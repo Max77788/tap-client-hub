@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
+/* ── TAP Client Hub Design System ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #eef1f6;
+  --card: #ffffff;
+  --ink: #1a2340;
+  --muted: #5f667d;
+  --line: #dde2ec;
+  --teal: #1c2a5e;
+  --teal-soft: #e7ebf5;
+  --teal-ink: #16234d;
+  --amber: #b9791f;
+  --amber-soft: #f7edda;
+  --red: #a8392f;
+  --red-soft: #f6e2df;
+  --green: #2f7d4f;
+  --green-soft: #e3efe6;
+  --blue: #2c5d86;
+  --blue-soft: #e0eaf2;
+  --paid: #1c2a5e;
+  --paid-soft: #e7ebf5;
+  --shadow: 0 1px 2px rgba(26, 35, 64, 0.06), 0 8px 24px rgba(26, 35, 64, 0.1);
+  --sidebar-start: #21305f;
+  --sidebar-end: #1a2750;
+  --sidebar-width: 236px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Base resets ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: "Public Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* ── Headings use Fraunces ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+/* ── Links ── */
+a {
+  color: var(--teal);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── Focus ring ── */
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
