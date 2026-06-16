@@ -30,8 +30,8 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    if (!supabase) return;
     async function loadUsers() {
+      if (!supabase) return;
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("id, full_name, role, location, active")
