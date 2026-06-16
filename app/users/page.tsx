@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +24,13 @@ const ROLE_STYLES: Record<string, { bg: string; fg: string }> = {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return createClient();
+  }, []);
 
   useEffect(() => {
+    if (!supabase) return;
     async function loadUsers() {
       const { data: profiles, error } = await supabase
         .from("profiles")
@@ -51,6 +55,7 @@ export default function UsersPage() {
   }, [supabase]);
 
   async function toggleStatus(userId: string, currentStatus: string) {
+    if (!supabase) return;
     const newActive = currentStatus !== "Active";
     const { error } = await supabase
       .from("profiles")
