@@ -25,7 +25,7 @@ staff = [
 profile_ids = {}
 for name, role, loc in staff:
     cur.execute(
-        "INSERT INTO profiles (full_name, role, location, active) VALUES (%s, %s, %s, true) RETURNING id",
+        "INSERT INTO profiles (id, full_name, role, location, active, modules) VALUES (gen_random_uuid(), %s, %s, %s, true, '{clients,workload,time,fin,pr,stx,t9,rend,vault,support}') RETURNING id",
         (name, role, loc)
     )
     profile_ids[name] = cur.fetchone()[0]
@@ -151,30 +151,69 @@ svc_configs = [
 
 months_2026 = [f"2026-{m:02d}" for m in range(1, 13)]
 
+# Service tracking: stage vs count (from schema v2 services.tracking column)
+cur.execute("SELECT code, tracking FROM services")
+tracking_map = {r[0]: r[1] for r in cur.fetchall()}
+
 svc_count = 0
 wp_count = 0
+pc_count = 0
+
+# Monthly expected defaults for count services
+PR_EXPECTED = {"2026-01":5,"2026-02":4,"2026-03":4,"2026-04":5,"2026-05":4,"2026-06":5,
+               "2026-07":4,"2026-08":5,"2026-09":4,"2026-10":5,"2026-11":4,"2026-12":5}
+PR_DONE =     {"2026-01":5,"2026-02":4,"2026-03":4,"2026-04":5,"2026-05":4,"2026-06":0,
+               "2026-07":0,"2026-08":0,"2026-09":0,"2026-10":0,"2026-11":0,"2026-12":0}
+
+T9_MONTHLY = {"2026-01":2,"2026-02":3,"2026-03":1,"2026-04":5,"2026-05":2,"2026-06":0,
+              "2026-07":0,"2026-08":0,"2026-09":0,"2026-10":0,"2026-11":0,"2026-12":0}
 
 for (cname, scode, aname, freq, proc) in svc_configs:
+    tracking = tracking_map.get(scode, 'stage')
+    
+    # Skip T9 if annual target not set (some clients don't have 1099s)
+    exp_annual = None
+    if scode == 'T9':
+        exp_annual = 25  # default 25 forms/year
+    
     cur.execute(
-        """INSERT INTO client_services (client_id, service_id, assigned_to, active, frequency, processor)
-           VALUES (%s, %s, %s, true, %s, %s) RETURNING id""",
-        (client_ids[cname], service_map[scode], profile_ids.get(aname), freq, proc)
+        """INSERT INTO client_services (client_id, service_id, assigned_to, active, frequency, processor, expected_annual)
+           VALUES (%s, %s, %s, true, %s, %s, %s) RETURNING id""",
+        (client_ids[cname], service_map[scode], profile_ids.get(aname), freq, proc, exp_annual)
     )
     cs_id = cur.fetchone()[0]
     svc_count += 1
     
-    # Create work_periods for monthly services (all 12 months)
-    if freq in ("monthly", "quarterly", "yearly"):
+    if tracking == 'stage':
+        # Stage services: create work_periods
         for m in months_2026:
             cur.execute(
                 "INSERT INTO work_periods (client_service_id, period, stage) VALUES (%s, %s, 'not_started')",
                 (cs_id, m)
             )
             wp_count += 1
+            
+    elif tracking == 'count' and scode == 'PR':
+        # Payroll: count runs per month
+        for m in months_2026:
+            cur.execute(
+                "INSERT INTO period_counts (client_service_id, period, processed, expected) VALUES (%s, %s, %s, %s)",
+                (cs_id, m, PR_DONE.get(m, 0), PR_EXPECTED.get(m, 1))
+            )
+            pc_count += 1
+            
+    elif tracking == 'count' and scode == 'T9':
+        # 1099s: count forms per month
+        for m in months_2026:
+            cur.execute(
+                "INSERT INTO period_counts (client_service_id, period, processed, expected) VALUES (%s, %s, %s, %s)",
+                (cs_id, m, T9_MONTHLY.get(m, 0), None)
+            )
+            pc_count += 1
 
 conn.commit()
 cur.close()
 conn.close()
 
-print(f"Seeded {svc_count} client_services with {wp_count} work_periods")
-print("DONE - TAP Client Hub demo data seeded!")
+print(f"Seeded {svc_count} client_services: {wp_count} work_periods (stage) + {pc_count} period_counts (count)")
+print("DONE - TAP Client Hub demo data seeded! (schema v2)")
