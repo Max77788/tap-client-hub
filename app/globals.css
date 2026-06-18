@@ -90,3 +90,18 @@ a:hover {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+/* ── Mobile optimizations ── */
+@media (max-width: 767px) {
+  body {
+    font-size: 1rem;
+  }
+  
+  input, select, button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  input, select {
+    font-size: 16px !important; /* prevent iOS zoom on focus */
+  }
+}

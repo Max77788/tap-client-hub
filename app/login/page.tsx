@@ -48,7 +48,7 @@ function LoginContent() {
       style={{ backgroundColor: "var(--paper)" }}
     >
       <div
-        className="w-full max-w-sm p-8 rounded-xl"
+        className="w-full max-w-sm mx-4 sm:mx-auto p-6 sm:p-8 rounded-xl"
         style={{
           backgroundColor: "var(--card)",
           boxShadow: "var(--shadow)",

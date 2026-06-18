@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import { Public_Sans, Fraunces } from "next/font/google";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./globals.css";
 
 const publicSans = Public_Sans({
@@ -53,13 +53,94 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/support": { title: "Help & Support", subtitle: "Submit a support request or find answers" },
 };
 
+// ── Mobile sidebar ──
+function MobileSidebar({
+  visibleNav,
+  pathname,
+  open,
+  onClose,
+}: {
+  visibleNav: NavItem[];
+  pathname: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={onClose} />
+      {/* Drawer */}
+      <div
+        ref={ref}
+        className="fixed top-0 left-0 z-50 h-full w-64 flex flex-col shadow-2xl md:hidden"
+        style={{
+          background: `linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)`,
+          color: "#ffffff",
+        }}
+      >
+        <div className="px-5 pt-8 pb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-white m-0">TAP</h2>
+            <p className="text-xs mt-0.5 opacity-70">Associates, LLC &middot; Est. 1999</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white text-lg leading-none p-1"
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
+        </div>
+        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+          {visibleNav.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={onClose}
+                className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  isActive ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </nav>
+        <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
+      </div>
+    </>
+  );
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [role, setRole] = useState("admin"); // admin | manager | staff | owner
+  const [role, setRole] = useState("admin");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Hide sidebar on auth pages ──
+  const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
 
   // ── Filter nav items by role ──
   const visibleNav = NAV_ITEMS.filter((item) => {
@@ -71,113 +152,116 @@ export default function RootLayout({
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
-    <html
-      lang="en"
-      className={`${publicSans.variable} ${fraunces.variable}`}
-    >
-      <body
-        className="min-h-screen flex"
-        style={{ backgroundColor: "var(--paper)" }}
-      >
-        {/* ── Sidebar ── */}
-        <aside
-          className="sticky top-0 h-screen flex flex-col shrink-0 select-none"
-          style={{
-            width: "var(--sidebar-width)",
-            background: `linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)`,
-            color: "#ffffff",
-          }}
-        >
-          {/* Brand */}
-          <div className="px-5 pt-8 pb-6">
-            <h2 className="text-2xl font-semibold tracking-tight text-white m-0">
-              TAP
-            </h2>
-            <p className="text-xs mt-1 opacity-70 leading-relaxed">
-              Associates, LLC &middot; Est. 1999
-            </p>
-          </div>
+    <html lang="en" className={`${publicSans.variable} ${fraunces.variable}`}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
+      <body className="min-h-screen flex flex-col md:flex-row" style={{ backgroundColor: "var(--paper)" }}>
+        {/* ── Desktop Sidebar (hidden on auth pages) ── */}
+        {!isAuthPage && (
+          <aside
+            className="hidden md:flex sticky top-0 h-screen flex-col shrink-0 select-none"
+            style={{
+              width: "var(--sidebar-width)",
+              background: `linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)`,
+              color: "#ffffff",
+            }}
+          >
+            {/* Brand */}
+            <div className="px-5 pt-8 pb-6">
+              <h2 className="text-2xl font-semibold tracking-tight text-white m-0">TAP</h2>
+              <p className="text-xs mt-1 opacity-70 leading-relaxed">Associates, LLC &middot; Est. 1999</p>
+            </div>
 
-          {/* Nav */}
-          <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-            {visibleNav.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                    isActive
-                      ? "bg-white/15 text-white"
-                      : "text-white/75 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </a>
-              );
-            })}
-          </nav>
+            {/* Nav */}
+            <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+              {visibleNav.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                      isActive ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
+            </nav>
 
-          {/* Footer */}
-          <div className="px-5 pb-6 pt-4 text-xs text-white/50">
-            TAP Client Hub v1.0
-          </div>
-        </aside>
+            {/* Footer */}
+            <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
+          </aside>
+        )}
+
+        {/* ── Mobile sidebar drawer ── */}
+        {!isAuthPage && (
+          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        )}
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
-          <header
-            className="sticky top-0 z-10 flex items-center justify-between h-16 px-6 shrink-0"
-            style={{
-              backgroundColor: "var(--card)",
-              borderBottom: `1px solid var(--line)`,
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <div className="flex items-center gap-4 min-w-0">
-              <div>
-                <h1 className="text-lg font-semibold text-[var(--ink)] m-0 leading-tight">
-                  {pageInfo.title}
-                </h1>
-                <p className="text-xs text-[var(--muted)] m-0">
-                  {pageInfo.subtitle}
-                </p>
+          {/* Top bar (hidden on auth pages) */}
+          {!isAuthPage && (
+            <header
+              className="sticky top-0 z-10 flex items-center justify-between h-14 md:h-16 px-3 md:px-6 shrink-0"
+              style={{
+                backgroundColor: "var(--card)",
+                borderBottom: `1px solid var(--line)`,
+                boxShadow: "var(--shadow)",
+              }}
+            >
+              <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                {/* Hamburger */}
+                <button
+                  className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-[var(--teal-soft)] transition-colors shrink-0"
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Open menu"
+                >
+                  <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
+                    <rect y="0" width="20" height="2" rx="1" fill="var(--ink)" />
+                    <rect y="7" width="20" height="2" rx="1" fill="var(--ink)" />
+                    <rect y="14" width="20" height="2" rx="1" fill="var(--ink)" />
+                  </svg>
+                </button>
+
+                <div className="min-w-0">
+                  <h1 className="text-base md:text-lg font-semibold text-[var(--ink)] m-0 leading-tight truncate">
+                    {pageInfo.title}
+                  </h1>
+                  <p className="hidden sm:block text-xs text-[var(--muted)] m-0">{pageInfo.subtitle}</p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              {/* Role selector */}
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="text-sm rounded-lg px-3 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer"
-              >
-                <option value="owner">Owner</option>
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="staff">Staff</option>
-              </select>
+              <div className="flex items-center gap-1.5 md:gap-3">
+                {/* Role selector */}
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="text-xs md:text-sm rounded-lg px-2 md:px-3 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer"
+                >
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="staff">Staff</option>
+                </select>
 
-              {/* Action buttons */}
-              <button
-                className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-lg
-                  bg-[var(--teal)] text-white hover:opacity-90 transition-opacity"
-              >
-                + New Client
-              </button>
+                {/* Action buttons */}
+                <button className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity">
+                  + New Client
+                </button>
 
-              <button
-                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg
-                  border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
-              >
-                Export
-              </button>
-            </div>
-          </header>
+                <button className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors">
+                  Export
+                </button>
+              </div>
+            </header>
+          )}
 
           {/* Page content */}
-          <main className="flex-1 p-6">{children}</main>
+          <main className={`flex-1 ${isAuthPage ? "" : "p-3 md:p-6"}`}>{children}</main>
         </div>
       </body>
     </html>
