@@ -88,7 +88,7 @@ export function getT9ExpectedCount(clientId: string): number {
 
 export interface WorklistTableProps {
   serviceKey: ServiceKey;
-  clients: Client[];
+  clients: any[];
   year: number;
   variant?: "default" | "payroll" | "t9";
   readOnly?: boolean;
@@ -412,7 +412,7 @@ export default function WorklistTable({
 
                     {/* Month cells */}
                     {MONTHS_SHORT.map((_m, i) => {
-                      const stage = stages[i];
+                      const stage = (stages[i] || "") as WorklistStage;
                       const style = STAGE_STYLES[stage];
                       const isActive = activeMonths.has(i);
                       const isPastDue =

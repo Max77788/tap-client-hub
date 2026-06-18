@@ -63,7 +63,7 @@ export default function RootLayout({
 
   // ── Filter nav items by role ──
   const visibleNav = NAV_ITEMS.filter((item) => {
-    if (item.role === "owner" && role !== "owner") return false;
+    if (item.role === "owner" && role !== "owner" && role !== "admin") return false;
     return true;
   });
 

@@ -11,7 +11,7 @@ interface ClientModalProps {
   onSave: (client: Client | Omit<Client, "id" | "cid">) => void;
 }
 
-const EMPTY_SERVICES: ServiceConfig[] = (
+const EMPTY_SERVICES: any[] = (
   Object.keys(SERVICE_META) as ServiceKey[]
 ).map((key) => ({
   key,
@@ -26,6 +26,7 @@ function makeEmptyClient(): Omit<Client, "id" | "cid"> {
   return {
     name: "",
     type: "Business",
+    status: "active",
     group: "Terry",
     city: "",
     state: "TX",
@@ -53,6 +54,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         email: client.email,
         phone: client.phone,
         address: client.address,
+        status: client.status || "active",
         assignedStaff: client.assignedStaff,
         services: client.services.map((s) => ({ ...s })),
       });

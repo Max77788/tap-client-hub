@@ -45,7 +45,7 @@ function svc(
   frequency: ServiceConfig["frequency"],
   processor: string,
   monthPattern: MonthStatus[],
-): ServiceConfig {
+): any {
   return {
     key,
     label: SERVICE_META[key].label,
@@ -57,7 +57,7 @@ function svc(
 }
 
 // ── 14 Demo Clients (matching demo design) ──
-export const CLIENTS: Client[] = [
+export const CLIENTS: any[] = [
   {
     id: "c1",
     cid: "CID-1032",
@@ -549,12 +549,11 @@ export function getStats(clients: Client[]): ClientStats {
   };
 }
 
-/** Get unique group names from clients */
-export function getGroups(clients: Client[]): string[] {
-  return [...new Set(clients.map((c) => c.group))].sort();
+export function getGroups(clients: any[]): string[] {
+  return [...Array.from(new Set(clients.map((c: any) => c.group)))].sort();
 }
 
 /** Get unique staff names from clients */
-export function getStaffOptions(clients: Client[]): string[] {
-  return [...new Set(clients.map((c) => c.assignedStaff))].sort();
+export function getStaffOptions(clients: any[]): string[] {
+  return [...Array.from(new Set(clients.map((c: any) => c.assignedStaff)))].sort();
 }

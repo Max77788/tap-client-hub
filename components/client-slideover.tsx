@@ -25,7 +25,7 @@ export default function ClientSlideover({ client, open, onClose, onSave }: Clien
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [editable, setEditable] = useState(false);
-  const [localServices, setLocalServices] = useState<ServiceConfig[]>(client.services);
+  const [localServices, setLocalServices] = useState<any[]>(client.services);
 
   // Reset local state when client changes
   useEffect(() => {
@@ -158,9 +158,9 @@ export default function ClientSlideover({ client, open, onClose, onSave }: Clien
             </h3>
             <div className="space-y-2">
               {localServices.map((svc) => {
-                const meta = SERVICE_META[svc.key];
+                const meta = (svc.key && (SERVICE_META as any)[svc.key]) || { label: "Unknown", pillColor: "var(--muted)", pillBg: "var(--line)" };
                 const isExpanded = expandedService === svc.key;
-                const enabledMonths = svc.months.filter((m) => m !== "lock" && m !== "na").length;
+                const enabledMonths = (svc.months as string[]).filter((m: string) => m !== "lock" && m !== "na").length;
 
                 return (
                   <div
@@ -273,8 +273,8 @@ export default function ClientSlideover({ client, open, onClose, onSave }: Clien
                             Month Tracking
                           </p>
                           <div className="grid grid-cols-12 gap-0.5">
-                            {svc.months.map((status, i) => {
-                              const c = STATUS_COLORS[status];
+                            {(svc.months as string[]).map((status: string, i: number) => {
+                              const c = (STATUS_COLORS as any)[status];
                               return (
                                 <div
                                   key={i}

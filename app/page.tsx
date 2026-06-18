@@ -344,10 +344,11 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
       {/* Service pills */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {enabledServices.map((svc) => {
-          const meta = SERVICE_META[svc.key];
+          const meta = svc.key ? SERVICE_META[svc.key] : null;
+          if (!meta) return null;
           return (
             <span
-              key={svc.key}
+              key={svc.key || svc.id}
               className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full"
               style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}
             >
@@ -367,7 +368,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
             {previewSvc.label} · {previewSvc.frequency}
           </p>
           <div className="grid grid-cols-12 gap-px">
-            {previewSvc.months.map((status, i) => {
+            {(previewSvc.months || []).map((status, i) => {
               const c = MONTH_CELL_COLORS[status];
               return (
                 <div

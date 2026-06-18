@@ -3,17 +3,23 @@
 export type ClientType = "Business" | "Personal";
 export type ServiceTracking = "stage" | "count";
 export type WorkStage = "not_started" | "in_progress" | "waiting_client" | "prepared" | "done" | "na";
+export type MonthStatus = "done" | "billed" | "paid" | "na" | "lock";
 export type ServiceCode = "FIN" | "PR" | "STX" | "T9" | "REND" | "TAX" | "RENEWAL";
+export type ServiceKey = "financials" | "payroll" | "sales_tax" | "1099s" | "renditions" | "tax_returns";
 
 export interface ServiceConfig {
   code: ServiceCode;
   name: string;
+  key?: ServiceKey;        // mock data uses key instead of code
+  label?: string;           // mock data display label
   tracking: ServiceTracking;
   active: boolean;
-  frequency?: string;     // monthly, quarterly, yearly
-  processor?: string;     // ADP, Toast, QuickBooks, ...
+  enabled?: boolean;        // mock data uses enabled
+  frequency?: string;       // monthly, quarterly, yearly
+  processor?: string;       // ADP, Toast, QuickBooks, ...
   software?: string;
-  expectedAnnual?: number; // 1099s annual target
+  expectedAnnual?: number;  // 1099s annual target
+  months?: any[];           // mock data month tracking
 }
 
 export interface ClientService {
@@ -22,7 +28,13 @@ export interface ClientService {
   service: ServiceConfig;
   assignedTo?: string;     // staff name or ID
   active: boolean;
+  enabled?: boolean;       // alias for active, used by mock data
   frequency?: string;
+  // Mock-data flat fields (inline service shape)
+  key?: ServiceKey;
+  label?: string;
+  processor?: string;
+  months?: any[];
 }
 
 export interface Client {
@@ -109,4 +121,14 @@ export interface StaffMember {
   name: string;
   initials: string;
   role: string;
+}
+
+// Mock data types
+export interface VaultEntry {
+  id: string;
+  site: string;
+  username?: string;
+  password?: string;
+  notes?: string;
+  clientId?: string;
 }

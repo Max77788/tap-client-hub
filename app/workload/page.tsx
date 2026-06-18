@@ -52,15 +52,15 @@ export default function WorkloadPage() {
     for (const client of CLIENTS) {
       for (const svc of client.services) {
         if (!svc.enabled) continue;
-        const freq = FREQ_TOUCHPOINTS[svc.frequency] || 0;
-        const processor = svc.processor;
+        const freq = FREQ_TOUCHPOINTS[svc.frequency || ""] || 0;
+        const processor = svc.processor || "";
         // Map initials to full name
         const staffName =
           STAFF.find((s) => s.initials === processor)?.name || processor;
 
         const load = map.get(staffName);
         if (load) {
-          load.services[svc.key] = (load.services[svc.key] || 0) + freq;
+          (load.services as any)[svc.key || "financials"] = ((load.services as any)[svc.key || "financials"] || 0) + freq;
           load.totalTouchpoints += freq;
           if (!countedClients.has(client.id + staffName)) {
             load.clientCount++;
@@ -92,10 +92,10 @@ export default function WorkloadPage() {
   const teamGroups = useMemo(() => {
     const map = new Map<string, { count: number; staff: Set<string> }>();
     for (const client of CLIENTS) {
-      const group = client.group;
+      const group = client.group || "Other";
       const existing = map.get(group) || { count: 0, staff: new Set<string>() };
       existing.count++;
-      existing.staff.add(client.assignedStaff);
+      existing.staff.add(client.assignedStaff || "Unassigned");
       map.set(group, existing);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
