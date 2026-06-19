@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   CLIENTS as INITIAL_CLIENTS,
@@ -13,9 +13,27 @@ import {
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 
+const STORAGE_KEY = "tap_hub_clients";
+
+function loadClients(): Client[] {
+  if (typeof window === "undefined") return INITIAL_CLIENTS;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return INITIAL_CLIENTS;
+}
+
+function saveClients(clients: Client[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+  } catch {}
+}
+
 export default function ClientsPage() {
   // ── State ──
-  const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
+  const [clients, setClients] = useState<Client[]>(loadClients);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
@@ -23,6 +41,9 @@ export default function ClientsPage() {
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+  // Persist clients to localStorage on every change
+  useEffect(() => { saveClients(clients); }, [clients]);
 
   // ── Derived data ──
   const groups = useMemo(() => getGroups(clients), [clients]);
@@ -300,7 +321,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
   return (
     <div
       onClick={onClick}
-      className="group p-4 rounded-xl cursor-pointer transition-all duration-200 hover:-translate-y-1"
+      className="group p-4 rounded-xl cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-1"
       style={{
         backgroundColor: "var(--card)",
         boxShadow: "var(--shadow)",

@@ -57,12 +57,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ── Links ── */
-a {
+main a {
   color: var(--teal);
   text-decoration: none;
 }
 
-a:hover {
+main a:hover {
   text-decoration: underline;
 }
 
