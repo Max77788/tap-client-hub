@@ -124,6 +124,24 @@ function MobileSidebar({
             );
           })}
         </nav>
+        <div className="px-3 pb-3">
+          <a
+            href="/login"
+            onClick={(e) => {
+              e.preventDefault();
+              document.cookie = "tap_demo_user=; path=/; max-age=0";
+              window.location.href = "/login";
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Log out
+          </a>
+        </div>
         <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
       </div>
     </>
@@ -190,6 +208,26 @@ export default function RootLayout({
                 );
               })}
             </nav>
+
+            {/* Logout */}
+            <div className="px-3 pb-3">
+              <a
+                href="/login"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.cookie = "tap_demo_user=; path=/; max-age=0";
+                  window.location.href = "/login";
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Log out
+              </a>
+            </div>
 
             {/* Footer */}
             <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
