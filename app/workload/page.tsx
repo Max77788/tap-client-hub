@@ -261,7 +261,7 @@ export default function WorkloadPage() {
                     return (
                       <div
                         key={key}
-                        className="h-full transition-all"
+                        className="h-full transition-[width]"
                         style={{
                           width: `${widthPct}%`,
                           backgroundColor: svcColors[key],

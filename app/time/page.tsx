@@ -196,7 +196,7 @@ export default function TimePage() {
           <button
             onClick={running ? stopTimer : startTimer}
             disabled={!running && (!selectedClient || !selectedPerson)}
-            className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold transition-all ${
+            className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold transition-[background-color,color] ${
               running
                 ? "bg-[var(--red)] text-white hover:opacity-90"
                 : "bg-[var(--teal)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"

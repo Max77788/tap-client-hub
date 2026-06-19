@@ -484,7 +484,7 @@ export default function WorklistTable({
                                   }}
                                 >
                                   <div
-                                    className="h-full rounded-full transition-all"
+                                    className="h-full rounded-full transition-[width]"
                                     style={{
                                       width: `${pct}%`,
                                       backgroundColor: style.fg,
@@ -583,7 +583,7 @@ function CellWrapper({
     <button
       onClick={readOnly ? undefined : onClick}
       disabled={readOnly}
-      className={`inline-flex items-center justify-center w-full h-8 rounded-md transition-all ${
+      className={`inline-flex items-center justify-center w-full h-8 rounded-md transition-[background-color,color] ${
         readOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
       }`}
       style={{
