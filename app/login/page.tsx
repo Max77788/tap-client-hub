@@ -19,6 +19,21 @@ function LoginContent() {
     setError(null);
     setLoading(true);
 
+    // Demo credentials — bypass Supabase Auth for quick access
+    const DEMO_USERS: Record<string, { password: string; name: string }> = {
+      "tushar@tapallc.com": { password: "TapHub2024!", name: "Tushar Patil" },
+      "lizette@tapallc.com": { password: "TapHub2024!", name: "Lizette" },
+    };
+
+    const demo = DEMO_USERS[email.toLowerCase()];
+    if (demo && password === demo.password) {
+      // Set a session cookie so the proxy allows access
+      document.cookie = `tap_demo_user=${encodeURIComponent(demo.name)}; path=/; max-age=86400; SameSite=Lax`;
+      router.push(next);
+      router.refresh();
+      return;
+    }
+
     try {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({

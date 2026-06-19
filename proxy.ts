@@ -41,13 +41,16 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Also check for demo login cookie
+  const hasDemoCookie = request.cookies.get("tap_demo_user")?.value;
+
   const { pathname } = request.nextUrl;
 
   // Redirect to /login if unauthenticated and not already on a public route
   const isPublicRoute =
     pathname.startsWith("/login") || pathname.startsWith("/auth/callback");
 
-  if (!user && !isPublicRoute) {
+  if (!user && !hasDemoCookie && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
