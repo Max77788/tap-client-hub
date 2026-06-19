@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
-  CLIENTS,
+  CLIENTS as INITIAL_CLIENTS,
   SERVICE_META,
   filterClients,
-  getClientById,
   getStats,
   getGroups,
   getStaffOptions,
@@ -16,6 +15,7 @@ import ClientModal from "@/components/client-modal";
 
 export default function ClientsPage() {
   // ── State ──
+  const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
@@ -25,18 +25,18 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   // ── Derived data ──
-  const groups = useMemo(() => getGroups(CLIENTS), []);
-  const staffOptions = useMemo(() => getStaffOptions(CLIENTS), []);
-  const stats = useMemo(() => getStats(CLIENTS), []);
+  const groups = useMemo(() => getGroups(clients), [clients]);
+  const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
+  const stats = useMemo(() => getStats(clients), [clients]);
 
   const filteredClients = useMemo(
-    () => filterClients(CLIENTS, { search, type: typeFilter, staff: staffFilter }),
-    [search, typeFilter, staffFilter],
+    () => filterClients(clients, { search, type: typeFilter, staff: staffFilter }),
+    [clients, search, typeFilter, staffFilter],
   );
 
   const selectedClient = useMemo(
-    () => (selectedClientId ? getClientById(selectedClientId) : null),
-    [selectedClientId],
+    () => (selectedClientId ? clients.find(c => c.id === selectedClientId) ?? null : null),
+    [clients, selectedClientId],
   );
 
   // ── Handlers ──
@@ -60,14 +60,27 @@ export default function ClientsPage() {
     setModalOpen(true);
   }
 
-  function handleModalSave(_data: Client | Omit<Client, "id" | "cid">) {
-    // In production: upsert to Supabase. For now, mock console.log.
-    console.log("Client saved:", _data);
-  }
+  const handleSlideoverSave = useCallback((updated: Client) => {
+    setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
+    setSelectedClientId(null); // force re-select to refresh slideover
+    setTimeout(() => setSelectedClientId(updated.id), 0);
+  }, []);
 
-  function handleSlideoverSave(client: Client) {
-    console.log("Slideover save:", client);
-  }
+  const handleModalSave = useCallback((data: Client | Omit<Client, "id" | "cid">) => {
+    if ("id" in data && data.id) {
+      // Edit existing
+      setClients(prev => prev.map(c => c.id === data.id ? data as Client : c));
+    } else {
+      // Add new
+      const newClient: Client = {
+        ...data,
+        id: "c" + Date.now(),
+        cid: "CID-" + Math.floor(1000 + Math.random() * 9000),
+        status: "active",
+      } as Client;
+      setClients(prev => [...prev, newClient]);
+    }
+  }, []);
 
   function handleExport() {
     console.log("Export to Excel — stub");
@@ -166,9 +179,9 @@ export default function ClientsPage() {
       </div>
 
       {/* ── Results summary ── */}
-      {filteredClients.length < CLIENTS.length && (
+      {filteredClients.length < clients.length && (
         <p className="text-xs text-[var(--muted)]">
-          Showing {filteredClients.length} of {CLIENTS.length} clients
+          Showing {filteredClients.length} of {clients.length} clients
           {search ? ` matching "${search}"` : ""}
         </p>
       )}
