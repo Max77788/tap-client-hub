@@ -11,14 +11,35 @@ interface ClientModalProps {
   onSave: (client: Client | Omit<Client, "id" | "cid">) => void;
 }
 
+// ── Service configuration metadata ──
+const SERVICE_CADENCES: Record<ServiceKey, { options: string[]; label: string }> = {
+  financials:  { options: ["Monthly", "Quarterly", "Yearly"], label: "Frequency" },
+  payroll:     { options: ["Weekly", "Bi-Weekly", "Monthly"], label: "Payroll Cadence" },
+  sales_tax:   { options: [], label: "" },   // always Monthly, no picker
+  "1099s":     { options: [], label: "" },    // always Yearly, no picker — show expected count instead
+  renditions:  { options: [], label: "" },     // always Yearly
+  tax_returns: { options: [], label: "" },      // always Yearly
+};
+
+const SERVICE_DEFAULTS: Record<ServiceKey, { frequency: string; processor: string }> = {
+  financials:  { frequency: "Monthly", processor: "QuickBooks" },
+  payroll:     { frequency: "Bi-Weekly", processor: "ADP" },
+  sales_tax:   { frequency: "Monthly", processor: "TA" },
+  "1099s":     { frequency: "Yearly", processor: "TA" },
+  renditions:  { frequency: "Yearly", processor: "TA" },
+  tax_returns: { frequency: "Yearly", processor: "TA" },
+};
+
 const EMPTY_SERVICES: any[] = (
   Object.keys(SERVICE_META) as ServiceKey[]
 ).map((key) => ({
   key,
   label: SERVICE_META[key].label,
   enabled: false,
-  frequency: "Monthly" as const,
-  processor: "TA",
+  frequency: SERVICE_DEFAULTS[key].frequency,
+  processor: SERVICE_DEFAULTS[key].processor,
+  assignedTo: "",
+  expectedAnnual: key === "1099s" ? 0 : undefined,
   months: Array(12).fill("lock") as ServiceConfig["months"],
 }));
 
@@ -98,11 +119,24 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           ? {
               ...s,
               enabled: !s.enabled,
+              frequency: SERVICE_DEFAULTS[key].frequency,
+              processor: SERVICE_DEFAULTS[key].processor,
+              assignedTo: "",
+              expectedAnnual: key === "1099s" ? 0 : undefined,
               months: !s.enabled
                 ? Array(12).fill("na") as ServiceConfig["months"]
                 : Array(12).fill("lock") as ServiceConfig["months"],
             }
           : s,
+      ),
+    }));
+  }
+
+  function setServiceField(key: ServiceKey, field: string, value: string | number) {
+    setForm((prev) => ({
+      ...prev,
+      services: prev.services.map((s) =>
+        s.key === key ? { ...s, [field]: value } : s,
       ),
     }));
   }
@@ -280,65 +314,144 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
                 Services
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 {form.services.map((svc) => {
                   const meta = SERVICE_META[svc.key];
+                  const cadence = SERVICE_CADENCES[svc.key];
+                  const is1099 = svc.key === "1099s";
                   return (
-                    <label
-                      key={svc.key}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
-                        svc.enabled
-                          ? ""
-                          : "opacity-60 hover:opacity-100"
-                      }`}
-                      style={{
-                        borderColor: svc.enabled ? meta.pillColor : "var(--line)",
-                        backgroundColor: svc.enabled ? `${meta.pillBg}80` : "transparent",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={svc.enabled}
-                        onChange={() => toggleService(svc.key)}
-                        className="sr-only"
-                      />
-                      <span
-                        className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
+                    <div key={svc.key}>
+                      <label
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                          svc.enabled
+                            ? ""
+                            : "opacity-60 hover:opacity-100"
+                        }`}
                         style={{
                           borderColor: svc.enabled ? meta.pillColor : "var(--line)",
-                          backgroundColor: svc.enabled ? meta.pillColor : "transparent",
+                          backgroundColor: svc.enabled ? `${meta.pillBg}80` : "transparent",
                         }}
                       >
-                        {svc.enabled && (
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
+                        <input
+                          type="checkbox"
+                          checked={svc.enabled}
+                          onChange={() => toggleService(svc.key)}
+                          className="sr-only"
+                        />
+                        <span
+                          className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
+                          style={{
+                            borderColor: svc.enabled ? meta.pillColor : "var(--line)",
+                            backgroundColor: svc.enabled ? meta.pillColor : "transparent",
+                          }}
+                        >
+                          {svc.enabled && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </span>
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: svc.enabled ? meta.pillColor : "var(--muted)" }}
+                        >
+                          {meta.label}
+                        </span>
+                        {svc.enabled && cadence.options.length === 0 && (
+                          <span className="text-[10px] text-[var(--muted)] ml-auto">
+                            {svc.frequency}
+                          </span>
                         )}
-                      </span>
-                      <span
-                        className="text-xs font-medium"
-                        style={{ color: svc.enabled ? meta.pillColor : "var(--muted)" }}
-                      >
-                        {meta.label}
-                      </span>
-                    </label>
+                      </label>
+
+                      {/* Expanded fields — visible only when enabled */}
+                      {svc.enabled && (
+                        <div
+                          className="ml-7 mt-1.5 p-3 rounded-lg space-y-2.5"
+                          style={{
+                            backgroundColor: "var(--card)",
+                            border: "1px solid var(--line)",
+                          }}
+                        >
+                          {/* Frequency picker (only for services with cadence options) */}
+                          {cadence.options.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                {cadence.label}
+                              </span>
+                              <select
+                                value={svc.frequency}
+                                onChange={(e) => setServiceField(svc.key, "frequency", e.target.value)}
+                                className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
+                              >
+                                {cadence.options.map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : is1099 ? (
+                            /* Expected 1099s count */
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                Expected / year
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={svc.expectedAnnual ?? 0}
+                                onChange={(e) => setServiceField(svc.key, "expectedAnnual", parseInt(e.target.value) || 0)}
+                                className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                              />
+                            </div>
+                          ) : (
+                            /* Fixed cadence label */
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                Cadence
+                              </span>
+                              <span className="text-[11px] text-[var(--ink)]">{svc.frequency}</span>
+                            </div>
+                          )}
+
+                          {/* Processor */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                              Processor
+                            </span>
+                            <select
+                              value={svc.processor}
+                              onChange={(e) => setServiceField(svc.key, "processor", e.target.value)}
+                              className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
+                            >
+                              {["ADP", "QuickBooks", "Toast", "TaxDome", "TA", "Manual", "Other"].map((p) => (
+                                <option key={p} value={p}>{p}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Assigned to */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                              Assigned to
+                            </span>
+                            <select
+                              value={svc.assignedTo || ""}
+                              onChange={(e) => setServiceField(svc.key, "assignedTo", e.target.value)}
+                              className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
+                            >
+                              <option value="">Unassigned</option>
+                              {STAFF.map((s) => (
+                                <option key={s.id} value={s.name}>{s.name} ({s.initials})</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             </div>
-
-            {/* Primary assigned staff */}
-            <Field label="Primary Assigned Staff">
-              <select
-                value={form.assignedStaff}
-                onChange={(e) => update("assignedStaff", e.target.value)}
-                className="field-input"
-              >
-                {STAFF.map((s) => (
-                  <option key={s.id} value={s.name}>{s.name} ({s.initials})</option>
-                ))}
-              </select>
-            </Field>
 
             {/* Footer */}
             <div

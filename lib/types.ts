@@ -34,6 +34,7 @@ export interface ClientService {
   key?: ServiceKey;
   label?: string;
   processor?: string;
+  expectedAnnual?: number;
   months?: any[];
 }
 
