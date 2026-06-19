@@ -116,7 +116,7 @@ function MobileSidebar({
                 href={item.href}
                 onClick={onClose}
                 className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/15 text-white font-semibold" : "text-white/95 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 {item.label}
@@ -182,7 +182,7 @@ export default function RootLayout({
                     key={item.label}
                     href={item.href}
                     className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                      isActive ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                      isActive ? "bg-white/15 text-white font-semibold" : "text-white/95 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     {item.label}
