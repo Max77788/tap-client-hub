@@ -57,7 +57,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect authenticated users away from login
-  if (user && pathname.startsWith("/login")) {
+  if ((user || hasDemoCookie) && pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

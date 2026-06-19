@@ -125,11 +125,17 @@ function MobileSidebar({
           })}
         </nav>
         <div className="px-3 pb-3">
-          <a
-            href="/login"
-            onClick={(e) => {
-              e.preventDefault();
+          <button
+            onClick={() => {
+              // Clear demo cookie
               document.cookie = "tap_demo_user=; path=/; max-age=0";
+              // Clear Supabase auth cookies (common prefixes)
+              document.cookie.split("; ").forEach(c => {
+                const name = c.split("=")[0];
+                if (name.includes("sb-") || name.includes("supabase")) {
+                  document.cookie = name + "=; path=/; max-age=0";
+                }
+              });
               window.location.href = "/login";
             }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-colors"
@@ -140,7 +146,7 @@ function MobileSidebar({
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
             Log out
-          </a>
+          </button>
         </div>
         <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
       </div>
@@ -211,11 +217,15 @@ export default function RootLayout({
 
             {/* Logout */}
             <div className="px-3 pb-3">
-              <a
-                href="/login"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button
+                onClick={() => {
                   document.cookie = "tap_demo_user=; path=/; max-age=0";
+                  document.cookie.split("; ").forEach(c => {
+                    const name = c.split("=")[0];
+                    if (name.includes("sb-") || name.includes("supabase")) {
+                      document.cookie = name + "=; path=/; max-age=0";
+                    }
+                  });
                   window.location.href = "/login";
                 }}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150"
@@ -226,7 +236,7 @@ export default function RootLayout({
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
                 Log out
-              </a>
+              </button>
             </div>
 
             {/* Footer */}
