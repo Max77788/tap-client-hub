@@ -28,17 +28,17 @@ const STATUS_STYLES: Record<string, { bg: string; fg: string }> = {
   Inactive: { bg: "var(--red-soft)", fg: "var(--red)" },
 };
 
-// ── Mock users (mirrors demo data) ──
+// ── Mock users (real TAP Associates team) ──
 const MOCK_USERS: User[] = [
-  { id: "u1", name: "Tushar Patil", email: "tushar@tapallc.com", role: "Owner / Admin", location: "Houston, TX", mgr: "—", modules: [...MODULES], status: "Active" },
-  { id: "u2", name: "Lizette", email: "lizette@tapallc.com", role: "Manager", location: "Houston, TX", mgr: "Tushar Patil", modules: ["Clients","Financials","Payroll","Sales Tax","1099s","Renditions","Timesheet","Vault","Workload"], status: "Active" },
-  { id: "u3", name: "Janeth", email: "janeth@tapallc.com", role: "Manager", location: "Houston, TX", mgr: "Tushar Patil", modules: ["Clients","Financials","Payroll","Sales Tax","1099s","Renditions","Timesheet","Workload"], status: "Active" },
-  { id: "u4", name: "Sam", email: "sam@tapallc.com", role: "Staff", location: "Houston, TX", mgr: "Lizette", modules: ["Clients","Financials","Sales Tax","1099s","Timesheet"], status: "Active" },
-  { id: "u5", name: "Alvarez", email: "alvarez@tapallc.com", role: "Staff", location: "Houston, TX", mgr: "Lizette", modules: ["Clients","Financials","Payroll","Timesheet"], status: "Active" },
-  { id: "u6", name: "Mike", email: "mike@tapallc.com", role: "Staff", location: "College Station, TX", mgr: "Lizette", modules: ["Clients","Financials","Renditions","Timesheet"], status: "Active" },
-  { id: "u7", name: "Shelpa", email: "shelpa@tapallc.com", role: "Staff", location: "Houston, TX", mgr: "Lizette", modules: ["Clients","Financials","Timesheet"], status: "Active" },
-  { id: "u8", name: "Rahul", email: "rahul@tapallc.com", role: "Offshore", location: "Pune, India", mgr: "Janeth", modules: ["Clients","Financials","Timesheet"], status: "Invite sent" },
-  { id: "u9", name: "Neha", email: "neha@tapallc.com", role: "Offshore", location: "Pune, India", mgr: "Janeth", modules: ["Financials","Sales Tax","Timesheet"], status: "Reset required" },
+  { id: "u1", name: "Tushar Patil", email: "tushar@tapallc.com", role: "Owner / Admin", location: "US", mgr: "—", modules: [...MODULES], status: "Active" },
+  { id: "u2", name: "Lizette Esparza", email: "accounts4@tapallc.com", role: "Manager", location: "US", mgr: "Tushar Patil", modules: [...MODULES], status: "Active" },
+  { id: "u3", name: "Janeth Noguera", email: "admin2@tapallc.com", role: "Staff", location: "US", mgr: "Lizette Esparza", modules: ["Clients","Payroll","Sales Tax","Business Taxes","Personal Taxes","Renditions","1099s","Annual Reports","Timesheet","Vault","Users & Access","Support"], status: "Active" },
+  { id: "u4", name: "Shilpa Kulkarni", email: "accounts2@tapallc.com", role: "Staff", location: "US", mgr: "Lizette Esparza", modules: ["Clients","Financials","Payroll","Business Taxes","Personal Taxes","1099s","Timesheet","Vault","Users & Access","Support"], status: "Active" },
+  { id: "u5", name: "Bonnie Edwards", email: "admin@tapallc.com", role: "Staff", location: "US", mgr: "Lizette Esparza", modules: ["Clients","Renditions","Annual Reports","Timesheet","Vault","Users & Access","Billing","Support"], status: "Active" },
+  { id: "u6", name: "Sam Patil", email: "accounts@tapallc.com", role: "Offshore/India", location: "India", mgr: "Lizette Esparza", modules: ["Clients","Financials","Sales Tax","1099s","Timesheet","Vault","Users & Access","Billing","Support"], status: "Active" },
+  { id: "u7", name: "Amruta Patil", email: "accounts3@tapallc.com", role: "Offshore/India", location: "India", mgr: "Lizette Esparza", modules: ["Clients","Financials","Payroll","Sales Tax","1099s","Timesheet","Vault","Users & Access"], status: "Active" },
+  { id: "u8", name: "Alvaro Ortega", email: "tax2@tapallc.com", role: "Staff", location: "US", mgr: "Lizette Esparza", modules: ["Clients","Business Taxes","Vault","Users & Access","Support"], status: "Active" },
+  { id: "u9", name: "Sanket Panchasara", email: "tax@tapallc.com", role: "Offshore/India", location: "India", mgr: "Lizette Esparza", modules: ["Clients","Financials","Timesheet","Vault","Users & Access","Support"], status: "Active" },
 ];
 
 // ── User Modal ──

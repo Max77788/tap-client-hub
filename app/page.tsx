@@ -14,12 +14,16 @@ import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 
 const STORAGE_KEY = "tap_hub_clients";
+const DATA_VERSION = 2; // bump to invalidate old localStorage on data changes
 
 function loadClients(): Client[] {
   if (typeof window === "undefined") return INITIAL_CLIENTS;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    const storedVersion = localStorage.getItem("tap_hub_data_version");
+    if (storedVersion === String(DATA_VERSION)) {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    }
   } catch {}
   return INITIAL_CLIENTS;
 }
@@ -28,6 +32,7 @@ function saveClients(clients: Client[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+    localStorage.setItem("tap_hub_data_version", String(DATA_VERSION));
   } catch {}
 }
 
