@@ -5,8 +5,6 @@ import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   CLIENTS,
   SERVICE_META,
-  STAFF,
-  MONTHS_SHORT,
   filterClients,
   getClientById,
   getStats,
@@ -15,15 +13,6 @@ import {
 } from "@/lib/data";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
-
-// ── Status colors for month cells ──
-const MONTH_CELL_COLORS: Record<string, { bg: string; fg: string }> = {
-  done:   { bg: "var(--green-soft)", fg: "var(--green)" },
-  billed: { bg: "var(--amber-soft)", fg: "var(--amber)" },
-  paid:   { bg: "var(--paid-soft)",  fg: "var(--paid)" },
-  na:     { bg: "var(--red-soft)",   fg: "var(--red)" },
-  lock:   { bg: "transparent",       fg: "transparent" },
-};
 
 export default function ClientsPage() {
   // ── State ──
@@ -295,11 +284,6 @@ function StatCard({
 function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
   const enabledServices = client.services.filter((s) => s.enabled);
 
-  // Calculate month tracking preview (first 6 months of financials or first service)
-  const previewSvc =
-    client.services.find((s) => s.key === "financials" && s.enabled) ||
-    enabledServices[0];
-
   return (
     <div
       onClick={onClick}
@@ -334,8 +318,6 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
 
       {/* Meta row */}
       <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-3">
-        <span className="font-mono text-[10px]">{client.cid}</span>
-        <span aria-hidden>·</span>
         <span>{client.group}</span>
         <span aria-hidden>·</span>
         <span>{client.city}, {client.state}</span>
@@ -360,31 +342,6 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
           <span className="text-[10px] text-[var(--muted)] italic">No services</span>
         )}
       </div>
-
-      {/* Month tracking mini row (only if we have a service) */}
-      {previewSvc && (
-        <div className="mb-3">
-          <p className="text-[10px] text-[var(--muted)] mb-1 uppercase tracking-wider font-medium">
-            {previewSvc.label} · {previewSvc.frequency}
-          </p>
-          <div className="grid grid-cols-12 gap-px">
-            {(previewSvc.months || []).map((status, i) => {
-              const c = MONTH_CELL_COLORS[status];
-              return (
-                <div
-                  key={i}
-                  className="h-4 rounded-sm"
-                  style={{
-                    backgroundColor: c.bg,
-                    border: status === "lock" ? "1px dashed var(--line)" : "none",
-                  }}
-                  title={`${MONTHS_SHORT[i]}: ${status}`}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Bottom row: Staff + arrow */}
       <div

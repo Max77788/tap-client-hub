@@ -248,14 +248,7 @@ export default function RootLayout({
                   <option value="staff">Staff</option>
                 </select>
 
-                {/* Action buttons */}
-                <button className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity">
-                  + New Client
-                </button>
-
-                <button className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors">
-                  Export
-                </button>
+                {/* Action buttons removed — per-page actions belong on each page, not in global header */}
               </div>
             </header>
           )}

@@ -30,11 +30,16 @@ export const SERVICE_META: Record<ServiceKey, { label: string; pillColor: string
 
 // ── Helper: generate a 12-month tracking array ──
 function makeMonths(pattern: MonthStatus[]): MonthStatus[] {
-  if (pattern.length === 12) return pattern;
+  const currentMonth = new Date().getMonth(); // 0-11
+  if (pattern.length === 12) {
+    // For the current year, lock future months so they show as "not yet"
+    return pattern.map((status, i) => (i > currentMonth ? "lock" : status));
+  }
   // repeat pattern to fill 12
   const result: MonthStatus[] = [];
   for (let i = 0; i < 12; i++) {
-    result.push(pattern[i % pattern.length]);
+    const status = pattern[i % pattern.length];
+    result.push(i > currentMonth ? "lock" : status);
   }
   return result;
 }
