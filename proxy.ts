@@ -48,7 +48,9 @@ export async function proxy(request: NextRequest) {
 
   // Redirect to /login if unauthenticated and not already on a public route
   const isPublicRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/auth/callback");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth/callback") ||
+    pathname.startsWith("/api/");
 
   if (!user && !hasDemoCookie && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);
