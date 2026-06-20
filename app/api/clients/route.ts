@@ -99,7 +99,7 @@ export async function GET() {
       address: db.address || "",
       assignedStaff: clientServices[0]?.assigned_to || "Unassigned",
       services,
-    } as Client;
+    };
   });
 
   return NextResponse.json({ clients });
