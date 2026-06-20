@@ -23,7 +23,7 @@ export const MONTHS_SHORT = [
 
 // ── Service labels & pill colors ──
 export const SERVICE_META: Record<ServiceKey, { label: string; pillColor: string; pillBg: string }> = {
-  financials:  { label: "Financials",  pillColor: "var(--green)",       pillBg: "var(--green-soft)"  },
+  financials:  { label: "Monthly Financials",  pillColor: "var(--green)",       pillBg: "var(--green-soft)"  },
   payroll:     { label: "Payroll",     pillColor: "var(--blue)",        pillBg: "var(--blue-soft)"   },
   sales_tax:   { label: "Sales Tax",   pillColor: "var(--amber)",       pillBg: "var(--amber-soft)"  },
   "1099s":     { label: "1099s",       pillColor: "#8b6914",            pillBg: "#f5edd6"             },
