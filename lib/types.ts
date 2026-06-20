@@ -128,8 +128,10 @@ export interface StaffMember {
 export interface VaultEntry {
   id: string;
   site: string;
+  url?: string;
   username?: string;
   password?: string;
   notes?: string;
   clientId?: string;
+  isBank?: boolean;
 }

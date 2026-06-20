@@ -9,6 +9,7 @@ import {
   getStats,
   getGroups,
   getStaffOptions,
+  deleteVaultEntriesByClient,
 } from "@/lib/data";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
@@ -103,12 +104,7 @@ export default function ClientsPage() {
     } catch {}
     // Cascade: remove vault entries for this client
     try {
-      const vaultEntries = JSON.parse(localStorage.getItem("tap_vault") || "null");
-      if (vaultEntries) {
-        const clientName = clients.find(c => c.id === clientId)?.name;
-        const filtered = vaultEntries.filter((e: any) => e.clientName !== clientName);
-        localStorage.setItem("tap_vault", JSON.stringify(filtered));
-      }
+      deleteVaultEntriesByClient(clientId);
     } catch {}
   }, [clients]);
 

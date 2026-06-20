@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { VAULT_ENTRIES, CLIENTS, getVaultEntriesByClient } from "@/lib/data";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import {
+  loadVault,
+  addVaultEntry,
+  updateVaultEntry,
+  deleteVaultEntry,
+  getVaultEntriesByClient,
+  CLIENTS,
+} from "@/lib/data";
 import type { VaultEntry } from "@/lib/types";
+import VaultModal from "@/components/vault-modal";
 
 export default function VaultPage() {
   const [unlocked, setUnlocked] = useState(false);
@@ -13,6 +21,16 @@ export default function VaultPage() {
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(
     new Set(),
   );
+
+  // ── Vault state (from localStorage) ──
+  const [vaultEntries, setVaultEntries] = useState<VaultEntry[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<VaultEntry | null>(null);
+
+  // Load vault on mount
+  useEffect(() => {
+    setVaultEntries(loadVault());
+  }, []);
 
   // ── Group entries by client ──
   const groupedEntries = useMemo(() => {
@@ -35,7 +53,13 @@ export default function VaultPage() {
       }
     }
     return Array.from(filtered.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [searchQuery]);
+  }, [searchQuery, vaultEntries]);
+
+  // Count total entries
+  const totalEntries = useMemo(
+    () => groupedEntries.reduce((sum, [, entries]) => sum + entries.length, 0),
+    [groupedEntries],
+  );
 
   function toggleClient(clientName: string) {
     setExpandedClients((prev) => {
@@ -60,6 +84,58 @@ export default function VaultPage() {
       return next;
     });
   }
+
+  // ── CRUD handlers ──
+  function handleAdd() {
+    setEditingEntry(null);
+    setModalOpen(true);
+  }
+
+  function handleEdit(entry: VaultEntry) {
+    setEditingEntry(entry);
+    setModalOpen(true);
+  }
+
+  function handleDelete(entry: VaultEntry) {
+    const clientName = entry.clientId
+      ? CLIENTS.find((c) => c.id === entry.clientId)?.name || "Unassigned"
+      : "Unassigned";
+    if (confirm(`Delete credential for "${entry.site}" (${clientName})?\n\nThis cannot be undone.`)) {
+      deleteVaultEntry(entry.id);
+      setVaultEntries(loadVault());
+    }
+  }
+
+  const handleSave = useCallback(
+    (entry: VaultEntry | Omit<VaultEntry, "id">) => {
+      if ("id" in entry && entry.id) {
+        // Edit mode
+        updateVaultEntry(entry.id, {
+          site: entry.site,
+          url: entry.url,
+          username: entry.username,
+          password: entry.password,
+          notes: entry.notes,
+          clientId: entry.clientId,
+          isBank: entry.isBank,
+        });
+      } else {
+        // Add mode
+        addVaultEntry(entry as Omit<VaultEntry, "id">);
+      }
+      setVaultEntries(loadVault());
+    },
+    [],
+  );
+
+  // ── Build clients list for dropdown ──
+  const clientOptions = useMemo(
+    () =>
+      CLIENTS.map((c) => ({ id: c.id, name: c.name })).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    [],
+  );
 
   // ── Locked state ──
   if (!unlocked) {
@@ -133,16 +209,32 @@ export default function VaultPage() {
   return (
     <div className="space-y-6">
       {/* ── Page header ── */}
-      <div>
-        <h1
-          className="text-xl font-semibold text-[var(--ink)] m-0"
-          style={{ fontFamily: "Fraunces, Georgia, serif" }}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1
+            className="text-xl font-semibold text-[var(--ink)] m-0"
+            style={{ fontFamily: "Fraunces, Georgia, serif" }}
+          >
+            Password Vault
+          </h1>
+          <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
+            Secure credential storage for client portals
+          </p>
+        </div>
+        <button
+          onClick={handleAdd}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
+          style={{
+            backgroundColor: "var(--teal)",
+            color: "#ffffff",
+          }}
         >
-          Password Vault
-        </h1>
-        <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-          Secure credential storage for client portals
-        </p>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add Credential
+        </button>
       </div>
 
       {/* ── Vault note ── */}
@@ -189,7 +281,7 @@ export default function VaultPage() {
             color: "var(--teal)",
           }}
         >
-          {VAULT_ENTRIES.length} entries across {groupedEntries.length} clients
+          {totalEntries} entries across {groupedEntries.length} clients
         </span>
         <button
           onClick={() => setUnlocked(false)}
@@ -285,6 +377,8 @@ export default function VaultPage() {
                       entry={entry}
                       showPassword={visiblePasswords.has(entry.id)}
                       onTogglePassword={() => togglePassword(entry.id)}
+                      onEdit={() => handleEdit(entry)}
+                      onDelete={() => handleDelete(entry)}
                     />
                   ))}
                 </div>
@@ -292,7 +386,29 @@ export default function VaultPage() {
             </div>
           );
         })}
+
+        {groupedEntries.length === 0 && (
+          <div className="text-center py-10 text-sm text-[var(--muted)]">
+            No credentials found{searchQuery ? " matching your search" : ""}.
+            <br />
+            <button
+              onClick={handleAdd}
+              className="mt-2 text-[var(--teal)] font-medium hover:underline"
+            >
+              Add your first credential
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* ── Vault Modal ── */}
+      <VaultModal
+        open={modalOpen}
+        vaultEntry={editingEntry}
+        clients={clientOptions}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSave}
+      />
     </div>
   );
 }
@@ -304,12 +420,16 @@ function VaultEntryRow({
   entry,
   showPassword,
   onTogglePassword,
+  onEdit,
+  onDelete,
 }: {
   entry: VaultEntry;
   showPassword: boolean;
   onTogglePassword: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
-  const isBank = entry.site === "TAP Bank";
+  const isBank = entry.isBank || entry.site === "TAP Bank";
 
   return (
     <div
@@ -327,56 +447,86 @@ function VaultEntryRow({
         )}
       </div>
 
-      {isBank ? (
-        /* ── Bank entry: "Open in TAP Bank" link ── */
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            alert("TAP Bank integration — coming soon.");
-          }}
-          className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          style={{
-            backgroundColor: "var(--teal-soft)",
-            color: "var(--teal)",
-          }}
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      <div className="shrink-0 flex items-center gap-2">
+        {isBank ? (
+          /* ── Bank entry: "Open in TAP Bank" link ── */
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              alert("TAP Bank integration — coming soon.");
+            }}
+            className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            style={{
+              backgroundColor: "var(--teal-soft)",
+              color: "var(--teal)",
+            }}
           >
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
-          Open in TAP Bank ↗
-        </a>
-      ) : (
-        /* ── Regular credential entry ── */
-        <div className="shrink-0 flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs text-[var(--muted)]">
-              {entry.username || "—"}
-            </p>
-            <p className="text-xs font-mono text-[var(--ink)]">
-              {showPassword ? entry.password : "••••••••"}
-            </p>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            Open in TAP Bank ↗
+          </a>
+        ) : (
+          /* ── Regular credential entry ── */
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-xs text-[var(--muted)]">
+                {entry.username || "—"}
+              </p>
+              <p className="text-xs font-mono text-[var(--ink)]">
+                {showPassword ? entry.password : "••••••••"}
+              </p>
+            </div>
+            <button
+              onClick={onTogglePassword}
+              className="text-xs font-medium transition-colors hover:underline"
+              style={{ color: "var(--muted)" }}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
           </div>
+        )}
+
+        {/* ── Action icons ── */}
+        <div className="flex items-center gap-0.5 ml-1 pl-2" style={{ borderLeft: "1px solid var(--line)" }}>
+          {/* Edit button */}
           <button
-            onClick={onTogglePassword}
-            className="text-xs font-medium transition-colors hover:underline"
-            style={{ color: "var(--muted)" }}
+            onClick={onEdit}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--teal-soft)]/70"
+            style={{ color: "var(--teal)" }}
+            title="Edit credential"
           >
-            {showPassword ? "Hide" : "Show"}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          {/* Delete button */}
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--red-soft)]/70"
+            style={{ color: "var(--red)" }}
+            title="Delete credential"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

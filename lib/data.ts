@@ -1119,8 +1119,8 @@ export const CLIENTS: any[] = [
 ];
 
 
-// ── Password Vault Entries ──
-export const VAULT_ENTRIES: VaultEntry[] = [
+// ── Password Vault Entries (initial seed data) ──
+const DEFAULT_VAULT_ENTRIES: VaultEntry[] = [
   {
     id: "v1",
     clientId: "c1",
@@ -1144,6 +1144,7 @@ export const VAULT_ENTRIES: VaultEntry[] = [
     username: "",
     password: "",
     notes: "Business checking — routing + account on file in TAP Bank portal.",
+    isBank: true,
   },
   {
     id: "v4",
@@ -1168,6 +1169,7 @@ export const VAULT_ENTRIES: VaultEntry[] = [
     username: "",
     password: "",
     notes: "Operating account. See TAP Bank for full details.",
+    isBank: true,
   },
   {
     id: "v7",
@@ -1200,6 +1202,7 @@ export const VAULT_ENTRIES: VaultEntry[] = [
     username: "",
     password: "",
     notes: "Capital reserve account. Details in TAP Bank.",
+    isBank: true,
   },
   {
     id: "v11",
@@ -1219,11 +1222,86 @@ export const VAULT_ENTRIES: VaultEntry[] = [
   },
 ];
 
+// Keep VAULT_ENTRIES as mutable export for backward compat
+export let VAULT_ENTRIES: VaultEntry[] = [...DEFAULT_VAULT_ENTRIES];
+
+// ── localStorage persistence ──
+const VAULT_STORAGE_KEY = "tap_vault";
+
+export function loadVault(): VaultEntry[] {
+  if (typeof window === "undefined") return [...DEFAULT_VAULT_ENTRIES];
+  try {
+    const raw = localStorage.getItem(VAULT_STORAGE_KEY);
+    if (!raw) {
+      VAULT_ENTRIES = [...DEFAULT_VAULT_ENTRIES];
+      return [...VAULT_ENTRIES];
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      VAULT_ENTRIES = parsed;
+      return [...parsed];
+    }
+  } catch {
+    // corrupted data, fall back to defaults
+  }
+  VAULT_ENTRIES = [...DEFAULT_VAULT_ENTRIES];
+  return [...VAULT_ENTRIES];
+}
+
+export function saveVault(entries: VaultEntry[]): void {
+  VAULT_ENTRIES = [...entries];
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(entries));
+    } catch {
+      // storage full or unavailable
+    }
+  }
+}
+
+export function addVaultEntry(entry: Omit<VaultEntry, "id">): VaultEntry {
+  const newEntry: VaultEntry = {
+    ...entry,
+    id: "v" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+  };
+  saveVault([...loadVault(), newEntry]);
+  return newEntry;
+}
+
+export function updateVaultEntry(id: string, updates: Partial<Omit<VaultEntry, "id">>): VaultEntry | null {
+  const entries = loadVault();
+  const idx = entries.findIndex((e) => e.id === id);
+  if (idx === -1) return null;
+  const updated = { ...entries[idx], ...updates };
+  entries[idx] = updated;
+  saveVault(entries);
+  return updated;
+}
+
+export function deleteVaultEntry(id: string): boolean {
+  const entries = loadVault();
+  const idx = entries.findIndex((e) => e.id === id);
+  if (idx === -1) return false;
+  entries.splice(idx, 1);
+  saveVault(entries);
+  return true;
+}
+
+/** Delete all vault entries for a given clientId (used by client cascade delete) */
+export function deleteVaultEntriesByClient(clientId: string): number {
+  const entries = loadVault();
+  const before = entries.length;
+  const filtered = entries.filter((e) => e.clientId !== clientId);
+  saveVault(filtered);
+  return before - filtered.length;
+}
+
 // ── Helper: get entries grouped by client name ──
 export function getVaultEntriesByClient(): Map<string, VaultEntry[]> {
+  const entries = loadVault();
   const map = new Map<string, VaultEntry[]>();
-  for (const entry of VAULT_ENTRIES) {
-    const client = CLIENTS.find((c) => c.id === entry.clientId);
+  for (const entry of entries) {
+    const client = entry.clientId ? CLIENTS.find((c) => c.id === entry.clientId) : undefined;
     const key = client ? client.name : "Unassigned";
     const existing = map.get(key) || [];
     existing.push(entry);
