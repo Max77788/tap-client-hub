@@ -144,30 +144,20 @@ export default function TimePage() {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold text-[var(--ink)] m-0 leading-tight">
-            Timesheet
-          </h1>
-          <p className="text-xs text-[var(--muted)] m-0 mt-1 max-w-lg leading-relaxed">
-            Live time tracking by person and client - lean by design; profitability analytics come next.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] text-[var(--muted)] font-medium whitespace-nowrap">Viewing as</span>
-          <select
-            value={viewingAs}
-            onChange={(e) => setViewingAs(e.target.value)}
-            className="text-xs sm:text-xs rounded-lg px-2.5 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] font-medium cursor-pointer outline-none max-w-[200px] sm:max-w-none truncate"
-          >
-            {STAFF.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.role} - {s.name} (full access)
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Viewing as selector */}
+      <div className="flex items-center gap-2 justify-end">
+        <span className="text-[11px] text-[var(--muted)] font-medium whitespace-nowrap">Viewing as</span>
+        <select
+          value={viewingAs}
+          onChange={(e) => setViewingAs(e.target.value)}
+          className="text-xs sm:text-xs rounded-lg px-2.5 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] font-medium cursor-pointer outline-none max-w-[200px] sm:max-w-none truncate"
+        >
+          {STAFF.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.role} - {s.name} (full access)
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Notification tip */}

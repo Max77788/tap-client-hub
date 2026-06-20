@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 // ── Types ──
 interface User {
@@ -428,17 +427,7 @@ export default function UsersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1
-            className="text-xl font-semibold text-[var(--ink)] m-0"
-            style={{ fontFamily: "Fraunces, Georgia, serif" }}
-          >
-            Users & Access
-          </h1>
-          <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-            Who can get into the platform, what they can see, and who they report to
-          </p>
-        </div>
+        <div />
         <button
           onClick={openAddModal}
           className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg text-white"

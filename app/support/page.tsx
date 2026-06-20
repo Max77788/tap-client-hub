@@ -85,19 +85,6 @@ export default function SupportPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page header ── */}
-      <div>
-        <h1
-          className="text-xl font-semibold text-[var(--ink)] m-0"
-          style={{ fontFamily: "Fraunces, Georgia, serif" }}
-        >
-          Help & Support
-        </h1>
-        <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-          Submit a support request or find answers to common questions
-        </p>
-      </div>
-
       {/* ── Two-column layout ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Left: Form ── */}

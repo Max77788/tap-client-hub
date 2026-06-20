@@ -21,18 +21,7 @@ export default function StxPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h1
-            className="text-xl font-semibold text-[var(--ink)] m-0"
-            style={{ fontFamily: "Fraunces, Georgia, serif" }}
-          >
-            Sales Tax
-          </h1>
-          <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-            Monthly and quarterly sales tax filing preparation tracking
-          </p>
-        </div>
+      <div className="flex justify-end mb-2">
         <select
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}

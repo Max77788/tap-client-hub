@@ -21,18 +21,7 @@ export default function TaxPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h1
-            className="text-xl font-semibold text-[var(--ink)] m-0"
-            style={{ fontFamily: "Fraunces, Georgia, serif" }}
-          >
-            Tax Returns
-          </h1>
-          <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-            Annual tax return preparation and filing (yearly)
-          </p>
-        </div>
+      <div className="flex justify-end mb-2">
         <select
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}

@@ -120,19 +120,6 @@ export default function WorkloadPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Page header ── */}
-      <div>
-        <h1
-          className="text-xl font-semibold text-[var(--ink)] m-0"
-          style={{ fontFamily: "Fraunces, Georgia, serif" }}
-        >
-          Team Workload Analytics
-        </h1>
-        <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-          Per-person workload distribution and service mix analysis
-        </p>
-      </div>
-
       {/* ── Stats row ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Team Members" value={STAFF.length} color="var(--teal)" />

@@ -55,6 +55,7 @@ export async function GET() {
       const meta = SERVICE_META[key] || { label: svcCode };
 
       return {
+        csId: cs.id,
         key,
         label: meta.label,
         enabled: true,
@@ -71,6 +72,7 @@ export async function GET() {
     for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
       if (!existingKeys.has(key)) {
         services.push({
+          csId: "",
           key,
           label: SERVICE_META[key].label,
           enabled: false,
@@ -101,4 +103,48 @@ export async function GET() {
   });
 
   return NextResponse.json({ clients });
+}
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const body = await request.json();
+
+  const { data, error } = await supabase
+    .from("clients")
+    .insert({
+      name: body.name,
+      type: body.type?.toLowerCase() || "business",
+      group_owner: body.group || null,
+      status: body.status || "active",
+      city: body.city || "",
+      state: body.state || "TX",
+      address: body.address || "",
+      cid: body.cid || null,
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || "Insert failed" }, { status: 500 });
+  }
+
+  return NextResponse.json({ client: data }, { status: 201 });
+}
+
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
+  }
+
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }

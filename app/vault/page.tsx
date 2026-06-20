@@ -210,17 +210,7 @@ export default function VaultPage() {
     <div className="space-y-6">
       {/* ── Page header ── */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1
-            className="text-xl font-semibold text-[var(--ink)] m-0"
-            style={{ fontFamily: "Fraunces, Georgia, serif" }}
-          >
-            Password Vault
-          </h1>
-          <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-            Secure credential storage for client portals
-          </p>
-        </div>
+        <div />
         <button
           onClick={handleAdd}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
@@ -418,14 +408,10 @@ export default function VaultPage() {
 // ══════════════════════════════════════════════
 function VaultEntryRow({
   entry,
-  showPassword,
-  onTogglePassword,
   onEdit,
   onDelete,
 }: {
   entry: VaultEntry;
-  showPassword: boolean;
-  onTogglePassword: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -480,22 +466,13 @@ function VaultEntryRow({
           </a>
         ) : (
           /* ── Regular credential entry ── */
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-xs text-[var(--muted)]">
-                {entry.username || "—"}
-              </p>
-              <p className="text-xs font-mono text-[var(--ink)]">
-                {showPassword ? entry.password : "••••••••"}
-              </p>
-            </div>
-            <button
-              onClick={onTogglePassword}
-              className="text-xs font-medium transition-colors hover:underline"
-              style={{ color: "var(--muted)" }}
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
+          <div className="text-right">
+            <p className="text-xs text-[var(--muted)]">
+              {entry.username || "—"}
+            </p>
+            <p className="text-xs font-mono text-[var(--ink)]">
+              {entry.password}
+            </p>
           </div>
         )}
 
