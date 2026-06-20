@@ -142,11 +142,11 @@ export default function ClientsPage() {
       {/* ── Toolbar: Search + Filters + Actions ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
         {/* Search */}
-        <div className="relative flex-1 min-w-[240px] max-w-2xl">
+        <div className="relative flex-1 min-w-[280px]">
           <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-            width="18"
-            height="18"
+            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--muted)"
@@ -160,7 +160,7 @@ export default function ClientsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clients…"
-            className="w-full pl-11 pr-4 py-3 rounded-lg border border-[var(--line)] bg-[var(--card)] text-base text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
+            className="w-full pl-12 pr-5 py-3.5 rounded-lg border border-[var(--line)] bg-[var(--card)] text-lg text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
           />
         </div>
 
