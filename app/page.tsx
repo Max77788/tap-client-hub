@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
-  CLIENTS as INITIAL_CLIENTS,
   SERVICE_META,
   filterClients,
   getStats,
@@ -11,35 +10,13 @@ import {
   getStaffOptions,
   deleteVaultEntriesByClient,
 } from "@/lib/data";
+import { useClientsState } from "@/hooks/use-clients-state";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 
-const STORAGE_KEY = "tap_hub_clients";
-const DATA_VERSION = 2; // bump to invalidate old localStorage on data changes
-
-function loadClients(): Client[] {
-  if (typeof window === "undefined") return INITIAL_CLIENTS;
-  try {
-    const storedVersion = localStorage.getItem("tap_hub_data_version");
-    if (storedVersion === String(DATA_VERSION)) {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
-    }
-  } catch {}
-  return INITIAL_CLIENTS;
-}
-
-function saveClients(clients: Client[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-    localStorage.setItem("tap_hub_data_version", String(DATA_VERSION));
-  } catch {}
-}
-
 export default function ClientsPage() {
-  // ── State ──
-  const [clients, setClients] = useState<Client[]>(loadClients);
+  // ── State from Supabase API (with localStorage cache fallback) ──
+  const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading } = useClientsState();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
@@ -47,9 +24,6 @@ export default function ClientsPage() {
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-
-  // Persist clients to localStorage on every change
-  useEffect(() => { saveClients(clients); }, [clients]);
 
   // ── Derived data ──
   const groups = useMemo(() => getGroups(clients), [clients]);
@@ -88,13 +62,13 @@ export default function ClientsPage() {
   }
 
   const handleSlideoverSave = useCallback((updated: Client) => {
-    setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
+    updateClient(updated.id, updated);
     setSelectedClientId(null); // force re-select to refresh slideover
     setTimeout(() => setSelectedClientId(updated.id), 0);
-  }, []);
+  }, [updateClient]);
 
   const handleSlideoverDelete = useCallback((clientId: string) => {
-    setClients(prev => prev.filter(c => c.id !== clientId));
+    deleteFromState(clientId);
     setSelectedClientId(null);
     // Cascade: remove timesheet entries for this client
     try {
@@ -106,12 +80,12 @@ export default function ClientsPage() {
     try {
       deleteVaultEntriesByClient(clientId);
     } catch {}
-  }, [clients]);
+  }, [deleteFromState]);
 
   const handleModalSave = useCallback((data: Client | Omit<Client, "id" | "cid">) => {
     if ("id" in data && data.id) {
       // Edit existing
-      setClients(prev => prev.map(c => c.id === data.id ? data as Client : c));
+      updateClient(data.id, data as Client);
     } else {
       // Add new
       const newClient: Client = {
@@ -120,9 +94,9 @@ export default function ClientsPage() {
         cid: "CID-" + Math.floor(1000 + Math.random() * 9000),
         status: "active",
       } as Client;
-      setClients(prev => [...prev, newClient]);
+      addClient(newClient);
     }
-  }, []);
+  }, [updateClient, addClient]);
 
   function handleExport() {
     console.log("Export to Excel — stub");
@@ -130,6 +104,11 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
+      {/* ── Loading overlay ── */}
+      {loading && (
+        <div className="text-xs text-[var(--muted)] animate-pulse">Loading clients from database…</div>
+      )}
+
       {/* ── Stat cards row ── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label="Total Clients" value={stats.total} />

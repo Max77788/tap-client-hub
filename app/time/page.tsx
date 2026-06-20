@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, Fragment } from "react";
 import { CLIENTS, STAFF, SERVICE_META } from "@/lib/data";
+import { useClientsState } from "@/hooks/use-clients-state";
 import type { ServiceKey } from "@/lib/types";
 
 interface TimeEntry {
@@ -33,6 +34,10 @@ export default function TimePage() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
+  // Supabase clients (with localStorage fallback)
+  const { clients: supabaseClients } = useClientsState();
+  const clients = supabaseClients.length > 50 ? supabaseClients : CLIENTS;
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem("tap-timesheet-entries");
@@ -56,7 +61,7 @@ export default function TimePage() {
   }, [elapsed, selectedClient, selectedPerson]);
 
   const stopTimer = useCallback(() => {
-    const client = CLIENTS.find((c) => c.id === selectedClient);
+    const client = clients.find((c) => c.id === selectedClient);
     const person = STAFF.find((s) => s.id === selectedPerson);
     if (elapsed > 0 && client && person) {
       const svc = selectedService
@@ -205,10 +210,10 @@ export default function TimePage() {
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
               disabled={running}
-              className="text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full truncate"
+              className="text-sm sm:text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
             >
               <option value="">-- choose client --</option>
-              {CLIENTS.map((c) => (
+              {clients.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
@@ -275,7 +280,7 @@ export default function TimePage() {
           <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-2">
             <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: "var(--green)" }} />
             <span className="text-xs text-[var(--muted)]">
-              {CLIENTS.find(c => c.id === selectedClient)?.name} · {STAFF.find(s => s.id === selectedPerson)?.name}
+              {clients.find(c => c.id === selectedClient)?.name} · {STAFF.find(s => s.id === selectedPerson)?.name}
             </span>
           </div>
         )}
@@ -363,7 +368,7 @@ export default function TimePage() {
                             autoFocus
                             className="text-xs rounded px-1.5 py-1 border border-[var(--line)] bg-white text-[var(--ink)] outline-none w-full"
                           >
-                            {CLIENTS.map((c) => (
+                            {clients.map((c) => (
                               <option key={c.id} value={c.name}>{c.name}</option>
                             ))}
                           </select>

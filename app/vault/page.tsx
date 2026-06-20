@@ -7,10 +7,11 @@ import {
   updateVaultEntry,
   deleteVaultEntry,
   getVaultEntriesByClient,
-  CLIENTS,
+  CLIENTS as INITIAL_CLIENTS,
 } from "@/lib/data";
 import type { VaultEntry } from "@/lib/types";
 import VaultModal from "@/components/vault-modal";
+import { useClientsState } from "@/hooks/use-clients-state";
 
 export default function VaultPage() {
   const [unlocked, setUnlocked] = useState(false);
@@ -23,6 +24,10 @@ export default function VaultPage() {
   const [vaultEntries, setVaultEntries] = useState<VaultEntry[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<VaultEntry | null>(null);
+
+  // Supabase clients
+  const { clients: supabaseClients } = useClientsState();
+  const clients = supabaseClients.length > 50 ? supabaseClients : INITIAL_CLIENTS;
 
   // Load vault on mount
   useEffect(() => {
@@ -83,7 +88,7 @@ export default function VaultPage() {
 
   function handleDelete(entry: VaultEntry) {
     const clientName = entry.clientId
-      ? CLIENTS.find((c) => c.id === entry.clientId)?.name || "Unassigned"
+      ? clients.find((c) => c.id === entry.clientId)?.name || "Unassigned"
       : "Unassigned";
     if (confirm(`Delete credential for "${entry.site}" (${clientName})?\n\nThis cannot be undone.`)) {
       deleteVaultEntry(entry.id);
@@ -116,7 +121,7 @@ export default function VaultPage() {
   // ── Build clients list for dropdown ──
   const clientOptions = useMemo(
     () =>
-      CLIENTS.map((c) => ({ id: c.id, name: c.name })).sort((a, b) =>
+      clients.map((c) => ({ id: c.id, name: c.name })).sort((a, b) =>
         a.name.localeCompare(b.name),
       ),
     [],

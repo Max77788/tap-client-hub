@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { CLIENTS, STAFF, SERVICE_META } from "@/lib/data";
+import { useClientsState } from "@/hooks/use-clients-state";
 import type { ServiceKey } from "@/lib/types";
 
 // ── Frequency → touchpoints/year ──
@@ -22,6 +23,10 @@ interface StaffLoad {
 }
 
 export default function WorkloadPage() {
+  // Supabase clients (with localStorage fallback)
+  const { clients: supabaseClients } = useClientsState();
+  const clients = supabaseClients.length > 50 ? supabaseClients : CLIENTS;
+
   // ── Calculate workload per staff member ──
   const staffLoads = useMemo<StaffLoad[]>(() => {
     const map = new Map<string, StaffLoad>();
@@ -49,7 +54,7 @@ export default function WorkloadPage() {
     // Track which staff member we've counted as a client
     const countedClients = new Set<string>();
 
-    for (const client of CLIENTS) {
+    for (const client of clients) {
       for (const svc of client.services) {
         if (!svc.enabled) continue;
         const freq = FREQ_TOUCHPOINTS[svc.frequency || ""] || 0;
@@ -78,7 +83,7 @@ export default function WorkloadPage() {
 
   // ── Unassigned clients (no enabled services processed by anyone on staff) ──
   const unassignedClients = useMemo(() => {
-    return CLIENTS.filter((client) => {
+    return clients.filter((client) => {
       const enabledSvcs = client.services.filter((s) => s.enabled);
       if (enabledSvcs.length === 0) return true;
       // Check if any service has a processor that's NOT in STAFF
@@ -91,7 +96,7 @@ export default function WorkloadPage() {
   // ── Group by "team" (based on client group field) ──
   const teamGroups = useMemo(() => {
     const map = new Map<string, { count: number; staff: Set<string> }>();
-    for (const client of CLIENTS) {
+    for (const client of clients) {
       const group = client.group || "Other";
       const existing = map.get(group) || { count: 0, staff: new Set<string>() };
       existing.count++;
@@ -123,7 +128,7 @@ export default function WorkloadPage() {
       {/* ── Stats row ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Team Members" value={STAFF.length} color="var(--teal)" />
-        <StatCard label="Total Clients" value={CLIENTS.length} color="var(--blue)" />
+        <StatCard label="Total Clients" value={clients.length} color="var(--blue)" />
         <StatCard
           label="Busiest Person"
           value={busiestPerson?.totalTouchpoints ?? 0}
