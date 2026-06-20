@@ -92,6 +92,26 @@ export default function ClientsPage() {
     setTimeout(() => setSelectedClientId(updated.id), 0);
   }, []);
 
+  const handleSlideoverDelete = useCallback((clientId: string) => {
+    setClients(prev => prev.filter(c => c.id !== clientId));
+    setSelectedClientId(null);
+    // Cascade: remove timesheet entries for this client
+    try {
+      const tsEntries = JSON.parse(localStorage.getItem("tap-timesheet-entries") || "[]");
+      const filtered = tsEntries.filter((e: any) => e.clientName !== clients.find(c => c.id === clientId)?.name);
+      localStorage.setItem("tap-timesheet-entries", JSON.stringify(filtered));
+    } catch {}
+    // Cascade: remove vault entries for this client
+    try {
+      const vaultEntries = JSON.parse(localStorage.getItem("tap_vault") || "null");
+      if (vaultEntries) {
+        const clientName = clients.find(c => c.id === clientId)?.name;
+        const filtered = vaultEntries.filter((e: any) => e.clientName !== clientName);
+        localStorage.setItem("tap_vault", JSON.stringify(filtered));
+      }
+    } catch {}
+  }, [clients]);
+
   const handleModalSave = useCallback((data: Client | Omit<Client, "id" | "cid">) => {
     if ("id" in data && data.id) {
       // Edit existing
@@ -259,6 +279,7 @@ export default function ClientsPage() {
           open={slideoverOpen}
           onClose={closeSlideover}
           onSave={handleSlideoverSave}
+          onDelete={handleSlideoverDelete}
         />
       )}
 

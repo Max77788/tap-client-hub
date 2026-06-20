@@ -19,9 +19,10 @@ interface ClientSlideoverProps {
   open: boolean;
   onClose: () => void;
   onSave?: (client: Client) => void;
+  onDelete?: (clientId: string) => void;
 }
 
-export default function ClientSlideover({ client, open, onClose, onSave }: ClientSlideoverProps) {
+export default function ClientSlideover({ client, open, onClose, onSave, onDelete }: ClientSlideoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [editable, setEditable] = useState(false);
@@ -356,6 +357,19 @@ export default function ClientSlideover({ client, open, onClose, onSave }: Clien
             borderTop: "1px solid var(--line)",
           }}
         >
+          {editable && onDelete && (
+            <button
+              onClick={() => {
+                if (confirm(`Delete ${client.name}?\n\nThis cannot be undone. All timesheet entries and vault credentials for this client will also be removed.`)) {
+                  onDelete(client.id);
+                  onClose();
+                }
+              }}
+              className="text-sm font-medium px-4 py-2 rounded-lg border border-[var(--red)] text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors mr-auto"
+            >
+              Delete Client
+            </button>
+          )}
           <button
             onClick={onClose}
             className="text-sm font-medium px-4 py-2 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
