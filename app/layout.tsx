@@ -28,12 +28,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Clients", href: "/" },
   { label: "Team Workload", href: "/workload" },
   { label: "Timesheet", href: "/time" },
+  { label: "---", href: "" },
   { label: "Financials", href: "/fin" },
   { label: "Payroll", href: "/pr" },
   { label: "Sales Tax", href: "/stx" },
   { label: "1099s", href: "/t9" },
   { label: "Renditions", href: "/rend" },
   { label: "Tax Returns", href: "/tax" },
+  { label: "---", href: "" },
   { label: "Password Vault", href: "/vault" },
   { label: "Users & Access", href: "/users", role: "owner" },
   { label: "Help & Support", href: "/support" },
@@ -111,6 +113,9 @@ function MobileSidebar({
         </div>
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
           {visibleNav.map((item) => {
+            if (item.label === "---") {
+              return <div key="sep-mobile" className="my-3 mx-2 border-t border-white/15" />;
+            }
             const isActive = pathname === item.href;
             return (
               <a
@@ -202,6 +207,9 @@ export default function RootLayout({
             {/* Nav */}
             <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
               {visibleNav.map((item) => {
+                if (item.label === "---") {
+                  return <div key="sep-desktop-1" className="my-3 mx-2 border-t border-white/15" />;
+                }
                 const isActive = pathname === item.href;
                 return (
                   <a

@@ -6,11 +6,22 @@ import WorklistTable, { stageToMonthStatus, type WorklistStage } from "@/compone
 
 export default function T9Page() {
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
+  const [year, setYear] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("tap_hub_t9_year");
+      return saved ? Number(saved) : currentYear;
+    }
+    return currentYear;
+  });
   const years = useMemo(
     () => [currentYear, currentYear - 1, currentYear - 2],
     [currentYear],
   );
+
+  const handleYearChange = (y: number) => {
+    setYear(y);
+    localStorage.setItem("tap_hub_t9_year", String(y));
+  };
 
   const { clients, updateServiceMonth } = useClientsState();
 
@@ -24,7 +35,7 @@ export default function T9Page() {
       <div className="flex justify-end mb-2">
         <select
           value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
+          onChange={(e) => handleYearChange(Number(e.target.value))}
           className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none"
         >
           {years.map((y) => (

@@ -135,18 +135,18 @@ export default function ClientsPage() {
         <StatCard label="Total Clients" value={stats.total} />
         <StatCard label="Business" value={stats.business} color="var(--teal)" softColor="var(--teal-soft)" />
         <StatCard label="Personal" value={stats.personal} color="var(--blue)" softColor="var(--blue-soft)" />
-        <StatCard label="Monthly Financials" value={stats.monthlyFinancials} color="var(--green)" softColor="var(--green-soft)" />
+        <StatCard label="Financials" value={stats.monthlyFinancials} color="var(--green)" softColor="var(--green-soft)" />
         <StatCard label="Behind This Month" value={stats.behindThisMonth} color="var(--red)" softColor="var(--red-soft)" alert={stats.behindThisMonth > 0} />
       </div>
 
       {/* ── Toolbar: Search + Filters + Actions ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
         {/* Search */}
-        <div className="relative flex-1 min-w-[280px]">
+        <div className="relative flex-1 min-w-[320px]">
           <svg
             className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-            width="20"
-            height="20"
+            width="22"
+            height="22"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--muted)"
@@ -160,7 +160,7 @@ export default function ClientsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clients…"
-            className="w-full pl-12 pr-5 py-3.5 rounded-lg border border-[var(--line)] bg-[var(--card)] text-lg text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
+            className="w-full pl-12 pr-5 py-4 rounded-lg border-[3px] border-[var(--line)] bg-[var(--card)] text-lg font-bold text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
           />
         </div>
 
@@ -230,7 +230,7 @@ export default function ClientsPage() {
 
       {/* ── Client cards grid ── */}
       {filteredClients.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredClients.map((client) => (
             <ClientCard
               key={client.id}
@@ -373,7 +373,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
       </div>
 
       {/* Meta row */}
-      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-3">
+      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2">
         <span>{client.group}</span>
         <span aria-hidden>·</span>
         <span>{client.city}, {client.state}</span>

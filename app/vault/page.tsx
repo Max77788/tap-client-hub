@@ -346,6 +346,14 @@ export default function VaultPage() {
               {/* Accordion body */}
               {isExpanded && (
                 <div style={{ borderTop: "1px solid var(--line)" }}>
+                  {/* Column headers */}
+                  <div className="px-5 py-2 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ borderBottom: "1px solid var(--line)" }}>
+                    <span className="flex-[2]">Portal / Site</span>
+                    <span className="flex-[1.5]">Username</span>
+                    <span className="flex-[1.5]">Password</span>
+                    <span className="flex-1">Links / Notes</span>
+                    <span className="shrink-0 w-[60px]"></span>
+                  </div>
                   {entries.map((entry) => (
                     <VaultEntryRow
                       key={entry.id}
@@ -402,90 +410,94 @@ function VaultEntryRow({
 
   return (
     <div
-      className="px-5 py-3 flex items-center justify-between gap-4"
+      className="px-5 py-3 flex items-center gap-4"
       style={{ borderBottom: "1px solid var(--line)" }}
     >
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[var(--ink)]">
+      {/* Portal / Site */}
+      <div className="flex-[2] min-w-0">
+        <p className="text-sm font-bold text-[var(--ink)] truncate">
           {entry.site}
         </p>
-        {entry.notes && (
-          <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
-            {entry.notes}
-          </p>
-        )}
       </div>
 
-      <div className="shrink-0 flex items-center gap-2">
+      {/* Username */}
+      <div className="flex-[1.5] min-w-0">
+        <p className="text-xs font-medium text-[var(--ink)] truncate">
+          {entry.username || "—"}
+        </p>
+      </div>
+
+      {/* Password */}
+      <div className="flex-[1.5] min-w-0">
+        <p className="text-xs font-mono text-[var(--ink)] truncate">
+          {entry.password || "—"}
+        </p>
+      </div>
+
+      {/* Links */}
+      <div className="flex-1 min-w-0 flex items-center gap-2">
         {isBank ? (
-          /* ── Bank entry: "Open in TAP Bank" link ── */
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
               alert("TAP Bank integration — coming soon.");
             }}
-            className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded"
             style={{
               backgroundColor: "var(--teal-soft)",
               color: "var(--teal)",
             }}
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            Open in TAP Bank ↗
+            Bank ↗
           </a>
-        ) : (
-          /* ── Regular credential entry ── */
-          <div className="text-right">
-            <p className="text-xs text-[var(--muted)]">
-              {entry.username || "—"}
-            </p>
-            <p className="text-xs font-mono text-[var(--ink)]">
-              {entry.password}
-            </p>
-          </div>
-        )}
-
-        {/* ── Action icons ── */}
-        <div className="flex items-center gap-0.5 ml-1 pl-2" style={{ borderLeft: "1px solid var(--line)" }}>
-          {/* Edit button */}
-          <button
-            onClick={onEdit}
-            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--teal-soft)]/70"
+        ) : entry.url ? (
+          <a
+            href={entry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-semibold hover:underline"
             style={{ color: "var(--teal)" }}
-            title="Edit credential"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </button>
-          {/* Delete button */}
-          <button
-            onClick={onDelete}
-            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--red-soft)]/70"
-            style={{ color: "var(--red)" }}
-            title="Delete credential"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-          </button>
-        </div>
+            Open ↗
+          </a>
+        ) : null}
+        {entry.notes && (
+          <span className="text-[10px] text-[var(--muted)] truncate" title={entry.notes}>
+            {entry.notes}
+          </span>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-0.5 ml-1 pl-2 shrink-0" style={{ borderLeft: "1px solid var(--line)" }}>
+        <button
+          onClick={onEdit}
+          className="p-1.5 rounded-lg transition-colors hover:bg-[var(--teal-soft)]/70"
+          style={{ color: "var(--teal)" }}
+          title="Edit credential"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+        </button>
+        <button
+          onClick={onDelete}
+          className="p-1.5 rounded-lg transition-colors hover:bg-[var(--red-soft)]/70"
+          style={{ color: "var(--red)" }}
+          title="Delete credential"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
       </div>
     </div>
   );

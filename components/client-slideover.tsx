@@ -102,7 +102,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               {client.name}
             </h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-[var(--muted)]">{client.cid}</span>
               <span
                 className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide uppercase"
                 style={{ backgroundColor: typeBadgeColor.bg, color: typeBadgeColor.fg }}

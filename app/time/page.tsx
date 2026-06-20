@@ -199,13 +199,13 @@ export default function TimePage() {
           </div>
 
           {/* CLIENT */}
-          <div className="flex flex-col gap-1 w-full sm:flex-1 sm:min-w-[200px]">
+          <div className="flex flex-col gap-1 w-full sm:flex-1 sm:min-w-[180px] sm:max-w-[280px]">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</label>
             <select
               value={selectedClient}
               onChange={(e) => setSelectedClient(e.target.value)}
               disabled={running}
-              className="text-sm sm:text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+              className="text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full truncate"
             >
               <option value="">-- choose client --</option>
               {CLIENTS.map((c) => (

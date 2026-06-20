@@ -24,8 +24,8 @@ const STAGE_STYLES: Record<
   { bg: string; fg: string; ring?: string }
 > = {
   "": { bg: "transparent", fg: "var(--muted)" },
-  ip: { bg: "var(--blue-soft)", fg: "var(--blue)" },
-  wc: { bg: "var(--amber-soft)", fg: "var(--amber)" },
+  ip: { bg: "var(--amber-soft)", fg: "var(--amber)" },
+  wc: { bg: "#fef3c7", fg: "#b45309" },
   pp: { bg: "var(--teal-soft)", fg: "var(--teal)" },
   dn: { bg: "var(--green-soft)", fg: "var(--green)" },
   na: { bg: "var(--red-soft)", fg: "var(--red)" },
@@ -278,7 +278,7 @@ export default function WorklistTable({
   return (
     <div className="space-y-4">
       {/* ── Stats row ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <StatCard
           label={`Due in ${stats.currentMonthName}`}
           value={stats.dueThisMonth}
@@ -287,21 +287,9 @@ export default function WorklistTable({
         />
         <StatCard
           label="In Progress"
-          value={stats.inProgress}
+          value={stats.inProgress + stats.waiting}
           color="var(--blue)"
           softColor="var(--blue-soft)"
-        />
-        <StatCard
-          label="Waiting on Client"
-          value={stats.waiting}
-          color="var(--amber)"
-          softColor="var(--amber-soft)"
-        />
-        <StatCard
-          label="Prepared"
-          value={stats.prepared}
-          color="var(--teal)"
-          softColor="var(--teal-soft)"
         />
         <StatCard
           label="Done"
@@ -417,9 +405,6 @@ export default function WorklistTable({
                     <td className="px-4 py-2.5">
                       <div className="text-sm font-medium text-[var(--ink)] truncate max-w-[200px]">
                         {client.name}
-                      </div>
-                      <div className="text-[10px] text-[var(--muted)]">
-                        {client.cid}
                       </div>
                     </td>
 
