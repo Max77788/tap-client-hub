@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CLIENTS } from "@/lib/data";
-import WorklistTable from "@/components/worklist-table";
+import { useClientsState } from "@/hooks/use-clients-state";
+import WorklistTable, { stageToMonthStatus, type WorklistStage } from "@/components/worklist-table";
 
 export default function StxPage() {
   const currentYear = new Date().getFullYear();
@@ -11,6 +11,13 @@ export default function StxPage() {
     () => [currentYear, currentYear - 1, currentYear - 2],
     [currentYear],
   );
+
+  const { clients, updateServiceMonth } = useClientsState();
+
+  const handleStageChange = (clientId: string, monthIdx: number, stage: WorklistStage) => {
+    const status = stageToMonthStatus(stage);
+    updateServiceMonth(clientId, "sales_tax", monthIdx, status);
+  };
 
   return (
     <div className="space-y-4">
@@ -36,7 +43,12 @@ export default function StxPage() {
           ))}
         </select>
       </div>
-      <WorklistTable serviceKey="sales_tax" clients={CLIENTS} year={year} />
+      <WorklistTable
+        serviceKey="sales_tax"
+        clients={clients}
+        year={year}
+        onStageChange={handleStageChange}
+      />
     </div>
   );
 }

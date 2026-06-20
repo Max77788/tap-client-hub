@@ -1,16 +1,34 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { CLIENTS } from "@/lib/data";
-import WorklistTable from "@/components/worklist-table";
+import { useClientsState } from "@/hooks/use-clients-state";
+import WorklistTable, { type WorklistStage } from "@/components/worklist-table";
+import type { MonthStatus } from "@/lib/types";
+
+function stageToMonthStatus(stage: WorklistStage): MonthStatus {
+  switch (stage) {
+    case "dn": return "done";
+    case "pp": return "billed";
+    case "": return "lock";
+    case "na": return "na";
+    case "ip": return "billed"; // in-progress maps to billed (being worked on)
+    case "wc": return "billed"; // waiting on client maps to billed
+    default: return "lock";
+  }
+}
 
 export default function FinPage() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const { clients, updateServiceMonth } = useClientsState();
   const years = useMemo(
     () => [currentYear, currentYear - 1, currentYear - 2],
     [currentYear],
   );
+
+  const handleStageChange = (clientId: string, monthIdx: number, newStage: WorklistStage) => {
+    updateServiceMonth(clientId, "financials", monthIdx, stageToMonthStatus(newStage));
+  };
 
   return (
     <div className="space-y-4">
@@ -36,7 +54,7 @@ export default function FinPage() {
           ))}
         </select>
       </div>
-      <WorklistTable serviceKey="financials" clients={CLIENTS} year={year} />
+      <WorklistTable serviceKey="financials" clients={clients} year={year} onStageChange={handleStageChange} />
     </div>
   );
 }

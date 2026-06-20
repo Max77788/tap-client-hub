@@ -86,12 +86,32 @@ export function getT9ExpectedCount(clientId: string): number {
 // ── Worklist Table Component ──
 // ══════════════════════════════════════════════
 
+// ── Map WorklistStage → MonthStatus for persistence ──
+export function stageToMonthStatus(stage: WorklistStage): MonthStatus {
+  switch (stage) {
+    case "dn":
+      return "done";
+    case "pp":
+      return "billed";
+    case "":
+      return "lock";
+    case "na":
+      return "na";
+    case "ip":
+    case "wc":
+      return "billed";
+    default:
+      return "lock";
+  }
+}
+
 export interface WorklistTableProps {
   serviceKey: ServiceKey;
   clients: any[];
   year: number;
   variant?: "default" | "payroll" | "t9";
   readOnly?: boolean;
+  onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage) => void;
 }
 
 export default function WorklistTable({
@@ -100,6 +120,7 @@ export default function WorklistTable({
   year,
   variant = "default",
   readOnly = false,
+  onStageChange,
 }: WorklistTableProps) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -172,25 +193,29 @@ export default function WorklistTable({
       if (readOnly || isHistorical) return;
 
       const key = `${clientId}:${serviceKey}`;
+      const client = clients.find((c: any) => c.id === clientId);
+      const svc = client?.services?.find((s: any) => s.key === serviceKey);
+      const activeMonths = svc ? getActiveMonths(svc.frequency) : new Set();
+      if (!activeMonths.has(monthIdx)) return;
+
       setWorklistState((prev) => {
         const stages = [...(prev[key] ?? [])];
         if (!stages.length) return prev;
 
-        const client = clients.find((c) => c.id === clientId);
-        const svc = client?.services.find((s) => s.key === serviceKey);
-        const activeMonths = svc ? getActiveMonths(svc.frequency) : new Set();
-
-        // Only cycle if month is active
-        if (!activeMonths.has(monthIdx)) return prev;
-
         const currentIdx = STAGE_CYCLE.indexOf(stages[monthIdx]);
         const nextIdx = (currentIdx + 1) % STAGE_CYCLE.length;
-        stages[monthIdx] = STAGE_CYCLE[nextIdx];
+        const newStage = STAGE_CYCLE[nextIdx];
+        stages[monthIdx] = newStage;
+
+        // Notify parent of stage change
+        if (onStageChange) {
+          onStageChange(clientId, monthIdx, newStage);
+        }
 
         return { ...prev, [key]: stages };
       });
     },
-    [readOnly, isHistorical, serviceKey, clients],
+    [readOnly, isHistorical, serviceKey, clients, onStageChange],
   );
 
   // ── Stats ──
