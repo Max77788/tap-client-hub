@@ -399,14 +399,11 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         )}
       </div>
 
-      {/* Bottom row: Staff + arrow */}
+      {/* Bottom row: arrow indicator */}
       <div
-        className="flex items-center justify-between pt-2"
+        className="flex items-center justify-end pt-2"
         style={{ borderTop: "1px solid var(--line)" }}
       >
-        <span className="text-[11px] text-[var(--muted)]">
-          {client.assignedStaff}
-        </span>
         <svg
           width="14"
           height="14"
