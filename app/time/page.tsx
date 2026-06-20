@@ -153,11 +153,11 @@ export default function TimePage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] text-[var(--muted)] font-medium">Viewing as</span>
+          <span className="text-[11px] text-[var(--muted)] font-medium whitespace-nowrap">Viewing as</span>
           <select
             value={viewingAs}
             onChange={(e) => setViewingAs(e.target.value)}
-            className="text-xs rounded-lg px-2.5 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] font-medium cursor-pointer outline-none"
+            className="text-xs sm:text-xs rounded-lg px-2.5 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] font-medium cursor-pointer outline-none max-w-[200px] sm:max-w-none truncate"
           >
             {STAFF.map((s) => (
               <option key={s.id} value={s.id}>
@@ -186,48 +186,51 @@ export default function TimePage() {
         </div>
       )}
 
-      {/* Timer controls — horizontal row */}
-      <div className="flex flex-wrap items-end gap-3 p-5 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-        {/* WHO */}
-        <div className="flex flex-col gap-1 min-w-[120px]">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</label>
-          <select
-            value={selectedPerson}
-            onChange={(e) => setSelectedPerson(e.target.value)}
-            disabled={running}
-            className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
-          >
-            <option value="">-- choose --</option>
-            {STAFF.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+      {/* Timer controls — responsive: stacked on mobile, horizontal row on desktop */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 p-4 sm:p-5 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+        {/* Row 1: WHO + CLIENT — stacked on mobile, side-by-side on desktop */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          {/* WHO */}
+          <div className="flex flex-col gap-1 w-full sm:flex-1 sm:min-w-[120px]">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</label>
+            <select
+              value={selectedPerson}
+              onChange={(e) => setSelectedPerson(e.target.value)}
+              disabled={running}
+              className="text-sm sm:text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+            >
+              <option value="">-- choose --</option>
+              {STAFF.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* CLIENT */}
+          <div className="flex flex-col gap-1 w-full sm:flex-1 sm:min-w-[200px]">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</label>
+            <select
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+              disabled={running}
+              className="text-sm sm:text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+            >
+              <option value="">-- choose client --</option>
+              {CLIENTS.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* CLIENT */}
-        <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</label>
-          <select
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-            disabled={running}
-            className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
-          >
-            <option value="">-- choose client --</option>
-            {CLIENTS.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* TASK */}
-        <div className="flex flex-col gap-1 min-w-[130px]">
+        {/* Row 2: TASK (full width on mobile) */}
+        <div className="flex flex-col gap-1 w-full sm:flex-1 sm:min-w-[130px] sm:w-auto">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Task</label>
           <select
             value={selectedService}
             onChange={(e) => setSelectedService(e.target.value)}
             disabled={running}
-            className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+            className="text-sm sm:text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
           >
             <option value="">-- choose --</option>
             {(Object.keys(SERVICE_META) as ServiceKey[]).map((key) => (
@@ -236,45 +239,48 @@ export default function TimePage() {
           </select>
         </div>
 
-        {/* ELAPSED */}
-        <div className="flex flex-col gap-1 items-center min-w-[140px]">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Elapsed</label>
-          <span className={`text-[28px] font-mono font-bold tracking-tight tabular-nums leading-none ${running ? "text-[var(--green)]" : "text-[var(--ink)]"}`}>
-            {formatTimer(elapsed)}
-          </span>
+        {/* Row 3: ELAPSED + START (side-by-side) */}
+        <div className="flex flex-row items-end gap-3 w-full sm:w-auto">
+          {/* ELAPSED */}
+          <div className="flex flex-col gap-1 items-center shrink-0">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Elapsed</label>
+            <span className={`text-[26px] sm:text-[28px] font-mono font-bold tracking-tight tabular-nums leading-none ${running ? "text-[var(--green)]" : "text-[var(--ink)]"}`}>
+              {formatTimer(elapsed)}
+            </span>
+          </div>
+
+          {/* START / STOP */}
+          <button
+            onClick={running ? stopTimer : startTimer}
+            disabled={!running && (!selectedClient || !selectedPerson)}
+            className={`flex items-center gap-2 px-5 py-2.5 sm:py-2.5 rounded-lg text-sm font-bold transition shadow-sm shrink-0 ${
+              running
+                ? "bg-[var(--red)] text-white hover:opacity-90"
+                : "text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            }`}
+            style={running ? {} : { backgroundColor: "#2f7d4f" }}
+          >
+            {running ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+                Stop
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="6 3 20 12 6 21 6 3" />
+                </svg>
+                Start
+              </>
+            )}
+          </button>
         </div>
 
-        {/* START / STOP */}
-        <button
-          onClick={running ? stopTimer : startTimer}
-          disabled={!running && (!selectedClient || !selectedPerson)}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-sm ${
-            running
-              ? "bg-[var(--red)] text-white hover:opacity-90"
-              : "text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-          }`}
-          style={running ? {} : { backgroundColor: "#2f7d4f" }}
-        >
-          {running ? (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-              Stop
-            </>
-          ) : (
-            <>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="6 3 20 12 6 21 6 3" />
-              </svg>
-              Start
-            </>
-          )}
-        </button>
-
         {running && (
-          <div className="flex items-center gap-2 ml-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-2">
             <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: "var(--green)" }} />
             <span className="text-xs text-[var(--muted)]">
               {CLIENTS.find(c => c.id === selectedClient)?.name} · {STAFF.find(s => s.id === selectedPerson)?.name}
@@ -284,14 +290,14 @@ export default function TimePage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-4 rounded-xl flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-          <span className="text-[28px] font-bold text-[var(--ink)] leading-none">{formatDuration(todayTotalSecs)}</span>
+          <span className="text-[24px] sm:text-[28px] font-bold text-[var(--ink)] leading-none">{formatDuration(todayTotalSecs)}</span>
           <span className="text-[11px] text-[var(--muted)] mt-1">Logged today</span>
         </div>
         {topPeople.map(([name, secs]) => (
           <div key={name} className="p-4 rounded-xl flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-            <span className="text-[28px] font-bold text-[var(--ink)] leading-none">{formatDuration(secs)}</span>
+            <span className="text-[24px] sm:text-[28px] font-bold text-[var(--ink)] leading-none">{formatDuration(secs)}</span>
             <span className="text-[11px] text-[var(--muted)] mt-1">{name}</span>
           </div>
         ))}
@@ -309,9 +315,9 @@ export default function TimePage() {
         <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
           Today&apos;s entries
         </h3>
-        <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+        <div className="rounded-xl overflow-hidden overflow-x-auto" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
           {todayEntries.length > 0 ? (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--line)" }}>
                   <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</th>
@@ -447,8 +453,8 @@ export default function TimePage() {
           <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
             Earlier entries
           </h3>
-          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-            <table className="w-full text-sm">
+          <div className="rounded-xl overflow-hidden overflow-x-auto" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+            <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--line)" }}>
                   <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</th>
