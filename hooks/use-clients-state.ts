@@ -5,10 +5,10 @@ import type { Client, ServiceKey, MonthStatus } from "@/lib/types";
 import { CLIENTS as INITIAL_CLIENTS } from "@/lib/data";
 
 const STORAGE_KEY = "tap_hub_clients";
-const DATA_VERSION = 2;
+const DATA_VERSION = 3; // bump: switched to Supabase source
 
-function loadClients(): Client[] {
-  if (typeof window === "undefined") return INITIAL_CLIENTS as Client[];
+function loadCachedClients(): Client[] | null {
+  if (typeof window === "undefined") return null;
   try {
     const storedVersion = localStorage.getItem("tap_hub_data_version");
     if (storedVersion === String(DATA_VERSION)) {
@@ -16,7 +16,7 @@ function loadClients(): Client[] {
       if (raw) return JSON.parse(raw);
     }
   } catch {}
-  return INITIAL_CLIENTS as Client[];
+  return null;
 }
 
 function saveClients(clients: Client[]) {
@@ -28,11 +28,41 @@ function saveClients(clients: Client[]) {
 }
 
 export function useClientsState() {
-  const [clients, setClients] = useState<Client[]>(loadClients);
+  const [clients, setClients] = useState<Client[]>(() => {
+    // Start with cached data for instant render
+    const cached = loadCachedClients();
+    if (cached && cached.length > 0) return cached;
+    return INITIAL_CLIENTS as Client[];
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Persist on change
+  // Fetch from Supabase API on mount
   useEffect(() => {
-    saveClients(clients);
+    let cancelled = false;
+    async function fetchFromSupabase() {
+      try {
+        const res = await fetch("/api/clients");
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        if (!cancelled && data.clients?.length > 0) {
+          setClients(data.clients);
+          saveClients(data.clients);
+        }
+      } catch {
+        // Silently keep cached/mock data
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchFromSupabase();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Persist to localStorage on change (for offline resilience)
+  useEffect(() => {
+    if (clients.length > 50) { // Only save real data, not fallback mock
+      saveClients(clients);
+    }
   }, [clients]);
 
   // Update a specific client
@@ -80,5 +110,6 @@ export function useClientsState() {
     updateServiceMonth,
     deleteClient,
     addClient,
+    loading,
   };
 }
