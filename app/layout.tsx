@@ -43,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Clients", subtitle: "Active client accounts and engagement tracking" },
   "/workload": { title: "Team Workload", subtitle: "Per-person workload distribution and service mix" },
-  "/time": { title: "Timesheet", subtitle: "Track time against client engagements" },
+  "/time": { title: "Timesheet", subtitle: "Live time tracking by person and client — lean by design; profitability analytics come next." },
   "/fin": { title: "Monthly Financials", subtitle: "Month-by-month financial statement preparation tracking" },
   "/pr": { title: "Payroll", subtitle: "Payroll processing and filing status" },
   "/stx": { title: "Sales Tax", subtitle: "Sales tax preparation and filing tracking" },

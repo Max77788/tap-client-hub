@@ -8,12 +8,13 @@ interface TimeEntry {
   id: string;
   clientName: string;
   personName: string;
+  personId: string;
   serviceKey: string;
   serviceLabel: string;
   duration: number;
   date: string;
   note: string;
-  comment: string;
+  edited?: boolean;
 }
 
 export default function TimePage() {
@@ -22,19 +23,15 @@ export default function TimePage() {
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedService, setSelectedService] = useState("");
-  const [note, setNote] = useState("");
-  const [comment, setComment] = useState("");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [editingNote, setEditingNote] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editingComment, setEditingComment] = useState<string | null>(null);
-  const [editCommentText, setEditCommentText] = useState("");
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<"who" | "client" | "task" | null>(null);
+  const [viewingAs, setViewingAs] = useState("tushar");
+  const [showTip, setShowTip] = useState(true);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  // Load saved entries from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem("tap-timesheet-entries");
@@ -42,7 +39,6 @@ export default function TimePage() {
     } catch {}
   }, []);
 
-  // Save entries to localStorage
   useEffect(() => {
     try {
       localStorage.setItem("tap-timesheet-entries", JSON.stringify(entries));
@@ -55,7 +51,7 @@ export default function TimePage() {
     startTimeRef.current = Date.now() - elapsed * 1000;
     intervalRef.current = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 1000);
+    }, 200);
   }, [elapsed, selectedClient, selectedPerson]);
 
   const stopTimer = useCallback(() => {
@@ -69,16 +65,14 @@ export default function TimePage() {
         id: crypto.randomUUID(),
         clientName: client.name,
         personName: person.name,
+        personId: person.id,
         serviceKey: selectedService,
-        serviceLabel: svc?.label || "",
+        serviceLabel: svc?.label || "—",
         duration: elapsed,
         date: new Date().toISOString(),
-        note: note.trim(),
-        comment: comment.trim(),
+        note: "",
       };
       setEntries((prev) => [entry, ...prev]);
-      setNote("");
-      setComment("");
     }
     setRunning(false);
     setElapsed(0);
@@ -86,7 +80,7 @@ export default function TimePage() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  }, [elapsed, selectedClient, selectedPerson, note, comment]);
+  }, [elapsed, selectedClient, selectedPerson, selectedService]);
 
   useEffect(() => {
     return () => {
@@ -94,20 +88,21 @@ export default function TimePage() {
     };
   }, []);
 
-  // Aggregate stats
+  // Stats
   const today = new Date().toISOString().slice(0, 10);
   const todayEntries = entries.filter((e) => e.date.slice(0, 10) === today);
   const todayTotalSecs = todayEntries.reduce((s, e) => s + e.duration, 0);
-  const weekTotalSecs = entries
-    .filter((e) => {
-      const d = new Date(e.date);
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 86400000);
-      return d >= weekAgo;
-    })
-    .reduce((s, e) => s + e.duration, 0);
 
-  function formatTime(seconds: number): string {
+  // Per-person totals for today
+  const personTotals: Record<string, number> = {};
+  todayEntries.forEach((e) => {
+    personTotals[e.personName] = (personTotals[e.personName] || 0) + e.duration;
+  });
+  const topPeople = Object.entries(personTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  function formatTimer(seconds: number): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
@@ -122,332 +117,375 @@ export default function TimePage() {
     return `${h}h ${m}m`;
   }
 
+  function deleteEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  function updateEntry(id: string, field: string, value: string) {
+    setEntries((prev) =>
+      prev.map((e) => {
+        if (e.id !== id) return e;
+        if (field === "who") {
+          const person = STAFF.find((s) => s.name === value);
+          return { ...e, personName: value, personId: person?.id || "", edited: true };
+        }
+        if (field === "client") return { ...e, clientName: value, edited: true };
+        if (field === "task") return { ...e, serviceLabel: value, edited: true };
+        return e;
+      })
+    );
+    setEditingId(null);
+    setEditingField(null);
+  }
+
+  const viewingPerson = STAFF.find((s) => s.id === viewingAs) || STAFF[0];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--ink)] m-0" style={{ fontFamily: "Fraunces, Georgia, serif" }}>
-          Timesheet
-        </h1>
-        <p className="text-xs text-[var(--muted)] m-0 mt-0.5">
-          Live time tracker with client/project notes. Data saved locally.
-        </p>
+    <div className="space-y-5">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold text-[var(--ink)] m-0 leading-tight">
+            Timesheet
+          </h1>
+          <p className="text-xs text-[var(--muted)] m-0 mt-1 max-w-lg leading-relaxed">
+            Live time tracking by person and client - lean by design; profitability analytics come next.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[11px] text-[var(--muted)] font-medium">Viewing as</span>
+          <select
+            value={viewingAs}
+            onChange={(e) => setViewingAs(e.target.value)}
+            className="text-xs rounded-lg px-2.5 py-1.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] font-medium cursor-pointer outline-none"
+          >
+            {STAFF.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.role} - {s.name} (full access)
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Notification tip */}
+      {showTip && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm"
+          style={{ backgroundColor: "#fef9e7", border: "1px solid #f5d76e", color: "#7d6608" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span className="flex-1 text-xs">
+            Try this: open any client — flip Payroll or Sales Tax on, then check that service in the left menu. The client moves there automatically — nobody re-types anything.
+          </span>
+          <button onClick={() => setShowTip(false)} className="text-[#7d6608] hover:text-[#5a4706] text-lg leading-none ml-1">
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Timer controls — horizontal row */}
+      <div className="flex flex-wrap items-end gap-3 p-5 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+        {/* WHO */}
+        <div className="flex flex-col gap-1 min-w-[120px]">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</label>
+          <select
+            value={selectedPerson}
+            onChange={(e) => setSelectedPerson(e.target.value)}
+            disabled={running}
+            className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+          >
+            <option value="">-- choose --</option>
+            {STAFF.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* CLIENT */}
+        <div className="flex flex-col gap-1 flex-1 min-w-[180px]">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</label>
+          <select
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+            disabled={running}
+            className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+          >
+            <option value="">-- choose client --</option>
+            {CLIENTS.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* TASK */}
+        <div className="flex flex-col gap-1 min-w-[130px]">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Task</label>
+          <select
+            value={selectedService}
+            onChange={(e) => setSelectedService(e.target.value)}
+            disabled={running}
+            className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50 w-full"
+          >
+            <option value="">-- choose --</option>
+            {(Object.keys(SERVICE_META) as ServiceKey[]).map((key) => (
+              <option key={key} value={key}>{SERVICE_META[key].label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* ELAPSED */}
+        <div className="flex flex-col gap-1 items-center min-w-[140px]">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Elapsed</label>
+          <span className={`text-[28px] font-mono font-bold tracking-tight tabular-nums leading-none ${running ? "text-[var(--green)]" : "text-[var(--ink)]"}`}>
+            {formatTimer(elapsed)}
+          </span>
+        </div>
+
+        {/* START / STOP */}
+        <button
+          onClick={running ? stopTimer : startTimer}
+          disabled={!running && (!selectedClient || !selectedPerson)}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-sm ${
+            running
+              ? "bg-[var(--red)] text-white hover:opacity-90"
+              : "text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          }`}
+          style={running ? {} : { backgroundColor: "#2f7d4f" }}
+        >
+          {running ? (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
+              Stop
+            </>
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="6 3 20 12 6 21 6 3" />
+              </svg>
+              Start
+            </>
+          )}
+        </button>
+
+        {running && (
+          <div className="flex items-center gap-2 ml-2">
+            <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: "var(--green)" }} />
+            <span className="text-xs text-[var(--muted)]">
+              {CLIENTS.find(c => c.id === selectedClient)?.name} · {STAFF.find(s => s.id === selectedPerson)?.name}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-4 rounded-xl flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Today</span>
-          <span className="text-xl font-bold text-[var(--ink)]">{formatDuration(todayTotalSecs)}</span>
-          <span className="text-[10px] text-[var(--muted)]">{todayEntries.length} entries</span>
+          <span className="text-[28px] font-bold text-[var(--ink)] leading-none">{formatDuration(todayTotalSecs)}</span>
+          <span className="text-[11px] text-[var(--muted)] mt-1">Logged today</span>
         </div>
-        <div className="p-4 rounded-xl flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">This Week</span>
-          <span className="text-xl font-bold text-[var(--ink)]">{formatDuration(weekTotalSecs)}</span>
-        </div>
-        <div className="p-4 rounded-xl flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Total Saved</span>
-          <span className="text-xl font-bold text-[var(--ink)]">{entries.length}</span>
-          <span className="text-[10px] text-[var(--muted)]">entries</span>
-        </div>
+        {topPeople.map(([name, secs]) => (
+          <div key={name} className="p-4 rounded-xl flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+            <span className="text-[28px] font-bold text-[var(--ink)] leading-none">{formatDuration(secs)}</span>
+            <span className="text-[11px] text-[var(--muted)] mt-1">{name}</span>
+          </div>
+        ))}
+        {topPeople.length < 3 &&
+          Array.from({ length: 3 - topPeople.length }).map((_, i) => (
+            <div key={`empty-${i}`} className="p-4 rounded-xl flex flex-col opacity-30" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+              <span className="text-[28px] font-bold text-[var(--ink)] leading-none">0m</span>
+              <span className="text-[11px] text-[var(--muted)] mt-1">--</span>
+            </div>
+          ))}
       </div>
 
-      {/* Timer card */}
-      <div className="p-6 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="text-6xl font-mono font-bold tracking-wider select-none"
-            style={{ color: running ? "var(--green)" : "var(--ink)" }}
-          >
-            {formatTime(elapsed)}
-          </div>
-
-          {running && (
-            <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: "var(--green)" }} />
-              <span className="text-xs font-medium" style={{ color: "var(--green)" }}>
-                Timing - {CLIENTS.find(c => c.id === selectedClient)?.name}
-                {selectedPerson ? ` · ${STAFF.find(s => s.id === selectedPerson)?.name}` : ""}
-              </span>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
-            <select
-              value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-              disabled={running}
-              className="flex-1 text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50"
-            >
-              <option value="">Select client...</option>
-              {CLIENTS.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={selectedPerson}
-              onChange={(e) => setSelectedPerson(e.target.value)}
-              disabled={running}
-              className="flex-1 text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50"
-            >
-              <option value="">Select person...</option>
-              {STAFF.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Service / Module picker */}
-          <div className="w-full max-w-md">
-            <select
-              value={selectedService}
-              onChange={(e) => setSelectedService(e.target.value)}
-              disabled={running}
-              className="w-full text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none disabled:opacity-50"
-            >
-              <option value="">Module (any)</option>
-              {(Object.keys(SERVICE_META) as ServiceKey[]).map((key) => (
-                <option key={key} value={key}>{SERVICE_META[key].label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Note input */}
-          <div className="w-full max-w-md">
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              disabled={running}
-              placeholder="Notes"
-              rows={2}
-              className="w-full text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none resize-none disabled:opacity-50 placeholder:text-[var(--muted)]/50"
-            />
-          </div>
-
-          {/* Comment input */}
-          <div className="w-full max-w-md">
-            <textarea
-              value={comment}
-              onChange={(e) => {
-                if (e.target.value.length <= 300) setComment(e.target.value);
-              }}
-              disabled={running}
-              placeholder="Add a comment (max 300 chars — visible on expand)"
-              rows={2}
-              maxLength={300}
-              className="w-full text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none resize-none disabled:opacity-50 placeholder:text-[var(--muted)]/50"
-            />
-            <div className="flex justify-end mt-1">
-              <span className={`text-[10px] ${comment.length >= 280 ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
-                {comment.length}/300
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={running ? stopTimer : startTimer}
-            disabled={!running && (!selectedClient || !selectedPerson)}
-            className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold transition-[background-color,color] ${
-              running
-                ? "bg-[var(--red)] text-white hover:opacity-90"
-                : "bg-[var(--teal)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            }`}
-          >
-            {running ? (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="6" y="4" width="4" height="16" rx="1" />
-                  <rect x="14" y="4" width="4" height="16" rx="1" />
-                </svg>
-                Stop & Save
-              </>
-            ) : (
-              <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="6 3 20 12 6 21 6 3" />
-                </svg>
-                Start
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Recent entries */}
-      <hr className="border-[var(--line)]" />
-      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-        <div className="p-5 border-b" style={{ borderColor: "var(--line)" }}>
-          <h3 className="text-sm font-semibold text-[var(--ink)] m-0">Recent Time Entries</h3>
-        </div>
-        {entries.length > 0 ? (
-          <div className="overflow-x-auto">
+      {/* Today's entries */}
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
+          Today&apos;s entries
+        </h3>
+        <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+          {todayEntries.length > 0 ? (
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                  <th className="w-8 px-2 py-3" />
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Person</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Module</th>
-                  <th className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Note</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Duration</th>
-                  <th className="text-right px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Time</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Task</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Time</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">When</th>
+                  <th className="w-0 px-3 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry) => {
-                  const isExpanded = expandedRow === entry.id;
+                {todayEntries.map((entry) => {
+                  const isEditing = editingId === entry.id;
                   return (
-                    <Fragment key={entry.id}>
-                      {/* Main row */}
-                      <tr
-                        className="hover:bg-[var(--teal-soft)] transition-colors cursor-pointer"
-                        style={{ borderBottom: isExpanded ? "none" : "1px solid var(--line)" }}
-                        onClick={() => setExpandedRow(isExpanded ? null : entry.id)}
-                      >
-                        <td className="px-2 py-3 text-center">
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            className={`inline-block transition-transform text-[var(--muted)] ${isExpanded ? "rotate-90" : ""}`}
+                    <tr
+                      key={entry.id}
+                      className="hover:bg-[var(--teal-soft)]/50 transition-colors"
+                      style={{ borderBottom: "1px solid var(--line)" }}
+                    >
+                      {/* WHO */}
+                      <td className="px-5 py-3">
+                        {isEditing && editingField === "who" ? (
+                          <select
+                            defaultValue={entry.personName}
+                            onChange={(e) => updateEntry(entry.id, "who", e.target.value)}
+                            onBlur={() => { setEditingId(null); setEditingField(null); }}
+                            autoFocus
+                            className="text-xs rounded px-1.5 py-1 border border-[var(--line)] bg-white text-[var(--ink)] outline-none w-full"
                           >
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
-                        </td>
-                        <td className="px-5 py-3 font-medium text-[var(--ink)]">{entry.clientName}</td>
-                        <td className="px-5 py-3 text-[var(--muted)]">{entry.personName}</td>
-                        <td className="px-5 py-3">
-                          {entry.serviceLabel ? (
-                            <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: SERVICE_META[entry.serviceKey as ServiceKey]?.pillBg || "var(--teal-soft)", color: SERVICE_META[entry.serviceKey as ServiceKey]?.pillColor || "var(--teal)" }}>
-                              {entry.serviceLabel}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-[var(--muted)]">—</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3" style={{ maxWidth: 250 }}>
-                          {editingNote === entry.id ? (
-                            <input
-                              type="text"
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              onBlur={() => {
-                                setEntries((prev) => prev.map((e) =>
-                                  e.id === entry.id ? { ...e, note: editText.trim() } : e
-                                ));
-                                setEditingNote(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  setEntries((prev) => prev.map((en) =>
-                                    en.id === entry.id ? { ...en, note: editText.trim() } : en
-                                  ));
-                                  setEditingNote(null);
-                                }
-                              }}
-                              autoFocus
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-xs px-2 py-1 rounded border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none w-full"
-                            />
-                          ) : (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); setEditingNote(entry.id); setEditText(entry.note || ""); }}
-                              className="text-xs cursor-pointer hover:text-[var(--teal)] block truncate"
-                              style={{ color: entry.note ? "var(--ink)" : "var(--muted)" }}
-                            >
-                              {entry.note || "Click to add note..."}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono text-[var(--teal)]">{formatDuration(entry.duration)}</td>
-                        <td className="px-5 py-3 text-right text-xs text-[var(--muted)]">
-                          {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{" "}
-                          {new Date(entry.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </td>
-                      </tr>
+                            {STAFF.map((s) => (
+                              <option key={s.id} value={s.name}>{s.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className="text-[var(--ink)] font-medium cursor-pointer hover:text-[var(--teal)]"
+                            onClick={() => { setEditingId(entry.id); setEditingField("who"); }}
+                          >
+                            {entry.personName}
+                          </span>
+                        )}
+                      </td>
 
-                      {/* Expanded comment row */}
-                      {isExpanded && (
-                        <tr style={{ borderBottom: "1px solid var(--line)", backgroundColor: "var(--teal-soft)" }}>
-                          <td colSpan={7} className="px-8 py-3">
-                            <div className="flex items-start gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] mt-0.5 shrink-0">
-                                Comment
-                              </span>
-                              {editingComment === entry.id ? (
-                                <div className="flex-1">
-                                  <textarea
-                                    value={editCommentText}
-                                    onChange={(e) => {
-                                      if (e.target.value.length <= 300) setEditCommentText(e.target.value);
-                                    }}
-                                    maxLength={300}
-                                    rows={2}
-                                    autoFocus
-                                    className="text-xs px-2 py-1 rounded border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none w-full resize-none"
-                                  />
-                                  <div className="flex justify-between items-center mt-1">
-                                    <span className={`text-[10px] ${editCommentText.length >= 280 ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
-                                      {editCommentText.length}/300
-                                    </span>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingComment(null);
-                                        }}
-                                        className="text-[10px] text-[var(--muted)] hover:text-[var(--ink)] px-2 py-0.5 rounded"
-                                      >
-                                        Cancel
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEntries((prev) => prev.map((en) =>
-                                            en.id === entry.id ? { ...en, comment: editCommentText.trim() } : en
-                                          ));
-                                          setEditingComment(null);
-                                        }}
-                                        className="text-[10px] font-semibold text-white bg-[var(--teal)] hover:opacity-90 px-3 py-1 rounded"
-                                      >
-                                        Save
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex-1 flex items-start justify-between gap-3">
-                                  <span
-                                    className="text-xs cursor-pointer hover:text-[var(--teal)]"
-                                    style={{ color: entry.comment ? "var(--ink)" : "var(--muted)" }}
-                                    onClick={(e) => { e.stopPropagation(); setEditingComment(entry.id); setEditCommentText(entry.comment || ""); }}
-                                  >
-                                    {entry.comment || "Click to add comment..."}
-                                  </span>
-                                  {entry.comment && (
-                                    <span className="text-[10px] text-[var(--muted)] shrink-0">{entry.comment.length}/300</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
+                      {/* CLIENT */}
+                      <td className="px-5 py-3">
+                        {isEditing && editingField === "client" ? (
+                          <select
+                            defaultValue={entry.clientName}
+                            onChange={(e) => updateEntry(entry.id, "client", e.target.value)}
+                            onBlur={() => { setEditingId(null); setEditingField(null); }}
+                            autoFocus
+                            className="text-xs rounded px-1.5 py-1 border border-[var(--line)] bg-white text-[var(--ink)] outline-none w-full"
+                          >
+                            {CLIENTS.map((c) => (
+                              <option key={c.id} value={c.name}>{c.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className="text-[var(--muted)] cursor-pointer hover:text-[var(--teal)]"
+                            onClick={() => { setEditingId(entry.id); setEditingField("client"); }}
+                          >
+                            {entry.clientName.length > 35 ? entry.clientName.slice(0, 33) + "..." : entry.clientName}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* TASK */}
+                      <td className="px-5 py-3">
+                        {isEditing && editingField === "task" ? (
+                          <select
+                            defaultValue={entry.serviceLabel}
+                            onChange={(e) => updateEntry(entry.id, "task", e.target.value)}
+                            onBlur={() => { setEditingId(null); setEditingField(null); }}
+                            autoFocus
+                            className="text-xs rounded px-1.5 py-1 border border-[var(--line)] bg-white text-[var(--ink)] outline-none w-full"
+                          >
+                            {Object.values(SERVICE_META).map((m) => (
+                              <option key={m.label} value={m.label}>{m.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className="text-[var(--muted)] cursor-pointer hover:text-[var(--teal)]"
+                            onClick={() => { setEditingId(entry.id); setEditingField("task"); }}
+                          >
+                            {entry.serviceLabel}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* TIME */}
+                      <td className="px-5 py-3 text-right">
+                        <span className="font-mono text-[var(--teal)] font-medium">{formatDuration(entry.duration)}</span>
+                      </td>
+
+                      {/* WHEN */}
+                      <td className="px-5 py-3 text-right">
+                        <span className="text-xs text-[var(--muted)]">Today</span>
+                      </td>
+
+                      {/* ACTIONS */}
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => { setEditingId(entry.id); setEditingField("who"); }}
+                          className="text-[11px] text-[var(--muted)] hover:text-[var(--teal)] mr-2"
+                        >
+                          edit
+                        </button>
+                        <button
+                          onClick={() => deleteEntry(entry.id)}
+                          className="text-[11px] text-[var(--muted)] hover:text-[var(--red)]"
+                        >
+                          delete
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
             </table>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-sm text-[var(--muted)]">No time entries today. Pick a client and hit Start.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* All entries */}
+      {entries.length > todayEntries.length && (
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
+            Earlier entries
+          </h3>
+          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Who</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Client</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Task</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Time</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries
+                  .filter((e) => e.date.slice(0, 10) !== today)
+                  .slice(0, 20)
+                  .map((entry) => (
+                    <tr
+                      key={entry.id}
+                      className="hover:bg-[var(--teal-soft)]/50 transition-colors"
+                      style={{ borderBottom: "1px solid var(--line)" }}
+                    >
+                      <td className="px-5 py-3 font-medium text-[var(--ink)]">{entry.personName}</td>
+                      <td className="px-5 py-3 text-[var(--muted)]">{entry.clientName.length > 35 ? entry.clientName.slice(0, 33) + "..." : entry.clientName}</td>
+                      <td className="px-5 py-3 text-[var(--muted)]">{entry.serviceLabel}</td>
+                      <td className="px-5 py-3 text-right font-mono text-[var(--teal)] font-medium">{formatDuration(entry.duration)}</td>
+                      <td className="px-5 py-3 text-right text-xs text-[var(--muted)]">
+                        {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <div className="py-12 text-center">
-            <p className="text-sm text-[var(--muted)]">No time entries yet. Start the timer to begin tracking.</p>
-          </div>
-        )}
+        </div>
+      )}
+
+      {/* Footer note */}
+      <div className="text-[11px] text-[var(--muted)] leading-relaxed pt-1 pb-6">
+        Lean &amp; live: pick a client, hit Start, the clock runs in real time. Stop logs it — built to replace the separate QuickBooks Time subscription. Entries are editable — anyone can fix their own time (wrong client, fat-fingered minutes, forgot to stop) without asking an admin; corrected rows show an &quot;edited&quot; tag. Profitability (time vs. fee) and baseline standard-times come as the first enhancement.
       </div>
     </div>
   );
