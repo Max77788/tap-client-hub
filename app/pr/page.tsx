@@ -31,31 +31,6 @@ export default function PrPage() {
     [clients],
   );
 
-  const totalRuns = useMemo(() => {
-    let count = 0;
-    for (const c of payrollClients) {
-      const svc = c.services.find((s) => s.key === "payroll");
-      if (!svc?.months) continue;
-      for (const status of svc.months) {
-        if (status === "done" || status === "billed" || status === "paid") count++;
-      }
-    }
-    return count;
-  }, [payrollClients]);
-
-  const totalExpected = useMemo(() => {
-    let count = 0;
-    for (const c of payrollClients) {
-      const svc = c.services.find((s) => s.key === "payroll");
-      if (!svc) continue;
-      const freq = svc.frequency || "Monthly";
-      if (freq === "Monthly") count += 12;
-      else if (freq === "Quarterly") count += 4;
-      else if (freq === "Annually") count += 1;
-    }
-    return count;
-  }, [payrollClients]);
-
   const handleStageChange = (clientId: string, monthIdx: number, newStage: WorklistStage) => {
     updateServiceMonth(clientId, "payroll", monthIdx, stageToMonthStatus(newStage));
   };
@@ -77,11 +52,9 @@ export default function PrPage() {
         </select>
       </div>
 
-      {/* Summary stat cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Clients" value={payrollClients.length} color="var(--teal)" />
-        <StatCard label="Runs Completed" value={totalRuns} color="var(--green)" />
-        <StatCard label="Runs Expected" value={totalExpected} color="var(--blue)" />
+      {/* Summary stat card */}
+      <div className="grid grid-cols-1 gap-3 max-w-[200px]">
+        <StatCard label="Payroll Clients" value={payrollClients.length} color="var(--teal)" />
       </div>
 
       <WorklistTable serviceKey="payroll" variant="payroll" clients={clients} year={year} onStageChange={handleStageChange} />
