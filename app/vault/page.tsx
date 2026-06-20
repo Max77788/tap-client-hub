@@ -18,9 +18,6 @@ export default function VaultPage() {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(
     new Set(),
   );
-  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(
-    new Set(),
-  );
 
   // ── Vault state (from localStorage) ──
   const [vaultEntries, setVaultEntries] = useState<VaultEntry[]>([]);
@@ -68,18 +65,6 @@ export default function VaultPage() {
         next.delete(clientName);
       } else {
         next.add(clientName);
-      }
-      return next;
-    });
-  }
-
-  function togglePassword(entryId: string) {
-    setVisiblePasswords((prev) => {
-      const next = new Set(prev);
-      if (next.has(entryId)) {
-        next.delete(entryId);
-      } else {
-        next.add(entryId);
       }
       return next;
     });
@@ -365,8 +350,6 @@ export default function VaultPage() {
                     <VaultEntryRow
                       key={entry.id}
                       entry={entry}
-                      showPassword={visiblePasswords.has(entry.id)}
-                      onTogglePassword={() => togglePassword(entry.id)}
                       onEdit={() => handleEdit(entry)}
                       onDelete={() => handleDelete(entry)}
                     />
