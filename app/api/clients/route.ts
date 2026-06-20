@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import type { Client, ServiceKey } from "@/lib/types";
+import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
@@ -45,8 +45,8 @@ export async function GET() {
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Map to Client type
-  const clients: Client[] = dbClients.map((db: any) => {
+  // Map to Client-compatible shape
+  const clients = dbClients.map((db: any) => {
     const clientServices = servicesByClient[db.id] || [];
 
     const services = clientServices.map((cs: any) => {
