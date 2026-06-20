@@ -283,8 +283,8 @@ export default function WorkloadPage() {
                   <span className="text-xs font-semibold text-[var(--red)]">
                     Unassigned
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: "var(--red-soft)", color: "var(--red)" }}>
-                    ⚠
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: "var(--red-soft)", color: "var(--red)" }}>
+                    ⚠ {unassignedClients.length}
                   </span>
                 </div>
                 <span className="text-xs font-mono text-[var(--red)]">
@@ -292,15 +292,18 @@ export default function WorkloadPage() {
                 </span>
               </div>
               <div
-                className="h-6 rounded-full flex items-center px-3"
+                className="rounded-lg p-3 text-xs max-h-[120px] overflow-y-auto"
                 style={{
                   backgroundColor: "var(--red-soft)",
                   border: "1px dashed var(--red)",
                 }}
               >
-                <span className="text-[11px] text-[var(--red)]">
-                  {unassignedClients.map((c) => c.name).join(", ")}
-                </span>
+                {unassignedClients.map((c, i) => (
+                  <span key={c.id}>
+                    <span className="text-[var(--red)] font-medium">{c.name}</span>
+                    {i < unassignedClients.length - 1 && <span className="text-[var(--muted)]"> · </span>}
+                  </span>
+                ))}
               </div>
             </div>
           )}
