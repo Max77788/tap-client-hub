@@ -185,22 +185,31 @@ export default function WorkloadPage() {
         <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
           By Team Rollup
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {teamGroups.map(([group, info]) => (
-            <div
-              key={group}
-              className="p-3 rounded-lg"
-              style={{ backgroundColor: "var(--teal-soft)" }}
-            >
-              <p className="text-sm font-semibold text-[var(--teal)]">{group}</p>
-              <p className="text-xs text-[var(--muted)]">
-                {info.count} client{info.count !== 1 ? "s" : ""}
-              </p>
-              <p className="text-xs text-[var(--muted)] mt-0.5">
-                {Array.from(info.staff).join(", ")}
-              </p>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Group</th>
+                <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Clients</th>
+                <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Staff</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamGroups.map(([group, info]) => (
+                <tr key={group} className="hover:bg-[var(--teal-soft)]/30 transition-colors" style={{ borderBottom: "1px solid var(--line)" }}>
+                  <td className="px-4 py-2">
+                    <span className="text-sm font-semibold text-[var(--ink)]">{group}</span>
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <span className="text-xs font-mono text-[var(--muted)]">{info.count}</span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className="text-xs text-[var(--muted)]">{Array.from(info.staff).slice(0, 4).join(", ")}{info.staff.size > 4 ? ` +${info.staff.size - 4} more` : ""}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import type { Client, MonthStatus, ServiceConfig } from "@/lib/types";
 import { MONTHS_SHORT, SERVICE_META } from "@/lib/data";
 
-// ── Month status colors ──
+// ── Module-specific processor options ──
+const PROCESSOR_OPTIONS: Record<string, string[]> = {
+  payroll: ["ADP", "QuickBooks Payroll", "Gusto", "Paychex", "Toast", "Other"],
+  financials: ["QuickBooks", "Xero", "NetSuite", "Other"],
+  sales_tax: ["Avalara", "TaxJar", "Self-filed", "Other"],
+  "1099s": ["Track1099", "Tax1099", "Yearli", "Other"],
+  renditions: ["Manual", "Other"],
+  tax_returns: ["UltraTax", "Lacerte", "ProSeries", "Other"],
+};
 const STATUS_COLORS: Record<MonthStatus, { bg: string; fg: string; label: string }> = {
   done:   { bg: "var(--green-soft)", fg: "var(--green)", label: "Done" },
   billed: { bg: "var(--amber-soft)", fg: "var(--amber)", label: "Billed" },
@@ -263,7 +271,29 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="text-[var(--muted)]">Processor:</span>
-                            <span className="font-medium text-[var(--ink)]">{svc.processor}</span>
+                            {editable ? (
+                              <select
+                                value={svc.processor || ""}
+                                onChange={(e) =>
+                                  setLocalServices((prev) =>
+                                    prev.map((s) =>
+                                      s.key === svc.key
+                                        ? { ...s, processor: e.target.value }
+                                        : s,
+                                    ),
+                                  )
+                                }
+                                className="text-xs rounded border border-[var(--line)] px-1.5 py-0.5 bg-[var(--card)] cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="">-- select --</option>
+                                {(PROCESSOR_OPTIONS[svc.key] || ["Other"]).map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="font-medium text-[var(--ink)]">{svc.processor || "—"}</span>
+                            )}
                           </div>
                         </div>
 
