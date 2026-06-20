@@ -297,6 +297,88 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           </div>
                         </div>
 
+                        {/* Sales Tax specialized fields */}
+                        {svc.key === "sales_tax" && svc.enabled && (
+                          <div className="grid grid-cols-2 gap-2 text-xs pt-1" style={{ borderTop: "1px dashed var(--line)" }}>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-[var(--muted)]">RT Number</span>
+                              {editable ? (
+                                <input
+                                  type="text"
+                                  value={svc.rtNumber || ""}
+                                  onChange={(e) =>
+                                    setLocalServices((prev) =>
+                                      prev.map((s) => s.key === svc.key ? { ...s, rtNumber: e.target.value } : s)
+                                    )
+                                  }
+                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
+                                  placeholder="RT-..."
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className="font-medium text-[var(--ink)]">{svc.rtNumber || "—"}</span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-[var(--muted)]">Tax ID</span>
+                              {editable ? (
+                                <input
+                                  type="text"
+                                  value={svc.taxId || ""}
+                                  onChange={(e) =>
+                                    setLocalServices((prev) =>
+                                      prev.map((s) => s.key === svc.key ? { ...s, taxId: e.target.value } : s)
+                                    )
+                                  }
+                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
+                                  placeholder="XX-XXXXXXX"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className="font-medium text-[var(--ink)]">{svc.taxId || "—"}</span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-[var(--muted)]">Bank Routing</span>
+                              {editable ? (
+                                <input
+                                  type="text"
+                                  value={svc.bankRouting || ""}
+                                  onChange={(e) =>
+                                    setLocalServices((prev) =>
+                                      prev.map((s) => s.key === svc.key ? { ...s, bankRouting: e.target.value } : s)
+                                    )
+                                  }
+                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
+                                  placeholder="XXXXXXXXX"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className="font-medium text-[var(--ink)]">{svc.bankRouting || "—"}</span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-[var(--muted)]">Account Number</span>
+                              {editable ? (
+                                <input
+                                  type="text"
+                                  value={svc.accountNumber || ""}
+                                  onChange={(e) =>
+                                    setLocalServices((prev) =>
+                                      prev.map((s) => s.key === svc.key ? { ...s, accountNumber: e.target.value } : s)
+                                    )
+                                  }
+                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
+                                  placeholder="XXXXXXXX"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className="font-medium text-[var(--ink)]">{svc.accountNumber || "—"}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Month tracking grid */}
                         <div>
                           <p className="text-[11px] text-[var(--muted)] mb-1.5 font-medium uppercase tracking-wider">
