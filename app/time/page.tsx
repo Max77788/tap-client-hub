@@ -7,6 +7,7 @@ import type { ServiceKey } from "@/lib/types";
 interface TimeEntry {
   id: string;
   clientName: string;
+  clientId: string;
   personName: string;
   personId: string;
   serviceKey: string;
@@ -64,6 +65,7 @@ export default function TimePage() {
       const entry: TimeEntry = {
         id: crypto.randomUUID(),
         clientName: client.name,
+        clientId: client.id,
         personName: person.name,
         personId: person.id,
         serviceKey: selectedService,

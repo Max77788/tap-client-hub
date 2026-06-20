@@ -99,7 +99,7 @@ export default function ClientsPage() {
     // Cascade: remove timesheet entries for this client
     try {
       const tsEntries = JSON.parse(localStorage.getItem("tap-timesheet-entries") || "[]");
-      const filtered = tsEntries.filter((e: any) => e.clientName !== clients.find(c => c.id === clientId)?.name);
+      const filtered = tsEntries.filter((e: any) => e.clientId !== clientId);
       localStorage.setItem("tap-timesheet-entries", JSON.stringify(filtered));
     } catch {}
     // Cascade: remove vault entries for this client
