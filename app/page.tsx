@@ -23,7 +23,6 @@ export default function ClientsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   // ── Derived data ──
   const groups = useMemo(() => getGroups(clients), [clients]);
@@ -52,12 +51,6 @@ export default function ClientsPage() {
   }
 
   function openAddModal() {
-    setEditingClient(null);
-    setModalOpen(true);
-  }
-
-  function openEditModal(client: Client) {
-    setEditingClient(client);
     setModalOpen(true);
   }
 
@@ -82,21 +75,15 @@ export default function ClientsPage() {
     } catch {}
   }, [deleteFromState]);
 
-  const handleModalSave = useCallback((data: Client | Omit<Client, "id" | "cid">) => {
-    if ("id" in data && data.id) {
-      // Edit existing
-      updateClient(data.id, data as Client);
-    } else {
-      // Add new
-      const newClient: Client = {
-        ...data,
-        id: "c" + Date.now(),
-        cid: "CID-" + Math.floor(1000 + Math.random() * 9000),
-        status: "active",
-      } as Client;
-      addClient(newClient);
-    }
-  }, [updateClient, addClient]);
+  const handleModalSave = useCallback((data: Omit<Client, "id" | "cid">) => {
+    const newClient: Client = {
+      ...data,
+      id: "c" + Date.now(),
+      cid: "CID-" + Math.floor(1000 + Math.random() * 9000),
+      status: "active",
+    } as Client;
+    addClient(newClient);
+  }, [addClient]);
 
   function handleExport() {
     console.log("Export to Excel — stub");
@@ -258,10 +245,9 @@ export default function ClientsPage() {
         />
       )}
 
-      {/* ── Add/Edit modal ── */}
+      {/* ── Add Client modal ── */}
       <ClientModal
         open={modalOpen}
-        client={editingClient}
         onClose={() => setModalOpen(false)}
         onSave={handleModalSave}
       />

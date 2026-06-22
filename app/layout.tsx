@@ -174,8 +174,25 @@ export default function RootLayout({
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
 
   // ── Filter nav items by role ──
+  const [userModules, setUserModules] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("tap_users");
+      if (stored) {
+        const users = JSON.parse(stored);
+        const currentUser = users.find((u: any) => u.email === "tushar@tapallc.com");
+        if (currentUser?.modules) {
+          setUserModules(currentUser.modules as string[]);
+        }
+      }
+    } catch {}
+  }, []);
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (item.role === "owner" && role !== "owner" && role !== "admin") return false;
+    // If a non-owner user has module restrictions, hide items not in their module list
+    if (userModules.length > 0 && role !== "owner" && role !== "admin") {
+      return userModules.includes(item.label);
+    }
     return true;
   });
 

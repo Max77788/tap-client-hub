@@ -15,8 +15,11 @@ interface User {
 }
 
 const MODULES = [
-  "Clients", "Financials", "Payroll", "Sales Tax", "1099s",
-  "Renditions", "Timesheet", "Vault", "Workload", "Users & Access",
+  "Clients", "Team Workload", "Timesheet",
+  "Financials", "Payroll", "Sales Tax", "1099s",
+  "Renditions", "Tax Returns",
+  "Vault", "Users & Access", "Help & Support",
+  "Billing", "Business Taxes", "Personal Taxes", "Annual Reports",
 ];
 
 const ROLE_OPTIONS = ["Owner / Admin", "Manager", "Staff", "Offshore"];

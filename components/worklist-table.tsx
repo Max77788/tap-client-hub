@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 
@@ -114,6 +114,18 @@ export interface WorklistTableProps {
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage) => void;
 }
 
+// ── Build initial worklist state from clients ──
+function buildWorklistState(clients: any[], serviceKey: ServiceKey): Record<string, WorklistStage[]> {
+  const state: Record<string, WorklistStage[]> = {};
+  for (const client of clients) {
+    const svc = client.services.find((s: any) => s.key === serviceKey);
+    if (!svc?.enabled) continue;
+    const key = `${client.id}:${serviceKey}`;
+    state[key] = (svc.months as any[]).map(mapMonthStatus);
+  }
+  return state;
+}
+
 export default function WorklistTable({
   serviceKey,
   clients,
@@ -139,16 +151,12 @@ export default function WorklistTable({
   // ── Initialize worklist state from client data ──
   const [worklistState, setWorklistState] = useState<
     Record<string, WorklistStage[]>
-  >(() => {
-    const state: Record<string, WorklistStage[]> = {};
-    for (const client of clients) {
-      const svc = client.services.find((s) => s.key === serviceKey);
-      if (!svc?.enabled) continue;
-      const key = `${client.id}:${serviceKey}`;
-      state[key] = svc.months.map(mapMonthStatus);
-    }
-    return state;
-  });
+  >(() => buildWorklistState(clients, serviceKey));
+
+  // Re-sync when clients or service key changes (edits flow through updateServiceMonth)
+  useEffect(() => {
+    setWorklistState(buildWorklistState(clients, serviceKey));
+  }, [clients, serviceKey]);
 
   // ── Payroll cadence lookup ──
   const payrollCadences = useMemo<Record<string, PayrollCadence>>(() => {
@@ -277,7 +285,34 @@ export default function WorklistTable({
 
   return (
     <div className="space-y-4">
-      {/* ── Stats row ── */}
+      {/* ── Year context banner ── */}
+      {isHistorical && (
+        <div
+          className="p-3 rounded-xl flex gap-2 text-sm"
+          style={{
+            backgroundColor: "var(--amber-soft)",
+            border: "1px solid #ead9b6",
+            color: "#7a5210",
+          }}
+        >
+          <span>📋</span>
+          <div>
+            <strong>{year}</strong> is a historical year. Data shown reflects current tracking status.
+            Historical snapshots per year coming in a future update.
+          </div>
+        </div>
+      )}
+      {!isHistorical && (
+        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+            style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)" }}>
+            ● Current Year
+          </span>
+          <span>{year} — live tracking</span>
+        </div>
+      )}
+
+      {/* ── Stats row ── */
       <div className="grid grid-cols-3 gap-3">
         <StatCard
           label={`Due in ${stats.currentMonthName}`}
