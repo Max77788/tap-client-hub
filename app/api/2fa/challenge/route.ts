@@ -1,45 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import speakeasy from "speakeasy";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * POST /api/2fa/challenge
  * Body: { email: string, code: string }
- * Verifies a 2FA code during login (no auth session required).
+ * Verifies a 2FA code during login. Requires Supabase session from password step.
  */
 export async function POST(req: NextRequest) {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  let body: { email?: string; code?: string } = {};
+  if (!user) {
+    return NextResponse.json({ error: "Session expired. Please sign in again." }, { status: 401 });
+  }
+
+  let body: { code?: string } = {};
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!body.email || !body.code) {
-    return NextResponse.json({ error: "Email and code are required" }, { status: 400 });
+  if (!body.code || body.code.length !== 6) {
+    return NextResponse.json({ error: "6-digit code is required" }, { status: 400 });
   }
 
-  const { data: profiles } = await supabase
+  // Get the user's TOTP secret from their profile
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, totp_secret, totp_enabled")
-    .order("created_at");
+    .select("totp_secret, totp_enabled")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (!profiles) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  const targetEmail = body.email.toLowerCase().trim();
-  const match = profiles.find((p: any) => {
-    const parts = (p.full_name || "").trim().split(/\s+/);
-    const first = (parts[0] || "").toLowerCase();
-    const last = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
-    return `${first}.${last}@tapallc.com` === targetEmail;
-  });
-
-  if (!match || !match.totp_enabled || !match.totp_secret) {
+  if (!profile?.totp_enabled || !profile?.totp_secret) {
     return NextResponse.json({ error: "2FA not configured" }, { status: 400 });
   }
 
   const verified = speakeasy.totp.verify({
-    secret: match.totp_secret,
+    secret: profile.totp_secret,
     encoding: "base32",
     token: body.code,
     window: 1,
@@ -49,9 +46,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid code" }, { status: 400 });
   }
 
-  const response = NextResponse.json({ success: true });
-  response.cookies.set("tap_2fa_verified", match.id, {
-    httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 86400,
-  });
-  return response;
+  return NextResponse.json({ success: true });
 }

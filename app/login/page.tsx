@@ -51,11 +51,7 @@ function LoginContent() {
       }
 
       // Check if this user has 2FA enabled
-      const res = await fetch("/api/2fa/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const res = await fetch("/api/2fa/status");
       const data = await res.json();
 
       if (data.enabled) {
@@ -86,7 +82,7 @@ function LoginContent() {
       const res = await fetch("/api/2fa/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: totpCode }),
+        body: JSON.stringify({ code: totpCode }),
       });
       const data = await res.json();
 
