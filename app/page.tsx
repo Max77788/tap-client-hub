@@ -14,6 +14,10 @@ import { useClientsState } from "@/hooks/use-clients-state";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 
+type DisplayItem =
+  | { kind: "group"; name: string; clients: Client[] }
+  | { kind: "single"; client: Client };
+
 export default function ClientsPage() {
   // ── State from Supabase API (with localStorage cache fallback) ──
   const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading } = useClientsState();
@@ -23,6 +27,7 @@ export default function ClientsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // ── Derived data ──
   const groups = useMemo(() => getGroups(clients), [clients]);
@@ -33,6 +38,38 @@ export default function ClientsPage() {
     () => filterClients(clients, { search, type: typeFilter, staff: staffFilter }),
     [clients, search, typeFilter, staffFilter],
   );
+
+  // Group filtered clients: multi-client groups become one group card, singles stay as-is
+  const displayItems = useMemo((): DisplayItem[] => {
+    const grouped = new Map<string, Client[]>();
+    const singles: Client[] = [];
+    for (const c of filteredClients) {
+      const g = (c.group || "").trim();
+      if (g) {
+        if (!grouped.has(g)) grouped.set(g, []);
+        grouped.get(g)!.push(c);
+      } else {
+        singles.push(c);
+      }
+    }
+    const items: DisplayItem[] = [];
+    for (const [name, members] of grouped) {
+      if (members.length >= 2) {
+        items.push({ kind: "group", name, clients: members });
+      } else {
+        // Solo group member - show as single card
+        singles.push(...members);
+      }
+    }
+    // Single clients sorted by name, then group cards
+    singles.sort((a, b) => a.name.localeCompare(b.name));
+    for (const c of singles) items.push({ kind: "single", client: c });
+    // Group cards sorted by name
+    const groupItems = items.filter((i): i is { kind: "group"; name: string; clients: Client[] } => i.kind === "group");
+    const singleItems = items.filter((i): i is { kind: "single"; client: Client } => i.kind === "single");
+    groupItems.sort((a, b) => a.name.localeCompare(b.name));
+    return [...groupItems, ...singleItems];
+  }, [filteredClients]);
 
   const selectedClient = useMemo(
     () => (selectedClientId ? clients.find(c => c.id === selectedClientId) ?? null : null),
@@ -195,15 +232,33 @@ export default function ClientsPage() {
       )}
 
       {/* ── Client cards grid ── */}
-      {filteredClients.length > 0 ? (
+      {displayItems.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {filteredClients.map((client) => (
-            <ClientCard
-              key={client.id}
-              client={client}
-              onClick={() => openSlideover(client.id)}
-            />
-          ))}
+          {displayItems.map((item) =>
+            item.kind === "group" ? (
+              <GroupCard
+                key={item.name}
+                groupName={item.name}
+                clients={item.clients}
+                expanded={expandedGroups.has(item.name)}
+                onToggle={() => {
+                  setExpandedGroups((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(item.name)) next.delete(item.name);
+                    else next.add(item.name);
+                    return next;
+                  });
+                }}
+                onClientClick={(id) => openSlideover(id)}
+              />
+            ) : (
+              <ClientCard
+                key={item.client.id}
+                client={item.client}
+                onClick={() => openSlideover(item.client.id)}
+              />
+            )
+          )}
         </div>
       ) : (
         /* ── Empty state ── */
@@ -295,6 +350,142 @@ function StatCard({
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// ── Group Card ──
+// ══════════════════════════════════════════════
+function GroupCard({
+  groupName,
+  clients,
+  expanded,
+  onToggle,
+  onClientClick,
+}: {
+  groupName: string;
+  clients: Client[];
+  expanded: boolean;
+  onToggle: () => void;
+  onClientClick: (id: string) => void;
+}) {
+  // Collect unique locations and services across all group members
+  const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
+  const allServices = new Set<string>();
+  clients.forEach((c) => c.services.filter((s) => s.enabled && s.key).forEach((s) => allServices.add(s.key!)));
+
+  return (
+    <div
+      onClick={onToggle}
+      className="group rounded-xl cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-1 p-4"
+      style={{
+        backgroundColor: "var(--card)",
+        boxShadow: "var(--shadow)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow =
+          "0 2px 8px rgba(26, 35, 64, 0.08), 0 12px 32px rgba(26, 35, 64, 0.14)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = "var(--shadow)";
+      }}
+    >
+      {/* Top row: Group name + count badge */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="text-sm font-semibold text-[var(--ink)] leading-snug group-hover:text-[var(--teal)] transition-colors">
+          {groupName}
+        </h3>
+        <span
+          className="shrink-0 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full"
+          style={{
+            backgroundColor: "var(--teal-soft)",
+            color: "var(--teal)",
+          }}
+        >
+          {clients.length} entities
+        </span>
+      </div>
+
+      {/* Locations */}
+      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+        <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
+      </div>
+
+      {/* Service pills */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {[...allServices].slice(0, 5).map((key) => {
+          const meta = SERVICE_META[key as ServiceKey];
+          if (!meta) return null;
+          return (
+            <span
+              key={key}
+              className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}
+            >
+              {meta.label}
+            </span>
+          );
+        })}
+        {allServices.size > 5 && (
+          <span className="text-[10px] text-[var(--muted)]">+{allServices.size - 5} more</span>
+        )}
+        {allServices.size === 0 && (
+          <span className="text-[10px] text-[var(--muted)] italic">No services</span>
+        )}
+      </div>
+
+      {/* Expand chevron */}
+      <div
+        className="flex items-center justify-between pt-2"
+        style={{ borderTop: "1px solid var(--line)" }}
+      >
+        <span className="text-[10px] text-[var(--muted)]">
+          {expanded ? "Hide entities" : "Show entities"}
+        </span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--muted)"
+          strokeWidth="2"
+          className={`transition-transform ${expanded ? "rotate-90" : ""}`}
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </div>
+
+      {/* Expanded sub-entity list */}
+      {expanded && (
+        <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
+          {clients.map((c) => (
+            <div
+              key={c.id}
+              onClick={(e) => { e.stopPropagation(); onClientClick(c.id); }}
+              className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--ink)] truncate">{c.name}</p>
+                <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
+              </div>
+              <span
+                className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{
+                  backgroundColor: c.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
+                  color: c.type === "Business" ? "var(--teal)" : "var(--blue)",
+                }}
+              >
+                {c.type === "Business" ? "BIZ" : "PERS"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
