@@ -60,6 +60,8 @@ create table if not exists profiles (
   modules           text[]       not null default '{}',  -- e.g. {clients,workload,fin,pr,stx,t9,rend,vault,support}
   invite_status     invite_status not null default 'invited',
   active            boolean      not null default true,
+  totp_secret       text,        -- TOTP secret for 2FA (encrypted)
+  totp_enabled      boolean      not null default false,
   created_at        timestamptz  not null default now()
 );
 

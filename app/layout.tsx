@@ -38,6 +38,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault" },
   { label: "Users & Access", href: "/users", role: "owner" },
+  { label: "---", href: "" },
+  { label: "Settings", href: "/settings/2fa" },
   { label: "Help & Support", href: "/support" },
 ];
 
@@ -54,6 +56,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/tax": { title: "Tax Returns", subtitle: "Annual tax return preparation and filing" },
   "/vault": { title: "Password Vault", subtitle: "Secure credential storage for client portals" },
   "/users": { title: "Users & Access", subtitle: "Manage team accounts and access levels" },
+  "/settings/2fa": { title: "Settings", subtitle: "Two-factor authentication" },
   "/support": { title: "Help & Support", subtitle: "Submit a support request or find answers" },
 };
 
