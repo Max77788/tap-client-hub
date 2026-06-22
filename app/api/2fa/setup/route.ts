@@ -1,38 +1,28 @@
 import { NextResponse } from "next/server";
-import { authenticator } from "otplib";
+import speakeasy from "speakeasy";
 import { createClient } from "@/lib/supabase/server";
 
 const ISSUER = "TAP Hub";
 
-/**
- * POST /api/2fa/setup
- * Generate a TOTP secret and provisioning URI.
- */
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  // Check if 2FA is already enabled
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("totp_enabled")
-    .eq("id", user.id)
-    .maybeSingle();
+    .from("profiles").select("totp_enabled").eq("id", user.id).maybeSingle();
 
   if (profile?.totp_enabled) {
     return NextResponse.json({ error: "2FA is already enabled" }, { status: 400 });
   }
 
-  // Generate secret
-  const secret = authenticator.generateSecret();
-  const email = user.email || user.id;
+  const secret = speakeasy.generateSecret({
+    name: `${ISSUER}: ${user.email || user.id}`,
+    length: 20,
+  });
 
-  // Build otpauth URI
-  const otpauth = authenticator.keyuri(email, ISSUER, secret);
-
-  return NextResponse.json({ secret, otpauth });
+  return NextResponse.json({
+    secret: secret.base32,
+    otpauth: secret.otpauth_url,
+  });
 }
