@@ -312,7 +312,7 @@ export default function WorklistTable({
         </div>
       )}
 
-      {/* ── Stats row ── */
+      {/* ── Stats row ── */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
           label={`Due in ${stats.currentMonthName}`}
