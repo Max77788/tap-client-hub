@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import speakeasy from "speakeasy";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
+/**
+ * POST /api/2fa/challenge
+ * Body: { email: string, code: string }
+ * Verifies a 2FA code during login (no auth session required).
+ */
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   let body: { email?: string; code?: string } = {};
   try { body = await req.json(); } catch {
