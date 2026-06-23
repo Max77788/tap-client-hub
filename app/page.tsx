@@ -137,6 +137,11 @@ export default function ClientsPage() {
         <StatCard label="Behind This Month" value={stats.behindThisMonth} color="var(--red)" softColor="var(--red-soft)" alert={stats.behindThisMonth > 0} />
       </div>
 
+      {/* ── Count summary ── */}
+      <p className="text-[13px] text-[var(--muted)]" style={{ margin: "12px 2px 6px" }}>
+        Showing {stats.total} clients — {stats.business} Business, {stats.personal} Personal
+      </p>
+
       {/* ── Toolbar: Search + Filters + Actions ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
         {/* Search */}
