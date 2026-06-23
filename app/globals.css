@@ -1,28 +1,29 @@
 @import "tailwindcss";
 
-/* ── TAP Client Hub Design System (Bright) ── */
+/* ── TAP Client Hub Design System ──
+   Heavily inspired by the v7 demo — muted, premium, corporate palette. */
 :root {
-  --paper: #f4f6f9;
+  --paper: #eef1f6;
   --card: #ffffff;
-  --ink: #1e293b;
-  --muted: #64748b;
-  --line: #e8ecf1;
-  --teal: #3b82f6;
-  --teal-soft: #eff6ff;
-  --teal-ink: #1e40af;
-  --amber: #d97706;
-  --amber-soft: #fef3c7;
-  --red: #ef4444;
-  --red-soft: #fef2f2;
-  --green: #22c55e;
-  --green-soft: #f0fdf4;
-  --blue: #3b82f6;
-  --blue-soft: #eff6ff;
-  --paid: #3b82f6;
-  --paid-soft: #eff6ff;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --sidebar-start: #ffffff;
-  --sidebar-end: #f8fafc;
+  --ink: #1a2340;
+  --muted: #5f667d;
+  --line: #dde2ec;
+  --teal: #1c2a5e;
+  --teal-soft: #e7ebf5;
+  --teal-ink: #16234d;
+  --amber: #b9791f;
+  --amber-soft: #f7edda;
+  --red: #a8392f;
+  --red-soft: #f6e2df;
+  --green: #2f7d4f;
+  --green-soft: #e3efe6;
+  --blue: #2c5d86;
+  --blue-soft: #e0eaf2;
+  --paid: #1c2a5e;
+  --paid-soft: #e7ebf5;
+  --shadow: 0 1px 2px rgba(26, 35, 64, 0.06), 0 8px 24px rgba(26, 35, 64, 0.10);
+  --sidebar-start: #21305f;
+  --sidebar-end: #1a2750;
   --sidebar-width: 236px;
 }
 
@@ -44,16 +45,18 @@ body {
   background-color: var(--paper);
   color: var(--ink);
   font-size: 0.9375rem;
-  line-height: 1.6;
-  font-family: var(--font-recoleta), Georgia, "Times New Roman", serif;
+  line-height: 1.45;
+  font-family: "Public Sans", system-ui, -apple-system, sans-serif;
 }
 
-/* ── Headings use Recoleta ── */
-main h1, main h2, main h3, main h4, main h5, main h6 {
+/* ── Headings use Recoleta (keep existing font) ── */
+main h1, main h2, main h3, main h4, main h5, main h6,
+.disp {
   font-family: var(--font-recoleta), Georgia, "Times New Roman", serif;
   font-weight: 600;
   line-height: 1.25;
   color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 /* ── Links ── */
@@ -96,11 +99,11 @@ main a:hover {
   body {
     font-size: 1rem;
   }
-  
+
   input, select, button, a {
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   input, select {
     font-size: 16px !important; /* prevent iOS zoom on focus */
   }

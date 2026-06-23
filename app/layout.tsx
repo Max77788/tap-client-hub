@@ -208,6 +208,9 @@ export default function RootLayout({
     <html lang="en" className={`${Recoleta.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen flex flex-col md:flex-row" style={{ backgroundColor: "var(--paper)" }}>
         {/* ── Desktop Sidebar (hidden on auth pages) ── */}
@@ -217,31 +220,38 @@ export default function RootLayout({
             style={{
               width: "var(--sidebar-width)",
               background: `linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)`,
-              color: "var(--ink)",
+              color: "#c4cee8",
             }}
           >
             {/* Brand */}
             <div className="px-5 pt-8 pb-6">
-              <h2 className="text-2xl font-semibold tracking-tight text-[var(--teal)] m-0">TAP</h2>
-              <p className="text-xs mt-1 opacity-70 leading-relaxed">Associates, LLC &middot; Est. 1999</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-white m-0">TAP</h2>
+              <p className="text-xs mt-1 opacity-70 leading-relaxed" style={{ color: "#9fb0d8" }}>Associates, LLC &middot; Est. 1999</p>
             </div>
 
             {/* Nav */}
             <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
               {visibleNav.map((item) => {
                 if (item.label === "---") {
-                  return <div key="sep-desktop-1" className="my-3 mx-2 border-t border-[var(--line)]" />;
+                  return <div key="sep-desktop-1" className="my-3 mx-2 border-t" style={{ borderColor: "rgba(255,255,255,0.14)" }} />;
                 }
                 const isActive = pathname === item.href;
                 return (
                   <a
                     key={item.label}
                     href={item.href}
-                    className={`block px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-150 ${
-                      isActive
-                        ? "bg-[var(--teal-soft)] text-[var(--teal)]"
-                        : "text-[var(--ink)] hover:bg-[var(--teal-soft)]/50"
-                    }`}
+                    className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150`}
+                    style={{
+                      color: isActive ? "var(--teal-ink)" : "#c4cee8",
+                      backgroundColor: isActive ? "var(--card)" : "transparent",
+                      fontWeight: isActive ? 600 : 500,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                    }}
                   >
                     {item.label}
                   </a>
@@ -274,7 +284,7 @@ export default function RootLayout({
             </div>
 
             {/* Footer */}
-            <div className="px-5 pb-6 pt-4 text-xs text-[var(--muted)]">TAP Client Hub v1.0</div>
+            <div className="px-5 pb-6 pt-4 text-xs" style={{ color: "#8a9bc6" }}>TAP Client Hub v1.0</div>
           </aside>
         )}
 

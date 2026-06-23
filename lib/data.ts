@@ -23,12 +23,12 @@ export const MONTHS_SHORT = [
 
 // ── Service labels & pill colors ──
 export const SERVICE_META: Record<ServiceKey, { label: string; pillColor: string; pillBg: string }> = {
-  financials:  { label: "Financials",         pillColor: "var(--green)",       pillBg: "var(--green-soft)"  },
-  payroll:     { label: "Payroll",     pillColor: "var(--blue)",        pillBg: "var(--blue-soft)"   },
-  sales_tax:   { label: "Sales Tax",   pillColor: "var(--amber)",       pillBg: "var(--amber-soft)"  },
-  "1099s":     { label: "1099s",       pillColor: "#ca8a04",            pillBg: "#fef9c3"             },
-  renditions:  { label: "Renditions",  pillColor: "#16a34a",            pillBg: "#dcfce7"             },
-  tax_returns: { label: "Tax Returns", pillColor: "#7c3aed",            pillBg: "#f3e8ff"             },
+  financials:  { label: "Financials",  pillColor: "#1d5734",            pillBg: "var(--green-soft)"  },
+  payroll:     { label: "Payroll",     pillColor: "#214b6e",            pillBg: "var(--blue-soft)"   },
+  sales_tax:   { label: "Sales Tax",   pillColor: "#8a560f",            pillBg: "var(--amber-soft)"  },
+  "1099s":     { label: "1099s",       pillColor: "#7a5436",            pillBg: "#f0e8e2"             },
+  renditions:  { label: "Renditions",  pillColor: "#3a5a44",            pillBg: "#e7eee8"             },
+  tax_returns: { label: "Tax Returns", pillColor: "#5a4a80",            pillBg: "#ece7f3"             },
 };
 
 // ── Helper: generate a 12-month tracking array ──
