@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { SERVICE_META } from "@/lib/data";
 import { useClientsState } from "@/hooks/use-clients-state";
 
 export default function WorkloadPage() {
@@ -68,7 +69,9 @@ export default function WorkloadPage() {
           </tbody>
         </table>
       </div>
-      <div className="text-[10px] text-[var(--muted)] mt-4">✓ Page loaded successfully</div>
+      <div className="text-[10px] text-[var(--muted)] mt-4">
+        ✓ Service labels: {Object.keys(SERVICE_META).join(", ")}
+      </div>
     </div>
   );
 }
