@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Client, ClientType, ServiceKey, ServiceConfig } from "@/lib/types";
-import { SERVICE_META, STAFF } from "@/lib/data";
+import { SERVICE_META } from "@/lib/data";
 
 interface ClientModalProps {
   open: boolean;
@@ -63,6 +63,14 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const isEdit = !!client;
   const [form, setForm] = useState<Omit<Client, "id" | "cid">>(makeEmptyClient());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [staffOptions, setStaffOptions] = useState<{id: string; name: string}[]>([]);
+
+  // Fetch staff from Supabase
+  useEffect(() => {
+    fetch("/api/profiles").then(r => r.ok ? r.json() : []).then(data => {
+      if (Array.isArray(data)) setStaffOptions(data.map((u: any) => ({ id: u.id, name: u.name })));
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (client) {
@@ -440,8 +448,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                               className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
                             >
                               <option value="">Unassigned</option>
-                              {STAFF.map((s) => (
-                                <option key={s.id} value={s.name}>{s.name} ({s.initials})</option>
+                              {staffOptions.map((s) => (
+                                <option key={s.id} value={s.name}>{s.name}</option>
                               ))}
                             </select>
                           </div>

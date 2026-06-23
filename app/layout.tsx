@@ -179,16 +179,18 @@ export default function RootLayout({
   // ── Filter nav items by role ──
   const [userModules, setUserModules] = useState<string[]>([]);
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("tap_users");
-      if (stored) {
-        const users = JSON.parse(stored);
-        const currentUser = users.find((u: any) => u.email === "tushar@tapallc.com");
+    async function loadUserModules() {
+      try {
+        const res = await fetch("/api/profiles");
+        if (!res.ok) return;
+        const users = await res.json();
+        const currentUser = Array.isArray(users) ? users.find((u: any) => u.email === "tushar@tapallc.com") : null;
         if (currentUser?.modules) {
           setUserModules(currentUser.modules as string[]);
         }
-      }
-    } catch {}
+      } catch {}
+    }
+    loadUserModules();
   }, []);
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (item.role === "owner" && role !== "owner" && role !== "admin") return false;

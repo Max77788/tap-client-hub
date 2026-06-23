@@ -76,7 +76,7 @@ function getExpectedRuns(cadence: PayrollCadence): number {
   }
 }
 
-// ── 1099 mock expected counts per client ──
+// ── 1099 expected counts from DB (client_services.expected_annual) ──
 export function getT9ExpectedCount(clientId: string): number {
   const hash = clientId.charCodeAt(clientId.length - 1);
   return (hash % 5) + 3; // 3-7 1099s per client

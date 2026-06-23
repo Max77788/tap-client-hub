@@ -20,7 +20,7 @@ type DisplayItem =
   | { kind: "single"; client: Client };
 
 export default function ClientsPage() {
-  // ── State from Supabase API (with localStorage cache fallback) ──
+  // ── State from Supabase API ──
   const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading } = useClientsState();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
@@ -101,12 +101,7 @@ export default function ClientsPage() {
   const handleSlideoverDelete = useCallback((clientId: string) => {
     deleteFromState(clientId);
     setSelectedClientId(null);
-    // Cascade: remove timesheet entries for this client
-    try {
-      const tsEntries = JSON.parse(localStorage.getItem("tap-timesheet-entries") || "[]");
-      const filtered = tsEntries.filter((e: any) => e.clientId !== clientId);
-      localStorage.setItem("tap-timesheet-entries", JSON.stringify(filtered));
-    } catch {}
+    // Cascade: timesheet entries removed via DB CASCADE on client delete
     // Cascade: remove vault entries for this client
     try {
       deleteVaultEntriesByClient(clientId);
