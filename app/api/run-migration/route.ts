@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { Pool } from "pg";
 
 export async function GET() {
-  const supabase = createAdminClient();
-  const results: string[] = [];
+  const pool = new Pool({
+    host: "db.phgogybfgovrlcdmifpv.supabase.co",
+    port: 5432,
+    database: "postgres",
+    user: "postgres",
+    password: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10000,
+  });
 
+  const results: string[] = [];
   const columns = [
     "sales_tax_notes",
     "tax_id",
@@ -15,18 +23,19 @@ export async function GET() {
     "sales_tax_rt",
   ];
 
-  for (const col of columns) {
-    // Check if column already exists by trying to select it
-    const { error } = await supabase
-      .from("client_services")
-      .select(col)
-      .limit(1);
-
-    if (error) {
-      results.push(`❌ ${col}: ${error.message}`);
-    } else {
-      results.push(`✓ ${col}: exists`);
+  try {
+    for (const col of columns) {
+      try {
+        await pool.query(
+          `ALTER TABLE client_services ADD COLUMN IF NOT EXISTS ${col} text;`
+        );
+        results.push(`✓ ${col}`);
+      } catch (e: any) {
+        results.push(`❌ ${col}: ${e.message}`);
+      }
     }
+  } finally {
+    await pool.end();
   }
 
   return NextResponse.json({ results });
