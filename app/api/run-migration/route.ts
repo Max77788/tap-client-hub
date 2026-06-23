@@ -1,29 +1,22 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
-  const supabase = createAdminClient();
-  const results: string[] = [];
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Check if columns exist by selecting them
-  try {
-    const { data, error } = await supabase
-      .from("client_services")
-      .select("id")
-      .limit(1);
-
-    if (error) {
-      return NextResponse.json({ error: `client_services table error: ${error.message}` });
-    }
-
-    results.push("✓ client_services table accessible");
-  } catch (e: any) {
-    return NextResponse.json({ error: `Connection failed: ${e.message}` });
+  if (!url || !key) {
+    return NextResponse.json({
+      error: "Missing env vars",
+      has_url: !!url,
+      has_key: !!key,
+      url_preview: url ? url.substring(0, 30) + "..." : null,
+    });
   }
 
+  // Use raw fetch to call Supabase REST API for column check
   const columns = [
     "sales_tax_notes",
-    "tax_id", 
+    "tax_id",
     "bank_name",
     "bank_routing",
     "bank_account",
@@ -31,22 +24,30 @@ export async function GET() {
     "sales_tax_rt",
   ];
 
-  for (const col of columns) {
-    const { data, error } = await supabase
-      .from("client_services")
-      .select(col)
-      .limit(1);
+  const results: string[] = [];
 
-    if (error) {
-      if (error.message.includes("does not exist")) {
+  for (const col of columns) {
+    const res = await fetch(
+      `${url}/rest/v1/client_services?select=${col}&limit=1`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+        },
+      }
+    );
+
+    if (res.ok) {
+      results.push(`✓ ${col}: exists`);
+    } else {
+      const txt = await res.text();
+      if (txt.includes("does not exist") || txt.includes("column")) {
         results.push(`❌ ${col}: MISSING`);
       } else {
-        results.push(`⚠ ${col}: ${error.message}`);
+        results.push(`⚠ ${col}: ${txt.substring(0, 100)}`);
       }
-    } else {
-      results.push(`✓ ${col}: exists`);
     }
   }
 
-  return NextResponse.json({ results });
+  return NextResponse.json({ results, ok: true });
 }
