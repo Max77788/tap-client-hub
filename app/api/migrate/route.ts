@@ -28,28 +28,26 @@ export async function GET() {
   if (!url || !key) return NextResponse.json({ error: "Missing env" }, { status: 500 });
   const ref = url.replace("https://", "").split(".")[0];
   const results: string[] = [];
-  
-  // Try every combination
+
+  // Try with options parameter to pass tenant reference
   const combos = [
-    { user: `postgres.${ref}`, host: "aws-0-us-east-1.pooler.supabase.com", port: 6543, label: "tx-pooler-postgres.ref" },
-    { user: `postgres.${ref}`, host: "aws-0-us-east-1.pooler.supabase.com", port: 5432, label: "sess-pooler-postgres.ref" },
-    { user: "postgres", host: "aws-0-us-east-1.pooler.supabase.com", port: 6543, label: "tx-pooler-postgres" },
-    { user: "postgres", host: `db.${ref}.supabase.co`, port: 5432, label: "direct-5432" },
-    { user: `postgres.${ref}`, host: `db.${ref}.supabase.co`, port: 5432, label: "direct-postgres.ref" },
+    { user: "postgres", host: "aws-0-us-east-1.pooler.supabase.com", port: 6543, options: `reference=${ref}`, label: "pooler-ref-opt" },
+    { user: "postgres", host: "aws-0-us-east-1.pooler.supabase.com", port: 6543, options: `project=${ref}`, label: "pooler-project-opt" },
+    { user: "postgres", host: "aws-0-us-east-1.pooler.supabase.com", port: 6543, options: `application_name=${ref}`, label: "pooler-appname" },
   ];
-  
-  for (const { user, host, port, label } of combos) {
+
+  for (const { user, host, port, options, label } of combos) {
     const pool = new Pool({
       host, port, database: "postgres", user, password: key,
       ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 8000,
+      options: `--${options}`,
     });
     try {
       const c = await pool.connect();
       try {
         const r = await c.query("SELECT 1 as test");
-        // Connection works! Run the actual migration
         const m = await c.query(SQL);
-        return NextResponse.json({ success: true, via: label, host, port, user, commands: m.map((x: any) => x.command) });
+        return NextResponse.json({ success: true, via: label, commands: m.map((x: any) => x.command) });
       } finally {
         c.release();
       }
@@ -59,6 +57,6 @@ export async function GET() {
       await pool.end().catch(() => {});
     }
   }
-  
-  return NextResponse.json({ error: "All failed", results, keyType: key.startsWith("eyJ") ? "JWT" : "raw" });
+
+  return NextResponse.json({ error: "All failed", results });
 }
