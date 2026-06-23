@@ -19,9 +19,10 @@ interface StaffLoad {
 }
 
 export default function WorkloadPage() {
-  const { clients, loading: clientsLoading } = useClientsState();
+  const { clients, loading: clientsLoading, error: clientsError } = useClientsState();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
+  const [staffError, setStaffError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +34,9 @@ export default function WorkloadPage() {
         if (!cancelled && Array.isArray(data)) {
           setStaff(data.map((u: any) => ({ id: u.id, name: u.name, role: u.role })));
         }
-      } catch {} finally {
+      } catch {
+        if (!cancelled) setStaffError("Failed to load staff");
+      } finally {
         if (!cancelled) setLoadingStaff(false);
       }
     }
@@ -42,6 +45,17 @@ export default function WorkloadPage() {
   }, []);
 
   if (clientsLoading || loadingStaff) return <PageSkeleton rows={6} />;
+
+  if (clientsError || staffError) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-[var(--red)] font-semibold">Workload data unavailable</p>
+        <p className="text-xs text-[var(--muted)] mt-1">
+          {clientsError || staffError}
+        </p>
+      </div>
+    );
+  }
 
   const staffLoads = useMemo<StaffLoad[]>(() => {
     const map = new Map<string, StaffLoad>();

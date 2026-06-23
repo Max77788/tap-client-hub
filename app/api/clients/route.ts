@@ -40,16 +40,19 @@ export async function GET() {
 
   // Fetch current month work_periods for all active client_services
   const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-  const { data: dbPeriods } = await supabase
-    .from("work_periods")
-    .select("client_service_id, stage")
-    .eq("period", currentPeriod);
-
-  // Index periods by client_service_id
   const periodByCsId: Record<string, string> = {};
-  for (const wp of dbPeriods || []) {
-    periodByCsId[wp.client_service_id] = wp.stage;
-  }
+  try {
+    const { data: dbPeriods, error: periodError } = await supabase
+      .from("work_periods")
+      .select("client_service_id, stage")
+      .eq("period", currentPeriod);
+
+    if (!periodError && dbPeriods) {
+      for (const wp of dbPeriods) {
+        periodByCsId[wp.client_service_id] = wp.stage;
+      }
+    }
+  } catch {} // work_periods table may not exist yet
 
   // Group services by client_id
   const servicesByClient: Record<string, any[]> = {};
