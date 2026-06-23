@@ -376,10 +376,11 @@ function GroupCard({
   return (
     <div
       onClick={onToggle}
-      className="group rounded-xl cursor-pointer transition-transform transition-shadow duration-200 ease-out hover:-translate-y-1 p-4"
+      className="group rounded-xl cursor-pointer hover:-translate-y-[4px] p-4"
       style={{
         backgroundColor: "var(--card)",
         boxShadow: "var(--shadow)",
+        transition: "transform 200ms ease-out, box-shadow 200ms ease-out",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow =
@@ -497,10 +498,11 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
   return (
     <div
       onClick={onClick}
-      className="group p-4 rounded-xl cursor-pointer transition-transform transition-shadow duration-200 ease-out hover:-translate-y-1"
+      className="group p-4 rounded-xl cursor-pointer hover:-translate-y-[4px]"
       style={{
         backgroundColor: "var(--card)",
         boxShadow: "var(--shadow)",
+        transition: "transform 200ms ease-out, box-shadow 200ms ease-out",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow =
