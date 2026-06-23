@@ -380,9 +380,11 @@ export default function WorklistTable({
               <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Assigned
               </th>
+              {variant !== "t9" && (
               <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Cadence
               </th>
+              )}
               {MONTHS_SHORT.map((m, i) => {
                 const isCurrentMonth = i === currentMonth && !isHistorical;
                 return (
@@ -443,11 +445,13 @@ export default function WorklistTable({
                     </td>
 
                     {/* Cadence */}
+                    {variant !== "t9" && (
                     <td className="px-3 py-2.5 text-xs text-[var(--muted)] whitespace-nowrap">
                       {variant === "payroll"
                         ? payrollCadences[client.id] ?? "Monthly"
                         : svc.frequency}
                     </td>
+                    )}
 
                     {/* Month cells */}
                     {MONTHS_SHORT.map((_m, i) => {
