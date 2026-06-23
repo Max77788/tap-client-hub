@@ -250,9 +250,7 @@ function LoginContent() {
                   >
                     Password
                   </label>
-                  <a href="#" className="text-xs" style={{ color: "var(--muted)" }}>
-                    Forgot password?
-                  </a>
+                  {/* Forgot password? — contact admin for reset */}
                 </div>
                 <input
                   id="password"

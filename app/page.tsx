@@ -13,6 +13,7 @@ import {
 import { useClientsState } from "@/hooks/use-clients-state";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
+import { PageSkeleton } from "@/components/loading-skeleton";
 
 type DisplayItem =
   | { kind: "group"; name: string; clients: Client[] }
@@ -128,12 +129,12 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Loading overlay ── */}
-      {loading && (
-        <div className="text-xs text-[var(--muted)] animate-pulse">Loading clients from database…</div>
-      )}
-
-      {/* ── Stat cards row ── */}
+      {/* ── Loading state ── */}
+      {loading ? (
+        <PageSkeleton rows={6} />
+      ) : (
+        <>
+          {/* ── Stat cards row ── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label="Total Clients" value={stats.total} />
         <StatCard label="Business" value={stats.business} color="var(--teal)" softColor="var(--teal-soft)" />
@@ -306,6 +307,8 @@ export default function ClientsPage() {
         onClose={() => setModalOpen(false)}
         onSave={handleModalSave}
       />
+        </>
+      )}
     </div>
   );
 }
