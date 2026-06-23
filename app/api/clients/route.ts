@@ -12,118 +12,85 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
   TAX: "tax_returns",
 };
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
 export async function GET() {
   const supabase = await createClient();
 
-  // Fetch clients
   const { data: dbClients, error: clientsError } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("status", "active")
-    .order("name");
+    .from("clients").select("*").eq("status", "active").order("name");
 
   if (clientsError || !dbClients) {
     return NextResponse.json({ error: clientsError?.message }, { status: 500 });
   }
 
-  // Fetch all client_services with service details
   const { data: dbServices, error: svcError } = await supabase
-    .from("client_services")
-    .select("*, service:services(*)")
-    .eq("active", true);
+    .from("client_services").select("*, service:services(*)").eq("active", true);
 
   if (svcError) {
     return NextResponse.json({ error: svcError.message }, { status: 500 });
   }
 
-  // Fetch current month work_periods for all active client_services
-  const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const currentPeriod = new Date().toISOString().slice(0, 7);
   const periodByCsId: Record<string, string> = {};
   try {
-    const { data: dbPeriods, error: periodError } = await supabase
-      .from("work_periods")
-      .select("client_service_id, stage")
-      .eq("period", currentPeriod);
+    const { data: dbPeriods } = await supabase
+      .from("work_periods").select("client_service_id, stage").eq("period", currentPeriod);
+    if (dbPeriods) for (const wp of dbPeriods) periodByCsId[wp.client_service_id] = wp.stage;
+  } catch {}
 
-    if (!periodError && dbPeriods) {
-      for (const wp of dbPeriods) {
-        periodByCsId[wp.client_service_id] = wp.stage;
-      }
-    }
-  } catch {} // work_periods table may not exist yet
-
-  // Group services by client_id
   const servicesByClient: Record<string, any[]> = {};
   for (const cs of dbServices || []) {
     if (!servicesByClient[cs.client_id]) servicesByClient[cs.client_id] = [];
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Map to Client-compatible shape
   const clients = dbClients.map((db: any) => {
     const clientServices = servicesByClient[db.id] || [];
-
     const services = clientServices.map((cs: any) => {
       const svcCode = cs.service?.code || "";
       const key = CODE_TO_KEY[svcCode] || "financials";
-      const meta = SERVICE_META[key] || { label: svcCode };
-
       return {
         csId: cs.id,
         key,
-        label: meta.label,
+        label: SERVICE_META[key]?.label || svcCode,
         enabled: true,
         frequency: cs.frequency || "Monthly",
         processor: cs.processor || "",
         assignedTo: cs.assigned_to || "",
         expectedAnnual: cs.expected_annual || undefined,
-        // Sales Tax specific fields (only for STX)
+        // Sales Tax fields
         ...(key === "sales_tax" ? {
-          salesTaxNotes: cs.sales_tax_notes || "",
-          taxId: cs.tax_id || "",
-          bankName: cs.bank_name || "",
-          bankRouting: cs.bank_routing || "",
-          bankAccount: cs.bank_account || "",
-          groupAssignedTo: cs.group_assigned_to || "",
+          salesTaxNotes: cs.sales_tax_notes || "", taxId: cs.tax_id || "",
+          bankName: cs.bank_name || "", bankRouting: cs.bank_routing || "",
+          bankAccount: cs.bank_account || "", groupAssignedTo: cs.group_assigned_to || "",
           salesTaxRT: cs.sales_tax_rt || "",
+        } : {}),
+        // Payroll fields
+        ...(key === "payroll" ? {
+          cdg: cs.cdg || "", eftps: cs.eftps || "",
+          payrollPassword: cs.payroll_password || "", paydate: cs.paydate || "",
         } : {}),
         currentStage: periodByCsId[cs.id] || "not_started",
         months: Array(12).fill("lock"),
       };
     });
 
-    // Fill in missing services as disabled
     const existingKeys = new Set(services.map((s) => s.key));
     for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
       if (!existingKeys.has(key)) {
         services.push({
-          csId: "",
-          key,
-          label: SERVICE_META[key].label,
-          enabled: false,
-          frequency: "Monthly",
-          processor: "",
-          assignedTo: "",
-          expectedAnnual: undefined,
-          currentStage: "not_started",
+          csId: "", key, label: SERVICE_META[key].label, enabled: false,
+          frequency: "Monthly", processor: "", assignedTo: "",
+          expectedAnnual: undefined, currentStage: "not_started",
           months: Array(12).fill("lock"),
         });
       }
     }
 
     return {
-      id: db.id,
-      cid: db.cid || `CID-${db.id.substring(0, 4)}`,
-      name: db.name,
-      type: db.type === "business" ? "Business" : "Personal",
-      group: db.group_owner || "Unassigned",
-      status: db.status || "active",
-      city: db.city || "",
-      state: db.state || "TX",
-      email: "",
-      phone: "",
+      id: db.id, cid: db.cid || `CID-${db.id.substring(0, 4)}`,
+      name: db.name, type: db.type === "business" ? "Business" : "Personal",
+      group: db.group_owner || "Unassigned", status: db.status || "active",
+      city: db.city || "", state: db.state || "TX", email: "", phone: "",
       address: db.address || "",
       assignedStaff: clientServices[0]?.assigned_to || "Unassigned",
       services,
@@ -137,42 +104,73 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
 
-  const { data, error } = await supabase
-    .from("clients")
-    .insert({
-      name: body.name,
-      type: body.type?.toLowerCase() || "business",
-      group_owner: body.group || null,
-      status: body.status || "active",
-      city: body.city || "",
-      state: body.state || "TX",
-      address: body.address || "",
-      cid: body.cid || null,
-    })
-    .select()
-    .single();
+  // Create client
+  const { data: client, error } = await supabase
+    .from("clients").insert({
+      name: body.name, type: body.type?.toLowerCase() || "business",
+      group_owner: body.group || null, status: body.status || "active",
+      city: body.city || "", state: body.state || "TX",
+      address: body.address || "", cid: body.cid || null,
+    }).select().single();
 
-  if (error || !data) {
+  if (error || !client) {
     return NextResponse.json({ error: error?.message || "Insert failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ client: data }, { status: 201 });
+  // Create client_services for enabled services
+  const services = Array.isArray(body.services) ? body.services : [];
+  const svcInserts: any[] = [];
+
+  for (const svc of services) {
+    if (!svc.enabled) continue;
+    const entry: any = {
+      client_id: client.id,
+      service_id: null,
+      frequency: svc.frequency || "Monthly",
+      processor: svc.processor || "",
+      assigned_to: svc.assignedTo || "",
+      active: true,
+    };
+
+    // Sales Tax fields
+    if (svc.key === "sales_tax") {
+      entry.sales_tax_notes = svc.salesTaxNotes || "";
+      entry.tax_id = svc.taxId || "";
+      entry.bank_name = svc.bankName || "";
+      entry.bank_routing = svc.bankRouting || "";
+      entry.bank_account = svc.bankAccount || "";
+      entry.group_assigned_to = svc.groupAssignedTo || "";
+      entry.sales_tax_rt = svc.salesTaxRT || "";
+    }
+
+    // Payroll fields
+    if (svc.key === "payroll") {
+      entry.cdg = svc.cdg || "";
+      entry.eftps = svc.eftps || "";
+      entry.payroll_password = svc.payrollPassword || "";
+      entry.paydate = svc.paydate || "";
+    }
+
+    if (svc.key === "1099s") {
+      entry.expected_annual = svc.expectedAnnual || 0;
+    }
+
+    svcInserts.push(entry);
+  }
+
+  if (svcInserts.length > 0) {
+    await supabase.from("client_services").insert(svcInserts);
+  }
+
+  return NextResponse.json({ client }, { status: 201 });
 }
 
 export async function DELETE(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
-  }
-
+  if (!id) return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
   const { error } = await supabase.from("clients").delete().eq("id", id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

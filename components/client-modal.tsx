@@ -454,6 +454,39 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                             </select>
                           </div>
 
+                          {/* Payroll specific fields */}
+                          {svc.key === "payroll" && (
+                            <>
+                              <div className="mt-2 pt-2" style={{ borderTop: "1px dashed var(--line)" }}>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--blue)]">
+                                  Payroll Details
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">CDG</span>
+                                  <input type="text" value={svc.cdg || ""} onChange={(e) => setServiceField(svc.key, "cdg", e.target.value)}
+                                    placeholder="CDG" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">EFTPs</span>
+                                  <input type="text" value={svc.eftps || ""} onChange={(e) => setServiceField(svc.key, "eftps", e.target.value)}
+                                    placeholder="EFTPs" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">Password</span>
+                                <input type="text" value={svc.payrollPassword || ""} onChange={(e) => setServiceField(svc.key, "payrollPassword", e.target.value)}
+                                  placeholder="Payroll password" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">Paydate</span>
+                                <input type="text" value={svc.paydate || ""} onChange={(e) => setServiceField(svc.key, "paydate", e.target.value)}
+                                  placeholder="e.g. 15th" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
+                              </div>
+                            </>
+                          )}
+
                           {/* Sales Tax specific fields */}
                           {svc.key === "sales_tax" && (
                             <>

@@ -28,7 +28,6 @@ export default function ClientsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // ── Derived data ──
   const groups = useMemo(() => getGroups(clients), [clients]);
@@ -141,7 +140,7 @@ export default function ClientsPage() {
       {/* ── Toolbar: Search + Filters + Actions ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
         {/* Search */}
-        <div className="relative flex-1 min-w-[320px]">
+        <div className="relative flex-[2] min-w-[280px]">
           <svg
             className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
             width="22"
@@ -192,9 +191,6 @@ export default function ClientsPage() {
           ))}
         </select>
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
         {/* Action buttons */}
         <button
           onClick={openAddModal}
@@ -236,15 +232,6 @@ export default function ClientsPage() {
                 key={item.name}
                 groupName={item.name}
                 clients={item.clients}
-                expanded={expandedGroups.has(item.name)}
-                onToggle={() => {
-                  setExpandedGroups((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(item.name)) next.delete(item.name);
-                    else next.add(item.name);
-                    return next;
-                  });
-                }}
                 onClientClick={(id) => openSlideover(id)}
               />
             ) : (
@@ -352,14 +339,10 @@ function StatCard({
 function GroupCard({
   groupName,
   clients,
-  expanded,
-  onToggle,
   onClientClick,
 }: {
   groupName: string;
   clients: Client[];
-  expanded: boolean;
-  onToggle: () => void;
   onClientClick: (id: string) => void;
 }) {
   // Collect unique locations and services across all group members
@@ -369,8 +352,7 @@ function GroupCard({
 
   return (
     <div
-      onClick={onToggle}
-      className="group cursor-pointer p-[15px_16px] border"
+      className="group p-[15px_16px] border"
       style={{
         backgroundColor: "var(--card)",
         borderColor: "var(--line)",
@@ -451,53 +433,30 @@ function GroupCard({
         )}
       </div>
 
-      {/* Expand chevron */}
-      <div
-        className="flex items-center justify-between pt-2"
-        style={{ borderTop: "1px solid var(--line)" }}
-      >
-        <span className="text-[10px] text-[var(--muted)]">
-          {expanded ? "Hide entities" : "Show entities"}
-        </span>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--muted)"
-          strokeWidth="2"
-          className={`transition-transform ${expanded ? "rotate-90" : ""}`}
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </div>
-
-      {/* Expanded sub-entity list */}
-      {expanded && (
-        <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
-          {clients.map((c) => (
-            <div
-              key={c.id}
-              onClick={(e) => { e.stopPropagation(); onClientClick(c.id); }}
-              className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors"
-            >
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-[var(--ink)] truncate">{c.name}</p>
-                <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
-              </div>
-              <span
-                className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
-                style={{
-                  backgroundColor: c.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
-                  color: c.type === "Business" ? "var(--teal)" : "var(--blue)",
-                }}
-              >
-                {c.type === "Business" ? "BIZ" : "PERS"}
-              </span>
+      {/* Static entity list - always visible */}
+      <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
+        {clients.map((c) => (
+          <div
+            key={c.id}
+            onClick={(e) => { e.stopPropagation(); onClientClick(c.id); }}
+            className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors"
+          >
+            <div className="min-w-0 flex-1 pr-2">
+              <p className="text-xs font-semibold text-[var(--ink)]" style={{ wordBreak: "break-word" }}>{c.name}</p>
+              <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
             </div>
-          ))}
-        </div>
-      )}
+            <span
+              className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: c.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
+                color: c.type === "Business" ? "var(--teal)" : "var(--blue)",
+              }}
+            >
+              {c.type === "Business" ? "BIZ" : "PERS"}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -594,8 +553,8 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
     >
       {/* Top row: Name + Type badge */}
       <div className="flex items-start justify-between gap-2 mb-[3px]">
-        <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight line-clamp-1"
-          style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
+        <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight"
+          style={{ fontFamily: '"Fraunces", Georgia, serif', wordBreak: "break-word" }}>
           {client.name}
         </h3>
         <span

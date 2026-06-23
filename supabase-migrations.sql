@@ -20,3 +20,10 @@ ALTER TABLE client_services
   ADD COLUMN IF NOT EXISTS bank_account TEXT,
   ADD COLUMN IF NOT EXISTS group_assigned_to TEXT,
   ADD COLUMN IF NOT EXISTS sales_tax_rt TEXT;
+
+-- Payroll fields on client_services
+ALTER TABLE client_services 
+  ADD COLUMN IF NOT EXISTS cdg TEXT,
+  ADD COLUMN IF NOT EXISTS eftps TEXT,
+  ADD COLUMN IF NOT EXISTS payroll_password TEXT,
+  ADD COLUMN IF NOT EXISTS paydate TEXT;

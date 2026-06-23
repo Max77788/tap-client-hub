@@ -45,6 +45,11 @@ export interface ClientService {
   bankAccount?: string;
   groupAssignedTo?: string;
   salesTaxRT?: string;
+  // Payroll specific fields (only on payroll service)
+  cdg?: string;
+  eftps?: string;
+  payrollPassword?: string;
+  paydate?: string;
   // Inline status from work_periods
   currentStage?: string;
 }
