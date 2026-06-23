@@ -36,12 +36,6 @@ export default function PrPage() {
     localStorage.setItem("tap_hub_pr_year", String(y));
   };
 
-  // Summary stats from clients with payroll service enabled
-  const payrollClients = useMemo(
-    () => clients.filter((c) => c.services.some((s) => s.key === "payroll" && s.enabled)),
-    [clients],
-  );
-
   const handleStageChange = (clientId: string, monthIdx: number, newStage: WorklistStage) => {
     updateServiceMonth(clientId, "payroll", monthIdx, stageToMonthStatus(newStage));
   };
@@ -55,29 +49,7 @@ export default function PrPage() {
         </select>
       </div>
 
-      {/* Summary stat card */}
-      <div className="grid grid-cols-1 gap-3 max-w-[200px]">
-        <StatCard label="Payroll Clients" value={payrollClients.length} color="var(--teal)" />
-      </div>
-
       <WorklistTable serviceKey="payroll" variant="payroll" clients={clients} year={year} onStageChange={handleStageChange} />
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-[11px] text-[var(--muted)]">
-        <span><span className="inline-block w-3 h-3 rounded mr-1" style={{ backgroundColor: "var(--green-soft)" }}/> Completed</span>
-        <span><span className="inline-block w-3 h-3 rounded mr-1" style={{ backgroundColor: "var(--amber-soft)" }}/> Partial</span>
-        <span><span className="inline-block w-3 h-3 rounded mr-1" style={{ backgroundColor: "var(--line)" }}/> Not started</span>
-        <span className="italic">Cells show completed / expected runs per month</span>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="p-3 rounded-lg flex flex-col" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)", borderLeft: `3px solid ${color}` }}>
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</span>
-      <span className="text-xl font-bold leading-tight" style={{ color }}>{value}</span>
     </div>
   );
 }
