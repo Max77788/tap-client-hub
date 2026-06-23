@@ -76,10 +76,10 @@ function getExpectedRuns(cadence: PayrollCadence): number {
   }
 }
 
-// ── 1099 expected counts from DB (client_services.expected_annual) ──
-export function getT9ExpectedCount(clientId: string): number {
-  const hash = clientId.charCodeAt(clientId.length - 1);
-  return (hash % 5) + 3; // 3-7 1099s per client
+// ── 1099 expected counts — use real client_services.expected_annual
+export function getT9ExpectedCount(clientId: string, svc?: any): number {
+  if (svc?.expectedAnnual && svc.expectedAnnual > 0) return svc.expectedAnnual;
+  return 0;
 }
 
 // ══════════════════════════════════════════════
@@ -174,26 +174,20 @@ export default function WorklistTable({
     return map;
   }, [serviceClients]);
 
-  // ── T9 actual counts lookup ──
+  // ── T9 actual counts lookup — uses real expected_annual from services
   const t9ActualCounts = useMemo<Record<string, number[]>>(() => {
     const map: Record<string, number[]> = {};
     for (const client of serviceClients) {
-      const expected = getT9ExpectedCount(client.id);
+      const svc = client.services.find((s: any) => s.key === serviceKey);
+      const expected = svc?.expectedAnnual || 0;
       const counts: number[] = [];
-      // Generate actual counts for 12 months
       for (let m = 0; m < 12; m++) {
-        if (m < 10) {
-          counts.push(Math.max(0, (expected + (m % 3) - 1) % (expected + 1)));
-        } else if (m === 10) {
-          counts.push(expected); // November: all done
-        } else {
-          counts.push(expected);
-        }
+        counts.push(m === 3 ? expected : 0); // Only April (month 3) has the expected count
       }
       map[client.id] = counts;
     }
     return map;
-  }, [serviceClients]);
+  }, [serviceClients, serviceKey]);
 
   // ── Cell click handler ──
   const handleCellClick = useCallback(
