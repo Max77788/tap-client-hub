@@ -5,6 +5,8 @@ import { SERVICE_META } from "@/lib/data";
 import { useClientsState } from "@/hooks/use-clients-state";
 import type { ServiceKey } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 const FREQ_TOUCHPOINTS: Record<string, number> = {
   monthly: 12, quarterly: 4, yearly: 1, annually: 1, "n/a": 0,
 };
@@ -32,7 +34,7 @@ export default function WorkloadPage() {
     return <div className="p-8 text-[var(--muted)]">Loading...</div>;
   }
   if (clientsError) {
-    return <div className="p-8 text-[var(--red)]">{clientsError}</div>;
+    return <div className="p-8 text-[var(--red)]">Error: {String(clientsError)}</div>;
   }
 
   // Compute staff workloads
