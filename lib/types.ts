@@ -134,4 +134,5 @@ export interface VaultEntry {
   notes?: string;
   clientId?: string;
   isBank?: boolean;
+  groupLabel?: string;
 }

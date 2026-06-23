@@ -2,39 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { Client, ServiceKey, MonthStatus } from "@/lib/types";
-import { CLIENTS as INITIAL_CLIENTS } from "@/lib/data";
-
-const STORAGE_KEY = "tap_hub_clients";
-const DATA_VERSION = 3; // bump: switched to Supabase source
-
-function loadCachedClients(): Client[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const storedVersion = localStorage.getItem("tap_hub_data_version");
-    if (storedVersion === String(DATA_VERSION)) {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
-    }
-  } catch {}
-  return null;
-}
-
-function saveClients(clients: Client[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
-    localStorage.setItem("tap_hub_data_version", String(DATA_VERSION));
-  } catch {}
-}
 
 export function useClientsState() {
-  const [clients, setClients] = useState<Client[]>(() => {
-    // Start with cached data for instant render
-    const cached = loadCachedClients();
-    if (cached && cached.length > 0) return cached;
-    return INITIAL_CLIENTS as Client[];
-  });
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch from Supabase API on mount
   useEffect(() => {
@@ -46,10 +18,11 @@ export function useClientsState() {
         const data = await res.json();
         if (!cancelled && data.clients?.length > 0) {
           setClients(data.clients);
-          saveClients(data.clients);
+        } else if (!cancelled) {
+          setError("No clients returned from API");
         }
-      } catch {
-        // Silently keep cached/mock data
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || "Failed to load clients");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -57,13 +30,6 @@ export function useClientsState() {
     fetchFromSupabase();
     return () => { cancelled = true; };
   }, []);
-
-  // Persist to localStorage on change (for offline resilience)
-  useEffect(() => {
-    if (clients.length > 50) { // Only save real data, not fallback mock
-      saveClients(clients);
-    }
-  }, [clients]);
 
   // Update a specific client
   const updateClient = useCallback((clientId: string, updates: Partial<Client>) => {
@@ -93,7 +59,7 @@ export function useClientsState() {
     []
   );
 
-  // Delete a client (with cascade handled by caller if needed)
+  // Delete a client
   const deleteClient = useCallback((clientId: string) => {
     setClients(prev => prev.filter(c => c.id !== clientId));
   }, []);
@@ -111,5 +77,6 @@ export function useClientsState() {
     deleteClient,
     addClient,
     loading,
+    error,
   };
 }
