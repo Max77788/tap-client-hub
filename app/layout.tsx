@@ -289,7 +289,7 @@ export default function RootLayout({
             <header
               className="sticky top-0 z-10 flex items-center justify-between shrink-0"
               style={{
-                height: 58,
+                height: 68,
                 backgroundColor: "var(--card)",
                 borderBottom: "1px solid var(--line)",
                 padding: "0 32px",
