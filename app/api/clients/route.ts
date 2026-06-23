@@ -97,6 +97,13 @@ export async function GET() {
       email: "",
       phone: "",
       address: db.address || "",
+      notes: db.notes || "",
+      taxId: db.tax_id || "",
+      bankName: db.bank_name || "",
+      bankRouting: db.bank_routing || "",
+      bankAccount: db.bank_account || "",
+      groupAssignedTo: db.group_assigned_to || "",
+      salesTaxRT: db.sales_tax_rt || "",
       assignedStaff: clientServices[0]?.assigned_to || "Unassigned",
       services,
     };
@@ -119,6 +126,13 @@ export async function POST(request: Request) {
       city: body.city || "",
       state: body.state || "TX",
       address: body.address || "",
+      notes: body.notes || null,
+      tax_id: body.taxId || null,
+      bank_name: body.bankName || null,
+      bank_routing: body.bankRouting || null,
+      bank_account: body.bankAccount || null,
+      group_assigned_to: body.groupAssignedTo || null,
+      sales_tax_rt: body.salesTaxRT || null,
       cid: body.cid || null,
     })
     .select()

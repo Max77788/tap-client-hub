@@ -52,6 +52,13 @@ export interface Client {
   address: string;
   email?: string;
   phone?: string;
+  notes?: string;
+  taxId?: string;
+  bankName?: string;
+  bankRouting?: string;
+  bankAccount?: string;
+  groupAssignedTo?: string;
+  salesTaxRT?: string;
   services: ClientService[];
   assignedStaff?: string;
 }
