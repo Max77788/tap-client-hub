@@ -1,9 +1,20 @@
 "use client";
 
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import "./globals.css";
+
+const Recoleta = localFont({
+  src: [
+    { path: "./fonts/Recoleta-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/Recoleta-Regular.woff2", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  variable: "--font-recoleta",
+  fallback: ["Georgia", "Times New Roman", "serif"],
+});
 
 interface NavItem {
   label: string;
@@ -192,7 +203,7 @@ export default function RootLayout({
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${Recoleta.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
