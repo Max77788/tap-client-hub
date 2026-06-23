@@ -241,8 +241,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         className="px-3 pb-3 space-y-3"
                         style={{ borderTop: `1px solid var(--line)` }}
                       >
-                        {/* Frequency + Processor */}
+                        {/* Frequency + Processor (skip for 1099s) */}
                         <div className="flex items-center gap-4 pt-2 text-xs">
+                          {svc.key !== "1099s" && (
                           <div className="flex items-center gap-1.5">
                             <span className="text-[var(--muted)]">Frequency:</span>
                             {editable ? (
@@ -269,6 +270,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                               <span className="font-medium text-[var(--ink)]">{svc.frequency}</span>
                             )}
                           </div>
+                          )}
                           <div className="flex items-center gap-1.5">
                             <span className="text-[var(--muted)]">Processor:</span>
                             {editable ? (

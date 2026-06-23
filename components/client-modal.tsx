@@ -365,7 +365,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                         >
                           {meta.label}
                         </span>
-                        {svc.enabled && cadence.options.length === 0 && (
+                        {svc.enabled && cadence.options.length === 0 && svc.key !== "1099s" && (
                           <span className="text-[10px] text-[var(--muted)] ml-auto">
                             {svc.frequency}
                           </span>
