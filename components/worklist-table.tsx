@@ -380,7 +380,7 @@ export default function WorklistTable({
               <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Assigned
               </th>
-              {variant !== "t9" && (
+              {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
               <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
                 Cadence
               </th>
@@ -445,7 +445,7 @@ export default function WorklistTable({
                     </td>
 
                     {/* Cadence */}
-                    {variant !== "t9" && (
+                    {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                     <td className="px-3 py-2.5 text-xs text-[var(--muted)] whitespace-nowrap">
                       {variant === "payroll"
                         ? payrollCadences[client.id] ?? "Monthly"
