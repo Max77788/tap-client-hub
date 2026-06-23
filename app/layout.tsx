@@ -96,17 +96,17 @@ function MobileSidebar({
         className="fixed top-0 left-0 z-50 h-full w-64 flex flex-col shadow-2xl md:hidden"
         style={{
           background: `linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)`,
-          color: "#ffffff",
+          color: "var(--ink)",
         }}
       >
         <div className="px-5 pt-8 pb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-white m-0">TAP</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-[var(--teal)] m-0">TAP</h2>
             <p className="text-xs mt-0.5 opacity-70">Associates, LLC &middot; Est. 1999</p>
           </div>
           <button
             onClick={onClose}
-            className="text-white/70 hover:text-white text-lg leading-none p-1"
+            className="text-[var(--muted)] hover:text-[var(--ink)] text-lg leading-none p-1"
             aria-label="Close menu"
           >
             ✕
@@ -115,7 +115,7 @@ function MobileSidebar({
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
           {visibleNav.map((item) => {
             if (item.label === "---") {
-              return <div key="sep-mobile" className="my-3 mx-2 border-t border-white/15" />;
+              return <div key="sep-mobile" className="my-3 mx-2 border-t border-[var(--line)]" />;
             }
             const isActive = pathname === item.href;
             return (
@@ -123,8 +123,10 @@ function MobileSidebar({
                 key={item.label}
                 href={item.href}
                 onClick={onClose}
-                className={`block px-4 py-3 rounded-lg text-sm font-semibold transition-colors text-white ${
-                  isActive ? "bg-white/15" : "hover:bg-white/10"
+                className={`block px-4 py-3 rounded-lg text-sm font-semibold transition-colors ${
+                  isActive
+                    ? "bg-[var(--teal-soft)] text-[var(--teal)]"
+                    : "text-[var(--ink)] hover:bg-[var(--teal-soft)]/50"
                 }`}
               >
                 {item.label}
@@ -146,7 +148,7 @@ function MobileSidebar({
               });
               window.location.href = "/login";
             }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-[var(--muted)] hover:bg-[var(--red-soft)] hover:text-[var(--red)] transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -156,7 +158,7 @@ function MobileSidebar({
             Log out
           </button>
         </div>
-        <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
+        <div className="px-5 pb-6 pt-4 text-xs text-[var(--muted)]">TAP Client Hub v1.0</div>
       </div>
     </>
   );
@@ -215,12 +217,12 @@ export default function RootLayout({
             style={{
               width: "var(--sidebar-width)",
               background: `linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)`,
-              color: "#ffffff",
+              color: "var(--ink)",
             }}
           >
             {/* Brand */}
             <div className="px-5 pt-8 pb-6">
-              <h2 className="text-2xl font-semibold tracking-tight text-white m-0">TAP</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--teal)] m-0">TAP</h2>
               <p className="text-xs mt-1 opacity-70 leading-relaxed">Associates, LLC &middot; Est. 1999</p>
             </div>
 
@@ -228,15 +230,17 @@ export default function RootLayout({
             <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
               {visibleNav.map((item) => {
                 if (item.label === "---") {
-                  return <div key="sep-desktop-1" className="my-3 mx-2 border-t border-white/15" />;
+                  return <div key="sep-desktop-1" className="my-3 mx-2 border-t border-[var(--line)]" />;
                 }
                 const isActive = pathname === item.href;
                 return (
                   <a
                     key={item.label}
                     href={item.href}
-                    className={`block px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-150 text-white ${
-                      isActive ? "bg-white/15" : "hover:bg-white/10"
+                    className={`block px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-150 ${
+                      isActive
+                        ? "bg-[var(--teal-soft)] text-[var(--teal)]"
+                        : "text-[var(--ink)] hover:bg-[var(--teal-soft)]/50"
                     }`}
                   >
                     {item.label}
@@ -258,7 +262,7 @@ export default function RootLayout({
                   });
                   window.location.href = "/login";
                 }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-colors duration-150"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-[var(--muted)] hover:bg-[var(--red-soft)] hover:text-[var(--red)] transition-colors duration-150"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -270,7 +274,7 @@ export default function RootLayout({
             </div>
 
             {/* Footer */}
-            <div className="px-5 pb-6 pt-4 text-xs text-white/50">TAP Client Hub v1.0</div>
+            <div className="px-5 pb-6 pt-4 text-xs text-[var(--muted)]">TAP Client Hub v1.0</div>
           </aside>
         )}
 

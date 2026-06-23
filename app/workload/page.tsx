@@ -114,7 +114,7 @@ export default function WorkloadPage() {
 
   const svcColors: Record<ServiceKey, string> = {
     financials: "var(--green)", payroll: "var(--blue)", sales_tax: "var(--amber)",
-    "1099s": "#8b6914", renditions: "#1e5631", tax_returns: "#5a2d82",
+    "1099s": "#ca8a04", renditions: "#16a34a", tax_returns: "#7c3aed",
   };
 
   return (

@@ -227,7 +227,7 @@ export default function TimePage() {
             <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">Elapsed</label>
             <span className={`text-[26px] sm:text-[28px] font-mono font-bold tracking-tight tabular-nums leading-none ${running ? "text-[var(--green)]" : "text-[var(--ink)]"}`}>{formatTimer(elapsed)}</span>
           </div>
-          <button onClick={running ? stopTimer : startTimer} disabled={!running && (!selectedClient || !selectedPerson)} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-sm shrink-0 ${running ? "bg-[var(--red)] text-white hover:opacity-90" : "text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"}`} style={running ? {} : { backgroundColor: "#2f7d4f" }}>
+          <button onClick={running ? stopTimer : startTimer} disabled={!running && (!selectedClient || !selectedPerson)} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition shadow-sm shrink-0 ${running ? "bg-[var(--red)] text-white hover:opacity-90" : "text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"}`} style={running ? {} : { backgroundColor: "var(--green)" }}>
             {running ? (<><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>Stop</>) : (<><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>Start</>)}
           </button>
         </div>

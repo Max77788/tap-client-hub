@@ -26,9 +26,9 @@ export const SERVICE_META: Record<ServiceKey, { label: string; pillColor: string
   financials:  { label: "Financials",         pillColor: "var(--green)",       pillBg: "var(--green-soft)"  },
   payroll:     { label: "Payroll",     pillColor: "var(--blue)",        pillBg: "var(--blue-soft)"   },
   sales_tax:   { label: "Sales Tax",   pillColor: "var(--amber)",       pillBg: "var(--amber-soft)"  },
-  "1099s":     { label: "1099s",       pillColor: "#8b6914",            pillBg: "#f5edd6"             },
-  renditions:  { label: "Renditions",  pillColor: "#1e5631",            pillBg: "#e3efe6"             },
-  tax_returns: { label: "Tax Returns", pillColor: "#5a2d82",            pillBg: "#f0e6f6"             },
+  "1099s":     { label: "1099s",       pillColor: "#ca8a04",            pillBg: "#fef9c3"             },
+  renditions:  { label: "Renditions",  pillColor: "#16a34a",            pillBg: "#dcfce7"             },
+  tax_returns: { label: "Tax Returns", pillColor: "#7c3aed",            pillBg: "#f3e8ff"             },
 };
 
 // ── Helper: generate a 12-month tracking array ──
