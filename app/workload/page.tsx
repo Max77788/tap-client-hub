@@ -20,14 +20,26 @@ export default function WorkloadPage() {
     let cancelled = false;
     async function load() {
       try {
+        console.log("[Workload] Fetching data...");
         const [cr, sr] = await Promise.all([
-          fetch("/api/clients").then(r => r.ok ? r.json() : Promise.reject("clients API failed")),
-          fetch("/api/profiles").then(r => r.ok ? r.json() : Promise.reject("profiles API failed")),
+          fetch("/api/clients").then(r => {
+            console.log("[Workload] clients response status:", r.status, r.ok);
+            return r.ok ? r.json() : Promise.reject(`clients API failed (${r.status})`);
+          }),
+          fetch("/api/profiles").then(r => {
+            console.log("[Workload] profiles response status:", r.status, r.ok);
+            return r.ok ? r.json() : Promise.reject(`profiles API failed (${r.status})`);
+          }),
         ]);
+        console.log("[Workload] clients payload:", typeof cr, Array.isArray(cr?.clients) ? `${cr.clients.length} clients` : "bad shape", cr?.error || "");
+        console.log("[Workload] profiles payload:", typeof sr, Array.isArray(sr) ? `${sr.length} profiles` : "bad shape", sr?.error || "");
         if (cancelled) return;
-        setClients(Array.isArray(cr?.clients) ? cr.clients : []);
+        const clientList = Array.isArray(cr?.clients) ? cr.clients : [];
+        setClients(clientList);
         setStaff(Array.isArray(sr) ? sr : []);
+        console.log("[Workload] State set — clients:", clientList.length, "staff:", (Array.isArray(sr) ? sr : []).length);
       } catch (e: any) {
+        console.error("[Workload] Error:", e?.message || e);
         if (!cancelled) setError(String(e?.message || e));
       } finally {
         if (!cancelled) setLoading(false);
@@ -51,6 +63,8 @@ export default function WorkloadPage() {
 
   // Compute loads
   const staffLoads = useMemo(() => {
+    try {
+    console.log("[Workload] Computing staffLoads — clients:", clients.length, "staff:", staff.length);
     const loads = new Map<string, { totalTouchpoints: number; clientCount: number; services: Record<string, number> }>();
     const counted = new Set<string>();
 
@@ -60,6 +74,10 @@ export default function WorkloadPage() {
         if (!svc?.enabled) continue;
         const freq = FREQ_TOUCHPOINTS[String(svc.frequency || "").toLowerCase()] || 0;
         const proc = String(svc.processor || "");
+        if (!proc) {
+          console.log("[Workload] Skipping service with no processor:", svc.key || svc.label, "client:", c.name);
+          continue;
+        }
         // Match processor initials or name to staff
         let staffName = proc;
         for (const [sName, sInfo] of staffMap) {
@@ -79,6 +97,8 @@ export default function WorkloadPage() {
       }
     }
 
+    console.log("[Workload] Staff with load:", loads.size, "total touchpoints:", Array.from(loads.values()).reduce((s,l)=>s+l.totalTouchpoints,0));
+
     // Fill in staff with no load
     for (const [name, info] of staffMap) {
       if (!loads.has(name)) {
@@ -93,6 +113,10 @@ export default function WorkloadPage() {
       ...data,
       services: data.services as Record<ServiceKey, number>,
     })).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
+  } catch (e: any) {
+    console.error("[Workload] useMemo crash:", e?.message || e);
+    return [];
+  }
   }, [clients, staff]);
 
   const busiest = staffLoads[0];
@@ -132,7 +156,10 @@ export default function WorkloadPage() {
                       const val = load.services[key];
                       if (!val || val <= 0) return null;
                       const meta = SERVICE_META[key];
-                      if (!meta) return null;
+                      if (!meta) {
+                        console.warn("[Workload] No SERVICE_META for key:", key);
+                        return null;
+                      }
                       return <span key={key} className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}>{meta.label}: {val}</span>;
                     })}
                   </div>
