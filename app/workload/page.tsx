@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { SERVICE_META } from "@/lib/data";
-import { useClientsState } from "@/hooks/use-clients-state";
 import type { ServiceKey } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -11,75 +10,103 @@ const FREQ_TOUCHPOINTS: Record<string, number> = {
   monthly: 12, quarterly: 4, yearly: 1, annually: 1, "n/a": 0,
 };
 
-interface StaffLoad {
-  name: string; initials: string; role: string;
-  totalTouchpoints: number; clientCount: number;
-  services: Record<ServiceKey, number>;
-}
-
 export default function WorkloadPage() {
-  const { clients, loading: clientsLoading, error: clientsError } = useClientsState();
+  const [clients, setClients] = useState<any[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
-  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/profiles")
-      .then(r => r.ok ? r.json() : [])
-      .then(data => { if (Array.isArray(data)) setStaff(data); })
-      .catch(() => {})
-      .finally(() => setLoadingStaff(false));
-  }, []);
-
-  if (clientsLoading || loadingStaff) {
-    return <div className="p-8 text-[var(--muted)]">Loading...</div>;
-  }
-  if (clientsError) {
-    return <div className="p-8 text-[var(--red)]">Error: {String(clientsError)}</div>;
-  }
-
-  // Compute staff workloads
-  const staffLoads = useMemo(() => {
-    const map = new Map<string, StaffLoad>();
-    for (const s of staff) {
-      const name = s.name || "Unknown";
-      const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase();
-      map.set(name, { name, initials, role: s.role || "", totalTouchpoints: 0, clientCount: 0, services: { financials: 0, payroll: 0, sales_tax: 0, "1099s": 0, renditions: 0, tax_returns: 0 } });
-    }
-    const counted = new Set<string>();
-    for (const c of clients) {
-      for (const svc of (c.services || [])) {
-        if (!svc || !svc.enabled) continue;
-        const freqKey = String(svc.frequency || "").toLowerCase();
-        const freq = FREQ_TOUCHPOINTS[freqKey] || 0;
-        const proc = String(svc.processor || "");
-        const staffName = staff.find((s) => {
-          const sName = String(s.name || "");
-          const initials = sName.split(" ").map((n: string) => n[0]).join("").toUpperCase();
-          return initials === proc || sName === proc || sName.split(" ")[0] === proc;
-        })?.name || proc;
-        const load = map.get(staffName);
-        if (load) {
-          const key = (svc.key || "financials") as ServiceKey;
-          load.services[key] = (load.services[key] || 0) + freq;
-          load.totalTouchpoints += freq;
-          const cid = c.id + staffName;
-          if (!counted.has(cid)) { load.clientCount++; counted.add(cid); }
-        }
+    let cancelled = false;
+    async function load() {
+      try {
+        const [cr, sr] = await Promise.all([
+          fetch("/api/clients").then(r => r.ok ? r.json() : Promise.reject("clients API failed")),
+          fetch("/api/profiles").then(r => r.ok ? r.json() : Promise.reject("profiles API failed")),
+        ]);
+        if (cancelled) return;
+        setClients(Array.isArray(cr?.clients) ? cr.clients : []);
+        setStaff(Array.isArray(sr) ? sr : []);
+      } catch (e: any) {
+        if (!cancelled) setError(String(e?.message || e));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) return <div className="p-8 text-[var(--muted)]">Loading workload data...</div>;
+  if (error) return <div className="p-8 text-[var(--red)]">Error: {error}</div>;
+  if (clients.length === 0) return <div className="p-8 text-[var(--muted)]">No clients loaded.</div>;
+
+  // Build staff map
+  const staffMap = new Map<string, { name: string; initials: string; role: string }>();
+  for (const s of staff) {
+    const name = String(s.name || "Unknown");
+    const initials = name.split(" ").map((n: string) => n[0] || "").join("").toUpperCase() || "??";
+    staffMap.set(name, { name, initials, role: String(s.role || "") });
+  }
+
+  // Compute loads
+  const staffLoads = useMemo(() => {
+    const loads = new Map<string, { totalTouchpoints: number; clientCount: number; services: Record<string, number> }>();
+    const counted = new Set<string>();
+
+    for (const c of clients) {
+      if (!c?.services) continue;
+      for (const svc of c.services) {
+        if (!svc?.enabled) continue;
+        const freq = FREQ_TOUCHPOINTS[String(svc.frequency || "").toLowerCase()] || 0;
+        const proc = String(svc.processor || "");
+        // Match processor initials or name to staff
+        let staffName = proc;
+        for (const [sName, sInfo] of staffMap) {
+          if (sInfo.initials === proc || sName === proc || sName.split(" ")[0] === proc) {
+            staffName = sName;
+            break;
+          }
+        }
+        if (!staffName) continue;
+        const load = loads.get(staffName) || { totalTouchpoints: 0, clientCount: 0, services: {} };
+        const key = String(svc.key || "financials");
+        load.services[key] = (load.services[key] || 0) + freq;
+        load.totalTouchpoints += freq;
+        const cid = String(c.id || "") + staffName;
+        if (!counted.has(cid)) { load.clientCount++; counted.add(cid); }
+        loads.set(staffName, load);
+      }
+    }
+
+    // Fill in staff with no load
+    for (const [name, info] of staffMap) {
+      if (!loads.has(name)) {
+        loads.set(name, { totalTouchpoints: 0, clientCount: 0, services: {} });
+      }
+    }
+
+    return Array.from(loads.entries()).map(([name, data]) => ({
+      name,
+      initials: staffMap.get(name)?.initials || "??",
+      role: staffMap.get(name)?.role || "",
+      ...data,
+      services: data.services as Record<ServiceKey, number>,
+    })).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
   }, [clients, staff]);
 
-  const busiestPerson = staffLoads[0] || null;
-  const totalTouchpoints = staffLoads.reduce((s, l) => s + l.totalTouchpoints, 0);
+  const busiest = staffLoads[0];
+  const totalTouch = staffLoads.reduce((s, l) => s + l.totalTouchpoints, 0);
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Team Members" value={staff.length} color="var(--teal)" />
         <StatCard label="Total Clients" value={clients.length} color="var(--blue)" />
-        <StatCard label="Busiest Person" value={busiestPerson?.totalTouchpoints ?? 0} suffix={busiestPerson ? ` (${busiestPerson.name.split(" ")[0]})` : ""} color="var(--amber)" />
-        <StatCard label="Touchpoints / yr" value={totalTouchpoints} color="var(--green)" />
+        <StatCard label="Busiest Person" value={busiest?.totalTouchpoints ?? 0}
+          suffix={busiest ? ` (${(busiest.name || "").split(" ")[0]})` : ""}
+          color="var(--amber)" />
+        <StatCard label="Touchpoints / yr" value={totalTouch} color="var(--green)" />
       </div>
 
       <div className="p-5 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
@@ -95,7 +122,7 @@ export default function WorkloadPage() {
           </thead>
           <tbody>
             {staffLoads.map((load) => (
-              <tr key={load.name} className="hover:bg-[var(--teal-soft)]/30" style={{ borderBottom: "1px solid var(--line)" }}>
+              <tr key={load.name} style={{ borderBottom: "1px solid var(--line)" }}>
                 <td className="p-3 font-semibold">{load.name} <span className="text-[10px] text-[var(--muted)]">{load.initials}</span></td>
                 <td className="p-3 text-right">{load.clientCount}</td>
                 <td className="p-3 text-right">{load.totalTouchpoints}</td>
@@ -103,8 +130,9 @@ export default function WorkloadPage() {
                   <div className="flex flex-wrap gap-1">
                     {(Object.keys(load.services) as ServiceKey[]).map((key) => {
                       const val = load.services[key];
-                      if (val <= 0) return null;
+                      if (!val || val <= 0) return null;
                       const meta = SERVICE_META[key];
+                      if (!meta) return null;
                       return <span key={key} className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}>{meta.label}: {val}</span>;
                     })}
                   </div>
