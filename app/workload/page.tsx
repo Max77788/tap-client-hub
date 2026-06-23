@@ -1,100 +1,85 @@
-"use client";
-
-import { useState, useEffect, useMemo } from "react";
 import { SERVICE_META } from "@/lib/data";
 import type { ServiceKey } from "@/lib/types";
+import { createClient } from "@/lib/supabase/server";
 
 const FREQ_TOUCHPOINTS: Record<string, number> = {
   monthly: 12, quarterly: 4, yearly: 1, annually: 1, "n/a": 0,
 };
 
-export default function WorkloadPage() {
-  const [clients, setClients] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const CODE_TO_KEY: Record<string, ServiceKey> = {
+  FIN: "financials", PR: "payroll", STX: "sales_tax",
+  T9: "1099s", REND: "renditions", TAX: "tax_returns",
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const [cr, sr] = await Promise.all([
-          fetch("/api/clients").then(r => r.ok ? r.json() : Promise.reject("clients API failed")),
-          fetch("/api/profiles").then(r => r.ok ? r.json() : Promise.reject("profiles API failed")),
-        ]);
-        if (cancelled) return;
-        setClients(Array.isArray(cr?.clients) ? cr.clients : []);
-        setStaff(Array.isArray(sr) ? sr : []);
-      } catch (e: any) {
-        if (!cancelled) setError(String(e?.message || e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+async function getWorkloadData() {
+  const supabase = await createClient();
 
-  if (loading) return <div className="p-8 text-[var(--muted)]">Loading workload data...</div>;
-  if (error) return <div className="p-8 text-[var(--red)]">Error: {error}</div>;
-  if (clients.length === 0) return <div className="p-8 text-[var(--muted)]">No clients loaded.</div>;
+  // Fetch clients with services
+  const { data: dbClients } = await supabase.from("clients").select("*").eq("status", "active").order("name");
+  const { data: dbServices } = await supabase.from("client_services").select("*, service:services(*)").eq("active", true);
+  const { data: profiles } = await supabase.from("profiles").select("*").order("full_name");
+
+  if (!dbClients) return { clients: [], staff: [], staffLoads: [] };
 
   // Build staff map
-  const staffMap = new Map<string, { name: string; initials: string; role: string }>();
-  for (const s of staff) {
-    const name = String(s.name || "Unknown");
+  const staffMap = new Map<string, { name: string; initials: string }>();
+  for (const p of profiles || []) {
+    const name = String(p.full_name || "Unknown");
     const initials = name.split(" ").map((n: string) => n[0] || "").join("").toUpperCase() || "??";
-    staffMap.set(name, { name, initials, role: String(s.role || "") });
+    staffMap.set(name, { name, initials });
+  }
+
+  // Group services by client
+  const servicesByClient: Record<string, any[]> = {};
+  for (const cs of dbServices || []) {
+    if (!servicesByClient[cs.client_id]) servicesByClient[cs.client_id] = [];
+    servicesByClient[cs.client_id].push(cs);
   }
 
   // Compute loads
-  const staffLoads = useMemo(() => {
-    const loads = new Map<string, { totalTouchpoints: number; clientCount: number; services: Record<string, number> }>();
-    const counted = new Set<string>();
+  const loads = new Map<string, { totalTouchpoints: number; clientCount: number; services: Record<string, number> }>();
+  const counted = new Set<string>();
 
-    for (const c of clients) {
-      if (!c?.services) continue;
-      for (const svc of c.services) {
-        if (!svc?.enabled) continue;
-        const freq = FREQ_TOUCHPOINTS[String(svc.frequency || "").toLowerCase()] || 0;
-        const proc = String(svc.processor || "");
-        // Match processor initials or name to staff
-        let staffName = proc;
-        for (const [sName, sInfo] of staffMap) {
-          if (sInfo.initials === proc || sName === proc || sName.split(" ")[0] === proc) {
-            staffName = sName;
-            break;
-          }
+  for (const c of dbClients) {
+    const clientServices = servicesByClient[c.id] || [];
+    for (const cs of clientServices) {
+      const freq = FREQ_TOUCHPOINTS[String(cs.frequency || "").toLowerCase()] || 0;
+      const proc = String(cs.processor || "");
+      let staffName = proc;
+      for (const [sName, sInfo] of staffMap) {
+        if (sInfo.initials === proc || sName === proc || sName.split(" ")[0] === proc) {
+          staffName = sName; break;
         }
-        if (!staffName) continue;
-        const load = loads.get(staffName) || { totalTouchpoints: 0, clientCount: 0, services: {} };
-        const key = String(svc.key || "financials");
-        load.services[key] = (load.services[key] || 0) + freq;
-        load.totalTouchpoints += freq;
-        const cid = String(c.id || "") + staffName;
-        if (!counted.has(cid)) { load.clientCount++; counted.add(cid); }
-        loads.set(staffName, load);
       }
+      if (!staffName) continue;
+      const load = loads.get(staffName) || { totalTouchpoints: 0, clientCount: 0, services: {} };
+      const key = CODE_TO_KEY[cs.service?.code || ""] || "financials";
+      load.services[key] = (load.services[key] || 0) + freq;
+      load.totalTouchpoints += freq;
+      const cid = String(c.id) + staffName;
+      if (!counted.has(cid)) { load.clientCount++; counted.add(cid); }
+      loads.set(staffName, load);
     }
+  }
 
-    // Fill in staff with no load
-    for (const [name] of staffMap) {
-      if (!loads.has(name)) {
-        loads.set(name, { totalTouchpoints: 0, clientCount: 0, services: {} });
-      }
-    }
+  for (const [name] of staffMap) {
+    if (!loads.has(name)) loads.set(name, { totalTouchpoints: 0, clientCount: 0, services: {} });
+  }
 
-    return Array.from(loads.entries()).map(([name, data]) => ({
-      name,
-      initials: staffMap.get(name)?.initials || "??",
-      role: staffMap.get(name)?.role || "",
-      ...data,
-      services: data.services as Record<ServiceKey, number>,
-    })).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
-  }, [clients, staff]);
+  const staffLoads = Array.from(loads.entries()).map(([name, data]) => ({
+    name,
+    initials: staffMap.get(name)?.initials || "??",
+    ...data,
+  })).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
+
+  return { clients: dbClients, staff: profiles || [], staffLoads };
+}
+
+export default async function WorkloadPage() {
+  const { clients, staff, staffLoads } = await getWorkloadData();
 
   const busiest = staffLoads[0];
-  const totalTouch = staffLoads.reduce((s, l) => s + l.totalTouchpoints, 0);
+  const totalTouch = staffLoads.reduce((s: number, l: any) => s + l.totalTouchpoints, 0);
 
   return (
     <div className="space-y-6">
@@ -119,7 +104,7 @@ export default function WorkloadPage() {
             </tr>
           </thead>
           <tbody>
-            {staffLoads.map((load) => (
+            {staffLoads.map((load: any) => (
               <tr key={load.name} style={{ borderBottom: "1px solid var(--line)" }}>
                 <td className="p-3 font-semibold">{load.name} <span className="text-[10px] text-[var(--muted)]">{load.initials}</span></td>
                 <td className="p-3 text-right">{load.clientCount}</td>
