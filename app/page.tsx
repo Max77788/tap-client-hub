@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   SERVICE_META,
@@ -419,11 +419,24 @@ function GroupCard({
         {[...allServices].slice(0, 5).map((key) => {
           const meta = SERVICE_META[key as ServiceKey];
           if (!meta) return null;
+          // Compute aggregate: use the worst status across clients with this service
+          const stages = clients
+            .flatMap((c) => c.services.filter((s) => s.enabled && s.key === key))
+            .map((s) => (s as any).currentStage || "not_started");
+          const worstPriority: Record<string, number> = { not_started: 0, in_progress: 1, done: 2, delayed: 3 };
+          let worstStage = "not_started";
+          let worstPri = 0;
+          for (const st of stages) {
+            const pri = worstPriority[st] ?? 0;
+            if (pri > worstPri) { worstPri = pri; worstStage = st; }
+          }
+          const statusOpt = STATUS_OPTIONS.find((o) => o.value === worstStage) || STATUS_OPTIONS[0];
           return (
             <span
               key={key}
               className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}
+              style={{ backgroundColor: statusOpt.bg, color: statusOpt.color }}
+              title={`${meta.label}: ${statusOpt.label} (${stages.length} clients)`}
             >
               {meta.label}
             </span>
@@ -491,8 +504,70 @@ function GroupCard({
 // ══════════════════════════════════════════════
 // ── Client Card ──
 // ══════════════════════════════════════════════
+
+const STATUS_OPTIONS = [
+  { value: "not_started", label: "Not Started", color: "var(--muted)", bg: "#e8eaf0" },
+  { value: "in_progress", label: "In Progress", color: "var(--blue)", bg: "var(--blue-soft)" },
+  { value: "done", label: "Done", color: "var(--green)", bg: "var(--green-soft)" },
+  { value: "delayed", label: "Delayed", color: "var(--red)", bg: "var(--red-soft)" },
+] as const;
+
 function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
   const enabledServices = client.services.filter((s) => s.enabled);
+  const [openPopover, setOpenPopover] = useState<string | null>(null);
+  const [serviceStatuses, setServiceStatuses] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const svc of enabledServices) {
+      map[svc.key || svc.id] = (svc as any).currentStage || "not_started";
+    }
+    return map;
+  });
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Sync external state changes
+  useEffect(() => {
+    const map: Record<string, string> = {};
+    for (const svc of enabledServices) {
+      map[svc.key || svc.id] = (svc as any).currentStage || "not_started";
+    }
+    setServiceStatuses(map);
+  }, [client.services]);
+
+  // Close popover on outside click
+  useEffect(() => {
+    if (!openPopover) return;
+    function handleClick(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setOpenPopover(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [openPopover]);
+
+  const handleStatusChange = async (svc: any, newStatus: string) => {
+    const key = svc.key || svc.id;
+    setServiceStatuses((prev) => ({ ...prev, [key]: newStatus }));
+    setOpenPopover(null);
+
+    if (!svc.csId) return; // No server ID yet
+    const period = new Date().toISOString().slice(0, 7);
+    await fetch("/api/work-periods", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_service_id: svc.csId,
+        period,
+        stage: newStatus,
+      }),
+    });
+  };
+
+  const getStatusStyle = (key: string) => {
+    const s = serviceStatuses[key] || "not_started";
+    const opt = STATUS_OPTIONS.find((o) => o.value === s) || STATUS_OPTIONS[0];
+    return { backgroundColor: opt.bg, color: opt.color };
+  };
 
   return (
     <div
@@ -540,13 +615,56 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         {enabledServices.map((svc) => {
           const meta = svc.key ? SERVICE_META[svc.key] : null;
           if (!meta) return null;
+          const key = svc.key || svc.id;
+          const statusStyle = getStatusStyle(key);
+          const isOpen = openPopover === key;
+
           return (
-            <span
-              key={svc.key || svc.id}
-              className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}
-            >
-              {meta.label}
+            <span key={key} style={{ position: "relative" }}>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenPopover(isOpen ? null : key);
+                }}
+                className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all"
+                style={{
+                  ...statusStyle,
+                }}
+                title={STATUS_OPTIONS.find((o) => o.value === (serviceStatuses[key] || "not_started"))?.label}
+              >
+                {meta.label}
+              </span>
+
+              {isOpen && (
+                <div
+                  ref={popoverRef}
+                  className="absolute z-50 bottom-full left-0 mb-1 p-1 rounded-lg shadow-lg flex flex-col gap-0.5 min-w-[110px]"
+                  style={{
+                    backgroundColor: "var(--card)",
+                    border: "1px solid var(--line)",
+                    boxShadow: "0 4px 16px rgba(26,35,64,0.16)",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleStatusChange(svc, opt.value)}
+                      className={`text-[10px] font-semibold px-2 py-1 rounded text-left hover:opacity-80 transition-opacity ${
+                        serviceStatuses[key] === opt.value ? "ring-1 ring-inset" : ""
+                      }`}
+                      style={{
+                        backgroundColor: opt.bg,
+                        color: opt.color,
+                      }}
+                    >
+                      {opt.label}
+                      {serviceStatuses[key] === opt.value && " ✓"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </span>
           );
         })}

@@ -43,14 +43,14 @@ body {
   padding: 0;
   background-color: var(--paper);
   color: var(--ink);
-  font-family: "Public Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-size: 0.9375rem;
   line-height: 1.6;
+  font-family: var(--font-recoleta), Georgia, "Times New Roman", serif;
 }
 
-/* ── Headings use Fraunces ── */
+/* ── Headings use Recoleta ── */
 main h1, main h2, main h3, main h4, main h5, main h6 {
-  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-family: var(--font-recoleta), Georgia, "Times New Roman", serif;
   font-weight: 600;
   line-height: 1.25;
   color: var(--ink);

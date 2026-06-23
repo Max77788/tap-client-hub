@@ -20,6 +20,7 @@ export interface ServiceConfig {
   software?: string;
   expectedAnnual?: number;  // 1099s annual target
   months?: any[];           // mock data month tracking
+  currentStage?: string;    // current month work_period stage
 }
 
 export interface ClientService {
@@ -36,6 +37,16 @@ export interface ClientService {
   processor?: string;
   expectedAnnual?: number;
   months?: any[];
+  // Sales Tax specific fields (only on sales_tax service)
+  salesTaxNotes?: string;
+  taxId?: string;
+  bankName?: string;
+  bankRouting?: string;
+  bankAccount?: string;
+  groupAssignedTo?: string;
+  salesTaxRT?: string;
+  // Inline status from work_periods
+  currentStage?: string;
 }
 
 export interface Client {
@@ -52,13 +63,6 @@ export interface Client {
   address: string;
   email?: string;
   phone?: string;
-  notes?: string;
-  taxId?: string;
-  bankName?: string;
-  bankRouting?: string;
-  bankAccount?: string;
-  groupAssignedTo?: string;
-  salesTaxRT?: string;
   services: ClientService[];
   assignedStaff?: string;
 }

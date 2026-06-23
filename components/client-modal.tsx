@@ -54,13 +54,6 @@ function makeEmptyClient(): Omit<Client, "id" | "cid"> {
     email: "",
     phone: "",
     address: "",
-    notes: "",
-    taxId: "",
-    bankName: "",
-    bankRouting: "",
-    bankAccount: "",
-    groupAssignedTo: "",
-    salesTaxRT: "",
     assignedStaff: "Terry Anderson",
     services: EMPTY_SERVICES,
   };
@@ -90,13 +83,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         email: client.email,
         phone: client.phone,
         address: client.address,
-        notes: client.notes || "",
-        taxId: client.taxId || "",
-        bankName: client.bankName || "",
-        bankRouting: client.bankRouting || "",
-        bankAccount: client.bankAccount || "",
-        groupAssignedTo: client.groupAssignedTo || "",
-        salesTaxRT: client.salesTaxRT || "",
         status: client.status || "active",
         assignedStaff: client.assignedStaff,
         services: client.services.map((s) => ({ ...s })),
@@ -331,84 +317,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               />
             </Field>
 
-            {/* Notes */}
-            <Field label="Notes">
-              <textarea
-                value={form.notes}
-                onChange={(e) => update("notes", e.target.value)}
-                placeholder="Any relevant notes about this client"
-                rows={2}
-                className="field-input resize-y"
-              />
-            </Field>
-
-            {/* Tax ID + Sales Tax RT row */}
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Tax ID">
-                <input
-                  type="text"
-                  value={form.taxId}
-                  onChange={(e) => update("taxId", e.target.value)}
-                  placeholder="EIN / SSN / ITIN"
-                  className="field-input"
-                />
-              </Field>
-              <Field label="S/Tax RT">
-                <input
-                  type="text"
-                  value={form.salesTaxRT}
-                  onChange={(e) => update("salesTaxRT", e.target.value)}
-                  placeholder="Sales tax return type"
-                  className="field-input"
-                />
-              </Field>
-            </div>
-
-            {/* Bank fields */}
-            <div className="grid grid-cols-3 gap-4">
-              <Field label="Bank Name">
-                <input
-                  type="text"
-                  value={form.bankName}
-                  onChange={(e) => update("bankName", e.target.value)}
-                  placeholder="Bank name"
-                  className="field-input"
-                />
-              </Field>
-              <Field label="Routing #">
-                <input
-                  type="text"
-                  value={form.bankRouting}
-                  onChange={(e) => update("bankRouting", e.target.value)}
-                  placeholder="Routing number"
-                  className="field-input"
-                />
-              </Field>
-              <Field label="Account #">
-                <input
-                  type="text"
-                  value={form.bankAccount}
-                  onChange={(e) => update("bankAccount", e.target.value)}
-                  placeholder="Account number"
-                  className="field-input"
-                />
-              </Field>
-            </div>
-
-            {/* Group Assigned To */}
-            <Field label="Group Assigned To">
-              <select
-                value={form.groupAssignedTo}
-                onChange={(e) => update("groupAssignedTo", e.target.value)}
-                className="field-input"
-              >
-                <option value="">Unassigned</option>
-                {staffOptions.map((s) => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))}
-              </select>
-            </Field>
-
             {/* Services */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
@@ -545,6 +453,103 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                               ))}
                             </select>
                           </div>
+
+                          {/* Sales Tax specific fields */}
+                          {svc.key === "sales_tax" && (
+                            <>
+                              <div className="mt-2 pt-2" style={{ borderTop: "1px dashed var(--line)" }}>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--amber)]">
+                                  Sales Tax Details
+                                </span>
+                              </div>
+
+                              {/* Notes */}
+                              <div className="flex items-start gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0 mt-1">
+                                  Notes
+                                </span>
+                                <textarea
+                                  value={svc.salesTaxNotes || ""}
+                                  onChange={(e) => setServiceField(svc.key, "salesTaxNotes", e.target.value)}
+                                  placeholder="Sales tax notes"
+                                  rows={2}
+                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] resize-y"
+                                />
+                              </div>
+
+                              {/* Tax ID + S/Tax RT */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                  Tax ID
+                                </span>
+                                <input
+                                  type="text"
+                                  value={svc.taxId || ""}
+                                  onChange={(e) => setServiceField(svc.key, "taxId", e.target.value)}
+                                  placeholder="EIN / SSN / ITIN"
+                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                  S/Tax RT
+                                </span>
+                                <input
+                                  type="text"
+                                  value={svc.salesTaxRT || ""}
+                                  onChange={(e) => setServiceField(svc.key, "salesTaxRT", e.target.value)}
+                                  placeholder="Sales tax return type"
+                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                />
+                              </div>
+
+                              {/* Bank Name / Routing # / Account # */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                  Bank
+                                </span>
+                                <input
+                                  type="text"
+                                  value={svc.bankName || ""}
+                                  onChange={(e) => setServiceField(svc.key, "bankName", e.target.value)}
+                                  placeholder="Name"
+                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                />
+                                <input
+                                  type="text"
+                                  value={svc.bankRouting || ""}
+                                  onChange={(e) => setServiceField(svc.key, "bankRouting", e.target.value)}
+                                  placeholder="Routing #"
+                                  className="w-20 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                />
+                                <input
+                                  type="text"
+                                  value={svc.bankAccount || ""}
+                                  onChange={(e) => setServiceField(svc.key, "bankAccount", e.target.value)}
+                                  placeholder="Acct #"
+                                  className="w-20 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                />
+                              </div>
+
+                              {/* Group Assigned To */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                  Group
+                                </span>
+                                <select
+                                  value={svc.groupAssignedTo || ""}
+                                  onChange={(e) => setServiceField(svc.key, "groupAssignedTo", e.target.value)}
+                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
+                                >
+                                  <option value="">Unassigned</option>
+                                  {staffOptions.map((s) => (
+                                    <option key={s.id} value={s.name}>{s.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

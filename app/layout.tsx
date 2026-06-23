@@ -1,22 +1,9 @@
 "use client";
 
 import type { Metadata } from "next";
-import { Public_Sans, Fraunces } from "next/font/google";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import "./globals.css";
-
-const publicSans = Public_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-public-sans",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-fraunces",
-});
 
 interface NavItem {
   label: string;
@@ -205,7 +192,7 @@ export default function RootLayout({
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
-    <html lang="en" className={`${publicSans.variable} ${fraunces.variable}`}>
+    <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>

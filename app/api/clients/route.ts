@@ -38,6 +38,19 @@ export async function GET() {
     return NextResponse.json({ error: svcError.message }, { status: 500 });
   }
 
+  // Fetch current month work_periods for all active client_services
+  const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const { data: dbPeriods } = await supabase
+    .from("work_periods")
+    .select("client_service_id, stage")
+    .eq("period", currentPeriod);
+
+  // Index periods by client_service_id
+  const periodByCsId: Record<string, string> = {};
+  for (const wp of dbPeriods || []) {
+    periodByCsId[wp.client_service_id] = wp.stage;
+  }
+
   // Group services by client_id
   const servicesByClient: Record<string, any[]> = {};
   for (const cs of dbServices || []) {
@@ -63,6 +76,17 @@ export async function GET() {
         processor: cs.processor || "",
         assignedTo: cs.assigned_to || "",
         expectedAnnual: cs.expected_annual || undefined,
+        // Sales Tax specific fields (only for STX)
+        ...(key === "sales_tax" ? {
+          salesTaxNotes: cs.sales_tax_notes || "",
+          taxId: cs.tax_id || "",
+          bankName: cs.bank_name || "",
+          bankRouting: cs.bank_routing || "",
+          bankAccount: cs.bank_account || "",
+          groupAssignedTo: cs.group_assigned_to || "",
+          salesTaxRT: cs.sales_tax_rt || "",
+        } : {}),
+        currentStage: periodByCsId[cs.id] || "not_started",
         months: Array(12).fill("lock"),
       };
     });
@@ -80,6 +104,7 @@ export async function GET() {
           processor: "",
           assignedTo: "",
           expectedAnnual: undefined,
+          currentStage: "not_started",
           months: Array(12).fill("lock"),
         });
       }
@@ -97,13 +122,6 @@ export async function GET() {
       email: "",
       phone: "",
       address: db.address || "",
-      notes: db.notes || "",
-      taxId: db.tax_id || "",
-      bankName: db.bank_name || "",
-      bankRouting: db.bank_routing || "",
-      bankAccount: db.bank_account || "",
-      groupAssignedTo: db.group_assigned_to || "",
-      salesTaxRT: db.sales_tax_rt || "",
       assignedStaff: clientServices[0]?.assigned_to || "Unassigned",
       services,
     };
@@ -126,13 +144,6 @@ export async function POST(request: Request) {
       city: body.city || "",
       state: body.state || "TX",
       address: body.address || "",
-      notes: body.notes || null,
-      tax_id: body.taxId || null,
-      bank_name: body.bankName || null,
-      bank_routing: body.bankRouting || null,
-      bank_account: body.bankAccount || null,
-      group_assigned_to: body.groupAssignedTo || null,
-      sales_tax_rt: body.salesTaxRT || null,
       cid: body.cid || null,
     })
     .select()
