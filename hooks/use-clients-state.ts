@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Client, ServiceKey, MonthStatus } from "@/lib/types";
+import type { Client, ServiceKey } from "@/lib/types";
+
+type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
 
 export function useClientsState() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch from Supabase API on mount
   useEffect(() => {
     let cancelled = false;
     async function fetchFromSupabase() {
@@ -31,16 +32,29 @@ export function useClientsState() {
     return () => { cancelled = true; };
   }, []);
 
-  // Update a specific client
   const updateClient = useCallback((clientId: string, updates: Partial<Client>) => {
     setClients(prev =>
       prev.map(c => (c.id === clientId ? { ...c, ...updates } : c))
     );
   }, []);
 
-  // Update a specific service month status for a client
+  // Map WorklistStage → work_period stage for API
+  const STAGE_TO_WP: Record<WorklistStage, string> = {
+    "": "not_started", ip: "in_progress", wc: "waiting_client",
+    pp: "prepared", dn: "done", na: "na",
+  };
+
+  // Map WorklistStage → MonthStatus for local months array
+  const STAGE_TO_MONTH: Record<WorklistStage, string> = {
+    "": "lock", ip: "billed", wc: "billed",
+    pp: "billed", dn: "done", na: "na",
+  };
+
   const updateServiceMonth = useCallback(
-    (clientId: string, serviceKey: ServiceKey, monthIdx: number, status: MonthStatus) => {
+    async (clientId: string, serviceKey: ServiceKey, monthIdx: number, wStage: WorklistStage) => {
+      const monthStatus = STAGE_TO_MONTH[wStage];
+
+      // Optimistic local update
       setClients(prev =>
         prev.map(c => {
           if (c.id !== clientId) return c;
@@ -48,35 +62,47 @@ export function useClientsState() {
             ...c,
             services: c.services.map(s => {
               if (s.key !== serviceKey) return s;
-              const months = [...s.months as MonthStatus[]];
-              months[monthIdx] = status;
+              const months = [...s.months as any[]];
+              months[monthIdx] = monthStatus;
               return { ...s, months };
             }),
           };
         })
       );
+
+      // Persist to Supabase
+      try {
+        const client = clients.find(c => c.id === clientId);
+        if (!client) return;
+        const svc = client.services.find(s => s.key === serviceKey);
+        if (!svc?.csId) return;
+
+        const now = new Date();
+        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const stage = STAGE_TO_WP[wStage];
+
+        await fetch("/api/work-periods", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, stage }),
+        });
+      } catch (e) {
+        console.error("Failed to persist stage change:", e);
+      }
     },
-    []
+    [clients]
   );
 
-  // Delete a client
   const deleteClient = useCallback((clientId: string) => {
     setClients(prev => prev.filter(c => c.id !== clientId));
   }, []);
 
-  // Add a client
   const addClient = useCallback((client: Client) => {
     setClients(prev => [...prev, client]);
   }, []);
 
   return {
-    clients,
-    setClients,
-    updateClient,
-    updateServiceMonth,
-    deleteClient,
-    addClient,
-    loading,
-    error,
+    clients, setClients, updateClient, updateServiceMonth,
+    deleteClient, addClient, loading, error,
   };
 }

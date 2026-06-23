@@ -10,34 +10,33 @@ export type ServiceKey = "financials" | "payroll" | "sales_tax" | "1099s" | "ren
 export interface ServiceConfig {
   code: ServiceCode;
   name: string;
-  key?: ServiceKey;        // mock data uses key instead of code
-  label?: string;           // mock data display label
+  key?: ServiceKey;
+  label?: string;
   tracking: ServiceTracking;
   active: boolean;
-  enabled?: boolean;        // mock data uses enabled
-  frequency?: string;       // monthly, quarterly, yearly
-  processor?: string;       // ADP, Toast, QuickBooks, ...
+  enabled?: boolean;
+  frequency?: string;
+  processor?: string;
   software?: string;
-  expectedAnnual?: number;  // 1099s annual target
-  months?: any[];           // mock data month tracking
-  currentStage?: string;    // current month work_period stage
+  expectedAnnual?: number;
+  months?: any[];
+  currentStage?: string;
 }
 
 export interface ClientService {
   id: string;
+  csId?: string;
   clientId: string;
   service: ServiceConfig;
-  assignedTo?: string;     // staff name or ID
+  assignedTo?: string;
   active: boolean;
-  enabled?: boolean;       // alias for active, used by mock data
+  enabled?: boolean;
   frequency?: string;
-  // Mock-data flat fields (inline service shape)
   key?: ServiceKey;
   label?: string;
   processor?: string;
   expectedAnnual?: number;
   months?: any[];
-  // Sales Tax specific fields (only on sales_tax service)
   salesTaxNotes?: string;
   taxId?: string;
   bankName?: string;
@@ -45,22 +44,20 @@ export interface ClientService {
   bankAccount?: string;
   groupAssignedTo?: string;
   salesTaxRT?: string;
-  // Payroll specific fields (only on payroll service)
   cdg?: string;
   eftps?: string;
   payrollPassword?: string;
   paydate?: string;
-  // Inline status from work_periods
   currentStage?: string;
 }
 
 export interface Client {
   id: string;
-  cid: string;            // display ID e.g. "CID-1032"
+  cid: string;
   name: string;
   type: ClientType;
-  entityType?: string;    // Single-member LLC, S-Corp, ...
-  group?: string;         // e.g. "Terry", "Lindsay"
+  entityType?: string;
+  group?: string;
   status: string;
   city: string;
   state: string;
@@ -77,7 +74,7 @@ export interface Profile {
   fullName: string;
   role: "admin" | "manager" | "staff" | "offshore";
   location?: string;
-  reportingManager?: string;  // name
+  reportingManager?: string;
   modules: string[];
   inviteStatus: "invited" | "active" | "disabled";
   active: boolean;
@@ -86,7 +83,7 @@ export interface Profile {
 export interface WorkPeriod {
   id: string;
   clientServiceId: string;
-  period: string;          // "YYYY-MM"
+  period: string;
   stage: WorkStage;
   doneBy?: string;
   doneAt?: string;
@@ -94,14 +91,14 @@ export interface WorkPeriod {
 
 export interface PeriodCount {
   clientServiceId: string;
-  period: string;          // "YYYY-MM"
+  period: string;
   processed: number;
   expected: number;
 }
 
 export interface TimeEntry {
   id: string;
-  who: string;             // profile ID
+  who: string;
   clientId?: string;
   clientServiceId?: string;
   task?: string;
@@ -116,12 +113,12 @@ export interface TimeEntry {
 export interface Credential {
   id: string;
   clientId?: string;
-  groupLabel?: string;     // "Firm-wide" when clientId is null
+  groupLabel?: string;
   portal: string;
   username?: string;
-  vaultRef?: string;       // pointer to password manager
+  vaultRef?: string;
   isBank: boolean;
-  linkUrl?: string;        // for bank link-outs
+  linkUrl?: string;
   notes?: string;
 }
 
@@ -140,7 +137,6 @@ export interface StaffMember {
   role: string;
 }
 
-// Mock data types
 export interface VaultEntry {
   id: string;
   site: string;
