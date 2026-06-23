@@ -7,7 +7,7 @@ import type { ServiceKey } from "@/lib/types";
 import { PageSkeleton } from "@/components/loading-skeleton";
 
 const FREQ_TOUCHPOINTS: Record<string, number> = {
-  Monthly: 12, Quarterly: 4, Annually: 1, "N/A": 0,
+  monthly: 12, quarterly: 4, yearly: 1, annually: 1, "n/a": 0,
 };
 
 interface StaffMember { id: string; name: string; role: string; }
@@ -55,8 +55,10 @@ export default function WorkloadPage() {
         const freq = FREQ_TOUCHPOINTS[svc.frequency || ""] || 0;
         const processor = svc.processor || "";
         const staffName = staff.find((s) => {
-          const initials = s.name.split(" ").map(n => n[0]).join("").toUpperCase();
-          return initials === processor || s.name === processor;
+          const parts = s.name.split(" ");
+          const initials = parts.map(n => n[0]).join("").toUpperCase();
+          const firstName = parts[0] || "";
+          return initials === processor || s.name === processor || firstName === processor;
         })?.name || processor;
         const load = map.get(staffName);
         if (load) {
@@ -75,7 +77,8 @@ export default function WorkloadPage() {
       if (enabledSvcs.length === 0) return true;
       return enabledSvcs.every((svc) => !staff.some((s) => {
         const initials = s.name.split(" ").map(n => n[0]).join("").toUpperCase();
-        return initials === svc.processor;
+        const firstName = s.name.split(" ")[0] || "";
+        return initials === svc.processor || firstName === svc.processor;
       }));
     });
   }, [clients, staff]);

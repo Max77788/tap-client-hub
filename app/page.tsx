@@ -326,19 +326,17 @@ function StatCard({
 }) {
   return (
     <div
-      className="relative p-4 rounded-xl flex flex-col justify-between overflow-hidden transition-transform hover:-translate-y-0.5"
+      className="relative p-4 rounded-xl flex flex-col justify-between overflow-hidden"
       style={{
         backgroundColor: "var(--card)",
         boxShadow: "var(--shadow)",
       }}
     >
-      {/* Accent bar */}
-      {color && (
-        <div
-          className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl"
-          style={{ backgroundColor: alert ? "var(--red)" : color }}
-        />
-      )}
+      {/* Accent bar - always present, consistent position */}
+      <div
+        className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl"
+        style={{ backgroundColor: alert ? "var(--red)" : (color || "transparent") }}
+      />
       <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] mb-1 leading-tight">
         {label}
       </p>
