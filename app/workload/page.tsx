@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Component, useState, useEffect, useMemo } from "react";
 import { SERVICE_META } from "@/lib/data";
 import { useClientsState } from "@/hooks/use-clients-state";
 import type { ServiceKey } from "@/lib/types";
@@ -18,7 +18,30 @@ interface StaffLoad {
   services: Record<ServiceKey, number>;
 }
 
-export default function WorkloadPage() {
+// ── Error Boundary ──
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-8 max-w-lg mx-auto text-center">
+          <p className="text-[var(--red)] font-semibold text-lg mb-2">Workload page error</p>
+          <p className="text-xs text-[var(--muted)] break-all font-mono mb-4">{this.state.error.message}</p>
+          <pre className="text-[10px] text-[var(--muted)] text-left bg-[var(--paper)] p-3 rounded overflow-auto max-h-48">{this.state.error.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function WorkloadInner() {
   const { clients, loading: clientsLoading, error: clientsError } = useClientsState();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
@@ -50,62 +73,79 @@ export default function WorkloadPage() {
     return (
       <div className="p-8 text-center">
         <p className="text-[var(--red)] font-semibold">Workload data unavailable</p>
-        <p className="text-xs text-[var(--muted)] mt-1">
-          {clientsError || staffError}
-        </p>
+        <p className="text-xs text-[var(--muted)] mt-1">{clientsError || staffError}</p>
       </div>
     );
   }
 
   const staffLoads = useMemo<StaffLoad[]>(() => {
-    const map = new Map<string, StaffLoad>();
-    for (const s of staff) {
-      map.set(s.name, { name: s.name, initials: s.name.split(" ").map(n => n[0]).join("").toUpperCase(), role: s.role, totalTouchpoints: 0, clientCount: 0, services: { financials: 0, payroll: 0, sales_tax: 0, "1099s": 0, renditions: 0, tax_returns: 0 } });
-    }
-    const countedClients = new Set<string>();
-    for (const client of clients) {
-      for (const svc of client.services) {
-        if (!svc.enabled) continue;
-        const freq = FREQ_TOUCHPOINTS[svc.frequency || ""] || 0;
-        const processor = svc.processor || "";
-        const staffName = staff.find((s) => {
-          const parts = s.name.split(" ");
-          const initials = parts.map(n => n[0]).join("").toUpperCase();
-          const firstName = parts[0] || "";
-          return initials === processor || s.name === processor || firstName === processor;
-        })?.name || processor;
-        const load = map.get(staffName);
-        if (load) {
-          (load.services as any)[svc.key || "financials"] = ((load.services as any)[svc.key || "financials"] || 0) + freq;
-          load.totalTouchpoints += freq;
-          if (!countedClients.has(client.id + staffName)) { load.clientCount++; countedClients.add(client.id + staffName); }
+    try {
+      const map = new Map<string, StaffLoad>();
+      for (const s of staff) {
+        map.set(s.name, { name: s.name, initials: s.name.split(" ").map(n => n[0]).join("").toUpperCase(), role: s.role, totalTouchpoints: 0, clientCount: 0, services: { financials: 0, payroll: 0, sales_tax: 0, "1099s": 0, renditions: 0, tax_returns: 0 } });
+      }
+      const countedClients = new Set<string>();
+      for (const client of clients) {
+        if (!client.services || !Array.isArray(client.services)) continue;
+        for (const svc of client.services) {
+          if (!svc || !svc.enabled) continue;
+          const freq = FREQ_TOUCHPOINTS[(svc.frequency || "").toLowerCase()] || 0;
+          const processor = svc.processor || "";
+          const staffName = staff.find((s) => {
+            const parts = s.name.split(" ");
+            const initials = parts.map(n => n[0]).join("").toUpperCase();
+            const firstName = parts[0] || "";
+            return initials === processor || s.name === processor || firstName === processor;
+          })?.name || processor;
+          const load = map.get(staffName);
+          if (load) {
+            const key = (svc.key || "financials") as ServiceKey;
+            (load.services as any)[key] = ((load.services as any)[key] || 0) + freq;
+            load.totalTouchpoints += freq;
+            if (!countedClients.has(client.id + staffName)) { load.clientCount++; countedClients.add(client.id + staffName); }
+          }
         }
       }
+      return Array.from(map.values()).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
+    } catch (e) {
+      console.error("staffLoads error:", e);
+      return [];
     }
-    return Array.from(map.values()).sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
   }, [clients, staff]);
 
   const unassignedClients = useMemo(() => {
-    return clients.filter((client) => {
-      const enabledSvcs = client.services.filter((s) => s.enabled);
-      if (enabledSvcs.length === 0) return true;
-      return enabledSvcs.every((svc) => !staff.some((s) => {
-        const initials = s.name.split(" ").map(n => n[0]).join("").toUpperCase();
-        const firstName = s.name.split(" ")[0] || "";
-        return initials === svc.processor || firstName === svc.processor;
-      }));
-    });
+    try {
+      return clients.filter((client) => {
+        if (!client.services || !Array.isArray(client.services)) return false;
+        const enabledSvcs = client.services.filter((s: any) => s && s.enabled);
+        if (enabledSvcs.length === 0) return true;
+        if (staff.length === 0) return true;
+        return enabledSvcs.every((svc: any) => !staff.some((s) => {
+          const initials = s.name.split(" ").map(n => n[0]).join("").toUpperCase();
+          const firstName = s.name.split(" ")[0] || "";
+          return initials === (svc.processor || "") || firstName === (svc.processor || "");
+        }));
+      });
+    } catch (e) {
+      console.error("unassignedClients error:", e);
+      return [];
+    }
   }, [clients, staff]);
 
   const teamGroups = useMemo(() => {
-    const map = new Map<string, { count: number; staff: Set<string> }>();
-    for (const client of clients) {
-      const group = client.group || "Other";
-      const existing = map.get(group) || { count: 0, staff: new Set<string>() };
-      existing.count++; existing.staff.add(client.assignedStaff || "Unassigned");
-      map.set(group, existing);
+    try {
+      const map = new Map<string, { count: number; staff: Set<string> }>();
+      for (const client of clients) {
+        const group = client.group || "Other";
+        const existing = map.get(group) || { count: 0, staff: new Set<string>() };
+        existing.count++; existing.staff.add(client.assignedStaff || "Unassigned");
+        map.set(group, existing);
+      }
+      return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    } catch (e) {
+      console.error("teamGroups error:", e);
+      return [];
     }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [clients]);
 
   const busiestPerson = staffLoads[0] || null;
@@ -163,6 +203,14 @@ export default function WorkloadPage() {
         </tbody></table></div>
       </div>
     </div>
+  );
+}
+
+export default function WorkloadPage() {
+  return (
+    <ErrorBoundary>
+      <WorkloadInner />
+    </ErrorBoundary>
   );
 }
 
