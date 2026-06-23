@@ -25,7 +25,7 @@ const STAGE_STYLES: Record<
 > = {
   "": { bg: "transparent", fg: "var(--muted)" },
   ip: { bg: "var(--amber-soft)", fg: "var(--amber)" },
-  wc: { bg: "#fef3c7", fg: "#b45309" },
+  wc: { bg: "var(--amber-soft)", fg: "var(--amber)" },
   pp: { bg: "var(--teal-soft)", fg: "var(--teal)" },
   dn: { bg: "var(--green-soft)", fg: "var(--green)" },
   na: { bg: "var(--red-soft)", fg: "var(--red)" },

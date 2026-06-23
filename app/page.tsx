@@ -159,19 +159,19 @@ export default function ClientsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clients…"
-            className="w-full pl-12 pr-5 py-4 rounded-lg border-[3px] border-[var(--line)] bg-[var(--card)] text-lg font-bold text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
+            className="w-full pl-[38px] pr-[14px] py-[11px] rounded-[11px] border border-[var(--line)] bg-[var(--card)] text-[14px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
           />
         </div>
 
         {/* Type filter tabs */}
-        <div className="flex items-center rounded-lg border border-[var(--line)] bg-[var(--card)] p-0.5">
+        <div className="flex items-center rounded-[11px] border border-[var(--line)] bg-[var(--card)] p-[3px]">
           {(["All", "Business", "Personal"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${
+              className={`text-[13px] font-medium px-[13px] py-[7px] rounded-[8px] transition-colors ${
                 typeFilter === t
-                  ? "bg-[var(--teal)] text-white shadow-sm"
+                  ? "bg-[var(--teal)] text-white font-semibold"
                   : "text-[var(--muted)] hover:text-[var(--ink)]"
               }`}
             >
@@ -198,7 +198,7 @@ export default function ClientsPage() {
         {/* Action buttons */}
         <button
           onClick={openAddModal}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity"
+          className="btn-primary"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -208,7 +208,7 @@ export default function ClientsPage() {
 
         <button
           onClick={handleExport}
-          className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
+          className="btn-secondary"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -221,7 +221,7 @@ export default function ClientsPage() {
 
       {/* ── Results summary ── */}
       {filteredClients.length < clients.length && (
-        <p className="text-xs text-[var(--muted)]">
+        <p className="text-[13px] text-[var(--muted)]">
           Showing {filteredClients.length} of {clients.length} clients
           {search ? ` matching "${search}"` : ""}
         </p>
@@ -326,23 +326,19 @@ function StatCard({
 }) {
   return (
     <div
-      className="relative p-4 rounded-xl flex flex-col justify-between overflow-hidden"
+      className="p-[13px_16px] rounded-[13px] flex flex-col justify-between border"
       style={{
         backgroundColor: "var(--card)",
-        boxShadow: "var(--shadow)",
+        borderColor: "var(--line)",
+        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
       }}
     >
-      {/* Accent bar - always present, consistent position */}
-      <div
-        className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl"
-        style={{ backgroundColor: alert ? "var(--red)" : (color || "transparent") }}
-      />
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] mb-1 leading-tight">
+      <p className="text-[12px] text-[var(--muted)] mb-1 leading-tight" style={{ fontFamily: '"Public Sans", sans-serif' }}>
         {label}
       </p>
       <p
-        className="text-2xl font-semibold m-0 leading-tight"
-        style={{ color: alert ? "var(--red)" : "var(--ink)" }}
+        className="text-[26px] font-semibold m-0 leading-none"
+        style={{ fontFamily: '"Fraunces", Georgia, serif', color: alert ? "var(--red)" : "var(--ink)" }}
       >
         {value}
       </p>
@@ -374,24 +370,29 @@ function GroupCard({
   return (
     <div
       onClick={onToggle}
-      className="group cursor-pointer hover:-translate-y-[4px] p-4"
+      className="group cursor-pointer p-[15px_16px] border"
       style={{
         backgroundColor: "var(--card)",
-        boxShadow: "var(--shadow)",
-        borderRadius: "12px",
-        transition: "transform 200ms ease-out, box-shadow 200ms ease-out",
+        borderColor: "var(--line)",
+        borderRadius: "14px",
+        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+        transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow =
-          "0 2px 8px rgba(26, 35, 64, 0.08), 0 12px 32px rgba(26, 35, 64, 0.14)";
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "var(--shadow)";
+        e.currentTarget.style.borderColor = "#cfc7b5";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "var(--shadow)";
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
+        e.currentTarget.style.borderColor = "var(--line)";
       }}
     >
       {/* Top row: Group name + count badge */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="text-sm font-semibold text-[var(--ink)] leading-snug group-hover:text-[var(--teal)] transition-colors">
+      <div className="flex items-start justify-between gap-2 mb-[3px]">
+        <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight"
+          style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
           {groupName}
         </h3>
         <span
@@ -572,31 +573,36 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
   return (
     <div
       onClick={onClick}
-      className="group p-4 cursor-pointer hover:-translate-y-[4px]"
+      className="group p-[15px_16px] cursor-pointer border"
       style={{
         backgroundColor: "var(--card)",
-        boxShadow: "var(--shadow)",
-        borderRadius: "12px",
-        transition: "transform 200ms ease-out, box-shadow 200ms ease-out",
+        borderColor: "var(--line)",
+        borderRadius: "14px",
+        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+        transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow =
-          "0 2px 8px rgba(26, 35, 64, 0.08), 0 12px 32px rgba(26, 35, 64, 0.14)";
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "var(--shadow)";
+        e.currentTarget.style.borderColor = "#cfc7b5";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "var(--shadow)";
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
+        e.currentTarget.style.borderColor = "var(--line)";
       }}
     >
       {/* Top row: Name + Type badge */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="text-sm font-semibold text-[var(--ink)] leading-snug line-clamp-1 group-hover:text-[var(--teal)] transition-colors">
+      <div className="flex items-start justify-between gap-2 mb-[3px]">
+        <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight line-clamp-1"
+          style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
           {client.name}
         </h3>
         <span
-          className="shrink-0 inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide uppercase"
+          className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
           style={{
-            backgroundColor: client.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
-            color: client.type === "Business" ? "var(--teal)" : "var(--blue)",
+            backgroundColor: client.type === "Business" ? "var(--ink)" : "#dfe7e6",
+            color: client.type === "Business" ? "#fff" : "var(--teal-ink)",
           }}
         >
           {client.type === "Business" ? "BIZ" : "PERS"}
@@ -604,14 +610,14 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
       </div>
 
       {/* Meta row */}
-      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2">
+      <div className="flex items-center gap-2 text-[12.5px] text-[var(--muted)] mb-[11px]">
         <span>{client.group}</span>
         <span aria-hidden>·</span>
         <span>{client.city}, {client.state}</span>
       </div>
 
       {/* Service pills */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      <div className="flex flex-wrap gap-[5px] mb-3">
         {enabledServices.map((svc) => {
           const meta = svc.key ? SERVICE_META[svc.key] : null;
           if (!meta) return null;
@@ -626,9 +632,10 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
                   e.stopPropagation();
                   setOpenPopover(isOpen ? null : key);
                 }}
-                className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer hover:ring-2 hover:ring-offset-1 transition-all"
+                className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px] cursor-pointer transition-all"
                 style={{
                   ...statusStyle,
+                  letterSpacing: "0.02em",
                 }}
                 title={STATUS_OPTIONS.find((o) => o.value === (serviceStatuses[key] || "not_started"))?.label}
               >

@@ -123,10 +123,10 @@ export default function WorkloadPage() {
 
 function StatCard({ label, value, suffix, color }: { label: string; value: number; suffix?: string; color?: string }) {
   return (
-    <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-      {color && <div className="h-0.5 rounded-t-xl mb-2" style={{ backgroundColor: color, margin: "-1rem -1rem 0.5rem -1rem", width: "calc(100% + 2rem)" }} />}
-      <p className="text-[11px] uppercase font-semibold text-[var(--muted)]">{label}</p>
-      <p className="text-2xl font-semibold text-[var(--ink)]">{value}{suffix && <span className="text-xs text-[var(--muted)] ml-1">{suffix}</span>}</p>
+    <div className="p-[13px_16px] rounded-[13px] flex flex-col justify-between border" style={{ backgroundColor: "var(--card)", borderColor: "var(--line)", boxShadow: "0 1px 2px rgba(33,31,26,0.04)" }}>
+      {color && <div className="h-0.5 rounded-t-xl mb-2" style={{ backgroundColor: color, margin: "-13px -16px 8px -16px", width: "calc(100% + 32px)" }} />}
+      <p className="text-[12px] text-[var(--muted)] mb-1 leading-tight" style={{ fontFamily: '"Public Sans", sans-serif' }}>{label}</p>
+      <p className="text-[26px] font-semibold m-0 leading-none" style={{ fontFamily: '"Fraunces", Georgia, serif', color: "var(--ink)" }}>{value}{suffix && <span className="text-xs text-[var(--muted)] ml-1">{suffix}</span>}</p>
     </div>
   );
 }

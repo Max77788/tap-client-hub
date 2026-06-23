@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ── TAP Client Hub Design System ──
-   Heavily inspired by the v7 demo — muted, premium, corporate palette. */
+   Exact match to the v7 demo — Fraunces + Public Sans, muted palette. */
 :root {
   --paper: #eef1f6;
   --card: #ffffff;
@@ -22,6 +22,7 @@
   --paid: #1c2a5e;
   --paid-soft: #e7ebf5;
   --shadow: 0 1px 2px rgba(26, 35, 64, 0.06), 0 8px 24px rgba(26, 35, 64, 0.10);
+  --card-shadow: 0 1px 2px rgba(33, 31, 26, 0.04);
   --sidebar-start: #21305f;
   --sidebar-end: #1a2750;
   --sidebar-width: 236px;
@@ -49,10 +50,17 @@ body {
   font-family: "Public Sans", system-ui, -apple-system, sans-serif;
 }
 
-/* ── Headings use Recoleta (keep existing font) ── */
+/* ── Headings use Fraunces (demo standard) ── */
 main h1, main h2, main h3, main h4, main h5, main h6,
-.disp {
-  font-family: var(--font-recoleta), Georgia, "Times New Roman", serif;
+.disp,
+.statcard .sn,
+.sect2,
+.suph, .suph2,
+.brand,
+.ccard .nm,
+.wload b,
+.top h1 {
+  font-family: "Fraunces", Georgia, serif;
   font-weight: 600;
   line-height: 1.25;
   color: var(--ink);
@@ -75,36 +83,95 @@ main a:hover {
   outline-offset: 2px;
 }
 
-/* ── Scrollbar styling ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Input / Select / Textarea base (demo style) ── */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input:not([type]),
+select,
+textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.875rem;
+  background: #fff;
+  color: var(--ink);
+  resize: vertical;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-soft);
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* ── Buttons base (demo: all-unset, border-radius:11px) ── */
+.btn-primary {
+  all: unset;
+  cursor: pointer;
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 11px;
+  font-weight: 600;
+  font-size: 0.84375rem;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
 }
+.btn-primary:hover { opacity: 0.9; }
 
-::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 3px;
+.btn-secondary {
+  all: unset;
+  cursor: pointer;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 10px 16px;
+  border-radius: 11px;
+  font-weight: 600;
+  font-size: 0.84375rem;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
 }
+.btn-secondary:hover { opacity: 0.9; }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+/* ── Table base (demo: #faf7f0 header bg) ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84375rem;
 }
+th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.71875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 13px 14px;
+  background: #faf7f0;
+  border-bottom: 1px solid var(--line);
+}
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #efeade;
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #fcfaf4; }
 
-/* ── Mobile optimizations ── */
+/* ── Mobile ── */
 @media (max-width: 767px) {
-  body {
-    font-size: 1rem;
-  }
-
-  input, select, button, a {
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  input, select {
-    font-size: 16px !important; /* prevent iOS zoom on focus */
-  }
+  body { font-size: 1rem; }
+  input, select, button, a { -webkit-tap-highlight-color: transparent; }
+  input, select { font-size: 16px !important; }
 }
