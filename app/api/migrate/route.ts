@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
+import { Pool } from "pg";
 
-// SQL migration to add sales tax columns to client_services
 const MIGRATION_SQL = `
--- Add missing columns to client_services table
 ALTER TABLE client_services 
   ADD COLUMN IF NOT EXISTS sales_tax_notes TEXT,
   ADD COLUMN IF NOT EXISTS tax_id TEXT,
@@ -21,33 +20,33 @@ export async function GET() {
     return NextResponse.json({ error: "Missing Supabase env vars" }, { status: 500 });
   }
   
-  // Extract project ref from URL: https://<ref>.supabase.co
   const ref = url.replace("https://", "").split(".")[0];
   
+  // Try direct PG connection - the service role key can sometimes work as IAM token
+  const pool = new Pool({
+    host: `db.${ref}.supabase.co`,
+    port: 6543,
+    database: "postgres",
+    user: "postgres",
+    password: key,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10000,
+  });
+  
   try {
-    // Use Supabase Management API SQL endpoint
-    const response = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${key}`,
-        "apikey": key,
-      },
-      body: JSON.stringify({ query: MIGRATION_SQL }),
-    });
-    
-    const result = await response.json();
-    
-    if (!response.ok) {
-      return NextResponse.json({ 
-        error: result.message || "Migration failed",
-        detail: result,
-        status: response.status,
-      }, { status: 200 });
+    const client = await pool.connect();
+    try {
+      const result = await client.query(MIGRATION_SQL);
+      return NextResponse.json({ success: true, result: result.command });
+    } finally {
+      client.release();
     }
-    
-    return NextResponse.json({ success: true, result });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 200 });
+    return NextResponse.json({ 
+      error: err.message,
+      hint: "If auth failed, we need the PG password from Supabase dashboard",
+    }, { status: 200 });
+  } finally {
+    await pool.end();
   }
 }
