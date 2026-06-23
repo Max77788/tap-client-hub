@@ -1,21 +1,29 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET() {
-  const pool = new Pool({
-    host: "db.phgogybfgovrlcdmifpv.supabase.co",
-    port: 5432,
-    database: "postgres",
-    user: "postgres",
-    password: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 10000,
-  });
-
+  const supabase = createAdminClient();
   const results: string[] = [];
+
+  // Check if columns exist by selecting them
+  try {
+    const { data, error } = await supabase
+      .from("client_services")
+      .select("id")
+      .limit(1);
+
+    if (error) {
+      return NextResponse.json({ error: `client_services table error: ${error.message}` });
+    }
+
+    results.push("✓ client_services table accessible");
+  } catch (e: any) {
+    return NextResponse.json({ error: `Connection failed: ${e.message}` });
+  }
+
   const columns = [
     "sales_tax_notes",
-    "tax_id",
+    "tax_id", 
     "bank_name",
     "bank_routing",
     "bank_account",
@@ -23,19 +31,21 @@ export async function GET() {
     "sales_tax_rt",
   ];
 
-  try {
-    for (const col of columns) {
-      try {
-        await pool.query(
-          `ALTER TABLE client_services ADD COLUMN IF NOT EXISTS ${col} text;`
-        );
-        results.push(`✓ ${col}`);
-      } catch (e: any) {
-        results.push(`❌ ${col}: ${e.message}`);
+  for (const col of columns) {
+    const { data, error } = await supabase
+      .from("client_services")
+      .select(col)
+      .limit(1);
+
+    if (error) {
+      if (error.message.includes("does not exist")) {
+        results.push(`❌ ${col}: MISSING`);
+      } else {
+        results.push(`⚠ ${col}: ${error.message}`);
       }
+    } else {
+      results.push(`✓ ${col}: exists`);
     }
-  } finally {
-    await pool.end();
   }
 
   return NextResponse.json({ results });
