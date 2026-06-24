@@ -38,24 +38,21 @@ export async function GET() {
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Load work_periods scoped to only the client_services we're loading
-  const allCsIds = (dbServices || []).map((cs: any) => cs.id).filter(Boolean);
+  // Load work_periods for current year (use high limit to avoid 1000-row cap)
   const periodByCsId: Record<string, Record<number, string>> = {};
-  if (allCsIds.length > 0) {
-    try {
-      const { data: dbPeriods } = await supabase
-        .from("work_periods").select("client_service_id, period, stage")
-        .in("client_service_id", allCsIds)
-        .like("period", `${currentYear}-%`);
-      if (dbPeriods) {
-        for (const wp of dbPeriods) {
-          if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
-          const monthNum = parseInt(wp.period.split("-")[1], 10) - 1;
-          periodByCsId[wp.client_service_id][monthNum] = wp.stage;
-        }
+  try {
+    const { data: dbPeriods } = await supabase
+      .from("work_periods").select("client_service_id, period, stage")
+      .like("period", `${currentYear}-%`)
+      .limit(100000);
+    if (dbPeriods) {
+      for (const wp of dbPeriods) {
+        if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
+        const monthNum = parseInt(wp.period.split("-")[1], 10) - 1;
+        periodByCsId[wp.client_service_id][monthNum] = wp.stage;
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
   const clients = dbClients.map((db: any) => {
     const clientServices = servicesByClient[db.id] || [];
