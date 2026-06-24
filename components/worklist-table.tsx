@@ -353,16 +353,16 @@ export default function WorklistTable({
         </div>
       )}
 
-      {/* ── Main table (no horizontal scroll) ── */}
+      {/* ── Main table (horizontally scrollable on mobile) ── */}
       <div
-        className="rounded-lg w-full"
+        className="rounded-lg overflow-x-auto"
         style={{
           backgroundColor: "var(--card)",
           boxShadow: "var(--shadow)",
           border: "1px solid var(--line)",
         }}
       >
-        <table className="w-full border-collapse table-fixed">
+        <table className="border-collapse table-fixed" style={{ minWidth: 800, width: "100%" }}>
           <thead>
             <tr
               style={{ borderBottom: "2px solid var(--line)" }}
