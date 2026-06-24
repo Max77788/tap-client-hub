@@ -38,26 +38,23 @@ export async function GET() {
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Load work_periods for current year (use high limit to avoid 1000-row cap)
+  // Load work_periods for current year (query by all 12 months to bypass 1000-row limit)
+  const months2026 = Array.from({ length: 12 }, (_, i) =>
+    `${currentYear}-${String(i + 1).padStart(2, "0")}`
+  );
   const periodByCsId: Record<string, Record<number, string>> = {};
   try {
-    const { data: dbPeriods, error: periodErr } = await supabase
+    const { data: dbPeriods } = await supabase
       .from("work_periods").select("client_service_id, period, stage")
-      .like("period", `${currentYear}-%`)
-      .limit(100000);
-    if (periodErr) console.error("period query error:", periodErr);
+      .in("period", months2026);
     if (dbPeriods) {
-      console.log("periods loaded:", dbPeriods.length);
-      // Check if our saved 1099s data is in there
-      const hasTarget = dbPeriods.some((p: any) => p.client_service_id === "d574fd8f-4603-4788-9154-be35f040bab2");
-      console.log("has target 1099s period:", hasTarget);
       for (const wp of dbPeriods) {
         if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
         const monthNum = parseInt(wp.period.split("-")[1], 10) - 1;
         periodByCsId[wp.client_service_id][monthNum] = wp.stage;
       }
     }
-  } catch (e) { console.error("period query exception:", e); }
+  } catch {}
 
   const clients = dbClients.map((db: any) => {
     const clientServices = servicesByClient[db.id] || [];
