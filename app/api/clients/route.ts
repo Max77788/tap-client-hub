@@ -38,17 +38,20 @@ export async function GET() {
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Load work_periods for current year (query by all 12 months to bypass 1000-row limit)
+  // Load work_periods for current year (use range to bypass 1000-row default limit)
   const months2026 = Array.from({ length: 12 }, (_, i) =>
     `${currentYear}-${String(i + 1).padStart(2, "0")}`
   );
   const periodByCsId: Record<string, Record<number, string>> = {};
   try {
-    const { data: dbPeriods } = await supabase
-      .from("work_periods").select("client_service_id, period, stage")
-      .in("period", months2026);
-    if (dbPeriods) {
-      for (const wp of dbPeriods) {
+    // Query in batches of 5000 to get all rows
+    for (let offset = 0; offset < 20000; offset += 5000) {
+      const { data: batch } = await supabase
+        .from("work_periods").select("client_service_id, period, stage")
+        .in("period", months2026)
+        .range(offset, offset + 4999);
+      if (!batch || batch.length === 0) break;
+      for (const wp of batch) {
         if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
         const monthNum = parseInt(wp.period.split("-")[1], 10) - 1;
         periodByCsId[wp.client_service_id][monthNum] = wp.stage;
