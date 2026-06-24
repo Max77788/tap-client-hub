@@ -191,36 +191,46 @@ export default function WorklistTable({
     return map;
   }, [serviceClients, serviceKey]);
 
-  // ── Cell click handler ──
+  // ── Stage picker state ──
+  const [pickerTarget, setPickerTarget] = useState<{ clientId: string; monthIdx: number } | null>(null);
+
+  // ── Cell click handler — opens stage picker ──
   const handleCellClick = useCallback(
     (clientId: string, monthIdx: number) => {
       if (readOnly || isHistorical) return;
 
-      const key = `${clientId}:${serviceKey}`;
       const client = clients.find((c: any) => c.id === clientId);
       const svc = client?.services?.find((s: any) => s.key === serviceKey);
       const activeMonths = svc ? getActiveMonths(svc.frequency) : new Set();
       if (!activeMonths.has(monthIdx)) return;
 
+      setPickerTarget({ clientId, monthIdx });
+    },
+    [readOnly, isHistorical, serviceKey, clients],
+  );
+
+  // ── Stage select handler — applies stage and closes picker ──
+  const handleStageSelect = useCallback(
+    (clientId: string, monthIdx: number, stage: WorklistStage) => {
+      const key = `${clientId}:${serviceKey}`;
+
       setWorklistState((prev) => {
         const stages = [...(prev[key] ?? [])];
         if (!stages.length) return prev;
-
-        const currentIdx = STAGE_CYCLE.indexOf(stages[monthIdx]);
-        const nextIdx = (currentIdx + 1) % STAGE_CYCLE.length;
-        const newStage = STAGE_CYCLE[nextIdx];
-        stages[monthIdx] = newStage;
-
-        // Notify parent of stage change
-        if (onStageChange) {
-          onStageChange(clientId, monthIdx, newStage);
-        }
-
+        stages[monthIdx] = stage;
         return { ...prev, [key]: stages };
       });
+
+      if (onStageChange) {
+        onStageChange(clientId, monthIdx, stage);
+      }
+
+      setPickerTarget(null);
     },
-    [readOnly, isHistorical, serviceKey, clients, onStageChange],
+    [serviceKey, onStageChange],
   );
+
+  const closePicker = useCallback(() => setPickerTarget(null), []);
 
   // ── Stats ──
   const stats = useMemo(() => {
@@ -612,14 +622,96 @@ export default function WorklistTable({
 
       {/* ── Fine-print note ── */}
       <p className="text-[10px] text-[var(--muted)] leading-relaxed italic">
-        Click a cell to cycle through stages: Not Started → In Progress →
-        Waiting on Client → Prepared → Done → N/A → Not Started.{isHistorical
-          ? " Historical years are read-only."
-          : ""}{" "}
-        Past-due months that aren&apos;t marked Done or N/A are flagged with a
-        red border. Cells are only active for months aligned with the service
-        frequency cadence.
+        Click a cell to open the stage picker. Past-due months that aren&apos;t
+        marked Done or N/A are flagged with a red border. Cells are only active
+        for months aligned with the service frequency cadence.
       </p>
+
+      {/* ── Stage Picker overlay ── */}
+      {pickerTarget && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={closePicker}
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+          />
+          {/* Picker sheet */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl px-4 pt-5 pb-8"
+            style={{
+              backgroundColor: "var(--card)",
+              boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
+              border: "1px solid var(--line)",
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-bold text-[var(--ink)]">
+                {MONTHS_SHORT[pickerTarget.monthIdx]} — Set Status
+              </span>
+              <button
+                onClick={closePicker}
+                className="text-xs text-[var(--muted)] bg-transparent border-none cursor-pointer px-2 py-1 rounded hover:bg-[var(--teal-soft)] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {STAGE_CYCLE.map((stage) => {
+                const style = STAGE_STYLES[stage];
+                const label = STAGE_LABELS[stage] || "Not Due";
+                const key = `${pickerTarget.clientId}:${serviceKey}`;
+                const stages = worklistState[key] ?? [];
+                const currentStage = stages[pickerTarget.monthIdx] || "";
+                const isCurrent = stage === currentStage;
+                return (
+                  <button
+                    key={stage}
+                    onClick={() =>
+                      handleStageSelect(pickerTarget.clientId, pickerTarget.monthIdx, stage)
+                    }
+                    className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl transition-all border"
+                    style={{
+                      backgroundColor: isCurrent ? style.bg : "transparent",
+                      borderColor: isCurrent ? style.fg : "var(--line)",
+                      color: isCurrent ? style.fg : "var(--muted)",
+                      fontWeight: isCurrent ? 700 : 400,
+                    }}
+                  >
+                    <span
+                      className="w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold"
+                      style={{
+                        backgroundColor: isCurrent ? style.bg : style.bg || "transparent",
+                        color: style.fg,
+                        border: stage === "" && !isCurrent
+                          ? "1px dashed var(--line)"
+                          : "1px solid transparent",
+                      }}
+                    >
+                      {stage === ""
+                        ? "·"
+                        : stage === "ip"
+                          ? "◐"
+                          : stage === "wc"
+                            ? "◑"
+                            : stage === "pp"
+                              ? "◕"
+                              : stage === "dn"
+                                ? "✓"
+                                : stage === "na"
+                                  ? "✗"
+                                  : ""}
+                    </span>
+                    <span className="text-[11px] leading-tight text-center">
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
