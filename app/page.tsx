@@ -145,25 +145,13 @@ export default function ClientsPage() {
       {/* ── Toolbar: Search + Filters + Actions ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
         {/* Search */}
-        <div className="relative flex-[2] min-w-[280px]">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--muted)"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+        <div className="flex-[2] min-w-[280px]">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clients"
-            className="w-full pl-[34px] pr-[14px] py-[10px] rounded-[11px] border border-[var(--line)] bg-[var(--card)] text-[14px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
+            className="w-full pl-[14px] pr-[14px] py-[10px] rounded-[11px] border border-[var(--line)] bg-[var(--card)] text-[14px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
           />
         </div>
 
