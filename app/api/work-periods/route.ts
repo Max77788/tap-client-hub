@@ -112,10 +112,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
-
   const { client_service_id, period, stage, done_by } = body;
 
+  console.log("WORK-PERIODS POST received:", { client_service_id, period, stage });
+
   if (!client_service_id || !period || !stage) {
+    console.error("WORK-PERIODS POST: missing fields", { client_service_id, period, stage });
     return NextResponse.json(
       { error: "Missing required fields: client_service_id, period, stage" },
       { status: 400 }

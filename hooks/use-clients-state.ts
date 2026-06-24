@@ -73,19 +73,24 @@ export function useClientsState() {
       // Persist to Supabase
       try {
         const client = clients.find(c => c.id === clientId);
-        if (!client) return;
+        if (!client) { console.error("SAVE FAIL: client not found", clientId); return; }
         const svc = client.services.find(s => s.key === serviceKey);
-        if (!svc?.csId) return;
+        if (!svc) { console.error("SAVE FAIL: service not found", serviceKey, clientId); return; }
+        if (!svc?.csId) { console.error("SAVE FAIL: no csId", clientId, serviceKey, svc); return; }
 
         const now = new Date();
         const period = `${now.getFullYear()}-${String(monthIdx + 1).padStart(2, "0")}`;
         const stage = STAGE_TO_WP[wStage];
 
-        await fetch("/api/work-periods", {
+        console.log("SAVING", { client_service_id: svc.csId, period, stage });
+
+        const res = await fetch("/api/work-periods", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ client_service_id: svc.csId, period, stage }),
         });
+        const data = await res.json();
+        console.log("SAVE RESULT", data);
       } catch (e) {
         console.error("Failed to persist stage change:", e);
       }
