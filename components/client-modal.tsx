@@ -140,7 +140,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     }));
   }
 
-  function setServiceField(key: ServiceKey, field: string, value: string | number) {
+  function setServiceField(key: ServiceKey, field: string, value: string | number | any[]) {
     setForm((prev) => ({
       ...prev,
       services: prev.services.map((s) =>
