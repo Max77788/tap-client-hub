@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════
 -- TAP Client Hub · Database Schema v3
--- Schema: tap_hub (dedicated)
+-- Schema: tap_hub_project (dedicated)
 -- Supabase (PostgreSQL 15)
 -- ═══════════════════════════════════════════════════════
 
@@ -8,12 +8,12 @@
 create extension if not exists "uuid-ossp";
 
 -- ══ SCHEMA ══
-create schema if not exists tap_hub;
+create schema if not exists tap_hub_project;
 
 -- ══ TABLES (matching production structure) ══
 
 -- services
-create table if not exists tap_hub.services (
+create table if not exists tap_hub_project.services (
   id              uuid primary key default gen_random_uuid(),
   code            text not null unique,
   name            text not null,
@@ -22,7 +22,7 @@ create table if not exists tap_hub.services (
 );
 
 -- profiles
-create table if not exists tap_hub.profiles (
+create table if not exists tap_hub_project.profiles (
   id                uuid primary key default gen_random_uuid(),
   full_name         text not null,
   role              text not null default 'staff',
@@ -42,7 +42,7 @@ create table if not exists tap_hub.profiles (
 );
 
 -- clients
-create table if not exists tap_hub.clients (
+create table if not exists tap_hub_project.clients (
   id           uuid primary key default gen_random_uuid(),
   name         text not null,
   type         text not null,
@@ -59,9 +59,9 @@ create table if not exists tap_hub.clients (
 );
 
 -- contacts
-create table if not exists tap_hub.contacts (
+create table if not exists tap_hub_project.contacts (
   id          uuid primary key default gen_random_uuid(),
-  client_id   uuid not null references tap_hub.clients(id) on delete cascade,
+  client_id   uuid not null references tap_hub_project.clients(id) on delete cascade,
   name        text not null,
   email       text,
   phone       text,
@@ -69,16 +69,16 @@ create table if not exists tap_hub.contacts (
 );
 
 -- client_tax_ids
-create table if not exists tap_hub.client_tax_ids (
-  client_id   uuid not null references tap_hub.clients(id) on delete cascade,
+create table if not exists tap_hub_project.client_tax_ids (
+  client_id   uuid not null references tap_hub_project.clients(id) on delete cascade,
   ein         text,
   ssn_last4   text
 );
 
 -- credentials
-create table if not exists tap_hub.credentials (
+create table if not exists tap_hub_project.credentials (
   id          uuid primary key default gen_random_uuid(),
-  client_id   uuid references tap_hub.clients(id) on delete cascade,
+  client_id   uuid references tap_hub_project.clients(id) on delete cascade,
   portal      text not null,
   username    text,
   vault_ref   text,
@@ -89,10 +89,10 @@ create table if not exists tap_hub.credentials (
 );
 
 -- client_services
-create table if not exists tap_hub.client_services (
+create table if not exists tap_hub_project.client_services (
   id              uuid primary key default gen_random_uuid(),
-  client_id       uuid not null references tap_hub.clients(id) on delete cascade,
-  service_id      uuid not null references tap_hub.services(id) on delete restrict,
+  client_id       uuid not null references tap_hub_project.clients(id) on delete cascade,
+  service_id      uuid not null references tap_hub_project.services(id) on delete restrict,
   assigned_to     uuid,
   active          boolean not null default true,
   frequency       text,
@@ -106,9 +106,9 @@ create table if not exists tap_hub.client_services (
 );
 
 -- work_periods
-create table if not exists tap_hub.work_periods (
+create table if not exists tap_hub_project.work_periods (
   id                uuid primary key default gen_random_uuid(),
-  client_service_id uuid not null references tap_hub.client_services(id) on delete cascade,
+  client_service_id uuid not null references tap_hub_project.client_services(id) on delete cascade,
   period            text not null,
   stage             text not null default 'not_started',
   done_by           uuid,
@@ -120,8 +120,8 @@ create table if not exists tap_hub.work_periods (
 );
 
 -- period_counts
-create table if not exists tap_hub.period_counts (
-  client_service_id uuid not null references tap_hub.client_services(id) on delete cascade,
+create table if not exists tap_hub_project.period_counts (
+  client_service_id uuid not null references tap_hub_project.client_services(id) on delete cascade,
   period            text not null,
   processed         int not null default 0,
   expected          int,
@@ -131,24 +131,24 @@ create table if not exists tap_hub.period_counts (
 );
 
 -- time_entries
-create table if not exists tap_hub.time_entries (
+create table if not exists tap_hub_project.time_entries (
   id                uuid primary key default gen_random_uuid(),
-  who               uuid not null references tap_hub.profiles(id),
-  client_id         uuid references tap_hub.clients(id),
-  client_service_id uuid references tap_hub.client_services(id),
+  who               uuid not null references tap_hub_project.profiles(id),
+  client_id         uuid references tap_hub_project.clients(id),
+  client_service_id uuid references tap_hub_project.client_services(id),
   task              text,
   started_at        timestamptz,
   seconds           int not null default 0,
   note              text,
   edited            boolean not null default false,
-  edited_by         uuid references tap_hub.profiles(id),
+  edited_by         uuid references tap_hub_project.profiles(id),
   edited_at         timestamptz,
   created_at        timestamptz not null default now()
 );
 
 -- billing_periods
-create table if not exists tap_hub.billing_periods (
-  client_service_id uuid not null references tap_hub.client_services(id) on delete cascade,
+create table if not exists tap_hub_project.billing_periods (
+  client_service_id uuid not null references tap_hub_project.client_services(id) on delete cascade,
   period            text not null,
   amount            numeric(10,2),
   invoiced_at       timestamptz,
@@ -156,9 +156,9 @@ create table if not exists tap_hub.billing_periods (
 );
 
 -- audit_log
-create table if not exists tap_hub.audit_log (
+create table if not exists tap_hub_project.audit_log (
   id          bigint primary key generated by default as identity,
-  actor       uuid references tap_hub.profiles(id),
+  actor       uuid references tap_hub_project.profiles(id),
   action      text not null,
   entity      text,
   entity_id   text,
@@ -168,32 +168,32 @@ create table if not exists tap_hub.audit_log (
 
 -- ══ INDEXES ══
 
-create index if not exists idx_clients_group      on tap_hub.clients(group_owner);
-create index if not exists idx_clients_status      on tap_hub.clients(status);
-create index if not exists idx_clients_type        on tap_hub.clients(type);
+create index if not exists idx_clients_group      on tap_hub_project.clients(group_owner);
+create index if not exists idx_clients_status      on tap_hub_project.clients(status);
+create index if not exists idx_clients_type        on tap_hub_project.clients(type);
 
-create index if not exists idx_contacts_client     on tap_hub.contacts(client_id);
+create index if not exists idx_contacts_client     on tap_hub_project.contacts(client_id);
 
-create index if not exists idx_creds_client        on tap_hub.credentials(client_id);
-create index if not exists idx_creds_bank          on tap_hub.credentials(is_bank) where is_bank = true;
+create index if not exists idx_creds_client        on tap_hub_project.credentials(client_id);
+create index if not exists idx_creds_bank          on tap_hub_project.credentials(is_bank) where is_bank = true;
 
-create index if not exists idx_cs_client           on tap_hub.client_services(client_id);
-create index if not exists idx_cs_service          on tap_hub.client_services(service_id);
+create index if not exists idx_cs_client           on tap_hub_project.client_services(client_id);
+create index if not exists idx_cs_service          on tap_hub_project.client_services(service_id);
 
-create index if not exists idx_wp_cs               on tap_hub.work_periods(client_service_id);
-create index if not exists idx_wp_period           on tap_hub.work_periods(period);
-create index if not exists idx_wp_stage            on tap_hub.work_periods(stage);
+create index if not exists idx_wp_cs               on tap_hub_project.work_periods(client_service_id);
+create index if not exists idx_wp_period           on tap_hub_project.work_periods(period);
+create index if not exists idx_wp_stage            on tap_hub_project.work_periods(stage);
 
-create index if not exists idx_pc_cs               on tap_hub.period_counts(client_service_id);
-create index if not exists idx_pc_period           on tap_hub.period_counts(period);
+create index if not exists idx_pc_cs               on tap_hub_project.period_counts(client_service_id);
+create index if not exists idx_pc_period           on tap_hub_project.period_counts(period);
 
-create index if not exists idx_te_who              on tap_hub.time_entries(who);
-create index if not exists idx_te_client           on tap_hub.time_entries(client_id);
+create index if not exists idx_te_who              on tap_hub_project.time_entries(who);
+create index if not exists idx_te_client           on tap_hub_project.time_entries(client_id);
 
-create index if not exists idx_audit_actor         on tap_hub.audit_log(actor);
-create index if not exists idx_audit_entity        on tap_hub.audit_log(entity, entity_id);
+create index if not exists idx_audit_actor         on tap_hub_project.audit_log(actor);
+create index if not exists idx_audit_entity        on tap_hub_project.audit_log(entity, entity_id);
 
 -- ══ PERMISSIONS ══
 
-grant usage on schema tap_hub to anon, authenticated, service_role;
-grant select, insert, update, delete on all tables in schema tap_hub to anon, authenticated, service_role;
+grant usage on schema tap_hub_project to anon, authenticated, service_role;
+grant select, insert, update, delete on all tables in schema tap_hub_project to anon, authenticated, service_role;
