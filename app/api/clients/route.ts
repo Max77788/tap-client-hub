@@ -29,12 +29,20 @@ export async function GET() {
     return NextResponse.json({ error: svcError.message }, { status: 500 });
   }
 
-  const currentPeriod = new Date().toISOString().slice(0, 7);
-  const periodByCsId: Record<string, string> = {};
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const periodByCsId: Record<string, Record<number, string>> = {};
   try {
     const { data: dbPeriods } = await supabase
-      .from("work_periods").select("client_service_id, stage").eq("period", currentPeriod);
-    if (dbPeriods) for (const wp of dbPeriods) periodByCsId[wp.client_service_id] = wp.stage;
+      .from("work_periods").select("client_service_id, period, stage")
+      .like("period", `${currentYear}-%`);
+    if (dbPeriods) {
+      for (const wp of dbPeriods) {
+        if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
+        const monthNum = parseInt(wp.period.split("-")[1], 10) - 1; // 0-indexed
+        periodByCsId[wp.client_service_id][monthNum] = wp.stage;
+      }
+    }
   } catch {}
 
   const servicesByClient: Record<string, any[]> = {};
@@ -69,8 +77,12 @@ export async function GET() {
           cdg: cs.cdg || "", eftps: cs.eftps || "",
           payrollPassword: cs.payroll_password || "", paydate: cs.paydate || "",
         } : {}),
-        currentStage: periodByCsId[cs.id] || "not_started",
-        months: Array(12).fill("lock"),
+        currentStage: (periodByCsId[cs.id]?.[currentMonth] || "not_started"),
+        months: Array.from({ length: 12 }, (_, i) => {
+          const wpStage = periodByCsId[cs.id]?.[i];
+          if (!wpStage) return "lock";
+          return wpStage === "done" ? "done" : wpStage === "na" ? "na" : "billed";
+        }),
       };
     });
 

@@ -78,7 +78,7 @@ export function useClientsState() {
         if (!svc?.csId) return;
 
         const now = new Date();
-        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const period = `${now.getFullYear()}-${String(monthIdx + 1).padStart(2, "0")}`;
         const stage = STAGE_TO_WP[wStage];
 
         await fetch("/api/work-periods", {
