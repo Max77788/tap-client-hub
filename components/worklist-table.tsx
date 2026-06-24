@@ -150,6 +150,18 @@ export default function WorklistTable({
     [clients, serviceKey],
   );
 
+  // ── Search state ──
+  const [search, setSearch] = useState("");
+  const filteredClients = useMemo(
+    () =>
+      search
+        ? serviceClients.filter((c) =>
+            c.name.toLowerCase().includes(search.toLowerCase()),
+          )
+        : serviceClients,
+    [serviceClients, search],
+  );
+
   // ── Initialize worklist state from client data ──
   const [worklistState, setWorklistState] = useState<
     Record<string, WorklistStage[]>
@@ -320,6 +332,22 @@ export default function WorklistTable({
         </span>
       </div>
 
+      {/* ── Search ── */}
+      <div className="flex gap-2 items-center">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search clients..."
+          className="flex-1 px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
+        />
+        {search && filteredClients.length < serviceClients.length && (
+          <span className="text-[11px] text-[var(--muted)] whitespace-nowrap">
+            {filteredClients.length} of {serviceClients.length}
+          </span>
+        )}
+      </div>
+
       {/* ── Legend ── */}
       <div className="flex flex-wrap items-center gap-2 text-[10px]">
         {legendItems.map(({ stage, dot }) => {
@@ -423,7 +451,7 @@ export default function WorklistTable({
             </tr>
           </thead>
           <tbody>
-            {serviceClients.length === 0 ? (
+            {filteredClients.length === 0 ? (
               <tr>
                 <td
                   colSpan={colCount}
@@ -433,7 +461,7 @@ export default function WorklistTable({
                 </td>
               </tr>
             ) : (
-              serviceClients.map((client) => {
+              filteredClients.map((client) => {
                 const svc = client.services.find((s) => s.key === serviceKey)!;
                 const activeMonths = getActiveMonths(svc.frequency);
                 const key = `${client.id}:${serviceKey}`;
