@@ -210,15 +210,9 @@ export default function WorklistTable({
   const handleCellClick = useCallback(
     (clientId: string, monthIdx: number) => {
       if (readOnly || isHistorical) return;
-
-      const client = clients.find((c: any) => c.id === clientId);
-      const svc = client?.services?.find((s: any) => s.key === serviceKey);
-      const activeMonths = svc ? getActiveMonths(svc.frequency) : new Set();
-      if (!activeMonths.has(monthIdx)) return;
-
       setPickerTarget({ clientId, monthIdx });
     },
-    [readOnly, isHistorical, serviceKey, clients],
+    [readOnly, isHistorical],
   );
 
   // ── Stage select handler — applies stage and closes picker ──
@@ -523,7 +517,7 @@ export default function WorklistTable({
                         !isHistorical;
 
                       const isCurrentMonth = i === currentMonth && !isHistorical;
-                      const cellReadOnly = readOnly || isHistorical || !isActive;
+                      const cellReadOnly = readOnly || isHistorical;
 
                       // ── Payroll variant: show run counts ──
                       if (variant === "payroll" && isActive) {
