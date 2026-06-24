@@ -44,6 +44,8 @@ export interface ClientService {
   bankAccount?: string;
   groupAssignedTo?: string;
   salesTaxRT?: string;
+  salesTaxLineItems?: Array<{ jurisdiction: string; rt: string }>;
+  processorOther?: string;
   cdg?: string;
   eftps?: string;
   payrollPassword?: string;

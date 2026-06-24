@@ -15,7 +15,7 @@ interface ClientModalProps {
 const SERVICE_CADENCES: Record<ServiceKey, { options: string[]; label: string }> = {
   financials:  { options: ["Monthly", "Quarterly", "Yearly"], label: "Frequency" },
   payroll:     { options: ["Weekly", "Bi-Weekly", "Monthly"], label: "Payroll Cadence" },
-  sales_tax:   { options: [], label: "" },   // always Monthly, no picker
+  sales_tax:   { options: ["Monthly", "Quarterly", "Yearly"], label: "Sales Tax Cadence" },   // editable cadence
   "1099s":     { options: [], label: "" },    // always Yearly, no picker — show expected count instead
   renditions:  { options: [], label: "" },     // always Yearly
   tax_returns: { options: [], label: "" },      // always Yearly
@@ -427,7 +427,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                               Processor
                             </span>
                             <select
-                              value={svc.processor}
+                              value={svc.processor && !["ADP", "QuickBooks", "Toast", "TaxDome", "TA", "Manual", "Other"].includes(svc.processor) ? "Other" : svc.processor}
                               onChange={(e) => setServiceField(svc.key, "processor", e.target.value)}
                               className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
                             >
@@ -435,6 +435,15 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                                 <option key={p} value={p}>{p}</option>
                               ))}
                             </select>
+                            {svc.processor === "Other" && (
+                              <input
+                                type="text"
+                                value={svc.processorOther || ""}
+                                onChange={(e) => setServiceField(svc.key, "processorOther", e.target.value)}
+                                placeholder="Specify processor..."
+                                className="w-24 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                              />
+                            )}
                           </div>
 
                           {/* Assigned to */}
@@ -462,17 +471,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                                   Payroll Details
                                 </span>
                               </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">CDG</span>
-                                  <input type="text" value={svc.cdg || ""} onChange={(e) => setServiceField(svc.key, "cdg", e.target.value)}
-                                    placeholder="CDG" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">EFTPs</span>
-                                  <input type="text" value={svc.eftps || ""} onChange={(e) => setServiceField(svc.key, "eftps", e.target.value)}
-                                    placeholder="EFTPs" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
-                                </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">EFTPs</span>
+                                <input type="text" value={svc.eftps || ""} onChange={(e) => setServiceField(svc.key, "eftps", e.target.value)}
+                                  placeholder="EFTPs password" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">Password</span>
@@ -526,7 +528,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                  S/Tax RT
+                                  RT
                                 </span>
                                 <input
                                   type="text"
@@ -565,22 +567,60 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                                 />
                               </div>
 
-                              {/* Group Assigned To */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                  Group
-                                </span>
-                                <select
-                                  value={svc.groupAssignedTo || ""}
-                                  onChange={(e) => setServiceField(svc.key, "groupAssignedTo", e.target.value)}
-                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
-                                >
-                                  <option value="">Unassigned</option>
-                                  {staffOptions.map((s) => (
-                                    <option key={s.id} value={s.name}>{s.name}</option>
-                                  ))}
-                                </select>
-                              </div>
+                              {/* Sales Tax Line Items */}
+                              {(!svc.salesTaxLineItems || svc.salesTaxLineItems.length === 0) ? (
+                                <div className="text-[11px] text-[var(--muted)] italic">No line items added yet.</div>
+                              ) : (
+                                svc.salesTaxLineItems.map((item: any, idx: number) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={item.jurisdiction || ""}
+                                      onChange={(e) => {
+                                        const items = [...(svc.salesTaxLineItems || [])];
+                                        items[idx] = { ...items[idx], jurisdiction: e.target.value };
+                                        setServiceField(svc.key, "salesTaxLineItems", items);
+                                      }}
+                                      placeholder="Jurisdiction"
+                                      className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={item.rt || ""}
+                                      onChange={(e) => {
+                                        const items = [...(svc.salesTaxLineItems || [])];
+                                        items[idx] = { ...items[idx], rt: e.target.value };
+                                        setServiceField(svc.key, "salesTaxLineItems", items);
+                                      }}
+                                      placeholder="RT"
+                                      className="w-20 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const items = svc.salesTaxLineItems.filter((_: any, i: number) => i !== idx);
+                                        setServiceField(svc.key, "salesTaxLineItems", items);
+                                      }}
+                                      className="p-1 rounded hover:bg-[var(--red-soft)] transition-colors"
+                                      aria-label="Remove line item"
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const items = [...(svc.salesTaxLineItems || []), { jurisdiction: "", rt: "" }];
+                                  setServiceField(svc.key, "salesTaxLineItems", items);
+                                }}
+                                className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors w-full"
+                              >
+                                + Add Line Item
+                              </button>
                             </>
                           )}
                         </div>

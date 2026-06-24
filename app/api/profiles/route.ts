@@ -48,6 +48,7 @@ export async function GET() {
       id: p.id,
       name: p.full_name || "",
       email,
+      username: email.split("@")[0],
       role: ROLE_MAP[p.role] || p.role || "Staff",
       location: p.location || "",
       mgr: p.reporting_manager || "—",

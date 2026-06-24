@@ -147,9 +147,9 @@ export default function ClientsPage() {
         {/* Search */}
         <div className="relative flex-[2] min-w-[280px]">
           <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-            width="22"
-            height="22"
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--muted)"
@@ -162,8 +162,8 @@ export default function ClientsPage() {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search clients…"
-            className="w-full pl-[38px] pr-[14px] py-[11px] rounded-[11px] border border-[var(--line)] bg-[var(--card)] text-[14px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
+            placeholder="Search clients"
+            className="w-full pl-[34px] pr-[14px] py-[10px] rounded-[11px] border border-[var(--line)] bg-[var(--card)] text-[14px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
           />
         </div>
 
@@ -205,18 +205,6 @@ export default function ClientsPage() {
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           Add Client
-        </button>
-
-        <button
-          onClick={handleExport}
-          className="btn-secondary"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Export
         </button>
       </div>
 
@@ -350,10 +338,13 @@ function GroupCard({
   clients: Client[];
   onClientClick: (id: string) => void;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
   // Collect unique locations and services across all group members
   const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
   const allServices = new Set<string>();
   clients.forEach((c) => c.services.filter((s) => s.enabled && s.key).forEach((s) => allServices.add(s.key!)));
+
+  const moduleColors = ["var(--teal)", "var(--blue)", "var(--green)", "var(--orange)", "#b8860b"];
 
   return (
     <div
@@ -376,12 +367,31 @@ function GroupCard({
         e.currentTarget.style.borderColor = "var(--line)";
       }}
     >
-      {/* Top row: Group name + count badge */}
+      {/* Top row: Group name + count badge + collapse toggle */}
       <div className="flex items-start justify-between gap-2 mb-[3px]">
-        <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight"
-          style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
-          {groupName}
-        </h3>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="shrink-0 p-0.5 rounded hover:bg-[var(--teal-soft)]/50 transition-colors"
+            title={collapsed ? "Expand group" : "Collapse group"}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--muted)"
+              strokeWidth="2.5"
+              style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight truncate"
+            style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
+            {groupName}
+          </h3>
+        </div>
         <span
           className="shrink-0 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full"
           style={{
@@ -394,7 +404,7 @@ function GroupCard({
       </div>
 
       {/* Locations */}
-      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2">
+      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2 ml-[22px]">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
@@ -402,29 +412,18 @@ function GroupCard({
         <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
       </div>
 
-      {/* Service pills */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {[...allServices].slice(0, 5).map((key) => {
+      {/* Service pills with module colors */}
+      <div className="flex flex-wrap gap-1.5 mb-3 ml-[22px]">
+        {[...allServices].slice(0, 5).map((key, idx) => {
           const meta = SERVICE_META[key as ServiceKey];
           if (!meta) return null;
-          // Compute aggregate: use the worst status across clients with this service
-          const stages = clients
-            .flatMap((c) => c.services.filter((s) => s.enabled && s.key === key))
-            .map((s) => (s as any).currentStage || "not_started");
-          const worstPriority: Record<string, number> = { not_started: 0, in_progress: 1, done: 2, delayed: 3 };
-          let worstStage = "not_started";
-          let worstPri = 0;
-          for (const st of stages) {
-            const pri = worstPriority[st] ?? 0;
-            if (pri > worstPri) { worstPri = pri; worstStage = st; }
-          }
-          const statusOpt = STATUS_OPTIONS.find((o) => o.value === worstStage) || STATUS_OPTIONS[0];
+          const color = moduleColors[idx % moduleColors.length];
           return (
             <span
               key={key}
               className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: statusOpt.bg, color: statusOpt.color }}
-              title={`${meta.label}: ${statusOpt.label} (${stages.length} clients)`}
+              style={{ backgroundColor: `${color}18`, color }}
+              title={meta.label}
             >
               {meta.label}
             </span>
@@ -438,29 +437,37 @@ function GroupCard({
         )}
       </div>
 
-      {/* Static entity list - always visible */}
-      <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
-        {clients.map((c) => (
-          <div
-            key={c.id}
-            onClick={(e) => { e.stopPropagation(); onClientClick(c.id); }}
-            className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors"
-          >
-            <div className="min-w-0 flex-1 pr-2">
-              <p className="text-xs font-semibold text-[var(--ink)]" style={{ wordBreak: "break-word" }}>{c.name}</p>
-              <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
-            </div>
-            <span
-              className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: c.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
-                color: c.type === "Business" ? "var(--teal)" : "var(--blue)",
-              }}
+      {/* Entity list — collapsible */}
+      <div
+        className="overflow-hidden transition-all duration-200"
+        style={{
+          maxHeight: collapsed ? "0px" : `${clients.length * 60}px`,
+          opacity: collapsed ? 0 : 1,
+        }}
+      >
+        <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
+          {clients.map((c) => (
+            <div
+              key={c.id}
+              onClick={(e) => { e.stopPropagation(); onClientClick(c.id); }}
+              className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors"
             >
-              {c.type === "Business" ? "BIZ" : "PERS"}
-            </span>
-          </div>
-        ))}
+              <div className="min-w-0 flex-1 pr-2">
+                <p className="text-xs font-semibold text-[var(--ink)]" style={{ wordBreak: "break-word" }}>{c.name}</p>
+                <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
+              </div>
+              <span
+                className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{
+                  backgroundColor: c.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
+                  color: c.type === "Business" ? "var(--teal)" : "var(--blue)",
+                }}
+              >
+                {c.type === "Business" ? "BIZ" : "PERS"}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

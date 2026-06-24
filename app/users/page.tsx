@@ -8,6 +8,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  username: string;
   role: string;
   location: string;
   mgr: string;
@@ -34,6 +35,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [passwordModal, setPasswordModal] = useState<{ user: User | null; password: string; saving: boolean; message: string }>({ user: null, password: "", saving: false, message: "" });
 
   // Fetch from Supabase on mount
   useEffect(() => {
@@ -68,6 +70,32 @@ export default function UsersPage() {
     [users]
   );
 
+  async function handlePasswordChange(user: User) {
+    if (passwordModal.user?.id === user.id && passwordModal.message) {
+      setPasswordModal({ user: null, password: "", saving: false, message: "" });
+      return;
+    }
+    setPasswordModal({ user, password: "", saving: false, message: "" });
+  }
+
+  async function submitPasswordChange() {
+    if (!passwordModal.user || !passwordModal.password) return;
+    setPasswordModal((prev) => ({ ...prev, saving: true, message: "" }));
+    try {
+      const res = await fetch(`/api/profiles/${passwordModal.user.id}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: passwordModal.password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to change password");
+      setPasswordModal((prev) => ({ ...prev, saving: false, password: "", message: "Password changed successfully!" }));
+      setTimeout(() => setPasswordModal({ user: null, password: "", saving: false, message: "" }), 2000);
+    } catch (err: any) {
+      setPasswordModal((prev) => ({ ...prev, saving: false, message: err.message || "Failed to change password" }));
+    }
+  }
+
   if (loading) return <PageSkeleton rows={6} />;
 
   if (error) {
@@ -100,17 +128,20 @@ export default function UsersPage() {
             <thead>
               <tr style={{ borderBottom: "2px solid var(--line)", backgroundColor: "#faf7f0" }}>
                 <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Name</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Username</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Location</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Role</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Reports to</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Status</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Modules</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.id} style={{ borderBottom: "1px solid var(--line)" }} className="hover:bg-[var(--teal-soft)]/30 transition-colors">
                   <td className="px-5 py-3 font-semibold text-[var(--ink)]">{u.name}</td>
+                  <td className="px-5 py-3 text-[var(--muted)] text-sm font-mono">{u.username}</td>
                   <td className="px-5 py-3 text-[var(--muted)]">{u.location}</td>
                   <td className="px-5 py-3">
                     <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: u.role === "Owner / Admin" ? "var(--teal-soft)" : u.role === "Manager" ? "var(--blue-soft)" : "var(--green-soft)", color: u.role === "Owner / Admin" ? "var(--teal)" : u.role === "Manager" ? "var(--blue)" : "var(--green)" }}>{u.role}</span>
@@ -127,6 +158,21 @@ export default function UsersPage() {
                       {u.modules.length > 3 && <span className="text-[10px] text-[var(--muted)]">+{u.modules.length - 3}</span>}
                     </div>
                   </td>
+                  <td className="px-5 py-3">
+                    <button
+                      onClick={() => handlePasswordChange(u)}
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors"
+                      style={{
+                        borderColor: "var(--teal)",
+                        color: "var(--teal)",
+                        backgroundColor: "transparent",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--teal-soft)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                    >
+                      Change Password
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -135,6 +181,92 @@ export default function UsersPage() {
         {users.length === 0 && <div className="p-12 text-center text-[var(--muted)]">No users found</div>}
         <div className="px-5 py-2 text-xs text-[var(--muted)] border-t border-[var(--line)]">{users.length} users from Supabase</div>
       </div>
+
+      {/* Password Change Modal */}
+      {passwordModal.user && (
+        <>
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center p-4"
+            style={{ backgroundColor: "rgba(26,35,64,0.4)" }}
+            onClick={() => setPasswordModal({ user: null, password: "", saving: false, message: "" })}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div
+              className="relative w-full max-w-sm rounded-xl shadow-2xl pointer-events-auto p-6"
+              style={{
+                backgroundColor: "var(--card)",
+                boxShadow: "var(--shadow)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold text-[var(--ink)] mb-1">Change Password</h3>
+              <p className="text-xs text-[var(--muted)] mb-4">
+                Set new password for <strong>{passwordModal.user.name}</strong>
+              </p>
+              {passwordModal.message ? (
+                <div className="space-y-3">
+                  <div
+                    className="text-xs font-medium px-3 py-2 rounded-lg"
+                    style={{
+                      backgroundColor: passwordModal.message.includes("success") ? "var(--green-soft)" : "var(--red-soft)",
+                      color: passwordModal.message.includes("success") ? "var(--green)" : "var(--red)",
+                    }}
+                  >
+                    {passwordModal.message}
+                  </div>
+                  <button
+                    onClick={() => setPasswordModal({ user: null, password: "", saving: false, message: "" })}
+                    className="w-full text-sm font-semibold px-4 py-2 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity"
+                  >
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    type="password"
+                    value={passwordModal.password}
+                    onChange={(e) => setPasswordModal((prev) => ({ ...prev, password: e.target.value }))}
+                    placeholder="New password"
+                    className="w-full text-sm rounded-lg px-3 py-2 border outline-none"
+                    style={{
+                      borderColor: "var(--line)",
+                      backgroundColor: "var(--card)",
+                      color: "var(--ink)",
+                    }}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPasswordModal({ user: null, password: "", saving: false, message: "" })}
+                      className="flex-1 text-sm font-medium px-4 py-2 rounded-lg border"
+                      style={{
+                        borderColor: "var(--line)",
+                        color: "var(--ink)",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={submitPasswordChange}
+                      disabled={passwordModal.saving || !passwordModal.password}
+                      className="flex-1 text-sm font-semibold px-4 py-2 rounded-lg text-white disabled:opacity-50"
+                      style={{
+                        backgroundColor: passwordModal.saving ? "var(--muted)" : "var(--teal)",
+                      }}
+                    >
+                      {passwordModal.saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

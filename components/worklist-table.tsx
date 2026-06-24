@@ -112,6 +112,7 @@ export interface WorklistTableProps {
   variant?: "default" | "payroll" | "t9";
   readOnly?: boolean;
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage) => void;
+  onClientClick?: (clientId: string) => void;
 }
 
 // ── Build initial worklist state from clients ──
@@ -133,6 +134,7 @@ export default function WorklistTable({
   variant = "default",
   readOnly = false,
   onStageChange,
+  onClientClick,
 }: WorklistTableProps) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -228,6 +230,7 @@ export default function WorklistTable({
     let waiting = 0;
     let prepared = 0;
     let done = 0;
+    let behind = 0;
 
     for (const client of serviceClients) {
       const svc = client.services.find((s) => s.key === serviceKey);
@@ -242,6 +245,10 @@ export default function WorklistTable({
       const stages = worklistState[key] ?? [];
       for (let m = 0; m < 12; m++) {
         if (activeMonths.has(m)) {
+          // Past due check: month is before current, not done, not na, not empty
+          if (m < currentMonth && stages[m] !== "dn" && stages[m] !== "na" && stages[m] !== "" && !isHistorical) {
+            behind++;
+          }
           switch (stages[m]) {
             case "ip":
               inProgress++;
@@ -260,8 +267,8 @@ export default function WorklistTable({
       }
     }
 
-    return { dueThisMonth, inProgress, waiting, prepared, done, currentMonthName };
-  }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState]);
+    return { dueThisMonth, inProgress, waiting, prepared, done, behind, currentMonthName };
+  }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical]);
 
   // ── Stage legend ──
   const legendItems: { stage: WorklistStage; dot: string }[] = [
@@ -273,71 +280,46 @@ export default function WorklistTable({
     { stage: "na", dot: "●" },
   ];
 
-  // ── Column width helpers ──
+  // ── Compact month column class ──
   const monthColClass =
-    "w-10 min-w-[2.5rem] text-center text-[11px] font-semibold";
+    "text-center text-[10px] font-semibold uppercase tracking-tight";
+
+  // ── Count of columns before month columns (for colspan) ──
+  const colCount = 2 + (variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0) + (variant === "payroll" ? 1 : 0) + 12;
 
   return (
-    <div className="space-y-4">
-      {/* ── Year context banner ── */}
-      {isHistorical && (
-        <div
-          className="p-3 rounded-xl flex gap-2 text-sm"
-          style={{
-            backgroundColor: "var(--amber-soft)",
-            border: "1px solid #ead9b6",
-            color: "#7a5210",
-          }}
-        >
-          <span>📋</span>
-          <div>
-            <strong>{year}</strong> is a historical year. Data shown reflects current tracking status.
-            Historical snapshots per year coming in a future update.
-          </div>
-        </div>
-      )}
-      {!isHistorical && (
-        <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
-            style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)" }}>
-            ● Current Year
-          </span>
-          <span>{year} — live tracking</span>
-        </div>
-      )}
-
-      {/* ── Stats row ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard
-          label={`Due in ${stats.currentMonthName}`}
-          value={stats.dueThisMonth}
-          color="var(--teal)"
-          softColor="var(--teal-soft)"
-        />
-        <StatCard
-          label="In Progress"
-          value={stats.inProgress + stats.waiting}
-          color="var(--blue)"
-          softColor="var(--blue-soft)"
-        />
-        <StatCard
-          label="Done"
-          value={stats.done}
-          color="var(--green)"
-          softColor="var(--green-soft)"
-        />
+    <div className="space-y-3">
+      {/* ── Compact stats row ── */}
+      <div className="flex items-center gap-4 text-xs flex-wrap">
+        <span className="font-semibold text-[var(--ink)]">{serviceClients.length} clients</span>
+        <span className="text-[var(--muted)]">·</span>
+        <span style={{ color: "var(--teal)" }}>
+          <strong>{stats.dueThisMonth}</strong> due in {stats.currentMonthName}
+        </span>
+        <span className="text-[var(--muted)]">·</span>
+        <span style={{ color: stats.behind > 0 ? "var(--red)" : "var(--green)" }}>
+          <strong>{stats.behind}</strong> behind
+        </span>
+        <span className="text-[var(--muted)]">·</span>
+        <span style={{ color: "var(--blue)" }}>
+          <strong>{stats.inProgress + stats.waiting}</strong> in progress
+        </span>
+        <span className="text-[var(--muted)]">·</span>
+        <span style={{ color: "var(--green)" }}>
+          <strong>{stats.done}</strong> done
+        </span>
       </div>
 
       {/* ── Legend ── */}
-      <div className="flex flex-wrap items-center gap-3 text-[11px]">
+      <div className="flex flex-wrap items-center gap-2 text-[10px]">
         {legendItems.map(({ stage, dot }) => {
           const style = STAGE_STYLES[stage];
           const label = STAGE_LABELS[stage] || (stage === "" ? "Not Due/Empty" : STAGE_LABELS[stage]);
           const displayLabel = stage === "" ? "Not Due" : label;
           return (
-            <span key={stage} className="inline-flex items-center gap-1.5">
+            <span key={stage} className="inline-flex items-center gap-1">
               <span
-                className="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-bold leading-none"
+                className="inline-flex items-center justify-center w-3 h-3 rounded text-[9px] font-bold leading-none"
                 style={{
                   backgroundColor: style.bg,
                   color: style.fg,
@@ -350,39 +332,59 @@ export default function WorklistTable({
             </span>
           );
         })}
-        <span className="inline-flex items-center gap-1.5 ml-3">
-          <span className="w-4 h-4 rounded border-2 border-[var(--red)]" />
+        <span className="inline-flex items-center gap-1 ml-2">
+          <span className="w-3 h-3 rounded border-2 border-[var(--red)]" />
           <span className="text-[var(--muted)]">Delayed</span>
         </span>
       </div>
 
-      {/* ── Main table ── */}
+      {/* ── Historical banner (if applicable) ── */}
+      {isHistorical && (
+        <div
+          className="px-3 py-2 rounded-lg flex gap-2 text-xs"
+          style={{
+            backgroundColor: "var(--amber-soft)",
+            border: "1px solid #ead9b6",
+            color: "#7a5210",
+          }}
+        >
+          <span>📋</span>
+          <span>Historical view for <strong>{year}</strong>. Read-only.</span>
+        </div>
+      )}
+
+      {/* ── Main table (no horizontal scroll) ── */}
       <div
-        className="overflow-x-auto rounded-xl"
+        className="rounded-lg w-full"
         style={{
           backgroundColor: "var(--card)",
           boxShadow: "var(--shadow)",
           border: "1px solid var(--line)",
         }}
       >
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse table-fixed">
           <thead>
             <tr
               style={{ borderBottom: "2px solid var(--line)" }}
               className="text-left"
             >
               <th
-                className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]"
-                style={{ minWidth: "180px" }}
+                className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]"
+                style={{ width: "22%" }}
               >
                 Client
               </th>
-              <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+              <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
                 Assigned
               </th>
               {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-              <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+              <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "11%" }}>
                 Cadence
+              </th>
+              )}
+              {variant === "payroll" && (
+              <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
+                Processor
               </th>
               )}
               {MONTHS_SHORT.map((m, i) => {
@@ -390,8 +392,9 @@ export default function WorklistTable({
                 return (
                   <th
                     key={m}
-                    className={monthColClass + " px-1 py-3 uppercase tracking-wider"}
+                    className={monthColClass + " px-0.5 py-2"}
                     style={{
+                      width: "auto",
                       color: isCurrentMonth
                         ? "var(--teal)"
                         : "var(--muted)",
@@ -413,8 +416,8 @@ export default function WorklistTable({
             {serviceClients.length === 0 ? (
               <tr>
                 <td
-                  colSpan={15}
-                  className="px-6 py-12 text-center text-sm text-[var(--muted)]"
+                  colSpan={colCount}
+                  className="px-4 py-8 text-center text-xs text-[var(--muted)]"
                 >
                   No clients with this service enabled.
                 </td>
@@ -426,30 +429,45 @@ export default function WorklistTable({
                 const key = `${client.id}:${serviceKey}`;
                 const stages = worklistState[key] ?? Array(12).fill("");
 
+                // Payroll processor lookup
+                const payrollSvc = client.services.find((s: any) => s.key === "payroll");
+                const processor = payrollSvc?.processor || "-";
+
                 return (
                   <tr
                     key={client.id}
                     className="transition-colors hover:bg-[var(--teal-soft)]/30"
                     style={{ borderBottom: "1px solid var(--line)" }}
                   >
-                    {/* Client name */}
-                    <td className="px-4 py-2.5">
-                      <div className="text-sm font-medium text-[var(--ink)] truncate max-w-[200px]">
+                    {/* Client name (clickable) */}
+                    <td className="px-2 py-1.5">
+                      <button
+                        onClick={() => onClientClick?.(client.id)}
+                        className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
+                        title={`Open ${client.name} details`}
+                      >
                         {client.name}
-                      </div>
+                      </button>
                     </td>
 
                     {/* Assigned */}
-                    <td className="px-3 py-2.5 text-xs text-[var(--muted)] whitespace-nowrap">
-                      {svc.processor}
+                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                      {svc.processor || svc.assignedTo || "-"}
                     </td>
 
                     {/* Cadence */}
                     {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-                    <td className="px-3 py-2.5 text-xs text-[var(--muted)] whitespace-nowrap">
+                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
                       {variant === "payroll"
                         ? payrollCadences[client.id] ?? "Monthly"
                         : svc.frequency}
+                    </td>
+                    )}
+
+                    {/* Processor column (payroll only) */}
+                    {variant === "payroll" && (
+                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                      {processor}
                     </td>
                     )}
 
@@ -478,7 +496,7 @@ export default function WorklistTable({
                           : Math.max(0, expected - 1 - (i % 2));
 
                         return (
-                          <td key={i} className="px-0.5 py-2.5">
+                          <td key={i} className="px-0 py-1.5">
                             <CellWrapper
                               isCurrentMonth={isCurrentMonth}
                               isPastDue={isPastDue}
@@ -486,7 +504,7 @@ export default function WorklistTable({
                               onClick={() => handleCellClick(client.id, i)}
                             >
                               <span
-                                className="text-[10px] font-semibold leading-none"
+                                className="text-[9px] font-semibold leading-none"
                                 style={{ color: style.fg }}
                               >
                                 {completed}/{expected}
@@ -506,7 +524,7 @@ export default function WorklistTable({
                         );
 
                         return (
-                          <td key={i} className="px-0.5 py-2.5">
+                          <td key={i} className="px-0 py-1.5">
                             <CellWrapper
                               isCurrentMonth={isCurrentMonth}
                               isPastDue={isPastDue}
@@ -515,7 +533,7 @@ export default function WorklistTable({
                             >
                               <div className="flex flex-col items-center gap-0.5">
                                 <span
-                                  className="text-[10px] font-semibold leading-none"
+                                  className="text-[9px] font-semibold leading-none"
                                   style={{ color: style.fg }}
                                 >
                                   {actual}/{expected}
@@ -542,7 +560,7 @@ export default function WorklistTable({
 
                       // ── Default variant: colored squares ──
                       return (
-                        <td key={i} className="px-0.5 py-2.5">
+                        <td key={i} className="px-0 py-1.5">
                           <CellWrapper
                             isCurrentMonth={isCurrentMonth}
                             isPastDue={isPastDue}
@@ -550,7 +568,7 @@ export default function WorklistTable({
                             onClick={() => handleCellClick(client.id, i)}
                           >
                             <div
-                              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold leading-none transition-colors"
+                              className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold leading-none transition-colors"
                               style={{
                                 backgroundColor: style.bg,
                                 color: style.fg,
@@ -563,7 +581,7 @@ export default function WorklistTable({
                                 cursor: cellReadOnly
                                   ? "default"
                                   : "pointer",
-                                opacity: !isActive ? 0.4 : 1,
+                                opacity: !isActive ? 0.3 : 1,
                               }}
                               title={`${MONTHS_SHORT[i]}: ${STAGE_LABELS[stage]}${isPastDue ? " (Delayed)" : ""}`}
                             >
@@ -626,7 +644,7 @@ function CellWrapper({
     <button
       onClick={readOnly ? undefined : onClick}
       disabled={readOnly}
-      className={`inline-flex items-center justify-center w-full h-8 rounded-md transition-[background-color,color] ${
+      className={`inline-flex items-center justify-center w-full h-7 rounded transition-[background-color,color] ${
         readOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
       }`}
       style={{
@@ -643,41 +661,5 @@ function CellWrapper({
     >
       {children}
     </button>
-  );
-}
-
-// ══════════════════════════════════════════════
-// ── Stat Card (inline mini card) ──
-// ══════════════════════════════════════════════
-function StatCard({
-  label,
-  value,
-  color,
-  softColor,
-}: {
-  label: string;
-  value: number;
-  color?: string;
-  softColor?: string;
-}) {
-  return (
-    <div
-      className="p-3 rounded-lg flex flex-col"
-      style={{
-        backgroundColor: "var(--card)",
-        boxShadow: "var(--shadow)",
-        borderLeft: color ? `3px solid ${color}` : "none",
-      }}
-    >
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-        {label}
-      </span>
-      <span
-        className="text-xl font-bold leading-tight"
-        style={{ color: color || "var(--ink)" }}
-      >
-        {value}
-      </span>
-    </div>
   );
 }
