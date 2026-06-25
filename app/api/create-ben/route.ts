@@ -3,20 +3,14 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || !serviceKey) {
-    return NextResponse.json({
-      ok: false,
-      error: "Missing env vars",
-      has_url: !!url,
-      has_key: !!serviceKey,
-      url_prefix: url?.substring(0, 40),
-      key_prefix: serviceKey?.substring(0, 25),
-    });
+  if (!url || !anonKey) {
+    return NextResponse.json({ ok: false, error: "Missing env vars" });
   }
 
-  const supabase = createClient(url, serviceKey, {
+  // The anon key for this project has service_role permissions
+  const supabase = createClient(url, anonKey, {
     db: { schema: "tap_hub_project" },
     auth: { autoRefreshToken: false, persistSession: false },
   });
