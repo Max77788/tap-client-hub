@@ -1,28 +1,32 @@
 import { NextResponse } from "next/server";
-import speakeasy from "speakeasy";
 import { createClient } from "@/lib/supabase/server";
-
-const ISSUER = "TAP Hub";
+import { generateAndStoreCode, sendCodeEmail } from "@/lib/email-2fa";
 
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!user || !user.email) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
 
   const { data: profile } = await supabase
-    .from("profiles").select("totp_enabled").eq("id", user.id).maybeSingle();
+    .from("profiles")
+    .select("email_2fa_enabled")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (profile?.totp_enabled) {
+  if (profile?.email_2fa_enabled) {
     return NextResponse.json({ error: "2FA is already enabled" }, { status: 400 });
   }
 
-  const secret = speakeasy.generateSecret({
-    name: `${ISSUER}: ${user.email || user.id}`,
-    length: 20,
-  });
+  const code = await generateAndStoreCode(user.id);
+  const sent = await sendCodeEmail(user.email, code, "setup");
 
   return NextResponse.json({
-    secret: secret.base32,
-    otpauth: secret.otpauth_url,
+    sent,
+    email: user.email,
+    message: sent
+      ? `Verification code sent to ${user.email}`
+      : "Code generated (email not configured — set RESEND_API_KEY)",
   });
 }

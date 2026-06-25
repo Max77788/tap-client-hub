@@ -9,7 +9,8 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"login" | "2fa">("login");
-  const [totpCode, setTotpCode] = useState("");
+  const [twoFACode, setTwoFACode] = useState("");
+  const [twoFAMessage, setTwoFAMessage] = useState("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,9 +56,14 @@ function LoginContent() {
       const data = await res.json();
 
       if (data.enabled) {
-        // Show 2FA challenge
+        // Send 2FA code to email
         setStep("2fa");
+        setTwoFAMessage("Sending verification code...");
         setLoading(false);
+        fetch("/api/2fa/challenge", { method: "POST" })
+          .then(r => r.json())
+          .then(d => setTwoFAMessage(d.message || "Check your email for the code"))
+          .catch(() => setTwoFAMessage("Enter the code from your email"));
       } else {
         // No 2FA - proceed
         router.push(next);
@@ -73,7 +79,7 @@ function LoginContent() {
 
   async function handle2FASubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (totpCode.length !== 6) return;
+    if (twoFACode.length !== 6) return;
 
     setError(null);
     setLoading(true);
@@ -82,7 +88,7 @@ function LoginContent() {
       const res = await fetch("/api/2fa/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: totpCode }),
+        body: JSON.stringify({ code: twoFACode }),
       });
       const data = await res.json();
 
@@ -133,20 +139,20 @@ function LoginContent() {
             <h1 className="text-xl font-semibold text-center mb-2">
               Two-Factor Authentication
             </h1>
-            <p className="text-sm text-center mb-6" style={{ color: "var(--muted)" }}>
-              Enter the 6-digit code from your authenticator app
+            <p className="text-sm text-center mb-2" style={{ color: "var(--muted)" }}>
+              {twoFAMessage || "Check your email for the verification code"}
             </p>
 
             <form onSubmit={handle2FASubmit} className="space-y-4">
               <div>
                 <input
-                  id="totp"
+                  id="2fa-code"
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
-                  value={totpCode}
-                  onChange={(e) => { setTotpCode(e.target.value.replace(/\D/g, "")); setError(null); }}
+                  value={twoFACode}
+                  onChange={(e) => { setTwoFACode(e.target.value.replace(/\D/g, "")); setError(null); }}
                   placeholder="000000"
                   autoFocus
                   className="w-full px-3.5 py-3 rounded-lg text-lg text-center tracking-[0.3em] font-mono border outline-none focus:ring-2 focus:ring-offset-0"
@@ -180,7 +186,7 @@ function LoginContent() {
 
               <button
                 type="submit"
-                disabled={loading || totpCode.length !== 6}
+                disabled={loading || twoFACode.length !== 6}
                 className="w-full py-2.5 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: "var(--teal)",
@@ -192,10 +198,27 @@ function LoginContent() {
 
               <button
                 type="button"
-                onClick={() => { setStep("login"); setError(null); setTotpCode(""); }}
+                onClick={() => { setStep("login"); setError(null); setTwoFACode(""); }}
                 className="w-full py-2 rounded-lg text-sm border border-[var(--line)] text-[var(--ink)]"
               >
                 Back to sign in
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setTwoFAMessage("Sending new code...");
+                  try {
+                    const r = await fetch("/api/2fa/challenge", { method: "POST" });
+                    const d = await r.json();
+                    setTwoFAMessage(d.message || "Code resent");
+                  } catch {
+                    setTwoFAMessage("Failed to send code. Try again.");
+                  }
+                }}
+                className="w-full py-2 rounded-lg text-sm text-[var(--teal)] font-medium hover:underline bg-transparent border-none cursor-pointer"
+              >
+                Resend code
               </button>
             </form>
           </>

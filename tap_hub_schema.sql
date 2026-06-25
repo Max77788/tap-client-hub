@@ -38,7 +38,10 @@ create table if not exists tap_hub_project.profiles (
   invited_at        timestamptz,
   last_login_at     timestamptz,
   totp_secret       text,
-  totp_enabled      boolean not null default false
+  totp_enabled      boolean not null default false,
+  email_2fa_enabled boolean not null default false,
+  email_2fa_code    text,
+  email_2fa_code_expires_at timestamptz
 );
 
 -- clients

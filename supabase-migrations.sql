@@ -21,7 +21,11 @@ ALTER TABLE client_services
   ADD COLUMN IF NOT EXISTS group_assigned_to TEXT,
   ADD COLUMN IF NOT EXISTS sales_tax_rt TEXT;
 
--- Payroll fields on client_services
+-- Email 2FA columns on profiles
+ALTER TABLE profiles 
+  ADD COLUMN IF NOT EXISTS email_2fa_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS email_2fa_code TEXT,
+  ADD COLUMN IF NOT EXISTS email_2fa_code_expires_at TIMESTAMPTZ;
 ALTER TABLE client_services 
   ADD COLUMN IF NOT EXISTS cdg TEXT,
   ADD COLUMN IF NOT EXISTS eftps TEXT,

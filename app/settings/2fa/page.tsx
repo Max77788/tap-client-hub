@@ -2,17 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import QRCode from "qrcode";
 
 export default function TwoFactorSetupPage() {
   const router = useRouter();
   const [step, setStep] = useState<"loading" | "setup" | "verify" | "done">("loading");
-  const [secret, setSecret] = useState("");
-  const [qrDataUrl, setQrDataUrl] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ enabled: boolean } | null>(null);
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
 
   // Check current 2FA status on mount
   useEffect(() => {
@@ -33,7 +32,7 @@ export default function TwoFactorSetupPage() {
     loadStatus();
   }, []);
 
-  // Start setup: get secret + generate QR code
+  // Start setup: send code to email
   async function startSetup() {
     setLoading(true);
     setError("");
@@ -42,18 +41,12 @@ export default function TwoFactorSetupPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setSecret(data.secret);
-
-      // Generate QR code as data URL
-      const qr = await QRCode.toDataURL(data.otpauth, {
-        width: 240,
-        margin: 2,
-        color: { dark: "#1a2330", light: "#ffffff" },
-      });
-      setQrDataUrl(qr);
+      setEmail(data.email || "");
+      setMessage(data.message || "Code sent");
+      setCode("");
       setStep("verify");
     } catch (err: any) {
-      setError(err.message || "Failed to generate 2FA secret");
+      setError(err.message || "Failed to start setup");
     } finally {
       setLoading(false);
     }
@@ -62,7 +55,7 @@ export default function TwoFactorSetupPage() {
   // Verify the code and enable 2FA
   async function verifyCode() {
     if (code.length !== 6) {
-      setError("Enter the 6-digit code from your authenticator app");
+      setError("Enter the 6-digit code from your email");
       return;
     }
     setLoading(true);
@@ -71,7 +64,7 @@ export default function TwoFactorSetupPage() {
       const res = await fetch("/api/2fa/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ secret, code }),
+        body: JSON.stringify({ code }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -84,7 +77,32 @@ export default function TwoFactorSetupPage() {
     }
   }
 
-  async function disable2FA() {
+  // Disable flow: send code first
+  async function startDisable() {
+    setLoading(true);
+    setError("");
+    setCode("");
+    try {
+      const res = await fetch("/api/2fa/disable", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setEmail(data.email || "");
+      setMessage(data.message || "Code sent");
+      setStep("verify"); // reuse verify step but with disable intent
+    } catch (err: any) {
+      setError(err.message || "Failed to start disable");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Confirm disable with code
+  async function confirmDisable() {
+    if (code.length !== 6) {
+      setError("Enter the 6-digit code from your email");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -98,11 +116,9 @@ export default function TwoFactorSetupPage() {
 
       setStatus({ enabled: false });
       setStep("setup");
-      setSecret("");
-      setQrDataUrl("");
       setCode("");
     } catch (err: any) {
-      setError(err.message || "Failed to disable 2FA");
+      setError(err.message || "Failed to disable");
     } finally {
       setLoading(false);
     }
@@ -118,7 +134,7 @@ export default function TwoFactorSetupPage() {
           Add an extra layer of security to your account
         </p>
 
-        {/* === DONE STATE === */}
+        {/* === DONE STATE (enabled) === */}
         {step === "done" && status?.enabled && (
           <div className="space-y-4">
             <div className="p-4 rounded-xl text-center" style={{ backgroundColor: "var(--green-soft)", border: "1px solid var(--green)" }}>
@@ -127,27 +143,23 @@ export default function TwoFactorSetupPage() {
                 2FA is enabled on your account
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                You will need your authenticator app to sign in.
+                You'll receive a verification code via email when signing in.
               </p>
             </div>
 
             <div className="space-y-3">
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="Enter current 6-digit code"
-                className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] text-center tracking-[0.3em] font-mono"
-              />
+              {error && (
+                <div className="text-sm p-3 rounded-lg" style={{ backgroundColor: "var(--red-soft)", color: "var(--red)" }}>
+                  {error}
+                </div>
+              )}
               <button
-                onClick={disable2FA}
-                disabled={loading || code.length !== 6}
+                onClick={startDisable}
+                disabled={loading}
                 className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
                 style={{ backgroundColor: "var(--red)" }}
               >
-                {loading ? "Disabling..." : "Disable 2FA"}
+                {loading ? "Sending code..." : "Disable 2FA"}
               </button>
               <button
                 onClick={() => router.push("/")}
@@ -159,49 +171,26 @@ export default function TwoFactorSetupPage() {
           </div>
         )}
 
-        {/* === SETUP STATE === */}
-        {step === "setup" && !status?.enabled && (
+        {/* === VERIFY STATE (setup or disable) === */}
+        {step === "verify" && (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--amber-soft)", border: "1px solid #ead9b6" }}>
-              <p className="text-sm" style={{ color: "#7a5210" }}>
-                <strong>Recommended</strong> - Protect your account with time-based one-time passwords (TOTP). You will need an authenticator app like Google Authenticator, Authy, or 1Password.
+            <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--teal-soft)", border: "1px solid var(--teal)" }}>
+              <p className="text-sm font-semibold" style={{ color: "var(--teal)" }}>
+                Check your email
+              </p>
+              <p className="text-sm mt-1" style={{ color: "var(--ink)" }}>
+                {message}{email ? ` — sent to ${email}` : ""}
+              </p>
+              <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+                Enter the 6-digit code below. It expires in 10 minutes.
               </p>
             </div>
 
-            <button
-              onClick={startSetup}
-              disabled={loading}
-              className="w-full py-3 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "var(--teal)" }}
-            >
-              {loading ? "Generating..." : "Set Up Two-Factor Authentication"}
-            </button>
-          </div>
-        )}
-
-        {/* === VERIFY STATE === */}
-        {step === "verify" && qrDataUrl && (
-          <div className="space-y-4">
-            <div className="flex flex-col items-center gap-4">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: "#ffffff", border: "1px solid var(--line)" }}>
-                <img src={qrDataUrl} alt="QR Code" className="w-60 h-60" />
+            {error && (
+              <div className="text-sm p-3 rounded-lg" style={{ backgroundColor: "var(--red-soft)", color: "var(--red)" }}>
+                {error}
               </div>
-
-              <div className="text-center space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>
-                  Manual setup key
-                </p>
-                <code className="text-xs px-3 py-1.5 rounded font-mono select-all break-all" style={{ backgroundColor: "var(--paper)", color: "var(--ink)", border: "1px solid var(--line)" }}>
-                  {secret}
-                </code>
-              </div>
-
-              <div className="text-center">
-                <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  Scan the QR code with your authenticator app, then enter the 6-digit code below.
-                </p>
-              </div>
-            </div>
+            )}
 
             <input
               type="text"
@@ -209,7 +198,7 @@ export default function TwoFactorSetupPage() {
               maxLength={6}
               value={code}
               onChange={(e) => { setCode(e.target.value.replace(/\D/g, "")); setError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") verifyCode(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") status?.enabled ? confirmDisable() : verifyCode(); }}
               placeholder="000000"
               autoFocus
               className="w-full px-3.5 py-3 rounded-lg text-lg text-center tracking-[0.3em] font-mono border outline-none focus:ring-2 focus:ring-offset-0"
@@ -220,28 +209,56 @@ export default function TwoFactorSetupPage() {
               }}
             />
 
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setStep(status?.enabled ? "done" : "setup"); setError(""); setCode(""); }}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold border border-[var(--line)] text-[var(--ink)]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={status?.enabled ? confirmDisable : verifyCode}
+                disabled={loading || code.length !== 6}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                style={{ backgroundColor: "var(--teal)" }}
+              >
+                {loading ? "Verifying..." : status?.enabled ? "Confirm Disable" : "Verify & Enable"}
+              </button>
+            </div>
+
+            <button
+              onClick={status?.enabled ? startDisable : startSetup}
+              disabled={loading}
+              className="w-full py-2 rounded-lg text-sm text-[var(--teal)] font-medium hover:underline bg-transparent border-none cursor-pointer"
+            >
+              Resend code
+            </button>
+          </div>
+        )}
+
+        {/* === SETUP STATE (not enabled) === */}
+        {step === "setup" && !status?.enabled && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl" style={{ backgroundColor: "var(--amber-soft)", border: "1px solid #ead9b6" }}>
+              <p className="text-sm" style={{ color: "#7a5210" }}>
+                <strong>Recommended</strong> - When enabled, you'll receive a 6-digit verification code via email each time you sign in. Make sure your email address is accessible.
+              </p>
+            </div>
+
             {error && (
               <div className="text-sm p-3 rounded-lg" style={{ backgroundColor: "var(--red-soft)", color: "var(--red)" }}>
                 {error}
               </div>
             )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setStep("setup"); setError(""); setQrDataUrl(""); setSecret(""); setCode(""); }}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold border border-[var(--line)] text-[var(--ink)]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={verifyCode}
-                disabled={loading || code.length !== 6}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-                style={{ backgroundColor: "var(--teal)" }}
-              >
-                {loading ? "Verifying..." : "Verify & Enable"}
-              </button>
-            </div>
+            <button
+              onClick={startSetup}
+              disabled={loading}
+              className="w-full py-3 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+              style={{ backgroundColor: "var(--teal)" }}
+            >
+              {loading ? "Sending code..." : "Set Up Email Two-Factor Authentication"}
+            </button>
           </div>
         )}
 
