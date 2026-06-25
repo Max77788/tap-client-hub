@@ -56,7 +56,7 @@ export default function VaultPage() {
     for (const [clientName, entries] of map) {
       const matches = entries.filter((e) =>
         e.site.toLowerCase().includes(q) ||
-        (e.username && e.username.toLowerCase().includes(q)) ||
+        (e.email && e.email.toLowerCase().includes(q)) ||
         (e.notes && e.notes.toLowerCase().includes(q)) ||
         clientName.toLowerCase().includes(q)
       );
@@ -185,7 +185,7 @@ export default function VaultPage() {
 
       <div className="relative">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by client, site, or username..." className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] placeholder:text-[var(--muted)]/60" />
+        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search by client, site, or email..." className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] placeholder:text-[var(--muted)]/60" />
         {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)]"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></button>}
       </div>
 
@@ -205,7 +205,7 @@ export default function VaultPage() {
                 <div style={{ borderTop: "1px solid var(--line)" }}>
                   <div className="px-5 py-2 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ borderBottom: "1px solid var(--line)" }}>
                     <span className="flex-[2]">Portal / Site</span>
-                    <span className="flex-[1.5]">Username</span>
+                    <span className="flex-[1.5]">Email</span>
                     <span className="flex-[1.5]">Password</span>
                     <span className="flex-1">Links / Notes</span>
                     <span className="shrink-0 w-[60px]"></span>
@@ -239,7 +239,7 @@ function VaultEntryRow({ entry, onEdit, onDelete }: { entry: VaultEntry; onEdit:
   return (
     <div className="px-5 py-3 flex items-center gap-4" style={{ borderBottom: "1px solid var(--line)" }}>
       <div className="flex-[2] min-w-0"><p className="text-sm font-bold text-[var(--ink)] truncate">{entry.site}</p></div>
-      <div className="flex-[1.5] min-w-0"><p className="text-xs font-medium text-[var(--ink)] truncate">{entry.username || "—"}</p></div>
+      <div className="flex-[1.5] min-w-0"><p className="text-xs font-medium text-[var(--ink)] truncate">{entry.email || "—"}</p></div>
       <div className="flex-[1.5] min-w-0"><p className="text-xs font-mono text-[var(--ink)] truncate">{entry.password || "—"}</p></div>
       <div className="flex-1 min-w-0 flex items-center gap-2">
         {isBank ? (

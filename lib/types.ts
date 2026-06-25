@@ -143,7 +143,7 @@ export interface VaultEntry {
   id: string;
   site: string;
   url?: string;
-  username?: string;
+  email?: string;
   password?: string;
   notes?: string;
   clientId?: string;

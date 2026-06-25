@@ -15,7 +15,7 @@ function makeEmptyEntry(): Omit<VaultEntry, "id"> {
   return {
     site: "",
     url: "",
-    username: "",
+    email: "",
     password: "",
     notes: "",
     clientId: "",
@@ -33,7 +33,7 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
       setForm({
         site: vaultEntry.site || "",
         url: vaultEntry.url || "",
-        username: vaultEntry.username || "",
+        email: vaultEntry.email || "",
         password: vaultEntry.password || "",
         notes: vaultEntry.notes || "",
         clientId: vaultEntry.clientId || "",
@@ -159,14 +159,14 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
               </Field>
             </div>
 
-            {/* Username + Password row */}
+            {/* Email + Password row */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Username">
+              <Field label="Email">
                 <input
-                  type="text"
-                  value={form.username}
-                  onChange={(e) => update("username", e.target.value)}
-                  placeholder="user@example.com"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  placeholder="client@example.com"
                   className="field-input"
                 />
               </Field>
