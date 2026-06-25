@@ -13,7 +13,7 @@ export default function StxPage() {
     }
     return currentYear;
   });
-  const { clients, updateServiceMonth } = useClientsState();
+  const { clients, loading, updateServiceMonth } = useClientsState();
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
   const enabledCount = useMemo(
@@ -39,7 +39,7 @@ export default function StxPage() {
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
-      <WorklistTable serviceKey="sales_tax" clients={clients} year={year}
+      <WorklistTable serviceKey="sales_tax" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "sales_tax", monthIdx, stage)}
         onClientClick={handleClientClick} />
     </div>

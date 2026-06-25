@@ -13,7 +13,7 @@ export default function T9Page() {
     }
     return currentYear;
   });
-  const { clients, updateServiceMonth } = useClientsState();
+  const { clients, loading, updateServiceMonth } = useClientsState();
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
   const enabledCount = useMemo(
@@ -39,7 +39,7 @@ export default function T9Page() {
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
-      <WorklistTable serviceKey="1099s" variant="t9" clients={clients} year={year}
+      <WorklistTable serviceKey="1099s" variant="t9" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "1099s", monthIdx, stage)}
         onClientClick={handleClientClick} />
     </div>

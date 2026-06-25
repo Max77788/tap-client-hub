@@ -13,7 +13,7 @@ export default function RendPage() {
     }
     return currentYear;
   });
-  const { clients, updateServiceMonth } = useClientsState();
+  const { clients, loading, updateServiceMonth } = useClientsState();
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
   return (
@@ -24,7 +24,7 @@ export default function RendPage() {
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
-      <WorklistTable serviceKey="renditions" clients={clients} year={year}
+      <WorklistTable serviceKey="renditions" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "renditions", monthIdx, stage)} />
     </div>
   );

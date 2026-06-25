@@ -13,7 +13,7 @@ export default function TaxPage() {
     }
     return currentYear;
   });
-  const { clients, updateServiceMonth } = useClientsState();
+  const { clients, loading, updateServiceMonth } = useClientsState();
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
   return (
@@ -24,7 +24,7 @@ export default function TaxPage() {
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
-      <WorklistTable serviceKey="tax_returns" clients={clients} year={year}
+      <WorklistTable serviceKey="tax_returns" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "tax_returns", monthIdx, stage)} />
     </div>
   );

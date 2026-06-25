@@ -13,7 +13,7 @@ export default function FinPage() {
     }
     return currentYear;
   });
-  const { clients, updateServiceMonth } = useClientsState();
+  const { clients, loading, updateServiceMonth } = useClientsState();
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
   const enabledCount = useMemo(
@@ -39,7 +39,7 @@ export default function FinPage() {
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
-      <WorklistTable serviceKey="financials" clients={clients} year={year}
+      <WorklistTable serviceKey="financials" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "financials", monthIdx, stage)}
         onClientClick={handleClientClick} />
     </div>

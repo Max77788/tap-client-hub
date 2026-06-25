@@ -116,6 +116,7 @@ export interface WorklistTableProps {
   year: number;
   variant?: "default" | "payroll" | "t9";
   readOnly?: boolean;
+  loading?: boolean;
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage) => void;
   onClientClick?: (clientId: string) => void;
 }
@@ -138,6 +139,7 @@ export default function WorklistTable({
   year,
   variant = "default",
   readOnly = false,
+  loading = false,
   onStageChange,
   onClientClick,
 }: WorklistTableProps) {
@@ -387,6 +389,18 @@ export default function WorklistTable({
         >
           <span>📋</span>
           <span>Historical view for <strong>{year}</strong>. Read-only.</span>
+        </div>
+      )}
+
+      {/* ── Loading state ── */}
+      {loading && (
+        <div className="flex items-center justify-center py-20 rounded-lg" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)", border: "1px solid var(--line)" }}>
+          <div className="flex flex-col items-center gap-3">
+            <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+            <span className="text-sm font-medium" style={{ color: "var(--teal)" }}>Loading data...</span>
+          </div>
         </div>
       )}
 

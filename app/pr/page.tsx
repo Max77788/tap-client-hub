@@ -13,7 +13,7 @@ export default function PrPage() {
     }
     return currentYear;
   });
-  const { clients, updateServiceMonth } = useClientsState();
+  const { clients, loading, updateServiceMonth } = useClientsState();
   const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
   const enabledCount = useMemo(
@@ -39,7 +39,7 @@ export default function PrPage() {
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
-      <WorklistTable serviceKey="payroll" variant="payroll" clients={clients} year={year}
+      <WorklistTable serviceKey="payroll" variant="payroll" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "payroll", monthIdx, stage)}
         onClientClick={handleClientClick} />
     </div>
