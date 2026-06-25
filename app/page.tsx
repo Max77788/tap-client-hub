@@ -380,8 +380,6 @@ function GroupCard({
   const allServices = new Set<string>();
   clients.forEach((c) => c.services.filter((s) => s.enabled && s.key).forEach((s) => allServices.add(s.key!)));
 
-  const moduleColors = ["var(--teal)", "var(--blue)", "var(--green)", "var(--orange)", "#b8860b"];
-
   return (
     <div
       className="group p-[15px_16px] border"
@@ -449,17 +447,16 @@ function GroupCard({
         <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
       </div>
 
-      {/* Service pills with module colors */}
+      {/* Service pills with distinct service colors */}
       <div className="flex flex-wrap gap-1.5 mb-3 ml-[22px]">
-        {[...allServices].slice(0, 5).map((key, idx) => {
+        {[...allServices].slice(0, 5).map((key) => {
           const meta = SERVICE_META[key as ServiceKey];
           if (!meta) return null;
-          const color = moduleColors[idx % moduleColors.length];
           return (
             <span
               key={key}
               className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
-              style={{ backgroundColor: `${color}18`, color, letterSpacing: "0.02em" }}
+              style={{ backgroundColor: meta.pillBg, color: meta.pillColor, letterSpacing: "0.02em" }}
               title={meta.label}
             >
               {meta.label}
@@ -572,12 +569,6 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
     });
   };
 
-  const getStatusStyle = (key: string) => {
-    const s = serviceStatuses[key] || "not_started";
-    const opt = STATUS_OPTIONS.find((o) => o.value === s) || STATUS_OPTIONS[0];
-    return { backgroundColor: opt.bg, color: opt.color };
-  };
-
   return (
     <div
       onClick={onClick}
@@ -624,13 +615,12 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         <span>{client.city}, {client.state}</span>
       </div>
 
-      {/* Service pills */}
+      {/* Service pills — colored by service type, click for status popover */}
       <div className="flex flex-wrap gap-[5px] mb-3">
         {enabledServices.map((svc) => {
           const meta = svc.key ? SERVICE_META[svc.key] : null;
           if (!meta) return null;
           const key = svc.key || svc.id;
-          const statusStyle = getStatusStyle(key);
           const isOpen = openPopover === key;
 
           return (
@@ -642,7 +632,8 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
                 }}
                 className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px] cursor-pointer transition-colors"
                 style={{
-                  ...statusStyle,
+                  backgroundColor: meta.pillBg,
+                  color: meta.pillColor,
                   letterSpacing: "0.02em",
                 }}
                 title={STATUS_OPTIONS.find((o) => o.value === (serviceStatuses[key] || "not_started"))?.label}
