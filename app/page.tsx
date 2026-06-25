@@ -326,7 +326,7 @@ function GroupCard({
   clients: Client[];
   onClientClick: (id: string) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   // Collect unique locations and services across all group members
   const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
   const allServices = new Set<string>();
