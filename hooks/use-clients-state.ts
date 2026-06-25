@@ -46,7 +46,7 @@ export function useClientsState() {
 
   // Map WorklistStage → MonthStatus for local months array
   const STAGE_TO_MONTH: Record<WorklistStage, string> = {
-    "": "lock", ip: "billed", wc: "billed",
+    "": "lock", ip: "in_progress", wc: "waiting",
     pp: "billed", dn: "done", na: "na",
   };
 

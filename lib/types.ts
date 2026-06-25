@@ -3,7 +3,7 @@
 export type ClientType = "Business" | "Personal";
 export type ServiceTracking = "stage" | "count";
 export type WorkStage = "not_started" | "in_progress" | "waiting_client" | "prepared" | "done" | "na";
-export type MonthStatus = "done" | "billed" | "paid" | "na" | "lock";
+export type MonthStatus = "done" | "billed" | "paid" | "na" | "lock" | "in_progress" | "waiting";
 export type ServiceCode = "FIN" | "PR" | "STX" | "T9" | "REND" | "TAX" | "RENEWAL";
 export type ServiceKey = "financials" | "payroll" | "sales_tax" | "1099s" | "renditions" | "tax_returns";
 

@@ -41,6 +41,10 @@ function mapMonthStatus(status: MonthStatus): WorklistStage {
       return "pp";
     case "na":
       return "na";
+    case "in_progress":
+      return "ip";
+    case "waiting":
+      return "wc";
     case "lock":
     default:
       return "";
@@ -98,8 +102,9 @@ export function stageToMonthStatus(stage: WorklistStage): MonthStatus {
     case "na":
       return "na";
     case "ip":
+      return "in_progress";
     case "wc":
-      return "billed";
+      return "waiting";
     default:
       return "lock";
   }

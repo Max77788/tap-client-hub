@@ -85,7 +85,12 @@ export async function GET() {
         months: Array.from({ length: 12 }, (_, i) => {
           const wpStage = periodByCsId[cs.id]?.[i];
           if (!wpStage) return "lock";
-          return wpStage === "done" ? "done" : wpStage === "na" ? "na" : "billed";
+          return wpStage === "done" ? "done"
+            : wpStage === "na" ? "na"
+            : wpStage === "in_progress" ? "in_progress"
+            : wpStage === "waiting_client" ? "waiting"
+            : wpStage === "prepared" ? "billed"
+            : "lock";
         }),
       };
     });
