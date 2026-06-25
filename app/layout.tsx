@@ -171,8 +171,17 @@ export default function RootLayout({
   const pathname = usePathname();
   const [role, setRole] = useState("admin");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
 
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
+
+  // Read email from cookie
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+    if (match) {
+      setUserEmail(decodeURIComponent(match[1]));
+    }
+  }, []);
 
   const [userModules, setUserModules] = useState<string[]>([]);
   useEffect(() => {
@@ -344,6 +353,11 @@ export default function RootLayout({
               </div>
 
               <div className="flex items-center gap-3">
+                {userEmail && (
+                  <span className="hidden sm:block text-[12px] text-[var(--muted)] max-w-[160px] truncate">
+                    {userEmail}
+                  </span>
+                )}
                 <div className="rolepick hidden sm:flex items-center gap-2">
                   <span className="text-[12px] text-[var(--muted)]">Viewing as</span>
                   <select

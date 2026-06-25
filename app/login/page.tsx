@@ -31,6 +31,7 @@ function LoginContent() {
     const demo = DEMO_USERS[email.toLowerCase()];
     if (demo && password === demo.password) {
       document.cookie = `tap_demo_user=${encodeURIComponent(demo.name)}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
       router.push(next);
       router.refresh();
       return;
@@ -66,6 +67,7 @@ function LoginContent() {
           .catch(() => setTwoFAMessage("Enter the code from your email"));
       } else {
         // No 2FA - proceed
+        document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
         router.push(next);
         router.refresh();
       }
@@ -97,6 +99,8 @@ function LoginContent() {
         setLoading(false);
         return;
       }
+
+      document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
 
       router.push(next);
       router.refresh();
