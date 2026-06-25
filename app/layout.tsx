@@ -318,7 +318,7 @@ export default function RootLayout({
             <header
               className="flex items-end justify-between shrink-0"
               style={{
-                padding: "0 32px",
+                padding: "22px 32px 0",
               }}
             >
               <div className="flex items-center gap-4 min-w-0">
@@ -344,18 +344,21 @@ export default function RootLayout({
               </div>
 
               <div className="flex items-center gap-3">
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="text-[13px] rounded-[10px] px-3 py-[9px] border border-[var(--line)] bg-white text-[var(--ink)] cursor-pointer"
-                  style={{ appearance: "none", paddingRight: 30 }}
-                >
+                <div className="rolepick hidden sm:flex items-center gap-2">
+                  <span className="text-[12px] text-[var(--muted)]">Viewing as</span>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="text-[13px] rounded-[10px] px-3 py-[9px] border border-[var(--line)] bg-white text-[var(--ink)] cursor-pointer"
+                    style={{ appearance: "none", paddingRight: 30 }}
+                  >
                   <option value="owner">Owner</option>
                   <option value="admin">Admin</option>
                   <option value="manager">Manager</option>
                   <option value="staff">Staff</option>
                 </select>
               </div>
+            </div>
             </header>
           )}
 

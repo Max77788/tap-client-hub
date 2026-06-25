@@ -18,17 +18,17 @@ const STAGE_LABELS: Record<WorklistStage, string> = {
 
 const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 
-// ── Stage colors (matching demo spec) ──
+// ── Stage colors (matching demo v7 exactly) ──
 const STAGE_STYLES: Record<
   WorklistStage,
-  { bg: string; fg: string; ring?: string }
+  { bg: string; fg: string; border?: string }
 > = {
   "": { bg: "transparent", fg: "var(--muted)" },
-  ip: { bg: "var(--amber-soft)", fg: "var(--amber)" },
-  wc: { bg: "var(--amber-soft)", fg: "var(--amber)" },
-  pp: { bg: "var(--teal-soft)", fg: "var(--teal)" },
-  dn: { bg: "var(--green-soft)", fg: "var(--green)" },
-  na: { bg: "var(--red-soft)", fg: "var(--red)" },
+  ip: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2" },
+  wc: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6" },
+  pp: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec" },
+  dn: { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6" },
+  na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf" },
 };
 
 // ── Map existing MonthStatus → WorklistStage ──
@@ -489,7 +489,7 @@ export default function WorklistTable({
                 return (
                   <tr
                     key={client.id}
-                    className="transition-colors hover:bg-[var(--teal-soft)]/30"
+                    className="transition-colors"
                     style={{ borderBottom: "1px solid var(--line)" }}
                   >
                     {/* Client name (clickable) */}
@@ -621,15 +621,17 @@ export default function WorklistTable({
                             onClick={() => handleCellClick(client.id, i)}
                           >
                             <div
-                              className="w-7 h-7 rounded-[8px] flex items-center justify-center text-xs font-bold leading-none transition-colors"
+                              className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-xs font-bold leading-none transition-colors"
                               style={{
                                 backgroundColor: style.bg,
                                 color: style.fg,
                                 border:
                                   stage === ""
-                                    ? "1px dashed var(--line)"
-                                    : isActive
-                                      ? "1px solid transparent"
+                                    ? isPastDue
+                                      ? "1px solid var(--red)"
+                                      : "1px solid var(--line)"
+                                    : isActive && style.border
+                                      ? `1px solid ${style.border}`
                                       : "none",
                                 cursor: cellReadOnly
                                   ? "default"
@@ -638,13 +640,13 @@ export default function WorklistTable({
                               }}
                               title={`${MONTHS_SHORT[i]}: ${STAGE_LABELS[stage]}${isPastDue ? " (Delayed)" : ""}`}
                             >
-                              {stage === "" ? "·" : stage === "ip" ? "" : ""}
+                              {stage === "" ? (isPastDue ? "!" : "·") : ""}
                               {stage === "ip"
-                                ? "◐"
+                                ? "•"
                                 : stage === "wc"
-                                  ? "◑"
+                                  ? "⏳"
                                   : stage === "pp"
-                                    ? "◕"
+                                    ? "✓"
                                     : stage === "dn"
                                       ? "✓"
                                       : stage === "na"
@@ -735,11 +737,11 @@ export default function WorklistTable({
                       {stage === ""
                         ? "·"
                         : stage === "ip"
-                          ? "◐"
+                          ? "•"
                           : stage === "wc"
-                            ? "◑"
+                            ? "⏳"
                             : stage === "pp"
-                              ? "◕"
+                              ? "✓"
                               : stage === "dn"
                                 ? "✓"
                                 : stage === "na"
@@ -784,9 +786,9 @@ function CellWrapper({
         readOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
       }`}
       style={{
-        backgroundColor: isCurrentMonth ? "var(--teal-soft)" : "transparent",
+        backgroundColor: isCurrentMonth ? "#f3f6fc" : "transparent",
         boxShadow: isPastDue
-          ? "0 0 0 2px var(--red), 0 0 0 3px var(--red-soft)"
+          ? "0 0 0 2px var(--red)"
           : isCurrentMonth
             ? "inset 0 0 0 1px var(--teal)"
             : "none",
