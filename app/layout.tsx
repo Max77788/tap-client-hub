@@ -21,7 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Sales Tax", href: "/stx", icon: "🧾" },
   { label: "1099s", href: "/t9", icon: "📄" },
   { label: "Renditions", href: "/rend", icon: "🏠" },
-  { label: "Tax Returns", href: "/tax" },
+  { label: "Tax Returns", href: "/tax", icon: "📋" },
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault", icon: "🔒" },
   { label: "Users & Access", href: "/users", icon: "🪪", role: "owner" },
