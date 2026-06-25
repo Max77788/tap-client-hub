@@ -143,7 +143,7 @@ export default function ClientsPage() {
       </p>
 
       {/* ── Toolbar: Search + Filters + Actions ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 flex-wrap">
         {/* Search */}
         <div className="flex-[2] min-w-[280px]">
           <input
@@ -176,7 +176,7 @@ export default function ClientsPage() {
         <select
           value={staffFilter}
           onChange={(e) => setStaffFilter(e.target.value)}
-          className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none"
+          className="text-sm rounded-[11px] px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none"
         >
           <option value="">All Staff</option>
           {staffOptions.map((s) => (
