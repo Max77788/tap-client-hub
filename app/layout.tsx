@@ -7,26 +7,27 @@ import "./globals.css";
 interface NavItem {
   label: string;
   href: string;
+  icon?: string;
   role?: "owner" | "all";
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Clients", href: "/" },
-  { label: "Team Workload", href: "/workload" },
-  { label: "Timesheet", href: "/time" },
+  { label: "Clients", href: "/", icon: "👥" },
+  { label: "Team Workload", href: "/workload", icon: "⚖️" },
+  { label: "Timesheet", href: "/time", icon: "⏱️" },
   { label: "---", href: "" },
-  { label: "Financials", href: "/fin" },
-  { label: "Payroll", href: "/pr" },
-  { label: "Sales Tax", href: "/stx" },
-  { label: "1099s", href: "/t9" },
-  { label: "Renditions", href: "/rend" },
+  { label: "Financials", href: "/fin", icon: "📊" },
+  { label: "Payroll", href: "/pr", icon: "💵" },
+  { label: "Sales Tax", href: "/stx", icon: "🧾" },
+  { label: "1099s", href: "/t9", icon: "📄" },
+  { label: "Renditions", href: "/rend", icon: "🏠" },
   { label: "Tax Returns", href: "/tax" },
   { label: "---", href: "" },
-  { label: "Password Vault", href: "/vault" },
-  { label: "Users & Access", href: "/users", role: "owner" },
+  { label: "Password Vault", href: "/vault", icon: "🔒" },
+  { label: "Users & Access", href: "/users", icon: "🪪", role: "owner" },
   { label: "---", href: "" },
   { label: "Settings", href: "/settings/2fa" },
-  { label: "Help & Support", href: "/support" },
+  { label: "Help & Support", href: "/support", icon: "🛟" },
 ];
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -108,14 +109,28 @@ function MobileSidebar({
                 key={item.label}
                 href={item.href}
                 onClick={onClose}
-                className="block px-3 py-2.5 rounded-[10px] text-sm font-medium transition-colors"
+                className="flex items-center gap-[11px] px-3 py-[10px] rounded-[10px] font-medium transition-colors"
                 style={{
                   color: isActive ? "var(--teal-ink)" : "#c4cee8",
                   backgroundColor: isActive ? "#fff" : "transparent",
                   fontWeight: isActive ? 600 : 500,
+                  fontSize: 14,
                 }}
               >
-                {item.label}
+                {item.icon && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      width: 18,
+                      justifyContent: "center",
+                      fontSize: 15,
+                      opacity: 0.9,
+                    }}
+                  >
+                    {item.icon}
+                  </span>
+                )}
+                <span>{item.label}</span>
               </a>
             );
           })}
@@ -224,20 +239,34 @@ export default function RootLayout({
                   <a
                     key={item.label}
                     href={item.href}
-                className="block px-3 py-[10px] rounded-[10px] text-sm font-medium transition-colors"
-                style={{
-                  color: isActive ? "var(--teal-ink)" : "#c4cee8",
-                  backgroundColor: isActive ? "#fff" : "transparent",
-                  fontWeight: isActive ? 600 : 500,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                {item.label}
+                    className="flex items-center gap-[11px] px-3 py-[10px] rounded-[10px] font-medium transition-colors"
+                    style={{
+                      color: isActive ? "var(--teal-ink)" : "#c4cee8",
+                      backgroundColor: isActive ? "#fff" : "transparent",
+                      fontWeight: isActive ? 600 : 500,
+                      fontSize: 14,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    {item.icon && (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          width: 18,
+                          justifyContent: "center",
+                          fontSize: 15,
+                          opacity: 0.9,
+                        }}
+                      >
+                        {item.icon}
+                      </span>
+                    )}
+                    <span>{item.label}</span>
               </a>
             );
           })}
