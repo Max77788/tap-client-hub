@@ -50,8 +50,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Mode 1: send code
-  const code = await generateAndStoreCode(user.id);
-  const sent = await sendCodeEmail(user.email, code, "login");
+  const result = await generateAndStoreCode(user.id);
+  if (!result.ok) {
+    console.error("challenge: failed to store code:", result.error);
+    return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });
+  }
+
+  const sent = await sendCodeEmail(user.email, result.code, "login");
 
   return NextResponse.json({
     sent,

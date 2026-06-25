@@ -37,8 +37,13 @@ export async function POST(req: NextRequest) {
   }
 
   // No code — send challenge email first
-  const code = await generateAndStoreCode(user.id);
-  const sent = await sendCodeEmail(user.email, code, "disable");
+  const result = await generateAndStoreCode(user.id);
+  if (!result.ok) {
+    console.error("disable: failed to store code:", result.error);
+    return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });
+  }
+
+  const sent = await sendCodeEmail(user.email, result.code, "disable");
 
   return NextResponse.json({
     sent,

@@ -5,12 +5,12 @@ const RESEND_FROM = "TAP Hub <notifications@email.mom-ai-agency.site>";
 /**
  * Generate a 6-digit code and store it on the user's profile.
  */
-export async function generateAndStoreCode(userId: string): Promise<string> {
+export async function generateAndStoreCode(userId: string): Promise<{ code: string; ok: boolean; error?: string }> {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
   const supabase = await createClient();
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({
       email_2fa_code: code,
@@ -18,7 +18,12 @@ export async function generateAndStoreCode(userId: string): Promise<string> {
     })
     .eq("id", userId);
 
-  return code;
+  if (error) {
+    console.error("generateAndStoreCode error:", error.message);
+    return { code, ok: false, error: error.message };
+  }
+
+  return { code, ok: true };
 }
 
 /**
