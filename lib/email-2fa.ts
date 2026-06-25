@@ -104,12 +104,21 @@ export async function verifyCode(
     .maybeSingle();
 
   if (!profile?.email_2fa_code || !profile?.email_2fa_code_expires_at) {
+    console.warn("verifyCode: no code or expiry found for user", userId);
     return false;
   }
 
   if (new Date(profile.email_2fa_code_expires_at) < new Date()) {
+    console.warn("verifyCode: code expired for user", userId);
     return false; // expired
   }
 
-  return profile.email_2fa_code === code;
+  // Trim both for safety
+  const stored = String(profile.email_2fa_code).trim();
+  const input = String(code).trim();
+  const match = stored === input;
+  if (!match) {
+    console.warn(`verifyCode: mismatch for user ${userId} — stored="${stored}" vs input="${input}"`);
+  }
+  return match;
 }
