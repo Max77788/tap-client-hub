@@ -316,11 +316,8 @@ export default function RootLayout({
           {/* Top bar */}
           {!isAuthPage && (
             <header
-              className="sticky top-0 z-10 flex items-center justify-between shrink-0"
+              className="flex items-end justify-between shrink-0"
               style={{
-                height: 68,
-                backgroundColor: "var(--card)",
-                borderBottom: "1px solid var(--line)",
                 padding: "0 32px",
               }}
             >
