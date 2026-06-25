@@ -20,6 +20,7 @@ function LoginContent() {
   const DEMO_USERS: Record<string, { password: string; name: string }> = {
     "tushar@tapallc.com": { password: "TapHub2024!", name: "Tushar Patil" },
     "lizette@tapallc.com": { password: "TapHub2024!", name: "Lizette" },
+    "ben@aifusioniqlabs.com": { password: "BenFusion2025!", name: "Ben AI Fusion" },
   };
 
   async function handlePasswordSubmit(e: React.FormEvent) {
