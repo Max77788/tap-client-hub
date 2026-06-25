@@ -137,7 +137,14 @@ export default function VaultPage() {
           </div>
           <h2 className="text-xl font-semibold text-[var(--ink)] mb-1" style={{ fontFamily: "Fraunces, Georgia, serif" }}>Restricted Area</h2>
           <p className="text-sm text-[var(--muted)] mb-6">This section contains sensitive credentials. Access is logged and restricted to authorized personnel.</p>
-          <button onClick={() => setUnlocked(true)} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: "var(--teal)", color: "#ffffff" }}>
+          <button onClick={() => setUnlocked(true)} className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold hover:opacity-90"
+            style={{
+              backgroundColor: "var(--ink)",
+              color: "#ffffff",
+              borderRadius: 11,
+              border: "none",
+              cursor: "pointer",
+            }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /><line x1="12" y1="15" x2="12" y2="18" />
             </svg>
@@ -173,9 +180,9 @@ export default function VaultPage() {
         </button>
       </div>
 
-      <div className="p-4 rounded-xl flex items-start gap-3" style={{ backgroundColor: "var(--teal-soft)", border: "1px solid var(--teal)" }}>
+      <div className="p-4 rounded-xl flex items-start gap-3" style={{ backgroundColor: "var(--amber-soft)", border: "1px solid #ead9b6" }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
-        <div><p className="text-sm font-semibold text-[var(--teal)]">Bank Logins</p><p className="text-xs text-[var(--ink)]">TAP Bank entries link to the secure banking portal. Click &ldquo;Open in TAP Bank&rdquo; to access full account details including routing and account numbers.</p></div>
+        <div><p className="text-sm font-semibold" style={{ color: "#6b4a12" }}>Bank Logins</p><p className="text-xs" style={{ color: "#5a4a2e" }}>TAP Bank entries link to the secure banking portal. Click &ldquo;Open in TAP Bank&rdquo; to access full account details including routing and account numbers.</p></div>
       </div>
 
       <div className="flex items-center gap-3">

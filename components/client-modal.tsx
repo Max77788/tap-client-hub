@@ -174,7 +174,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 flex items-center justify-center p-4"
-        style={{ backgroundColor: "rgba(26,35,64,0.4)" }}
+        style={{ backgroundColor: "rgba(33,31,26,0.34)" }}
         onClick={onClose}
       />
 
@@ -183,10 +183,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
       >
         <div
-          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl pointer-events-auto animate-modal-in"
+          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto animate-modal-in"
           style={{
             backgroundColor: "var(--card)",
             boxShadow: "var(--shadow)",
+            borderRadius: 18,
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -198,7 +199,15 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               borderBottom: "1px solid var(--line)",
             }}
           >
-            <h2 className="text-lg font-semibold text-[var(--ink)]">
+            <h2
+              style={{
+                fontFamily: '"Fraunces", Georgia, serif',
+                fontSize: 22,
+                fontWeight: 600,
+                color: "var(--ink)",
+              }}
+              className="m-0"
+            >
               {isEdit ? "Edit Client" : "Add New Client"}
             </h2>
             <button

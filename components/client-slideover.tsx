@@ -63,8 +63,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   if (!open) return null;
 
   const typeBadgeColor = client.type === "Business"
-    ? { bg: "var(--teal-soft)", fg: "var(--teal)" }
-    : { bg: "var(--blue-soft)", fg: "var(--blue)" };
+    ? { bg: "var(--ink)", fg: "#fff" }
+    : { bg: "#dfe7e6", fg: "var(--teal-ink)" };
+
+  // ── Section label: 11px 700 uppercase 0.1em (demo .sect) ──
+  const sectionLabel = "text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--muted)] mb-3";
 
   function toggleService(key: string) {
     setLocalServices((prev) =>
@@ -84,7 +87,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 transition-opacity duration-300"
-        style={{ backgroundColor: "rgba(26,35,64,0.4)" }}
+        style={{ backgroundColor: "rgba(33,31,26,0.34)" }}
         onClick={onClose}
       />
 
@@ -108,12 +111,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           }}
         >
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-[var(--ink)] truncate leading-tight">
+            <h2
+              className="truncate leading-tight m-0"
+              style={{
+                fontFamily: '"Fraunces", Georgia, serif',
+                fontSize: 23,
+                fontWeight: 600,
+                color: "var(--ink)",
+              }}
+            >
               {client.name}
             </h2>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-1">
               <span
-                className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide uppercase"
+                className="inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
                 style={{ backgroundColor: typeBadgeColor.bg, color: typeBadgeColor.fg }}
               >
                 {client.type === "Business" ? "BIZ" : "PERS"}
@@ -147,7 +158,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         <div className="flex-1 px-6 py-5 space-y-6">
           {/* Info section */}
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">
+            <h3 className={sectionLabel}>
               Client Information
             </h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -163,7 +174,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Services section */}
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">
+            <h3 className={sectionLabel}>
               Services
             </h3>
             <div className="space-y-2">
@@ -433,7 +444,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Assigned Staff overview */}
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">
+            <h3 className={sectionLabel}>
               Staff Assignments
             </h3>
             <div className="flex flex-wrap gap-1.5">

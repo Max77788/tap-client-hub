@@ -144,16 +144,16 @@ export default function UsersPage() {
                   <td className="px-5 py-3 text-[var(--muted)] text-sm font-mono">{u.username}</td>
                   <td className="px-5 py-3 text-[var(--muted)]">{u.location}</td>
                   <td className="px-5 py-3">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: u.role === "Owner / Admin" ? "var(--teal-soft)" : u.role === "Manager" ? "var(--blue-soft)" : "var(--green-soft)", color: u.role === "Owner / Admin" ? "var(--teal)" : u.role === "Manager" ? "var(--blue)" : "var(--green)" }}>{u.role}</span>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: u.role === "Owner / Admin" ? "var(--teal-soft)" : u.role === "Manager" ? "var(--blue-soft)" : "var(--green-soft)", color: u.role === "Owner / Admin" ? "var(--teal)" : u.role === "Manager" ? "var(--blue)" : "var(--green)" }}>{u.role}</span>
                   </td>
                   <td className="px-5 py-3 text-[var(--muted)]">{u.mgr}</td>
                   <td className="px-5 py-3">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: STATUS_STYLES[u.status]?.bg || "var(--line)", color: STATUS_STYLES[u.status]?.fg || "var(--muted)" }}>{u.status}</span>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: STATUS_STYLES[u.status]?.bg || "var(--line)", color: STATUS_STYLES[u.status]?.fg || "var(--muted)" }}>{u.status}</span>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-1">
                       {u.modules.slice(0, 3).map((m) => (
-                        <span key={m} className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)" }}>{m}</span>
+                        <span key={m} className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)" }}>{m}</span>
                       ))}
                       {u.modules.length > 3 && <span className="text-[10px] text-[var(--muted)]">+{u.modules.length - 3}</span>}
                     </div>
