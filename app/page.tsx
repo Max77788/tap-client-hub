@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   SERVICE_META,
@@ -118,7 +119,42 @@ export default function ClientsPage() {
   }, [addClient]);
 
   function handleExport() {
-    console.log("Export to Excel — stub");
+    const rows = filteredClients.map((c) => {
+      const enabledSvcs = c.services.filter((s) => s.enabled);
+      return {
+        "CID": c.cid,
+        "Name": c.name,
+        "Type": c.type,
+        "Entity Type": c.entityType || "",
+        "Group": c.group || "",
+        "Status": c.status,
+        "City": c.city,
+        "State": c.state,
+        "Address": c.address,
+        "Email": c.email || "",
+        "Phone": c.phone || "",
+        "Assigned Staff": c.assignedStaff || "",
+        "Services": enabledSvcs.map((s) => s.service?.name || s.key || "").join(", "),
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Column widths
+    ws["!cols"] = Object.keys(rows[0] || {}).map((k) => ({
+      wch: k === "Services" ? 40 : k === "Name" ? 28 : 16,
+    }));
+
+    XLSX.utils.book_append_sheet(wb, ws, "Clients");
+    const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([buffer], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clients_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -185,6 +221,18 @@ export default function ClientsPage() {
         </select>
 
         {/* Action buttons */}
+        <button
+          onClick={handleExport}
+          className="btn-secondary"
+          title="Export filtered clients to Excel"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export to Excel
+        </button>
         <button
           onClick={openAddModal}
           className="btn-primary"
