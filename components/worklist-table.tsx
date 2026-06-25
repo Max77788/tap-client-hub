@@ -305,7 +305,7 @@ export default function WorklistTable({
 
   // ── Compact month column class ──
   const monthColClass =
-    "text-center text-[10px] font-semibold uppercase tracking-tight";
+    "text-center text-[11px] font-semibold uppercase tracking-tight";
 
   // ── Count of columns before month columns (for colspan) ──
   const colCount = 2 + (variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0) + (variant === "payroll" ? 1 : 0) + 12;
@@ -350,7 +350,7 @@ export default function WorklistTable({
       </div>
 
       {/* ── Legend ── */}
-      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
         {legendItems.map(({ stage, dot }) => {
           const style = STAGE_STYLES[stage];
           const label = STAGE_LABELS[stage] || (stage === "" ? "Not Due/Empty" : STAGE_LABELS[stage]);
@@ -406,13 +406,15 @@ export default function WorklistTable({
 
       {/* ── Main table (horizontally scrollable on mobile) ── */}
       <div
-        className="rounded-lg overflow-x-auto"
+        className="overflow-hidden"
         style={{
           backgroundColor: "var(--card)",
           boxShadow: "var(--shadow)",
           border: "1px solid var(--line)",
+          borderRadius: "16px",
         }}
       >
+        <div className="overflow-x-auto">
         <table className="border-collapse table-fixed" style={{ minWidth: 800, width: "100%" }}>
           <thead>
             <tr
@@ -420,21 +422,21 @@ export default function WorklistTable({
               className="text-left"
             >
               <th
-                className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]"
+                className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]"
                 style={{ width: "22%" }}
               >
                 Client
               </th>
-              <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
                 Assigned
               </th>
               {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-              <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "11%" }}>
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "11%" }}>
                 Cadence
               </th>
               )}
               {variant === "payroll" && (
-              <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
                 Processor
               </th>
               )}
@@ -619,7 +621,7 @@ export default function WorklistTable({
                             onClick={() => handleCellClick(client.id, i)}
                           >
                             <div
-                              className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold leading-none transition-colors"
+                              className="w-7 h-7 rounded-[8px] flex items-center justify-center text-xs font-bold leading-none transition-colors"
                               style={{
                                 backgroundColor: style.bg,
                                 color: style.fg,
@@ -659,6 +661,7 @@ export default function WorklistTable({
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* ── Fine-print note ── */}
@@ -711,7 +714,7 @@ export default function WorklistTable({
                     onClick={() =>
                       handleStageSelect(pickerTarget.clientId, pickerTarget.monthIdx, stage)
                     }
-                    className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl transition-all border"
+                    className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl transition-colors border"
                     style={{
                       backgroundColor: isCurrent ? style.bg : "transparent",
                       borderColor: isCurrent ? style.fg : "var(--line)",
@@ -777,7 +780,7 @@ function CellWrapper({
     <button
       onClick={readOnly ? undefined : onClick}
       disabled={readOnly}
-      className={`inline-flex items-center justify-center w-full h-7 rounded transition-[background-color,color] ${
+      className={`inline-flex items-center justify-center w-full h-8 rounded transition-[background-color,color] ${
         readOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
       }`}
       style={{

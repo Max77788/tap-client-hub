@@ -224,39 +224,39 @@ export default function RootLayout({
                   <a
                     key={item.label}
                     href={item.href}
-                    className="block px-3 py-2.5 rounded-[10px] text-sm font-medium transition-colors"
-                    style={{
-                      color: isActive ? "var(--teal-ink)" : "#c4cee8",
-                      backgroundColor: isActive ? "#fff" : "transparent",
-                      fontWeight: isActive ? 600 : 500,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    {item.label}
-                  </a>
-                );
-              })}
-            </nav>
-
-            {/* Logout */}
-            <div className="pb-3">
-              <button
-                onClick={() => {
-                  document.cookie = "tap_demo_user=; path=/; max-age=0";
-                  document.cookie.split("; ").forEach(c => {
-                    const name = c.split("=")[0];
-                    if (name.includes("sb-") || name.includes("supabase")) {
-                      document.cookie = name + "=; path=/; max-age=0";
-                    }
-                  });
-                  window.location.href = "/login";
+                className="block px-3 py-[10px] rounded-[10px] text-sm font-medium transition-colors"
+                style={{
+                  color: isActive ? "var(--teal-ink)" : "#c4cee8",
+                  backgroundColor: isActive ? "#fff" : "transparent",
+                  fontWeight: isActive ? 600 : 500,
                 }}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] text-sm font-medium transition-colors w-full"
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="pb-3">
+          <button
+            onClick={() => {
+              document.cookie = "tap_demo_user=; path=/; max-age=0";
+              document.cookie.split("; ").forEach(c => {
+                const name = c.split("=")[0];
+                if (name.includes("sb-") || name.includes("supabase")) {
+                  document.cookie = name + "=; path=/; max-age=0";
+                }
+              });
+              window.location.href = "/login";
+            }}
+            className="flex items-center gap-2 px-3 py-[10px] rounded-[10px] text-sm font-medium transition-colors w-full"
                 style={{ color: "#c4cee8" }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)"; e.currentTarget.style.color = "#fff"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#c4cee8"; }}

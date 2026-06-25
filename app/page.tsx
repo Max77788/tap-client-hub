@@ -381,10 +381,11 @@ function GroupCard({
           </h3>
         </div>
         <span
-          className="shrink-0 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full"
+          className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
           style={{
             backgroundColor: "var(--teal-soft)",
             color: "var(--teal)",
+            letterSpacing: "0.02em",
           }}
         >
           {clients.length} entities
@@ -409,8 +410,8 @@ function GroupCard({
           return (
             <span
               key={key}
-              className="inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: `${color}18`, color }}
+              className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
+              style={{ backgroundColor: `${color}18`, color, letterSpacing: "0.02em" }}
               title={meta.label}
             >
               {meta.label}
@@ -445,10 +446,10 @@ function GroupCard({
                 <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
               </div>
               <span
-                className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded"
+                className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
                 style={{
-                  backgroundColor: c.type === "Business" ? "var(--teal-soft)" : "var(--blue-soft)",
-                  color: c.type === "Business" ? "var(--teal)" : "var(--blue)",
+                  backgroundColor: c.type === "Business" ? "var(--ink)" : "#dfe7e6",
+                  color: c.type === "Business" ? "#fff" : "var(--teal-ink)",
                 }}
               >
                 {c.type === "Business" ? "BIZ" : "PERS"}
@@ -591,7 +592,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
                   e.stopPropagation();
                   setOpenPopover(isOpen ? null : key);
                 }}
-                className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px] cursor-pointer transition-all"
+                className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px] cursor-pointer transition-colors"
                 style={{
                   ...statusStyle,
                   letterSpacing: "0.02em",
