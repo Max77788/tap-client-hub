@@ -19,6 +19,8 @@ const STATUS_COLORS: Record<MonthStatus, { bg: string; fg: string; label: string
   paid:   { bg: "var(--paid-soft)",  fg: "var(--paid)",  label: "Paid" },
   na:     { bg: "var(--red-soft)",   fg: "var(--red)",   label: "N/A" },
   lock:   { bg: "transparent",       fg: "var(--muted)", label: "—" },
+  in_progress: { bg: "var(--blue-soft)", fg: "var(--blue)", label: "In Progress" },
+  waiting:     { bg: "var(--amber-soft)", fg: "var(--amber)", label: "Waiting" },
 };
 
 // ── Props ──
