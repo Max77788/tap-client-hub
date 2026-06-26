@@ -311,43 +311,39 @@ export default function WorklistTable({
     let prepared = 0;
     let done = 0;
     let behind = 0;
+    let notStarted = 0;
+    let yDue = 0, yDone = 0;
 
     for (const client of serviceClients) {
       const svc = client.services.find((s) => s.key === serviceKey);
       if (!svc) continue;
       const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
 
-      if (activeMonths.has(currentMonth) && year === currentYear) {
-        dueThisMonth++;
-      }
-
       const key = `${client.id}:${serviceKey}`;
       const stages = worklistState[key] ?? [];
       for (let m = 0; m < 12; m++) {
-        if (activeMonths.has(m)) {
-          // Past due check: month is before current, not done, not na, not empty
-          if (m < currentMonth && stages[m] !== "dn" && stages[m] !== "na" && stages[m] !== "" && !isHistorical) {
-            behind++;
-          }
-          switch (stages[m]) {
-            case "ip":
-              inProgress++;
-              break;
-            case "wc":
-              waiting++;
-              break;
-            case "pp":
-              prepared++;
-              break;
-            case "dn":
-              done++;
-              break;
-          }
+        if (!activeMonths.has(m)) continue;
+        yDue++;
+        if (stages[m] === "dn") yDone++;
+
+        if (m === currentMonth && year === currentYear) {
+          dueThisMonth++;
+          if (!stages[m] || stages[m] === "") notStarted++;
+        }
+        // Past due check: month is before current, not done, not na, not empty
+        if (m < currentMonth && stages[m] !== "dn" && stages[m] !== "na" && stages[m] !== "" && !isHistorical) {
+          behind++;
+        }
+        switch (stages[m]) {
+          case "ip": inProgress++; break;
+          case "wc": waiting++; break;
+          case "pp": prepared++; break;
+          case "dn": done++; break;
         }
       }
     }
 
-    return { dueThisMonth, inProgress, waiting, prepared, done, behind, currentMonthName };
+    return { dueThisMonth, inProgress, waiting, prepared, done, behind, notStarted, currentMonthName, yDue, yDone };
   }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical]);
 
   // ── Stage legend ──
@@ -374,44 +370,32 @@ export default function WorklistTable({
 
   return (
     <div className="space-y-3">
-      {/* ── Compact stats row ── */}
+      {/* ── Stats row (demo: stat cards) ── */}
       {variant === "t9" ? (
-        <div className="flex items-center gap-4 text-xs flex-wrap">
-          <span style={{ color: "var(--ink)" }}>
-            <strong>{stats.expTot}</strong> Expected (year)
-          </span>
-          <span className="text-[var(--muted)]">·</span>
-          <span style={{ color: "var(--green)" }}>
-            <strong>{stats.doneTot}</strong> Processed
-          </span>
-          <span className="text-[var(--muted)]">·</span>
-          <span style={{ color: stats.rem > 0 ? "var(--amber)" : "var(--green)" }}>
-            <strong>{stats.rem}</strong> Remaining
-          </span>
-          <span className="text-[var(--muted)]">·</span>
-          <span style={{ color: "var(--blue)" }}>
-            <strong>{stats.curMonthCount}</strong> In {stats.currentMonthName}
-          </span>
+        <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+          <StatCard label="Expected (year)" value={stats.expTot} color="var(--ink)" />
+          <StatCard label="Processed" value={stats.doneTot} color="var(--green)" />
+          <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
+          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Viewing ${year}`} value={stats.isCur ? stats.curMonthCount : year} color="var(--blue)" />
         </div>
       ) : (
-      <div className="flex items-center gap-4 text-xs flex-wrap">
-        <span className="font-semibold text-[var(--ink)]">{serviceClients.length} clients</span>
-        <span className="text-[var(--muted)]">·</span>
-        <span style={{ color: "var(--teal)" }}>
-          <strong>{stats.dueThisMonth}</strong> due in {stats.currentMonthName}
-        </span>
-        <span className="text-[var(--muted)]">·</span>
-        <span style={{ color: stats.behind > 0 ? "var(--red)" : "var(--green)" }}>
-          <strong>{stats.behind}</strong> behind
-        </span>
-        <span className="text-[var(--muted)]">·</span>
-        <span style={{ color: "var(--blue)" }}>
-          <strong>{stats.inProgress + stats.waiting}</strong> in progress
-        </span>
-        <span className="text-[var(--muted)]">·</span>
-        <span style={{ color: "var(--green)" }}>
-          <strong>{stats.done}</strong> done
-        </span>
+      <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+        {!isHistorical ? (
+          <>
+            <StatCard label={`Due in ${stats.currentMonthName}`} value={stats.dueThisMonth} color="var(--ink)" />
+            <StatCard label="In progress" value={stats.inProgress} color="var(--blue)" />
+            <StatCard label="Waiting on client" value={stats.waiting} color="var(--amber)" />
+            <StatCard label="Prepared" value={stats.prepared} color="var(--teal)" />
+            <StatCard label="Done" value={stats.done} color="var(--green)" />
+            <StatCard label="Not started" value={stats.notStarted || 0} color="var(--red)" />
+          </>
+        ) : (
+          <>
+            <StatCard label={`Periods ${year}`} value={stats.yDue} color="var(--ink)" />
+            <StatCard label="Completed" value={stats.yDone} color="var(--green)" />
+            <StatCard label="Not completed" value={Math.max(0, stats.yDue - stats.yDone)} color="var(--amber)" />
+          </>
+        )}
       </div>
       )}
 
@@ -806,5 +790,43 @@ function CellWrapper({
     >
       {children}
     </button>
+  );
+}
+
+// ══════════════════════════════════════════════
+// ── Stat Card (demo v7 exact, shared) ──
+// ══════════════════════════════════════════════
+function StatCard({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color?: string;
+}) {
+  return (
+    <div
+      className="statcard"
+      style={{
+        flex: 1, minWidth: 120,
+        backgroundColor: "var(--card)",
+        border: "1px solid var(--line)",
+        borderRadius: 13,
+        padding: "13px 16px",
+        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+      }}
+    >
+      <div style={{
+        fontFamily: '"Fraunces",Georgia,serif',
+        fontWeight: 600, fontSize: 26, lineHeight: 1,
+        color: color || "var(--ink)",
+      }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+        {label}
+      </div>
+    </div>
   );
 }
