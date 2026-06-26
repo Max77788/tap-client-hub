@@ -5,47 +5,21 @@ import { MONTHS_SHORT, SERVICE_META } from "@/lib/data";
 import type { ServiceKey } from "@/lib/types";
 import { PageSkeleton } from "@/components/loading-skeleton";
 
-// ── Types ──
 interface StaffSummary {
   name: string;
   initials: string;
   clientCount: number;
   totalTouchpoints: number;
   services: Record<string, number>;
-  monthCounts: number[]; // touchpoints per month
+  monthCounts: number[];
   clients: string[];
 }
 
-interface ClientData {
-  id: string;
-  name: string;
-  assignedStaff: string;
-}
-
-// ── Month colors (progress indicators) ──
-function getMonthColor(count: number, maxCount: number): string {
-  if (count === 0) return "var(--line)";
-  const ratio = count / (maxCount || 1);
-  if (ratio >= 0.8) return "var(--green)";
-  if (ratio >= 0.4) return "var(--amber)";
-  return "var(--teal)";
-}
-
-function getMonthBg(count: number, maxCount: number): string {
-  if (count === 0) return "transparent";
-  const ratio = count / (maxCount || 1);
-  if (ratio >= 0.8) return "var(--green-soft)";
-  if (ratio >= 0.4) return "var(--amber-soft)";
-  return "var(--teal-soft)";
-}
-
-// ── Main Workload Page ──
 export default function WorkloadPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [staffLoads, setStaffLoads] = useState<StaffSummary[]>([]);
   const [totalClients, setTotalClients] = useState(0);
-  const [staffCount, setStaffCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,199 +31,186 @@ export default function WorkloadPage() {
         if (!cancelled) {
           setStaffLoads(Array.isArray(data.staffLoads) ? data.staffLoads : []);
           setTotalClients(data.totalClients || 0);
-          setStaffCount(data.staffCount || 0);
           setLoading(false);
         }
       } catch (err: any) {
-        if (!cancelled) {
-          setError(err.message || "Failed to load workload data");
-          setLoading(false);
-        }
+        if (!cancelled) { setError(err.message); setLoading(false); }
       }
     }
     load();
     return () => { cancelled = true; };
   }, []);
 
-  const stats = useMemo(() => {
-    const totalTouch = staffLoads.reduce((s, l) => s + l.totalTouchpoints, 0);
-    const busiest = staffLoads[0];
-    return { totalTouch, busiest };
+  const maxLoad = useMemo(() => Math.max(1, ...staffLoads.map(s => s.totalTouchpoints)), [staffLoads]);
+  const avgLoad = useMemo(() => {
+    const real = staffLoads.length;
+    if (!real) return 0;
+    return Math.round(staffLoads.reduce((a, s) => a + s.totalTouchpoints, 0) / real);
   }, [staffLoads]);
 
-  // Find max month count for color scaling
-  const maxMonthCount = useMemo(() => {
-    let max = 0;
-    for (const staff of staffLoads) {
-      for (const count of staff.monthCounts) {
-        if (count > max) max = count;
-      }
-    }
-    return max || 1;
-  }, [staffLoads]);
+  const realStaff = staffLoads.filter(s => s.name !== "Unassigned");
+  const busiest = realStaff[0];
+  const lightest = realStaff[realStaff.length - 1];
+  const unassigned = staffLoads.find(s => s.name === "Unassigned");
 
   if (loading) return <PageSkeleton rows={6} />;
+  if (error) return <div className="panel" style={panelStyle}><div className="empty" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Failed to load workload data. <button onClick={() => window.location.reload()} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600 }}>Retry</button></div></div>;
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-6 rounded-xl text-center" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--red-soft)" }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <h3 className="text-base font-semibold text-[var(--ink)] mb-1">Failed to load workload data</h3>
-        <p className="text-sm text-[var(--muted)]">{error}</p>
-        <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ backgroundColor: "var(--teal)" }}>Retry</button>
-      </div>
-    );
-  }
+  // ── Service colors ──
+  const SVCMETA: Record<string, { l: string; ic: string; col: string }> = {
+    financials:  { l: "Financials", ic: "📊", col: "#2f7d4f" },
+    payroll:     { l: "Payroll", ic: "💵", col: "#2c5d86" },
+    sales_tax:   { l: "Sales Tax", ic: "🧾", col: "#b9791f" },
+    tax_returns: { l: "Tax Return", ic: "📋", col: "#5a4a80" },
+    "1099s":     { l: "1099s", ic: "📄", col: "#7a5436" },
+    renditions:  { l: "Renditions", ic: "🏠", col: "#3a5a44" },
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Team Members" value={staffCount} color="var(--teal)" />
-        <StatCard label="Total Clients" value={totalClients} color="var(--blue)" />
-        <StatCard
-          label="Busiest Person"
-          value={stats.busiest?.totalTouchpoints ?? 0}
-          suffix={stats.busiest ? ` (${(stats.busiest.name || "").split(" ")[0]})` : ""}
-          color="var(--amber)"
-        />
-        <StatCard label="Touchpoints / yr" value={stats.totalTouch} color="var(--green)" />
+    <div>
+      {/* ── Stats ── */}
+      <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+        <div className="statcard" style={statcardStyle}>
+          <div className="sn" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1 }}>{realStaff.length}</div>
+          <div className="sl" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Team members</div>
+        </div>
+        <div className="statcard" style={statcardStyle}>
+          <div className="sn" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1, color: "var(--green)" }}>{totalClients}</div>
+          <div className="sl" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Clients</div>
+        </div>
+        <div className="statcard" style={statcardStyle}>
+          <div className="sn" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1, color: "var(--amber)" }}>{busiest?.name.split(" ")[0] || "—"}</div>
+          <div className="sl" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Busiest</div>
+        </div>
+        <div className="statcard" style={statcardStyle}>
+          <div className="sn" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1, color: "var(--red)" }}>{unassigned?.clientCount || 0}</div>
+          <div className="sl" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Unassigned</div>
+        </div>
       </div>
+
+      {/* ── Insight ── */}
+      {busiest && lightest && busiest !== lightest && avgLoad > 0 && (
+        <div className="insight" style={{
+          display: "flex", gap: 12, background: "var(--amber-soft)", border: "1px solid #ead9b6",
+          color: "#6b4a12", borderRadius: 14, padding: "14px 16px",
+          marginTop: 16, fontSize: "13.5px", lineHeight: 1.5,
+        }}>
+          <span>💡</span>
+          <div>
+            <b style={{ color: "#4a3208" }}>{busiest.name}</b> is carrying the heaviest load (~{busiest.totalTouchpoints} touchpoints/yr,
+            {Math.round((busiest.totalTouchpoints / avgLoad - 1) * 100)}% above average), while <b style={{ color: "#4a3208" }}>{lightest.name}</b>
+            {" "}sits at ~{lightest.totalTouchpoints}. Moving a couple of recurring clients from {busiest.name.split(" ")[0]} to{" "}
+            {lightest.name.split(" ")[0]} would even the team out{unassigned ? `. You also have ${unassigned.clientCount} unassigned client${unassigned.clientCount !== 1 ? "s" : ""} with no owner.` : "."}
+          </div>
+        </div>
+      )}
+
+      {/* ── Workload by estimated effort ── */}
+      <div className="sect2" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 18, margin: "26px 0 10px" }}>Workload by estimated effort</div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[11px] text-[var(--muted)]">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded" style={{ backgroundColor: "var(--green)" }} />
-          Busy (80%+)
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded" style={{ backgroundColor: "var(--amber)" }} />
-          Moderate (40-80%)
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded" style={{ backgroundColor: "var(--teal)" }} />
-          Light (&lt;40%)
-        </span>
+      <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, marginBottom: 8, fontSize: 12, color: "var(--muted)" }}>
+        {Object.entries(SVCMETA).map(([k, v]) => (
+          <span key={k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: v.col }}></i>{v.l}
+          </span>
+        ))}
+        <span className="lgd-note" style={{ marginLeft: "auto", fontStyle: "italic", opacity: .8 }}>bar length = est. annual touchpoints (recurring filings + jobs)</span>
       </div>
 
-      {/* Workload table */}
-      <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr style={{ borderBottom: "2px solid var(--line)" }}>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "18%" }}>Staff</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "8%" }}>Clients</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "8%" }}>Load/yr</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "24%" }}>Services</th>
-                {MONTHS_SHORT.map((m, i) => {
-                  const isCurrentMonth = i === new Date().getMonth();
-                  return (
-                    <th
-                      key={m}
-                      className="text-center text-[10px] font-semibold uppercase tracking-tight px-1 py-3"
-                      style={{
-                        width: "3.5%",
-                        color: isCurrentMonth ? "var(--teal)" : "var(--muted)",
-                        backgroundColor: isCurrentMonth ? "var(--teal-soft)" : "transparent",
-                      }}
-                    >
-                      {m}
-                    </th>
-                  );
+      {/* Bars */}
+      <div className="panel" style={{ ...panelStyle, padding: "14px 18px" }}>
+        {staffLoads.map(s => {
+          const isU = s.name === "Unassigned";
+          const diff = avgLoad ? Math.round((s.totalTouchpoints / avgLoad - 1) * 100) : 0;
+          const diffCls = isU ? "" : diff > 15 ? "d-hi" : diff < -15 ? "d-lo" : "d-mid";
+          const diffTxt = isU ? "unassigned — needs an owner" : (diff > 0 ? `+${diff}% vs avg` : `${diff}% vs avg`);
+          const diffColor = isU ? "var(--red)" : diff > 15 ? "var(--amber)" : diff < -15 ? "var(--green)" : "var(--muted)";
+          return (
+            <div key={s.name} className={`wrow ${isU ? "wrow-u" : ""}`} style={{
+              display: "grid", gridTemplateColumns: "170px 1fr 120px", alignItems: "center",
+              gap: 14, padding: "10px 0", borderBottom: "1px solid #efeade",
+            }}>
+              <div className="wname" style={{ fontWeight: 600, fontSize: 14, lineHeight: 1.25 }}>
+                {isU ? "⚠️ " : ""}{s.name}
+                <span className="wsub" style={{ display: "block", fontWeight: 500, fontSize: "11.5px", color: "var(--muted)", marginTop: 2 }}>
+                  {s.clientCount} client{s.clientCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="wtrack" style={{ display: "flex", height: 22, borderRadius: 7, overflow: "hidden", background: "#efeade" }}>
+                {Object.entries(SVCMETA).map(([k, v]) => {
+                  if (!s.services[k]) return null;
+                  return <div key={k} className="wseg" style={{ height: "100%", width: `${(s.services[k] / maxLoad) * 100}%`, background: v.col, transition: "width .5s cubic-bezier(.4,0,.2,1)" }}
+                    title={`${v.l}: ${s.services[k]} touchpoints`} />;
                 })}
-              </tr>
-            </thead>
-            <tbody>
-              {staffLoads.map((load) => (
-                <tr
-                  key={load.name}
-                  style={{ borderBottom: "1px solid var(--line)" }}
-                  className="hover:bg-[var(--teal-soft)]/30 transition-colors"
-                >
-                  <td className="px-4 py-3 font-semibold text-[var(--ink)]">
-                    {load.name}
-                    <span className="text-[10px] text-[var(--muted)] ml-1">{load.initials}</span>
-                  </td>
-                  <td className="px-4 py-3 text-[var(--muted)]">{load.clientCount}</td>
-                  <td className="px-4 py-3 font-semibold" style={{ color: load.totalTouchpoints > 50 ? "var(--amber)" : "var(--ink)" }}>
-                    {load.totalTouchpoints}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(Object.keys(load.services) as ServiceKey[]).map((key) => {
-                        const val = load.services[key];
-                        if (!val || val <= 0) return null;
-                        const meta = SERVICE_META[key];
-                        if (!meta) return null;
-                        return (
-                          <span
-                            key={key}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}
-                          >
-                            {meta.label}: {val}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  {load.monthCounts.map((count, idx) => {
-                    const isCurrentMonth = idx === new Date().getMonth();
-                    return (
-                      <td
-                        key={idx}
-                        className="px-1 py-3 text-center"
-                        style={{
-                          backgroundColor: isCurrentMonth ? "var(--teal-soft)" : "transparent",
-                        }}
-                      >
-                        {count > 0 ? (
-                          <span
-                            className="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-semibold"
-                            style={{
-                              backgroundColor: getMonthBg(count, maxMonthCount),
-                              color: getMonthColor(count, maxMonthCount),
-                            }}
-                            title={`${load.name}: ${count} touchpoints in ${MONTHS_SHORT[idx]}`}
-                          >
-                            {count}
-                          </span>
-                        ) : (
-                          <span className="text-[var(--line)]">·</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              {staffLoads.length === 0 && (
-                <tr>
-                  <td colSpan={4 + 12} className="px-4 py-8 text-center text-xs text-[var(--muted)]">
-                    No workload data yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-5 py-2 text-xs text-[var(--muted)] border-t border-[var(--line)]">
-          {staffLoads.length} staff members · {totalClients} active clients
-        </div>
+                {Object.values(s.services).reduce((a, b) => a + b, 0) === 0 && (
+                  <div className="wseg" style={{ width: 2, background: "#ddd" }} />
+                )}
+              </div>
+              <div className="wload" style={{ textAlign: "right" }}>
+                <b style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 19 }}>{s.totalTouchpoints}</b>
+                <span className="wdiff" style={{ display: "block", fontSize: 11, fontWeight: 600, marginTop: 1, color: diffColor }}>{diffTxt}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* ── Service mix by person ── */}
+      <div className="sect2" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 18, margin: "26px 0 10px" }}>Service mix by person</div>
+      <div className="panel" style={panelStyle}>
+        <table>
+          <thead>
+            <tr>
+              <th>Team member</th><th>Clients</th><th>Load / yr</th><th>Services handled</th>
+            </tr>
+          </thead>
+          <tbody>
+            {realStaff.map(s => (
+              <tr key={s.name}>
+                <td className="lname2" style={{ fontWeight: 600 }}>{s.name}</td>
+                <td style={{ fontVariantNumeric: "tabular-nums" }}>{s.clientCount}</td>
+                <td style={{ fontVariantNumeric: "tabular-nums" }}><b>{s.totalTouchpoints}</b></td>
+                <td>
+                  <div className="chips2" style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {Object.entries(SVCMETA).map(([k, v]) => {
+                      const cnt = s.services[k];
+                      if (!cnt) return null;
+                      return (
+                        <span key={k} className="schip" style={{
+                          fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20,
+                          background: `color-mix(in srgb, ${v.col} 12%, #fff)`,
+                          color: v.col, border: `1px solid color-mix(in srgb, ${v.col} 25%, #fff)`,
+                        }}>
+                          {v.ic} {v.l} <b style={{ fontWeight: 700 }}>{cnt}</b>
+                        </span>
+                      );
+                    })}
+                    {Object.values(s.services).reduce((a, b) => a + b, 0) === 0 && (
+                      <span className="schip" style={{ fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20, background: "color-mix(in srgb, #aaa 12%, #fff)", color: "#aaa", border: "1px solid color-mix(in srgb, #aaa 25%, #fff)" }}>none</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Fine print ── */}
+      <p className="fineprint" style={{ fontSize: "11.5px", color: "var(--muted)", lineHeight: 1.5, margin: "14px 2px 0", fontStyle: "italic" }}>
+        &ldquo;Load&rdquo; is an estimate of yearly touchpoints: monthly financials = 12, weekly payroll = 52,
+        bi-weekly = 26, quarterly sales tax = 4, plus a flat weight for tax returns, 1099s and renditions.
+        Adjust the weights to match how your firm actually scopes effort.
+      </p>
     </div>
   );
 }
 
-// ── Stat Card ──
-function StatCard({ label, value, suffix, color }: { label: string; value: number; suffix?: string; color?: string }) {
-  return (
-    <div className="p-[13px_16px] rounded-[13px] flex flex-col justify-between border" style={{ backgroundColor: "var(--card)", borderColor: "var(--line)", boxShadow: "0 1px 2px rgba(33,31,26,0.04)" }}>
-      {color && <div className="h-0.5 rounded-t-xl mb-2" style={{ backgroundColor: color, margin: "-13px -16px 8px -16px", width: "calc(100% + 32px)" }} />}
-      <p className="text-[12px] text-[var(--muted)] mb-1 leading-tight" style={{ fontFamily: '"Public Sans", sans-serif' }}>{label}</p>
-      <p className="text-[26px] font-semibold m-0 leading-none" style={{ fontFamily: '"Fraunces", Georgia, serif', color: "var(--ink)" }}>{value}{suffix && <span className="text-xs text-[var(--muted)] ml-1">{suffix}</span>}</p>
-    </div>
-  );
-}
+const statcardStyle: React.CSSProperties = {
+  flex: 1, minWidth: 120, background: "var(--card)", border: "1px solid var(--line)",
+  borderRadius: 13, padding: "13px 16px", boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+};
+const panelStyle: React.CSSProperties = {
+  background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", marginTop: 6,
+};
