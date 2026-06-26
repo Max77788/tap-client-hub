@@ -494,16 +494,17 @@ export default function WorklistTable({
 
       {/* ── Main table (horizontally scrollable on mobile) ── */}
       <div
-        className="overflow-hidden"
+        className="worklist-panel"
         style={{
           backgroundColor: "var(--card)",
-          boxShadow: "var(--shadow)",
-          border: "1px solid var(--line)",
           borderRadius: "16px",
+          overflow: "hidden",
+          marginTop: 6,
+          border: "1px solid var(--line)",
         }}
       >
         <div className="overflow-x-auto">
-        <table className="border-collapse table-fixed" style={{ minWidth: 800, width: "100%" }}>
+        <table style={{ minWidth: 800, width: "100%" }}>
           <thead>
             {variant === "t9" ? (
             <tr style={{ borderBottom: "2px solid var(--line)" }} className="text-left">

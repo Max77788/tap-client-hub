@@ -88,6 +88,43 @@ main a:hover {
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
+/* ── Table styling (demo v7 exact) ── */
+.worklist-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.worklist-panel th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 13px 14px;
+  background: #faf7f0;
+  border-bottom: 1px solid var(--line);
+}
+.worklist-panel td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #efeade;
+  vertical-align: middle;
+}
+.worklist-panel tr:last-child td {
+  border-bottom: none;
+}
+.worklist-panel tbody tr:hover {
+  background: #fcfaf4;
+}
+.worklist-panel .mh {
+  text-align: center;
+  padding: 11px 4px;
+}
+.worklist-panel .mtd {
+  text-align: center;
+  padding: 7px 3px;
+}
+
 /* ── Input / Select / Textarea base (demo style) ── */
 input[type="text"],
 input[type="search"],
