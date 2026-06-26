@@ -16,34 +16,29 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Team Workload", href: "/workload", icon: "⚖️" },
   { label: "Timesheet", href: "/time", icon: "⏱️" },
   { label: "---", href: "" },
-  { label: "Financials", href: "/fin", icon: "📊" },
+  { label: "Monthly Financials", href: "/fin", icon: "📊" },
   { label: "Payroll", href: "/pr", icon: "💵" },
   { label: "Sales Tax", href: "/stx", icon: "🧾" },
   { label: "1099s", href: "/t9", icon: "📄" },
   { label: "Renditions", href: "/rend", icon: "🏠" },
-  { label: "Tax Returns", href: "/tax", icon: "📋" },
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault", icon: "🔒" },
   { label: "Users & Access", href: "/users", icon: "🪪", role: "owner" },
-  { label: "---", href: "" },
-  { label: "Settings", href: "/settings/2fa" },
   { label: "Help & Support", href: "/support", icon: "🛟" },
 ];
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
-  "/": { title: "Clients", subtitle: "Active client accounts and engagement tracking" },
-  "/workload": { title: "Team Workload", subtitle: "Per-person workload distribution and service mix" },
-  "/time": { title: "Timesheet", subtitle: "Live time tracking by person and client" },
-  "/fin": { title: "Financials", subtitle: "Month-by-month financial statement preparation tracking" },
-  "/pr": { title: "Payroll", subtitle: "Payroll processing and filing status" },
-  "/stx": { title: "Sales Tax", subtitle: "Sales tax preparation and filing tracking" },
-  "/t9": { title: "1099s", subtitle: "Annual 1099 preparation and filing" },
-  "/rend": { title: "Renditions", subtitle: "Property renditions and annual filings" },
-  "/tax": { title: "Tax Returns", subtitle: "Annual tax return preparation and filing" },
-  "/vault": { title: "Password Vault", subtitle: "Secure credential storage for client portals" },
-  "/users": { title: "Users & Access", subtitle: "Manage team accounts and access levels" },
-  "/settings/2fa": { title: "Settings", subtitle: "Two-factor authentication" },
-  "/support": { title: "Help & Support", subtitle: "Submit a support request or find answers" },
+  "/": { title: "Clients", subtitle: "Your single source of truth — every client, business and personal, in one list." },
+  "/workload": { title: "Team Workload", subtitle: "Who\u2019s carrying what — by client count and by estimated effort. Spot overload before it bites." },
+  "/time": { title: "Timesheet", subtitle: "Live time tracking by person and client — lean by design; profitability analytics come next." },
+  "/fin": { title: "Monthly Financials", subtitle: "Bread & butter. Everyone here was flagged \u2018Financials\u2019 on their client card." },
+  "/pr": { title: "Payroll", subtitle: "Runs counted by month — weekly 4\u20135\u00d7, bi-weekly up to 2\u00d7. Rolls up to a monthly status." },
+  "/stx": { title: "Sales Tax", subtitle: "Auto-populated from clients with Sales Tax switched on." },
+  "/t9": { title: "1099s", subtitle: "Clients flagged for 1099 filing." },
+  "/rend": { title: "Renditions", subtitle: "Property tax renditions — clients flagged for renditions." },
+  "/vault": { title: "Password Vault", subtitle: "Portal logins. Kept separate from client files, on purpose." },
+  "/users": { title: "Users & Access", subtitle: "Who can get into the platform, what they can see, and who they report to. Owner-controlled." },
+  "/support": { title: "Help & Support", subtitle: "Stuck on something? Open a ticket and our team will jump on it." },
 };
 
 // ── Mobile sidebar ──
@@ -157,7 +152,7 @@ function MobileSidebar({
             Log out
           </button>
         </div>
-        <div className="px-4 pb-[22px] pt-4 text-[11px]" style={{ color: "#8a9bc6" }}>TAP Client Hub v1.0</div>
+        <div className="px-4 pb-[22px] pt-4 text-[11px]" style={{ color: "#8a9bc6" }}>Demo prototype · one entry, flows everywhere · no formulas</div>
       </div>
     </>
   );
@@ -310,7 +305,7 @@ export default function RootLayout({
 
             {/* Footer */}
             <div className="text-[11px]" style={{ color: "#8a9bc6", lineHeight: 1.5 }}>
-              TAP Client Hub v1.0
+              Demo prototype · one entry,<br />flows everywhere · no formulas
             </div>
           </aside>
         )}
@@ -358,6 +353,27 @@ export default function RootLayout({
                     {userEmail}
                   </span>
                 )}
+                {/* ── Year selector for worklist pages ── */}
+                {["/fin", "/pr", "/stx", "/t9", "/rend"].includes(pathname) && (
+                  <div className="hidden sm:flex items-center gap-2">
+                    <span className="text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--muted)]">Year</span>
+                    <select
+                      className="text-[13.5px] rounded-[11px] px-3 py-[10px] border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer"
+                      style={{ appearance: "none", paddingRight: 30 }}
+                      value={new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("year") || String(new Date().getFullYear())}
+                      onChange={(e) => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set("year", e.target.value);
+                        window.location.href = url.toString();
+                      }}
+                    >
+                      {[0, 1, 2].map((offset) => {
+                        const y = new Date().getFullYear() - offset;
+                        return <option key={y} value={y}>{y}{offset === 0 ? " (current)" : ""}</option>;
+                      })}
+                    </select>
+                  </div>
+                )}
                 <div className="rolepick hidden sm:flex items-center gap-2">
                   <span className="text-[12px] text-[var(--muted)]">Viewing as</span>
                   <select
@@ -377,7 +393,36 @@ export default function RootLayout({
           )}
 
           {/* Page content */}
-          <main className={`flex-1 ${isAuthPage ? "" : "px-8 py-[18px]"}`}>{children}</main>
+          <main className={`flex-1 ${isAuthPage ? "" : "px-8 py-[18px]"}`}>
+            {/* ── Tip banner ── */}
+            {!isAuthPage && (
+              <div
+                className="hidden sm:flex gap-3 items-start mx-0 mb-0 rounded-[14px] border px-4 py-[13px]"
+                style={{
+                  backgroundColor: "var(--teal-soft)",
+                  borderColor: "#cdd6ec",
+                  color: "var(--teal-ink)",
+                  margin: "0px 0px 14px 0px",
+                }}
+              >
+                <span>👋</span>
+                <div style={{ fontSize: "13.5px", lineHeight: 1.5 }}>
+                  <b>Try this:</b> open any client → flip <b>Payroll</b> or <b>Sales&nbsp;Tax</b> on, then check that
+                  service in the left menu. The client moves there automatically — nobody re-types anything.
+                </div>
+                <button
+                  className="ml-auto cursor-pointer border-none bg-none text-lg opacity-60 hover:opacity-100"
+                  style={{ color: "var(--teal-ink)", lineHeight: 1, fontSize: 18 }}
+                  onClick={(e) => {
+                    e.currentTarget.parentElement!.style.display = "none";
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {children}
+          </main>
         </div>
       </body>
     </html>
