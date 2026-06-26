@@ -18,18 +18,26 @@ const STAGE_LABELS: Record<WorklistStage, string> = {
 
 const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 
-// ── Stage colors (brighter) ──
+// ── Stage colors (matching demo v7 mcell classes exactly) ──
+// prog=blue, wait=amber, prep=teal, done=green, na=red, lock=not due
 const STAGE_STYLES: Record<
   WorklistStage,
-  { bg: string; fg: string; border?: string }
+  { bg: string; fg: string; border: string; cls: string; label: string }
 > = {
-  "": { bg: "transparent", fg: "var(--muted)" },
-  ip: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#93c5fd" },
-  wc: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#fcd34d" },
-  pp: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#5eead4" },
-  dn: { bg: "var(--green-soft)", fg: "var(--green)", border: "#86efac" },
-  na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#fca5a5" },
+  "": { bg: "transparent", fg: "#c2c8d4", border: "transparent", cls: "lock", label: "Not due" },
+  ip: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2", cls: "prog", label: "In progress" },
+  wc: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6", cls: "wait", label: "Waiting on client" },
+  pp: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec", cls: "prep", label: "Prepared" },
+  dn: { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6", cls: "done", label: "Done" },
+  na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf", cls: "na", label: "N/A" },
 };
+
+// Single-click cycling: advances to next stage, wraps from na back to blank
+function nextStage(current: WorklistStage): WorklistStage {
+  const cycle: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
+  const idx = cycle.indexOf(current);
+  return cycle[(idx + 1) % cycle.length];
+}
 
 // ── Map existing MonthStatus → WorklistStage ──
 function mapMonthStatus(status: MonthStatus): WorklistStage {
@@ -252,39 +260,22 @@ export default function WorklistTable({
       return { ...prev, [key]: counts };
     });
   }, [isHistorical, clients, year]);
-  const [pickerTarget, setPickerTarget] = useState<{ clientId: string; monthIdx: number } | null>(null);
 
-  // ── Cell click handler — opens stage picker ──
+  // ── Cell click handler — directly cycles stage (no picker) ──
   const handleCellClick = useCallback(
     (clientId: string, monthIdx: number) => {
       if (readOnly || isHistorical) return;
-      setPickerTarget({ clientId, monthIdx });
-    },
-    [readOnly, isHistorical],
-  );
-
-  // ── Stage select handler — applies stage and closes picker ──
-  const handleStageSelect = useCallback(
-    (clientId: string, monthIdx: number, stage: WorklistStage) => {
       const key = `${clientId}:${serviceKey}`;
-
-      setWorklistState((prev) => {
-        const stages = [...(prev[key] ?? [])];
-        if (!stages.length) return prev;
-        stages[monthIdx] = stage;
-        return { ...prev, [key]: stages };
-      });
-
-      if (onStageChange) {
-        onStageChange(clientId, monthIdx, stage);
-      }
-
-      setPickerTarget(null);
+      const stages = [...(worklistState[key] ?? [])];
+      if (!stages.length) return;
+      const current = (stages[monthIdx] || "") as WorklistStage;
+      const next = nextStage(current);
+      stages[monthIdx] = next;
+      setWorklistState((prev) => ({ ...prev, [key]: stages }));
+      if (onStageChange) onStageChange(clientId, monthIdx, next);
     },
-    [serviceKey, onStageChange],
+    [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
   );
-
-  const closePicker = useCallback(() => setPickerTarget(null), []);
 
   // ── Stats ──
   const stats = useMemo(() => {
@@ -443,34 +434,27 @@ export default function WorklistTable({
       )}
 
       {/* ── Legend ── */}
-      {variant !== "t9" && (
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        {legendItems.map(({ stage, dot }) => {
-          const style = STAGE_STYLES[stage];
-          const label = STAGE_LABELS[stage] || (stage === "" ? "Not Due/Empty" : STAGE_LABELS[stage]);
-          const displayLabel = stage === "" ? "Not Due" : label;
-          return (
-            <span key={stage} className="inline-flex items-center gap-1">
-              <span
-                className="inline-flex items-center justify-center w-3 h-3 rounded text-[9px] font-bold leading-none"
-                style={{
-                  backgroundColor: style.bg,
-                  color: style.fg,
-                  border: stage === "" ? "1px dashed var(--line)" : "1px solid transparent",
-                }}
-              >
-                {stage === "" ? dot : ""}
-              </span>
-              <span className="text-[var(--muted)]">{displayLabel}</span>
-            </span>
-          );
-        })}
-        <span className="inline-flex items-center gap-1 ml-2">
-          <span className="w-3 h-3 rounded border-2 border-[var(--red)]" />
-          <span className="text-[var(--muted)]">Delayed</span>
+      <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ margin: "14px 0 2px" }}>
+        {STAGE_CYCLE.filter(s => s !== "").map(s => (
+          <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
+            <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s].fg }}></i>
+            {STAGE_STYLES[s].label}
+          </span>
+        ))}
+        {!isHistorical && <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>Delayed (auto)</span>}
+        <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>N/A</span>
+        <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
+        <span style={{ marginLeft: "auto", fontStyle: "italic", opacity: 0.8, fontSize: 11, color: "var(--muted)" }}>
+          {!isHistorical ? "click a cell to advance · red ring = past due, flagged automatically" : `${year} — read-only history`}
         </span>
       </div>
-      )}
+
+      {/* ── Count line ── */}
+      <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
+        {!isHistorical
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
+          : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
+      </div>
 
       {/* ── Historical banner (if applicable) ── */}
       {isHistorical && (
@@ -723,49 +707,34 @@ export default function WorklistTable({
                         );
                       }
 
-                      // ── Default variant: colored squares ──
+                      // ── Default variant: mcell squares (demo v7 style) ──
+                      const t = stage === "" ? (isPastDue && !isHistorical ? "!" : "·")
+                        : stage === "ip" ? "•"
+                        : stage === "wc" ? "⏳"
+                        : stage === "pp" ? "✓"
+                        : stage === "dn" ? "✓"
+                        : stage === "na" ? "–" : "";
+                      const delayed = isPastDue && !isHistorical;
+                      const lockHist = isHistorical && isActive;
                       return (
                         <td key={i} className="px-0 py-1.5">
-                          <CellWrapper
-                            isCurrentMonth={isCurrentMonth}
-                            isPastDue={isPastDue}
-                            readOnly={cellReadOnly}
-                            onClick={() => handleCellClick(client.id, i)}
-                          >
-                            <div
-                              className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-xs font-bold leading-none transition-colors"
-                              style={{
-                                backgroundColor: style.bg,
-                                color: style.fg,
-                                border:
-                                  stage === ""
-                                    ? isPastDue
-                                      ? "1px solid var(--red)"
-                                      : "1px solid var(--line)"
-                                    : isActive && style.border
-                                      ? `1px solid ${style.border}`
-                                      : "none",
-                                cursor: cellReadOnly
-                                  ? "default"
-                                  : "pointer",
-                                opacity: !isActive ? 0.3 : 1,
-                              }}
-                              title={`${MONTHS_SHORT[i]}: ${STAGE_LABELS[stage]}${isPastDue ? " (Delayed)" : ""}`}
-                            >
-                              {stage === "" ? (isPastDue ? "!" : "·") : ""}
-                              {stage === "ip"
-                                ? "•"
-                                : stage === "wc"
-                                  ? "⏳"
-                                  : stage === "pp"
-                                    ? "✓"
-                                    : stage === "dn"
-                                      ? "✓"
-                                      : stage === "na"
-                                        ? "✗"
-                                        : ""}
-                            </div>
-                          </CellWrapper>
+                          <div
+                            onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
+                            className="mcell"
+                            style={{
+                              width: 30, height: 30, borderRadius: 8,
+                              border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
+                              background: !isActive ? "transparent" : style.bg,
+                              color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              margin: "0 auto",
+                              fontWeight: 700, fontSize: 14, userSelect: "none",
+                              cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
+                              boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
+                              opacity: !isActive && !lockHist ? 0 : 1,
+                            } as React.CSSProperties}
+                            title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${STAGE_LABELS[stage]}${isHistorical ? ` (${year})` : ""}`}
+                          >{isActive || lockHist ? t : ""}</div>
                         </td>
                       );
                     })}
@@ -780,81 +749,21 @@ export default function WorklistTable({
 
       {/* ── Fine-print note ── */}
       {variant === "t9" ? (
-        <p className="text-[10px] text-[var(--muted)] leading-relaxed italic">
+        <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
           Set each client&rsquo;s expected total on their card; log how many you
           process each month here. &ldquo;Left&rdquo; stays amber until the
           expected count is cleared. Click a month to add one, shift-click to
           subtract.
         </p>
       ) : (
-      <p className="text-[10px] text-[var(--muted)] leading-relaxed italic">
-        Click a cell to open the stage picker. Past-due months that aren&apos;t
-        marked Done or N/A are flagged with a red border. Cells are only active
-        for months aligned with the service frequency cadence.
+      <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
+        {!isHistorical
+          ? "Every service uses one workflow: In progress → Waiting on client → Prepared → Done. Anything past due flags red on its own. Click a cell to advance through the stages."
+          : `Read-only history for ${year}. Switch the Year selector back to ${currentYear} to make changes.`}
       </p>
       )}
 
-      {/* ── Stage Picker — floating adjacent dropdown ── */}
-      {pickerTarget && variant !== "t9" && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={closePicker} />
-          <div
-            className="fixed z-50 shadow-xl rounded-xl px-3 py-2.5"
-            style={{
-              backgroundColor: "var(--card)",
-              border: "1px solid var(--line)",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              minWidth: 220,
-            }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-[var(--ink)] uppercase tracking-wider">
-                {MONTHS_SHORT[pickerTarget.monthIdx]}
-              </span>
-              <button onClick={closePicker} className="text-xs text-[var(--muted)] bg-transparent border-none cursor-pointer p-0.5 hover:text-[var(--ink)] transition-colors">✕</button>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {STAGE_CYCLE.map((stage) => {
-                const style = STAGE_STYLES[stage];
-                const label = STAGE_LABELS[stage] || "Not Due";
-                const key = `${pickerTarget.clientId}:${serviceKey}`;
-                const stages = worklistState[key] ?? [];
-                const currentStage = stages[pickerTarget.monthIdx] || "";
-                const isCurrent = stage === currentStage;
-                const isDelayed = stage !== "dn" && stage !== "na" && stage !== "" && pickerTarget.monthIdx < currentMonth && !isHistorical;
-                return (
-                  <button
-                    key={stage}
-                    onClick={() => handleStageSelect(pickerTarget.clientId, pickerTarget.monthIdx, stage)}
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-colors border w-full text-left"
-                    style={{
-                      backgroundColor: isCurrent ? style.bg : "transparent",
-                      borderColor: isCurrent ? style.fg : "transparent",
-                      color: isCurrent ? style.fg : "var(--muted)",
-                      boxShadow: isDelayed ? "inset 0 0 0 1.5px var(--red)" : "none",
-                    }}
-                  >
-                    <span
-                      className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0"
-                      style={{
-                        backgroundColor: isCurrent ? style.fg : style.bg || "transparent",
-                        color: isCurrent ? "#fff" : style.fg,
-                        border: stage === "" && !isCurrent ? "1px dashed var(--line)" : "1px solid transparent",
-                      }}
-                    >
-                      {stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : stage === "dn" ? "✓" : stage === "na" ? "✗" : ""}
-                    </span>
-                    <span className="truncate">{label}</span>
-                    {isDelayed && <span className="ml-auto text-[9px] text-[var(--red)] font-bold">!</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      )}
+      {/* ── Stage Picker — removed: single-click cycling now ── */}
     </div>
   );
 }

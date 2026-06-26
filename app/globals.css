@@ -1,30 +1,29 @@
 @import "tailwindcss";
 
 /* ── TAP Client Hub Design System ──
-   Brighter palette — enhanced contrast for worklist cells and UI. */
+   Exact match to the v7 demo — Fraunces + Public Sans, muted palette. */
 :root {
   --paper: #eef1f6;
   --card: #ffffff;
-  --ink: #0f172a;
-  --muted: #64748b;
-  --line: #d1d9e6;
-  --teal: #0d9488;
-  --teal-soft: #ccfbf1;
-  --teal-ink: #0f766e;
-  --amber: #d97706;
-  --amber-soft: #fef3c7;
-  --red: #dc2626;
-  --red-soft: #fee2e2;
-  --green: #16a34a;
-  --green-soft: #dcfce7;
-  --blue: #2563eb;
-  --blue-soft: #dbeafe;
-  --paid: #0d9488;
-  --paid-soft: #ccfbf1;
-  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 8px 24px rgba(15, 23, 42, 0.12);
-  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --sidebar-start: #1e3a5f;
-  --sidebar-end: #172554;
+  --ink: #1a2340;
+  --muted: #5f667d;
+  --line: #dde2ec;
+  --teal: #1c2a5e;
+  --teal-soft: #e7ebf5;
+  --teal-ink: #16234d;
+  --amber: #b9791f;
+  --amber-soft: #f7edda;
+  --red: #a8392f;
+  --red-soft: #f6e2df;
+  --green: #2f7d4f;
+  --green-soft: #e3efe6;
+  --blue: #2c5d86;
+  --blue-soft: #e0eaf2;
+  --paid: #1c2a5e;
+  --paid-soft: #e7ebf5;
+  --shadow: 0 1px 2px rgba(26,35,64,.06), 0 8px 24px rgba(26,35,64,.10);
+  --sidebar-start: #21305f;
+  --sidebar-end: #1a2750;
   --sidebar-width: 236px;
 }
 
