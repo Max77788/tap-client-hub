@@ -1,812 +1,323 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Client, ClientType, ServiceKey, ServiceConfig } from "@/lib/types";
+import type { Client, ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
 interface ClientModalProps {
   open: boolean;
-  client?: Client | null; // null = "Add" mode, Client = "Edit" mode
+  client?: Client | null;
   onClose: () => void;
   onSave: (client: Client | Omit<Client, "id" | "cid">) => void;
 }
 
-// ── Service configuration metadata ──
-const SERVICE_CADENCES: Record<ServiceKey, { options: string[]; label: string }> = {
-  financials:  { options: ["Monthly", "Quarterly", "Yearly"], label: "Frequency" },
-  payroll:     { options: ["Weekly", "Bi-Weekly", "Monthly"], label: "Payroll Cadence" },
-  sales_tax:   { options: ["Monthly", "Quarterly", "Yearly"], label: "Sales Tax Cadence" },   // editable cadence
-  "1099s":     { options: [], label: "" },    // always Yearly, no picker — show expected count instead
-  renditions:  { options: [], label: "" },     // always Yearly
-  tax_returns: { options: [], label: "" },      // always Yearly
-};
-
-const SERVICE_DEFAULTS: Record<ServiceKey, { frequency: string; processor: string }> = {
-  financials:  { frequency: "Monthly", processor: "QuickBooks" },
-  payroll:     { frequency: "Bi-Weekly", processor: "ADP" },
-  sales_tax:   { frequency: "Monthly", processor: "TA" },
-  "1099s":     { frequency: "Yearly", processor: "TA" },
-  renditions:  { frequency: "Yearly", processor: "TA" },
-  tax_returns: { frequency: "Yearly", processor: "TA" },
-};
-
-const EMPTY_SERVICES: any[] = (
-  Object.keys(SERVICE_META) as ServiceKey[]
-).map((key) => ({
-  key,
-  label: SERVICE_META[key].label,
-  enabled: false,
-  frequency: SERVICE_DEFAULTS[key].frequency,
-  processor: SERVICE_DEFAULTS[key].processor,
-  assignedTo: "",
-  expectedAnnual: key === "1099s" ? 0 : undefined,
-  months: Array(12).fill("lock") as ServiceConfig["months"],
-}));
-
-function makeEmptyClient(): Omit<Client, "id" | "cid"> {
-  return {
-    name: "",
-    type: "Business",
-    status: "active",
-    group: "Terry",
-    city: "",
-    state: "TX",
-    emails: [""],
-    phones: [],
-    address: "",
-    assignedStaff: "Terry Anderson",
-    services: EMPTY_SERVICES,
-  };
-}
+const STAFF = ["Terry Anderson", "Lindsay", "Misty", "Jill", "Unassigned"];
 
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
-  const [form, setForm] = useState<Omit<Client, "id" | "cid">>(makeEmptyClient());
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [staffOptions, setStaffOptions] = useState<{id: string; name: string}[]>([]);
 
-  // Fetch staff from Supabase
-  useEffect(() => {
-    fetch("/api/profiles").then(r => r.ok ? r.json() : []).then(data => {
-      if (Array.isArray(data)) setStaffOptions(data.map((u: any) => ({ id: u.id, name: u.name })));
-    }).catch(() => {});
-  }, []);
+  // Generate preview CID
+  const [previewCid] = useState(() => "TP|BS|" + String(Math.floor(1000 + Math.random() * 9000)).padStart(4, "0"));
+
+  // ── Form fields ──
+  const [name, setName] = useState("");
+  const [type, setType] = useState("Business");
+  const [group, setGroup] = useState("");
+  const [assigned, setAssigned] = useState("Unassigned");
+  const [email, setEmail] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [st, setSt] = useState("TX");
+  const [zip, setZip] = useState("");
+
+  // ── Service toggles ──
+  const [fin, setFin] = useState(false);
+  const [pr, setPr] = useState(false);
+  const [stx, setStx] = useState(false);
+  const [tax, setTax] = useState(false);
+  const [t9, setT9] = useState(false);
+  const [rend, setRend] = useState(false);
+  const [finFreq, setFinFreq] = useState("Monthly");
+  const [fee, setFee] = useState("");
+  const [prFreq, setPrFreq] = useState("Bi-Weekly");
+  const [prProc, setPrProc] = useState("ADP");
+  const [stxFreq, setStxFreq] = useState("Monthly");
+  const [taxType, setTaxType] = useState("Business");
 
   useEffect(() => {
     if (client) {
-      setForm({
-        name: client.name,
-        type: client.type,
-        group: client.group,
-        city: client.city,
-        state: client.state,
-        emails: client.emails?.length ? [...client.emails] : [""],
-        phones: client.phones?.length ? [...client.phones] : [],
-        address: client.address,
-        status: client.status || "active",
-        assignedStaff: client.assignedStaff,
-        services: client.services.map((s) => ({ ...s })),
-      });
+      setName(client.name);
+      setType(client.type);
+      setGroup(client.group || "");
+      setAssigned(client.assignedStaff || "Unassigned");
+      setEmail((client.emails || [""])[0] || "");
+      setAddEmail((client.emails || [])[1] || "");
+      setPhone((client.phones || [""])[0] || "");
+      setAddress(client.address || "");
+      setCity(client.city || "");
+      setSt(client.state || "TX");
+      setZip((client as any).zip || "");
+      const svcs = client.services || [];
+      setFin(svcs.find(s => s.key === "financials")?.enabled || false);
+      setPr(svcs.find(s => s.key === "payroll")?.enabled || false);
+      setStx(svcs.find(s => s.key === "sales_tax")?.enabled || false);
+      setTax(svcs.find(s => s.key === "tax_returns")?.enabled || false);
+      setT9(svcs.find(s => s.key === "1099s")?.enabled || false);
+      setRend(svcs.find(s => s.key === "renditions")?.enabled || false);
     } else {
-      setForm(makeEmptyClient());
+      setName(""); setType("Business"); setGroup(""); setAssigned("Unassigned");
+      setEmail(""); setAddEmail(""); setPhone(""); setAddress(""); setCity(""); setSt("TX"); setZip("");
+      setFin(false); setPr(false); setStx(false); setTax(false); setT9(false); setRend(false);
     }
-    setErrors({});
   }, [client, open]);
 
-  // Close on Escape
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) {
-      document.addEventListener("keydown", onKey);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    if (open) document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   if (!open) return null;
 
-  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  }
-
-  function toggleService(key: ServiceKey) {
-    setForm((prev) => ({
-      ...prev,
-      services: prev.services.map((s) =>
-        s.key === key
-          ? {
-              ...s,
-              enabled: !s.enabled,
-              frequency: SERVICE_DEFAULTS[key].frequency,
-              processor: SERVICE_DEFAULTS[key].processor,
-              assignedTo: "",
-              expectedAnnual: key === "1099s" ? 0 : undefined,
-              months: !s.enabled
-                ? Array(12).fill("na") as ServiceConfig["months"]
-                : Array(12).fill("lock") as ServiceConfig["months"],
-            }
-          : s,
-      ),
-    }));
-  }
-
-  function setServiceField(key: ServiceKey, field: string, value: string | number | any[]) {
-    setForm((prev) => ({
-      ...prev,
-      services: prev.services.map((s) =>
-        s.key === key ? { ...s, [field]: value } : s,
-      ),
-    }));
-  }
-
-  function validate(): boolean {
-    const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = "Client name is required";
-    if (!form.city.trim()) errs.city = "City is required";
-    const validEmails = form.emails.filter((e) => e.trim());
-    if (validEmails.length === 0) {
-      errs.emails = "At least one email is required";
-    } else {
-      const invalid = validEmails.find((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-      if (invalid) errs.emails = `Invalid email format: ${invalid}`;
+  function handleSave() {
+    const nm = name.trim();
+    if (!nm) return;
+    const svcs: any[] = [];
+    function addSvc(key: ServiceKey, enabled: boolean, frequency: string, processor?: string) {
+      if (!enabled) return;
+      svcs.push({
+        key, enabled: true, frequency,
+        processor: processor || "-",
+        months: Array(12).fill("lock"),
+      });
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  }
+    addSvc("financials", fin, finFreq);
+    addSvc("payroll", pr, prFreq, prProc);
+    addSvc("sales_tax", stx, stxFreq);
+    addSvc("tax_returns", tax, "Yearly", taxType);
+    addSvc("1099s", t9, "Yearly");
+    addSvc("renditions", rend, "Yearly");
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate()) return;
-    // Filter out empty values
-    const payload = {
-      ...form,
-      emails: form.emails.filter((e) => e.trim()),
-      phones: form.phones.filter((p) => p.trim()),
-    };
-    onSave(payload as Omit<Client, "id" | "cid">);
+    onSave({
+      name: nm, type: type as "Business" | "Personal", status: "active",
+      group, assignedStaff: assigned,
+      emails: [email, addEmail].filter(Boolean),
+      phones: [phone].filter(Boolean),
+      address, city, state: st,
+      services: svcs.length ? svcs : [],
+    } as any);
     onClose();
   }
 
-  function updateEmail(idx: number, value: string) {
-    const next = [...form.emails];
-    next[idx] = value;
-    update("emails", next);
-  }
-
-  function addEmail() {
-    if (form.emails.length < 3) update("emails", [...form.emails, ""]);
-  }
-
-  function removeEmail(idx: number) {
-    if (form.emails.length <= 1) return;
-    update("emails", form.emails.filter((_, i) => i !== idx));
-  }
-
-  function updatePhone(idx: number, value: string) {
-    const next = [...form.phones];
-    next[idx] = value;
-    update("phones", next);
-  }
-
-  function addPhone() {
-    if (form.phones.length < 3) update("phones", [...form.phones, ""]);
-  }
-
-  function removePhone(idx: number) {
-    update("phones", form.phones.filter((_, i) => i !== idx));
-  }
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 flex items-center justify-center p-4"
-        style={{ backgroundColor: "rgba(33,31,26,0.34)" }}
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
-      >
-        <div
-          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto animate-modal-in"
-          style={{
-            backgroundColor: "var(--card)",
-            boxShadow: "var(--shadow)",
-            borderRadius: 18,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div
-            className="flex items-center justify-between px-6 py-4 sticky top-0 z-10 rounded-t-xl"
-            style={{
-              backgroundColor: "var(--card)",
-              borderBottom: "1px solid var(--line)",
-            }}
-          >
-            <h2
-              style={{
-                fontFamily: '"Fraunces", Georgia, serif',
-                fontSize: 22,
-                fontWeight: 600,
-                color: "var(--ink)",
-              }}
-              className="m-0"
-            >
-              {isEdit ? "Edit Client" : "Add New Client"}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-[var(--teal-soft)]/50 transition-colors"
-              aria-label="Close"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-            {/* Client Name */}
-            <Field label="Client Name" error={errors.name} required>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                placeholder="e.g. Acme Corporation"
-                className="field-input"
-              />
-            </Field>
-
-            {/* Type */}
-            <div className="grid grid-cols-1 gap-4">
-              <Field label="Type" required>
-                <div className="flex gap-2">
-                  {(["Business", "Personal"] as ClientType[]).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => update("type", t)}
-                      className={`flex-1 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors ${
-                        form.type === t
-                          ? "border-[var(--teal)] bg-[var(--teal-soft)] text-[var(--teal)]"
-                          : "border-[var(--line)] text-[var(--muted)] hover:bg-[var(--teal-soft)]/50"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-            </div>
-
-            {/* City + State row */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <Field label="City" error={errors.city} required>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={(e) => update("city", e.target.value)}
-                    placeholder="e.g. Austin"
-                    className="field-input"
-                  />
-                </Field>
-              </div>
-              <Field label="State">
-                <input
-                  type="text"
-                  value={form.state}
-                  onChange={(e) => update("state", e.target.value)}
-                  placeholder="TX"
-                  maxLength={2}
-                  className="field-input"
-                />
-              </Field>
-            </div>
-
-            {/* Emails */}
-            <Field label="Emails" error={errors.emails} required>
-              <div className="space-y-2">
-                {form.emails.map((email, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => updateEmail(idx, e.target.value)}
-                      placeholder="client@example.com"
-                      className="field-input flex-1"
-                    />
-                    {idx === form.emails.length - 1 && form.emails.length < 3 ? (
-                      <button type="button" onClick={addEmail} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors shrink-0">
-                        + Add
-                      </button>
-                    ) : form.emails.length > 1 ? (
-                      <button type="button" onClick={() => removeEmail(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors shrink-0">
-                        Remove
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </Field>
-
-            {/* Phones */}
-            <Field label="Phone Numbers">
-              <div className="space-y-2">
-                {form.phones.map((phone, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => updatePhone(idx, e.target.value)}
-                      placeholder="(555) 000-0000"
-                      className="field-input flex-1"
-                    />
-                    {idx === form.phones.length - 1 && form.phones.length < 3 ? (
-                      <button type="button" onClick={addPhone} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors shrink-0">
-                        + Add
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => removePhone(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors shrink-0">
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {form.phones.length === 0 && (
-                  <button type="button" onClick={addPhone} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors">
-                    + Add Phone Number
-                  </button>
-                )}
-              </div>
-            </Field>
-
-            {/* Address */}
-            <Field label="Address">
-              <input
-                type="text"
-                value={form.address}
-                onChange={(e) => update("address", e.target.value)}
-                placeholder="Full street address"
-                className="field-input"
-              />
-            </Field>
-
-            {/* Services */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
-                Services
-              </label>
-              <div className="space-y-2">
-                {form.services.map((svc) => {
-                  const meta = SERVICE_META[svc.key];
-                  const cadence = SERVICE_CADENCES[svc.key];
-                  const is1099 = svc.key === "1099s";
-                  return (
-                    <div key={svc.key}>
-                      <label
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
-                          svc.enabled
-                            ? ""
-                            : "opacity-60 hover:opacity-100"
-                        }`}
-                        style={{
-                          borderColor: svc.enabled ? meta.pillColor : "var(--line)",
-                          backgroundColor: svc.enabled ? `${meta.pillBg}80` : "transparent",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={svc.enabled}
-                          onChange={() => toggleService(svc.key)}
-                          className="sr-only"
-                        />
-                        <span
-                          className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
-                          style={{
-                            borderColor: svc.enabled ? meta.pillColor : "var(--line)",
-                            backgroundColor: svc.enabled ? meta.pillColor : "transparent",
-                          }}
-                        >
-                          {svc.enabled && (
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
-                        </span>
-                        <span
-                          className="text-xs font-medium"
-                          style={{ color: svc.enabled ? meta.pillColor : "var(--muted)" }}
-                        >
-                          {meta.label}
-                        </span>
-                        {svc.enabled && cadence.options.length === 0 && svc.key !== "1099s" && (
-                          <span className="text-[10px] text-[var(--muted)] ml-auto">
-                            {svc.frequency}
-                          </span>
-                        )}
-                      </label>
-
-                      {/* Expanded fields — visible only when enabled */}
-                      {svc.enabled && (
-                        <div
-                          className="ml-7 mt-1.5 p-3 rounded-lg space-y-2.5"
-                          style={{
-                            backgroundColor: "var(--card)",
-                            border: "1px solid var(--line)",
-                          }}
-                        >
-                          {/* Frequency picker (only for services with cadence options) */}
-                          {cadence.options.length > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                {cadence.label}
-                              </span>
-                              <select
-                                value={svc.frequency}
-                                onChange={(e) => setServiceField(svc.key, "frequency", e.target.value)}
-                                className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
-                              >
-                                {cadence.options.map((opt) => (
-                                  <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                              </select>
-                            </div>
-                          ) : is1099 ? (
-                            /* Expected 1099s count */
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                Expected / year
-                              </span>
-                              <input
-                                type="number"
-                                min={0}
-                                value={svc.expectedAnnual ?? 0}
-                                onChange={(e) => setServiceField(svc.key, "expectedAnnual", parseInt(e.target.value) || 0)}
-                                className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                              />
-                            </div>
-                          ) : (
-                            /* Fixed cadence label */
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                Cadence
-                              </span>
-                              <span className="text-[11px] text-[var(--ink)]">{svc.frequency}</span>
-                            </div>
-                          )}
-
-                          {/* Due month picker — financials only */}
-                          {svc.key === "financials" && ["Yearly", "Quarterly"].includes(svc.frequency) && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                {svc.frequency === "Yearly" ? "Due month" : "Quarter starts"}
-                              </span>
-                              <select
-                                value={svc.financialsMonth ?? (svc.frequency === "Quarterly" ? 0 : 3)}
-                                onChange={(e) => setServiceField(svc.key, "financialsMonth", parseInt(e.target.value))}
-                                className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
-                              >
-                                {[
-                                  { v: 0, l: "January" }, { v: 1, l: "February" }, { v: 2, l: "March" },
-                                  { v: 3, l: "April" }, { v: 4, l: "May" }, { v: 5, l: "June" },
-                                  { v: 6, l: "July" }, { v: 7, l: "August" }, { v: 8, l: "September" },
-                                  { v: 9, l: "October" }, { v: 10, l: "November" }, { v: 11, l: "December" },
-                                ].map((m) => (
-                                  <option key={m.v} value={m.v}>{m.l}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-
-                          {/* Processor */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                              Processor
-                            </span>
-                            <select
-                              value={svc.processor && !["ADP", "QuickBooks", "Toast", "TaxDome", "TA", "Manual", "Other"].includes(svc.processor) ? "Other" : svc.processor}
-                              onChange={(e) => setServiceField(svc.key, "processor", e.target.value)}
-                              className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
-                            >
-                              {["ADP", "QuickBooks", "Toast", "TaxDome", "TA", "Manual", "Other"].map((p) => (
-                                <option key={p} value={p}>{p}</option>
-                              ))}
-                            </select>
-                            {svc.processor === "Other" && (
-                              <input
-                                type="text"
-                                value={svc.processorOther || ""}
-                                onChange={(e) => setServiceField(svc.key, "processorOther", e.target.value)}
-                                placeholder="Specify processor..."
-                                className="w-24 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                              />
-                            )}
-                          </div>
-
-                          {/* Assigned to */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                              Assigned to
-                            </span>
-                            <select
-                              value={svc.assignedTo || ""}
-                              onChange={(e) => setServiceField(svc.key, "assignedTo", e.target.value)}
-                              className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
-                            >
-                              <option value="">Unassigned</option>
-                              {staffOptions.map((s) => (
-                                <option key={s.id} value={s.name}>{s.name}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Payroll specific fields */}
-                          {svc.key === "payroll" && (
-                            <>
-                              <div className="mt-2 pt-2" style={{ borderTop: "1px dashed var(--line)" }}>
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--blue)]">
-                                  Payroll Details
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">EFTPs</span>
-                                <input type="text" value={svc.eftps || ""} onChange={(e) => setServiceField(svc.key, "eftps", e.target.value)}
-                                  placeholder="EFTPs password" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">Password</span>
-                                <input type="text" value={svc.payrollPassword || ""} onChange={(e) => setServiceField(svc.key, "payrollPassword", e.target.value)}
-                                  placeholder="Payroll password" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">Paydate</span>
-                                <input type="text" value={svc.paydate || ""} onChange={(e) => setServiceField(svc.key, "paydate", e.target.value)}
-                                  placeholder="e.g. 15th" className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]" />
-                              </div>
-                            </>
-                          )}
-
-                          {/* Sales Tax specific fields */}
-                          {svc.key === "sales_tax" && (
-                            <>
-                              <div className="mt-2 pt-2" style={{ borderTop: "1px dashed var(--line)" }}>
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--amber)]">
-                                  Sales Tax Details
-                                </span>
-                              </div>
-
-                              {/* Notes */}
-                              <div className="flex items-start gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0 mt-1">
-                                  Notes
-                                </span>
-                                <textarea
-                                  value={svc.salesTaxNotes || ""}
-                                  onChange={(e) => setServiceField(svc.key, "salesTaxNotes", e.target.value)}
-                                  placeholder="Sales tax notes"
-                                  rows={2}
-                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] resize-y"
-                                />
-                              </div>
-
-                              {/* Tax ID + S/Tax RT row */}
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                    Tax ID
-                                  </span>
-                                  <input
-                                    type="text"
-                                    value={svc.taxId || ""}
-                                    onChange={(e) => setServiceField(svc.key, "taxId", e.target.value)}
-                                    placeholder="EIN / SSN / ITIN"
-                                    className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                  />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                    RT
-                                  </span>
-                                  <input
-                                    type="text"
-                                    value={svc.salesTaxRT || ""}
-                                    onChange={(e) => setServiceField(svc.key, "salesTaxRT", e.target.value)}
-                                    placeholder="Sales tax return type"
-                                    className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Bank Name / Routing # / Account # */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                  Bank
-                                </span>
-                                <input
-                                  type="text"
-                                  value={svc.bankName || ""}
-                                  onChange={(e) => setServiceField(svc.key, "bankName", e.target.value)}
-                                  placeholder="Name"
-                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                />
-                                <input
-                                  type="text"
-                                  value={svc.bankRouting || ""}
-                                  onChange={(e) => setServiceField(svc.key, "bankRouting", e.target.value)}
-                                  placeholder="Routing #"
-                                  className="w-20 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                />
-                                <input
-                                  type="text"
-                                  value={svc.bankAccount || ""}
-                                  onChange={(e) => setServiceField(svc.key, "bankAccount", e.target.value)}
-                                  placeholder="Acct #"
-                                  className="w-20 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                />
-                              </div>
-
-                              {/* Sales Tax Line Items */}
-                              {(!svc.salesTaxLineItems || svc.salesTaxLineItems.length === 0) ? (
-                                <div className="text-[11px] text-[var(--muted)] italic">No line items added yet.</div>
-                              ) : (
-                                svc.salesTaxLineItems.map((item: any, idx: number) => (
-                                  <div key={idx} className="flex items-center gap-2">
-                                    <input
-                                      type="text"
-                                      value={item.jurisdiction || ""}
-                                      onChange={(e) => {
-                                        const items = [...(svc.salesTaxLineItems || [])];
-                                        items[idx] = { ...items[idx], jurisdiction: e.target.value };
-                                        setServiceField(svc.key, "salesTaxLineItems", items);
-                                      }}
-                                      placeholder="Jurisdiction"
-                                      className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={item.rt || ""}
-                                      onChange={(e) => {
-                                        const items = [...(svc.salesTaxLineItems || [])];
-                                        items[idx] = { ...items[idx], rt: e.target.value };
-                                        setServiceField(svc.key, "salesTaxLineItems", items);
-                                      }}
-                                      placeholder="RT"
-                                      className="w-20 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const items = svc.salesTaxLineItems.filter((_: any, i: number) => i !== idx);
-                                        setServiceField(svc.key, "salesTaxLineItems", items);
-                                      }}
-                                      className="p-1 rounded hover:bg-[var(--red-soft)] transition-colors"
-                                      aria-label="Remove line item"
-                                    >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round">
-                                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                ))
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const items = [...(svc.salesTaxLineItems || []), { jurisdiction: "", rt: "" }];
-                                  setServiceField(svc.key, "salesTaxLineItems", items);
-                                }}
-                                className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors w-full"
-                              >
-                                + Add Line Item
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div
-              className="flex items-center justify-end gap-3 pt-3 sticky bottom-0"
-              style={{
-                backgroundColor: "var(--card)",
-                borderTop: "1px solid var(--line)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-sm font-medium px-4 py-2 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="text-sm font-semibold px-5 py-2 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity"
-              >
-                {isEdit ? "Save Changes" : "Add Client"}
-              </button>
-            </div>
-          </form>
+    <div className="mscrim show" style={{
+      position: "fixed", inset: 0, background: "rgba(33,31,26,0.4)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 60, padding: 20,
+    }} onClick={onClose}>
+      <div className="modal" style={{
+        background: "var(--paper)", borderRadius: 18, width: 480, maxWidth: "100%",
+        maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow)",
+      }} onClick={e => e.stopPropagation()}>
+        <h2 style={{
+          fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600,
+          padding: "20px 24px 4px", margin: 0, color: "var(--ink)",
+        }}>
+          {isEdit ? "Edit client" : "Add a client"}
+        </h2>
+        <div className="msub" style={{
+          color: "var(--muted)", fontSize: 13, padding: "0 24px 14px",
+          borderBottom: "1px solid var(--line)",
+        }}>
+          Fill this once — they&apos;ll appear in the right worklists automatically.
         </div>
 
-        {/* Modal animation */}
-        <style jsx>{`
-          @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.96) translateY(8px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-          }
-          .animate-modal-in {
-            animation: modalIn 0.2s ease-out;
-          }
-        `}</style>
-      </div>
-    </>
-  );
-}
+        <div className="mform" style={{ padding: "18px 24px" }}>
+          {/* CID box */}
+          <div className="cidbox" style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "var(--teal-soft)", border: "1px solid #cdd6ec",
+            borderRadius: 11, padding: "10px 14px", fontSize: 13,
+            color: "var(--teal-ink)", fontWeight: 600, marginBottom: 4,
+          }}>
+            New Client ID <b className="mono" style={{ fontSize: 15 }}>{previewCid}</b>
+            <span style={{ marginLeft: "auto", fontWeight: 500, fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", opacity: .7 }}>auto-assigned</span>
+          </div>
 
-// ── Form field helper ──
-function Field({
-  label,
-  error,
-  required,
-  children,
-}: {
-  label: string;
-  error?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
-        {label}
-        {required && <span className="text-[var(--red)] ml-0.5">*</span>}
-      </label>
-      {children}
-      {error && (
-        <p className="text-[11px] text-[var(--red)] mt-1">{error}</p>
-      )}
-      <style jsx>{`
-        :global(.field-input) {
-          width: 100%;
-          padding: 0.5rem 0.75rem;
-          border-radius: 0.5rem;
-          border: 1px solid var(--line);
-          background-color: var(--card);
-          color: var(--ink);
-          font-size: 0.875rem;
-          outline: none;
-          transition: border-color 0.15s, box-shadow 0.15s;
-        }
-        :global(.field-input:focus) {
-          border-color: var(--teal);
-          box-shadow: 0 0 0 2px var(--teal-soft);
-        }
-        :global(.field-input::placeholder) {
-          color: var(--muted);
-          opacity: 0.6;
-        }
-      `}</style>
+          {/* ── Client section ── */}
+          <div className="fsect" style={fsectStyle}>Client</div>
+          <label style={labelStyle}>Client / entity name</label>
+          <input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sunrise Holdings LLC" autoFocus />
+          <div className="two" style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Type</label>
+              <select style={inputStyle} value={type} onChange={e => setType(e.target.value)}>
+                <option>Business</option><option>Personal</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Group / owner</label>
+              <input style={inputStyle} value={group} onChange={e => setGroup(e.target.value)} placeholder="e.g. Gambhir" />
+            </div>
+          </div>
+          <label style={labelStyle}>Assigned to</label>
+          <select style={inputStyle} value={assigned} onChange={e => setAssigned(e.target.value)}>
+            {STAFF.map(s => <option key={s}>{s}</option>)}
+          </select>
+
+          {/* ── Contact section ── */}
+          <div className="fsect" style={fsectStyle}>Contact</div>
+          <label style={labelStyle}>Email</label>
+          <input style={inputStyle} value={email} onChange={e => setEmail(e.target.value)} placeholder="client@email.com" />
+          <label style={labelStyle}>Additional email <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <input style={inputStyle} value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="cc@email.com" />
+          <label style={labelStyle}>Phone</label>
+          <input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="(713) 555-0100" />
+          <label style={labelStyle}>Street address</label>
+          <input style={inputStyle} value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St." />
+          <div className="two" style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 2 }}>
+              <label style={labelStyle}>City</label>
+              <input style={inputStyle} value={city} onChange={e => setCity(e.target.value)} placeholder="Houston" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>State</label>
+              <input style={inputStyle} value={st} onChange={e => setSt(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>ZIP</label>
+              <input style={inputStyle} value={zip} onChange={e => setZip(e.target.value)} placeholder="77002" />
+            </div>
+          </div>
+
+          {/* ── Services section ── */}
+          <div className="fsect" style={fsectStyle}>Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them; details appear as you tick</span></div>
+
+          {/* Financials */}
+          <ServiceCard icon="📊" label="Monthly Financials" checked={fin} onChange={setFin}>
+            <div className="two" style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>
+                <select style={inputStyle} value={finFreq} onChange={e => setFinFreq(e.target.value)}>
+                  <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Monthly fee ($)</label>
+                <input style={inputStyle} value={fee} onChange={e => setFee(e.target.value)} placeholder="750" />
+              </div>
+            </div>
+          </ServiceCard>
+
+          {/* Payroll */}
+          <ServiceCard icon="💵" label="Payroll" checked={pr} onChange={setPr}>
+            <div className="two" style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>
+                <select style={inputStyle} value={prFreq} onChange={e => setPrFreq(e.target.value)}>
+                  <option>Weekly</option><option>Bi-Weekly</option><option>Semi-Monthly</option><option>Monthly</option><option>Quarterly</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Processor</label>
+                <select style={inputStyle} value={prProc} onChange={e => setPrProc(e.target.value)}>
+                  <option>ADP</option><option>Sure Payroll</option><option>QuickBooks Desktop</option><option>Gusto</option><option>Heartland</option><option>Toast</option><option>Paychex</option>
+                </select>
+              </div>
+            </div>
+          </ServiceCard>
+
+          {/* Sales Tax */}
+          <ServiceCard icon="🧾" label="Sales Tax" checked={stx} onChange={setStx}>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Filing frequency</label>
+            <select style={inputStyle} value={stxFreq} onChange={e => setStxFreq(e.target.value)}>
+              <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+            </select>
+          </ServiceCard>
+
+          {/* Tax Return */}
+          <ServiceCard icon="📋" label="Tax Return" checked={tax} onChange={setTax}>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Return type</label>
+            <select style={inputStyle} value={taxType} onChange={e => setTaxType(e.target.value)}>
+              <option>Business</option><option>1040</option><option>1065</option><option>1120</option><option>1120-S</option><option>990</option>
+            </select>
+          </ServiceCard>
+
+          {/* 1099 Filing */}
+          <ServiceCard icon="📄" label="1099 Filing" checked={t9} onChange={setT9} />
+
+          {/* Renditions */}
+          <ServiceCard icon="🏠" label="Renditions (property tax)" checked={rend} onChange={setRend} />
+        </div>
+
+        <div className="mfoot" style={{
+          padding: "6px 24px 22px", display: "flex", gap: 10, justifyContent: "flex-end",
+        }}>
+          <button className="btn alt" onClick={onClose} style={btnStyle(false)}>Cancel</button>
+          <button className="btn" onClick={handleSave} style={btnStyle(true)}>
+            {isEdit ? "Save changes" : "＋ Add client"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
+// ── Service card (checkbox toggle → expandable sub) ──
+function ServiceCard({ icon, label, checked, onChange, children }: {
+  icon: string; label: string; checked: boolean; onChange: (v: boolean) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="svccard" style={{
+      background: "var(--card)", border: "1px solid var(--line)", borderRadius: 11,
+      marginBottom: 8, overflow: "hidden",
+    }}>
+      <label className="svctop" style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "11px 13px",
+        margin: 0, cursor: "pointer", fontSize: 14, fontWeight: 600,
+        color: "var(--ink)", textTransform: "none", letterSpacing: 0,
+      }}>
+        <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ width: "auto" }} />
+        <span style={{ fontSize: 16 }}>{icon}</span><span>{label}</span>
+      </label>
+      {children && (
+        <div className={`svcsub${checked ? " open" : ""}`} style={{
+          maxHeight: checked ? 200 : 0, opacity: checked ? 1 : 0,
+          padding: checked ? "6px 13px 13px" : "0 13px",
+          transition: ".18s", background: "#faf7f0",
+          borderTop: checked ? "1px solid var(--line)" : "none",
+          overflow: "hidden",
+        }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Shared styles ──
+const fsectStyle: React.CSSProperties = {
+  fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 15,
+  color: "var(--ink)", margin: "20px 0 6px", paddingBottom: 6,
+  borderBottom: "1px solid var(--line)",
+};
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)",
+  margin: "12px 0 5px", textTransform: "uppercase", letterSpacing: ".04em",
+};
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 12px", border: "1px solid var(--line)",
+  borderRadius: 10, font: "inherit", fontSize: 14, background: "var(--card)",
+  color: "var(--ink)",
+};
+const btnStyle = (primary: boolean): React.CSSProperties => ({
+  all: "unset", cursor: "pointer",
+  background: primary ? "var(--ink)" : "var(--card)",
+  color: primary ? "#fff" : "var(--ink)",
+  border: primary ? "none" : "1px solid var(--line)",
+  padding: "10px 16px", borderRadius: 11,
+  fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
+});
