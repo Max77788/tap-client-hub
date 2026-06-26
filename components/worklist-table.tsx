@@ -794,36 +794,28 @@ export default function WorklistTable({
       </p>
       )}
 
-      {/* ── Stage Picker overlay ── */}
+      {/* ── Stage Picker — floating adjacent dropdown ── */}
       {pickerTarget && variant !== "t9" && (
         <>
-          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" onClick={closePicker} />
           <div
-            className="fixed inset-0 z-40"
-            onClick={closePicker}
-            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-          />
-          {/* Picker sheet */}
-          <div
-            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl px-4 pt-5 pb-8"
+            className="fixed z-50 shadow-xl rounded-xl px-3 py-2.5"
             style={{
               backgroundColor: "var(--card)",
-              boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
               border: "1px solid var(--line)",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              minWidth: 220,
             }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-bold text-[var(--ink)]">
-                {MONTHS_SHORT[pickerTarget.monthIdx]} — Set Status
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-[var(--ink)] uppercase tracking-wider">
+                {MONTHS_SHORT[pickerTarget.monthIdx]}
               </span>
-              <button
-                onClick={closePicker}
-                className="text-xs text-[var(--muted)] bg-transparent border-none cursor-pointer px-2 py-1 rounded hover:bg-[var(--teal-soft)] transition-colors"
-              >
-                ✕
-              </button>
+              <button onClick={closePicker} className="text-xs text-[var(--muted)] bg-transparent border-none cursor-pointer p-0.5 hover:text-[var(--ink)] transition-colors">✕</button>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {STAGE_CYCLE.map((stage) => {
                 const style = STAGE_STYLES[stage];
                 const label = STAGE_LABELS[stage] || "Not Due";
@@ -831,47 +823,31 @@ export default function WorklistTable({
                 const stages = worklistState[key] ?? [];
                 const currentStage = stages[pickerTarget.monthIdx] || "";
                 const isCurrent = stage === currentStage;
+                const isDelayed = stage !== "dn" && stage !== "na" && stage !== "" && pickerTarget.monthIdx < currentMonth && !isHistorical;
                 return (
                   <button
                     key={stage}
-                    onClick={() =>
-                      handleStageSelect(pickerTarget.clientId, pickerTarget.monthIdx, stage)
-                    }
-                    className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl transition-colors border"
+                    onClick={() => handleStageSelect(pickerTarget.clientId, pickerTarget.monthIdx, stage)}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-colors border w-full text-left"
                     style={{
                       backgroundColor: isCurrent ? style.bg : "transparent",
-                      borderColor: isCurrent ? style.fg : "var(--line)",
+                      borderColor: isCurrent ? style.fg : "transparent",
                       color: isCurrent ? style.fg : "var(--muted)",
-                      fontWeight: isCurrent ? 700 : 400,
+                      boxShadow: isDelayed ? "inset 0 0 0 1.5px var(--red)" : "none",
                     }}
                   >
                     <span
-                      className="w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold"
+                      className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0"
                       style={{
-                        backgroundColor: isCurrent ? style.bg : style.bg || "transparent",
-                        color: style.fg,
-                        border: stage === "" && !isCurrent
-                          ? "1px dashed var(--line)"
-                          : "1px solid transparent",
+                        backgroundColor: isCurrent ? style.fg : style.bg || "transparent",
+                        color: isCurrent ? "#fff" : style.fg,
+                        border: stage === "" && !isCurrent ? "1px dashed var(--line)" : "1px solid transparent",
                       }}
                     >
-                      {stage === ""
-                        ? "·"
-                        : stage === "ip"
-                          ? "•"
-                          : stage === "wc"
-                            ? "⏳"
-                            : stage === "pp"
-                              ? "✓"
-                              : stage === "dn"
-                                ? "✓"
-                                : stage === "na"
-                                  ? "✗"
-                                  : ""}
+                      {stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : stage === "dn" ? "✓" : stage === "na" ? "✗" : ""}
                     </span>
-                    <span className="text-[11px] leading-tight text-center">
-                      {label}
-                    </span>
+                    <span className="truncate">{label}</span>
+                    {isDelayed && <span className="ml-auto text-[9px] text-[var(--red)] font-bold">!</span>}
                   </button>
                 );
               })}
