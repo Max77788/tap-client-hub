@@ -356,10 +356,6 @@ export default function WorklistTable({
     { stage: "na", dot: "●" },
   ];
 
-  // ── Compact month column class ──
-  const monthColClass =
-    "text-center text-[11px] font-semibold uppercase tracking-tight";
-
   // ── Count of columns before month columns (for colspan) ──
   const baseCols = 2; // Client + Assigned
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
@@ -494,13 +490,13 @@ export default function WorklistTable({
             <tr style={{ borderBottom: "2px solid var(--line)" }} className="text-left">
               <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "22%" }}>Client</th>
               <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>Assigned</th>
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)] text-center" style={{ width: "7%" }}>Expected</th>
+              <th className="mh">Expected</th>
               {MONTHS_SHORT.map((m, i) => {
                 const isCM = i === currentMonth && !isHistorical;
-                return <th key={m} className={monthColClass + " px-0.5 py-2"} style={{ width: "auto", color: isCM ? "var(--teal)" : "var(--muted)", backgroundColor: isCM ? "var(--teal-soft)" : "transparent", borderBottom: isCM ? "2px solid var(--teal)" : "none" }}>{m}</th>;
+                return <th key={m} className={`mh${isCM ? " mh-now" : ""}`}>{m}</th>;
               })}
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)] text-center" style={{ width: "6%" }}>Done</th>
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)] text-center" style={{ width: "6%" }}>Left</th>
+              <th className="mh">Done</th>
+              <th className="mh">Left</th>
             </tr>
             ) : (
             <tr
@@ -529,22 +525,7 @@ export default function WorklistTable({
               {MONTHS_SHORT.map((m, i) => {
                 const isCurrentMonth = i === currentMonth && !isHistorical;
                 return (
-                  <th
-                    key={m}
-                    className={monthColClass + " px-0.5 py-2"}
-                    style={{
-                      width: "auto",
-                      color: isCurrentMonth
-                        ? "var(--teal)"
-                        : "var(--muted)",
-                      backgroundColor: isCurrentMonth
-                        ? "var(--teal-soft)"
-                        : "transparent",
-                      borderBottom: isCurrentMonth
-                        ? "2px solid var(--teal)"
-                        : "none",
-                    }}
-                  >
+                  <th key={m} className={`mh${isCurrentMonth ? " mh-now" : ""}`}>
                     {m}
                   </th>
                 );
@@ -592,7 +573,7 @@ export default function WorklistTable({
                         const isCM = i === currentMonth && !isHistorical;
                         const clickable = !isHistorical;
                         return (
-                          <td key={mo} className={`px-0 py-1.5 ${isCM ? "bg-[var(--teal-soft)]" : ""}`}>
+                          <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`}>
                             <div
                               onClick={clickable ? (e) => t9Bump(client.id, i, e) : undefined}
                               className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors cursor-${clickable ? "pointer" : "default"} hover:scale-110 hover:shadow-sm active:scale-95`}
@@ -674,7 +655,7 @@ export default function WorklistTable({
                           : Math.max(0, expected - 1 - (i % 2));
 
                         return (
-                          <td key={i} className="px-0 py-1.5">
+                          <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
                             <CellWrapper
                               isCurrentMonth={isCurrentMonth}
                               isPastDue={isPastDue}
@@ -702,7 +683,7 @@ export default function WorklistTable({
                       const delayed = isPastDue && !isHistorical;
                       const lockHist = isHistorical && isActive;
                       return (
-                        <td key={i} className="px-0 py-1.5">
+                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
                           <div
                             onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
                             className="mcell"
