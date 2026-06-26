@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { useMemo, useState, useCallback } from "react";
 import * as XLSX from "xlsx";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
@@ -165,43 +165,44 @@ export default function ClientsPage() {
       ) : (
         <>
           {/* ── Stat cards row ── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatCard label="Total Clients" value={stats.total} />
-        <StatCard label="Business" value={stats.business} color="var(--teal)" softColor="var(--teal-soft)" />
-        <StatCard label="Personal" value={stats.personal} color="var(--blue)" softColor="var(--blue-soft)" />
-        <StatCard label="Financials" value={stats.monthlyFinancials} color="var(--green)" softColor="var(--green-soft)" />
-        <StatCard label="Behind This Month" value={stats.behindThisMonth} color="var(--red)" softColor="var(--red-soft)" alert={stats.behindThisMonth > 0} />
+      <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+        <StatCard label="Total clients" value={stats.total} color="var(--ink)" />
+        <StatCard label="Business" value={stats.business} color="var(--teal)" />
+        <StatCard label="Personal" value={stats.personal} color="var(--blue)" />
+        <StatCard label="Monthly financials" value={stats.monthlyFinancials} color="var(--green)" />
+        <StatCard label="Behind this month" value={stats.behindThisMonth} color="var(--amber)" />
       </div>
 
-      {/* ── Count summary ── */}
-      <p className="text-[13px] text-[var(--muted)]" style={{ margin: "12px 2px 6px" }}>
-        Showing {stats.total} clients — {stats.business} Business, {stats.personal} Personal
-      </p>
-
-      {/* ── Toolbar: Search + Filters + Actions ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 flex-wrap">
-        {/* Search */}
-        <div className="flex-[2] min-w-[280px]">
+      {/* ── Controls: Search + Filters + Actions ── */}
+      <div className="controls" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "16px 0 4px" }}>
+        {/* Search with magnifying glass */}
+        <div className="search" style={{ flex: 1, minWidth: 220, position: "relative" }}>
+          <span className="mag" style={{ position: "absolute", left: 13, top: 11, opacity: 0.45 }}>🔍</span>
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search clients"
-            className="w-full pl-[14px] pr-[14px] py-[10px] rounded-[11px] border border-[var(--line)] bg-[var(--card)] text-[14px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
+            placeholder="Search client or group…"
+            style={{
+              width: "100%", padding: "11px 14px 11px 38px",
+              border: "1px solid var(--line)", borderRadius: 11,
+              background: "var(--card)", font: "inherit", fontSize: 14,
+            }}
           />
         </div>
 
         {/* Type filter tabs */}
-        <div className="flex items-center rounded-[11px] border border-[var(--line)] bg-[var(--card)] p-[3px]">
+        <div className="seg" style={{ display: "flex", background: "var(--card)", border: "1px solid var(--line)", borderRadius: 11, padding: 3 }}>
           {(["All", "Business", "Personal"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={`text-[13px] font-medium px-[13px] py-[7px] rounded-[8px] transition-colors ${
-                typeFilter === t
-                  ? "bg-[var(--teal)] text-white font-semibold"
-                  : "text-[var(--muted)] hover:text-[var(--ink)]"
-              }`}
+              style={{
+                all: "unset", cursor: "pointer", padding: "7px 13px", borderRadius: 8,
+                fontSize: 13, fontWeight: typeFilter === t ? 600 : 500,
+                background: typeFilter === t ? "var(--teal)" : "transparent",
+                color: typeFilter === t ? "#fff" : "var(--muted)",
+              }}
             >
               {t}
             </button>
@@ -212,49 +213,43 @@ export default function ClientsPage() {
         <select
           value={staffFilter}
           onChange={(e) => setStaffFilter(e.target.value)}
-          className="text-sm rounded-[11px] px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none"
+          className="pick"
+          style={{
+            padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 11,
+            background: "var(--card)", font: "inherit", fontSize: "13.5px", color: "var(--ink)",
+          }}
         >
-          <option value="">All Staff</option>
+          <option value="">All</option>
           {staffOptions.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
 
         {/* Action buttons */}
-        <button
-          onClick={handleExport}
-          className="btn-secondary"
-          title="Export filtered clients to Excel"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          Export to Excel
+        <button onClick={handleExport} className="btn alt" style={{
+          all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
+          border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
+          fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
+        }}>
+          ⤓ Export to Excel
         </button>
-        <button
-          onClick={openAddModal}
-          className="btn-primary"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add Client
+        <button onClick={openAddModal} className="btn" style={{
+          all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+          padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+          display: "inline-flex", gap: 7, alignItems: "center",
+        }}>
+          ＋ Add client
         </button>
       </div>
 
-      {/* ── Results summary ── */}
-      {filteredClients.length < clients.length && (
-        <p className="text-[13px] text-[var(--muted)]">
-          Showing {filteredClients.length} of {clients.length} clients
-          {search ? ` matching "${search}"` : ""}
-        </p>
-      )}
+      {/* ── Count line ── */}
+      <div className="count" style={{ color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px" }}>
+        {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} shown
+      </div>
 
       {/* ── Client cards grid ── */}
       {displayItems.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
           {displayItems.map((item) =>
             item.kind === "group" ? (
               <GroupCard
@@ -326,38 +321,40 @@ export default function ClientsPage() {
 
 // ══════════════════════════════════════════════
 // ── Stat Card ──
-// ══════════════════════════════════════════════
+// ── Stat Card (demo v7 exact) ──
 function StatCard({
   label,
   value,
   color,
-  softColor,
-  alert,
 }: {
   label: string;
   value: number;
   color?: string;
-  softColor?: string;
-  alert?: boolean;
 }) {
   return (
     <div
-      className="p-[13px_16px] rounded-[13px] flex flex-col justify-between border"
+      className="statcard"
       style={{
+        flex: 1, minWidth: 120,
         backgroundColor: "var(--card)",
-        borderColor: "var(--line)",
+        border: "1px solid var(--line)",
+        borderRadius: 13,
+        padding: "13px 16px",
         boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
       }}
     >
-      <p className="text-[12px] text-[var(--muted)] mb-1 leading-tight" style={{ fontFamily: '"Public Sans", sans-serif' }}>
-        {label}
-      </p>
-      <p
-        className="text-[26px] font-semibold m-0 leading-none"
-        style={{ fontFamily: '"Fraunces", Georgia, serif', color: alert ? "var(--red)" : "var(--ink)" }}
-      >
+      <div className="sn" style={{
+        fontFamily: '"Fraunces",Georgia,serif',
+        fontWeight: 600, fontSize: 26, lineHeight: 1,
+        color: color || "var(--ink)",
+      }}>
         {value}
-      </p>
+      </div>
+      <div className="sl" style={{
+        fontSize: 12, color: "var(--muted)", marginTop: 4,
+      }}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -585,77 +582,33 @@ function GroupCard({
 }
 
 // ══════════════════════════════════════════════
-// ── Client Card ──
+// ── Client Card (demo v7 exact) ──
 // ══════════════════════════════════════════════
 
-const STATUS_OPTIONS = [
-  { value: "not_started", label: "Not Started", color: "var(--muted)", bg: "#e8eaf0" },
-  { value: "in_progress", label: "In Progress", color: "var(--blue)", bg: "var(--blue-soft)" },
-  { value: "done", label: "Done", color: "var(--green)", bg: "var(--green-soft)" },
-  { value: "delayed", label: "Delayed", color: "var(--red)", bg: "var(--red-soft)" },
-] as const;
-
 function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
-  const enabledServices = client.services.filter((s) => s.enabled);
-  const [openPopover, setOpenPopover] = useState<string | null>(null);
-  const [serviceStatuses, setServiceStatuses] = useState<Record<string, string>>(() => {
-    const map: Record<string, string> = {};
+  const enabledServices = client.services.filter((s) => s.enabled && s.key);
+
+  // Get unique assignees across all enabled services
+  const assignees = useMemo(() => {
+    const set = new Set<string>();
     for (const svc of enabledServices) {
-      map[svc.key || svc.id] = (svc as any).currentStage || "not_started";
+      const who = svc.processor || svc.assignedTo || "-";
+      if (who && who !== "-") set.add(who);
     }
-    return map;
-  });
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  // Sync external state changes
-  useEffect(() => {
-    const map: Record<string, string> = {};
-    for (const svc of enabledServices) {
-      map[svc.key || svc.id] = (svc as any).currentStage || "not_started";
-    }
-    setServiceStatuses(map);
-  }, [client.services]);
-
-  // Close popover on outside click
-  useEffect(() => {
-    if (!openPopover) return;
-    function handleClick(e: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setOpenPopover(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [openPopover]);
-
-  const handleStatusChange = async (svc: any, newStatus: string) => {
-    const key = svc.key || svc.id;
-    setServiceStatuses((prev) => ({ ...prev, [key]: newStatus }));
-    setOpenPopover(null);
-
-    if (!svc.csId) return; // No server ID yet
-    const period = new Date().toISOString().slice(0, 7);
-    await fetch("/api/work-periods", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_service_id: svc.csId,
-        period,
-        stage: newStatus,
-      }),
-    });
-  };
+    return [...set];
+  }, [client]);
 
   return (
     <div
       onClick={onClick}
-      className="group p-[15px_16px] cursor-pointer border"
+      className="ccard group cursor-pointer"
       style={{
         backgroundColor: "var(--card)",
-        borderColor: "var(--line)",
-        borderRadius: "14px",
+        border: "1px solid var(--line)",
+        borderRadius: 14,
+        padding: "15px 16px",
         boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
-        transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
+        transition: ".14s",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-2px)";
@@ -668,15 +621,16 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         e.currentTarget.style.borderColor = "var(--line)";
       }}
     >
-      {/* Top row: Name + Type badge */}
-      <div className="flex items-start justify-between gap-2 mb-[3px]">
-        <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight"
-          style={{ fontFamily: '"Fraunces", Georgia, serif', wordBreak: "break-word" }}>
+      {/* Name + Type badge */}
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+        <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: "16.5px", lineHeight: 1.2 }}>
           {client.name}
-        </h3>
+        </div>
         <span
-          className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
+          className="badge"
           style={{
+            fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+            textTransform: "uppercase", letterSpacing: "0.05em",
             backgroundColor: client.type === "Business" ? "var(--ink)" : "#dfe7e6",
             color: client.type === "Business" ? "#fff" : "var(--teal-ink)",
           }}
@@ -685,93 +639,41 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         </span>
       </div>
 
-      {/* Meta row */}
-      <div className="flex items-center gap-2 text-[12.5px] text-[var(--muted)] mb-[11px]">
-        <span>{client.group}</span>
-        <span aria-hidden>·</span>
-        <span>{client.city}, {client.state}</span>
+      {/* Meta row: CID · group · city, state */}
+      <div className="meta" style={{ color: "var(--muted)", fontSize: "12.5px", marginTop: 3 }}>
+        <span className="mono" style={{ color: "#9a9484" }}>{client.cid || `TP|BS|${String(client.id).padStart(4,"0")}`}</span>
+        {" · "}{client.group || "—"}{" · "}{client.city}, {client.state}
       </div>
 
-      {/* Service pills — colored by service type, click for status popover */}
-      <div className="flex flex-wrap gap-[5px] mb-3">
+      {/* Service pills */}
+      <div className="pills" style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 10 }}>
         {enabledServices.map((svc) => {
-          const meta = svc.key ? SERVICE_META[svc.key] : null;
+          const key = svc.key!;
+          const meta = SERVICE_META[key as ServiceKey];
           if (!meta) return null;
-          const key = svc.key || svc.id;
-          const isOpen = openPopover === key;
-
+          const pillClass = key === "financials" ? "p-fin" : key === "payroll" ? "p-pr" : key === "sales_tax" ? "p-stx" : key === "tax_returns" ? "p-tax" : key === "1099s" ? "p-9" : key === "renditions" ? "p-rn" : "";
+          const labels: Record<string, string> = { financials: "FINANCIALS", payroll: "PAYROLL", sales_tax: "SALES TAX", tax_returns: "TAX RTN", "1099s": "1099", renditions: "RENDITION" };
           return (
-            <span key={key} style={{ position: "relative" }}>
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenPopover(isOpen ? null : key);
-                }}
-                className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px] cursor-pointer transition-colors"
-                style={{
-                  backgroundColor: meta.pillBg,
-                  color: meta.pillColor,
-                  letterSpacing: "0.02em",
-                }}
-                title={STATUS_OPTIONS.find((o) => o.value === (serviceStatuses[key] || "not_started"))?.label}
-              >
-                {meta.label}
-              </span>
-
-              {isOpen && (
-                <div
-                  ref={popoverRef}
-                  className="absolute z-50 bottom-full left-0 mb-1 p-1 rounded-lg shadow-lg flex flex-col gap-0.5 min-w-[110px]"
-                  style={{
-                    backgroundColor: "var(--card)",
-                    border: "1px solid var(--line)",
-                    boxShadow: "0 4px 16px rgba(26,35,64,0.16)",
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => handleStatusChange(svc, opt.value)}
-                      className={`text-[10px] font-semibold px-2 py-1 rounded text-left hover:opacity-80 transition-opacity ${
-                        serviceStatuses[key] === opt.value ? "ring-1 ring-inset" : ""
-                      }`}
-                      style={{
-                        backgroundColor: opt.bg,
-                        color: opt.color,
-                      }}
-                    >
-                      {opt.label}
-                      {serviceStatuses[key] === opt.value && " ✓"}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <span key={key} className={`pill ${pillClass}`} style={{
+              fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.02em", padding: "3px 8px", borderRadius: 20,
+              backgroundColor: meta.pillBg, color: meta.pillColor,
+            }}>
+              {labels[key] || meta.label}
             </span>
           );
         })}
         {enabledServices.length === 0 && (
-          <span className="text-[10px] text-[var(--muted)] italic">No services</span>
+          <span className="pill" style={{ fontSize: "10.5px", fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: "#eee", color: "#888" }}>
+            No services
+          </span>
         )}
       </div>
 
-      {/* Bottom row: arrow indicator */}
-      <div
-        className="flex items-center justify-end pt-2"
-        style={{ borderTop: "1px solid var(--line)" }}
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="var(--muted)"
-          strokeWidth="2"
-          className="group-hover:translate-x-0.5 transition-transform"
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+      {/* Handled by */}
+      <div className="row2" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 11 }}>
+        <span className="assignee" style={{ fontSize: 12, color: "var(--muted)" }}>
+          Handled by <b style={{ color: "var(--ink)", fontWeight: 600 }}>{assignees.length ? assignees.join(", ") : "—"}</b>
+        </span>
       </div>
     </div>
   );
