@@ -16,7 +16,7 @@ export async function GET() {
   const supabase = await createClient();
 
   const { data: dbClients, error: clientsError } = await supabase
-    .from("clients").select("*").eq("status", "active").order("name");
+    .from("clients").select("*, contacts(*)").eq("status", "active").order("name");
 
   if (clientsError || !dbClients) {
     return NextResponse.json({ error: clientsError?.message }, { status: 500 });
@@ -111,7 +111,9 @@ export async function GET() {
       id: db.id, cid: db.cid || `CID-${db.id.substring(0, 4)}`,
       name: db.name, type: db.type === "business" ? "Business" : "Personal",
       group: db.group_owner || "Unassigned", status: db.status || "active",
-      city: db.city || "", state: db.state || "TX", email: "", phone: "",
+      city: db.city || "", state: db.state || "TX",
+      emails: (db.contacts || []).map((c: any) => c.email).filter(Boolean),
+      phones: (db.contacts || []).map((c: any) => c.phone).filter(Boolean),
       address: db.address || "",
       assignedStaff: clientServices[0]?.assigned_to || "Unassigned",
       services,
@@ -136,6 +138,26 @@ export async function POST(request: Request) {
 
   if (error || !client) {
     return NextResponse.json({ error: error?.message || "Insert failed" }, { status: 500 });
+  }
+
+  // Save contacts (emails and phones)
+  const contacts: { client_id: string; email: string; phone: string; is_primary: boolean }[] = [];
+  const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
+  const phones = Array.isArray(body.phones) ? body.phones.filter((p: string) => p.trim()) : [];
+
+  // Create contacts from emails and phones
+  const maxLen = Math.max(emails.length, phones.length, 1);
+  for (let i = 0; i < maxLen; i++) {
+    contacts.push({
+      client_id: client.id,
+      email: emails[i] || "",
+      phone: phones[i] || "",
+      is_primary: i === 0,
+    });
+  }
+
+  if (contacts.length > 0) {
+    await supabase.from("contacts").insert(contacts);
   }
 
   // Create client_services for enabled services
@@ -184,6 +206,50 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ client }, { status: 201 });
+}
+
+export async function PUT(request: Request) {
+  const supabase = await createClient();
+  const body = await request.json();
+  const id = body.id;
+  if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
+
+  // Update client record
+  const { error: clientError } = await supabase
+    .from("clients").update({
+      name: body.name,
+      type: body.type?.toLowerCase() || "business",
+      group_owner: body.group || null,
+      status: body.status || "active",
+      city: body.city || "",
+      state: body.state || "TX",
+      address: body.address || "",
+    }).eq("id", id);
+
+  if (clientError) {
+    return NextResponse.json({ error: clientError.message }, { status: 500 });
+  }
+
+  // Replace contacts: delete all, then re-insert
+  await supabase.from("contacts").delete().eq("client_id", id);
+
+  const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
+  const phones = Array.isArray(body.phones) ? body.phones.filter((p: string) => p.trim()) : [];
+  const contacts: any[] = [];
+  const maxLen = Math.max(emails.length, phones.length, 1);
+  for (let i = 0; i < maxLen; i++) {
+    contacts.push({
+      client_id: id,
+      email: emails[i] || "",
+      phone: phones[i] || "",
+      is_primary: i === 0,
+    });
+  }
+  if (contacts.length > 0) {
+    await supabase.from("contacts").insert(contacts);
+  }
+
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(request: Request) {

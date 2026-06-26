@@ -147,6 +147,9 @@ function LoginContent() {
             <p className="text-sm text-center mb-2" style={{ color: "var(--muted)" }}>
               {twoFAMessage || "Check your email for the verification code"}
             </p>
+            <p className="text-sm text-center font-bold mb-3" style={{ color: "var(--amber)" }}>
+              If you don't see the code check the spam folder in your email
+            </p>
 
             <form onSubmit={handle2FASubmit} className="space-y-4">
               <div>

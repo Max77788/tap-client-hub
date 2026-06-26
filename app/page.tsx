@@ -131,8 +131,8 @@ export default function ClientsPage() {
         "City": c.city,
         "State": c.state,
         "Address": c.address,
-        "Email": c.email || "",
-        "Phone": c.phone || "",
+        "Email": (c.emails || []).filter(Boolean).join(", "),
+        "Phone": (c.phones || []).filter(Boolean).join(", "),
         "Assigned Staff": c.assignedStaff || "",
         "Services": enabledSvcs.map((s) => s.service?.name || s.key || "").join(", "),
       };
@@ -374,136 +374,213 @@ function GroupCard({
   clients: Client[];
   onClientClick: (id: string) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [showPopup, setShowPopup] = useState(false);
   // Collect unique locations and services across all group members
   const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
   const allServices = new Set<string>();
   clients.forEach((c) => c.services.filter((s) => s.enabled && s.key).forEach((s) => allServices.add(s.key!)));
 
   return (
-    <div
-      className="group p-[15px_16px] border"
-      style={{
-        backgroundColor: "var(--card)",
-        borderColor: "var(--line)",
-        borderRadius: "14px",
-        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
-        transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "var(--shadow)";
-        e.currentTarget.style.borderColor = "#cfc7b5";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "";
-        e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
-        e.currentTarget.style.borderColor = "var(--line)";
-      }}
-    >
-      {/* Top row: Group name + count badge + collapse toggle */}
-      <div className="flex items-start justify-between gap-2 mb-[3px]">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="shrink-0 p-0.5 rounded hover:bg-[var(--teal-soft)]/50 transition-colors"
-            title={collapsed ? "Expand group" : "Collapse group"}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--muted)"
-              strokeWidth="2.5"
-              style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-          <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight truncate"
-            style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
-            {groupName}
-          </h3>
-        </div>
-        <span
-          className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
-          style={{
-            backgroundColor: "var(--teal-soft)",
-            color: "var(--teal)",
-            letterSpacing: "0.02em",
-          }}
-        >
-          {clients.length} entities
-        </span>
-      </div>
-
-      {/* Locations */}
-      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2 ml-[22px]">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
-        <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
-      </div>
-
-      {/* Service pills with distinct service colors */}
-      <div className="flex flex-wrap gap-1.5 mb-3 ml-[22px]">
-        {[...allServices].slice(0, 5).map((key) => {
-          const meta = SERVICE_META[key as ServiceKey];
-          if (!meta) return null;
-          return (
-            <span
-              key={key}
-              className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
-              style={{ backgroundColor: meta.pillBg, color: meta.pillColor, letterSpacing: "0.02em" }}
-              title={meta.label}
-            >
-              {meta.label}
-            </span>
-          );
-        })}
-        {allServices.size > 5 && (
-          <span className="text-[10px] text-[var(--muted)]">+{allServices.size - 5} more</span>
-        )}
-        {allServices.size === 0 && (
-          <span className="text-[10px] text-[var(--muted)] italic">No services</span>
-        )}
-      </div>
-
-      {/* Entity list — collapsible */}
+    <>
       <div
-        className="overflow-hidden transition-all duration-200"
+        className="group p-[15px_16px] border"
         style={{
-          maxHeight: collapsed ? "0px" : `${clients.length * 60}px`,
-          opacity: collapsed ? 0 : 1,
+          backgroundColor: "var(--card)",
+          borderColor: "var(--line)",
+          borderRadius: "14px",
+          boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+          transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "var(--shadow)";
+          e.currentTarget.style.borderColor = "#cfc7b5";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "";
+          e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
+          e.currentTarget.style.borderColor = "var(--line)";
         }}
       >
-        <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--line)" }}>
-          {clients.map((c) => (
-            <div
-              key={c.id}
-              onClick={(e) => { e.stopPropagation(); onClientClick(c.id); }}
-              className="flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors"
+        {/* Top row: Group name + count badge + expand button */}
+        <div className="flex items-start justify-between gap-2 mb-[3px]">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <button
+              onClick={() => setShowPopup(true)}
+              className="shrink-0 p-0.5 rounded hover:bg-[var(--teal-soft)]/50 transition-colors"
+              title="Show group members"
             >
-              <div className="min-w-0 flex-1 pr-2">
-                <p className="text-xs font-semibold text-[var(--ink)]" style={{ wordBreak: "break-word" }}>{c.name}</p>
-                <p className="text-[10px] text-[var(--muted)]">{c.city}, {c.state}</p>
-              </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--muted)"
+                strokeWidth="2.5"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight truncate"
+              style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
+              {groupName}
+            </h3>
+          </div>
+          <span
+            className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
+            style={{
+              backgroundColor: "var(--teal-soft)",
+              color: "var(--teal)",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {clients.length} entities
+          </span>
+        </div>
+
+        {/* Locations */}
+        <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2 ml-[22px]">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
+        </div>
+
+        {/* Service pills */}
+        <div className="flex flex-wrap gap-1.5 mb-3 ml-[22px]">
+          {[...allServices].slice(0, 5).map((key) => {
+            const meta = SERVICE_META[key as ServiceKey];
+            if (!meta) return null;
+            return (
               <span
-                className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
+                key={key}
+                className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
+                style={{ backgroundColor: meta.pillBg, color: meta.pillColor, letterSpacing: "0.02em" }}
+                title={meta.label}
+              >
+                {meta.label}
+              </span>
+            );
+          })}
+          {allServices.size > 5 && (
+            <span className="text-[10px] text-[var(--muted)]">+{allServices.size - 5} more</span>
+          )}
+          {allServices.size === 0 && (
+            <span className="text-[10px] text-[var(--muted)] italic">No services</span>
+          )}
+        </div>
+
+        {/* Clickable hint */}
+        <button
+          onClick={() => setShowPopup(true)}
+          className="w-full text-[10px] text-[var(--muted)] hover:text-[var(--teal)] transition-colors text-left ml-[22px]"
+        >
+          Click to view {clients.length} entities →
+        </button>
+      </div>
+
+      {/* ── Group popup overlay ── */}
+      {showPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(33,31,26,0.34)" }}
+          onClick={() => setShowPopup(false)}
+        >
+          <div
+            className="relative w-full max-w-sm max-h-[80vh] overflow-y-auto shadow-2xl animate-modal-in"
+            style={{
+              backgroundColor: "var(--card)",
+              boxShadow: "var(--shadow)",
+              borderRadius: 18,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-5 py-4 sticky top-0 z-10 rounded-t-xl"
+              style={{
+                backgroundColor: "var(--card)",
+                borderBottom: "1px solid var(--line)",
+              }}
+            >
+              <h3
+                className="truncate m-0"
                 style={{
-                  backgroundColor: c.type === "Business" ? "var(--ink)" : "#dfe7e6",
-                  color: c.type === "Business" ? "#fff" : "var(--teal-ink)",
+                  fontFamily: '"Fraunces", Georgia, serif',
+                  fontSize: 20,
+                  fontWeight: 600,
+                  color: "var(--ink)",
                 }}
               >
-                {c.type === "Business" ? "BIZ" : "PERS"}
+                {groupName}
+              </h3>
+              <span
+                className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
+                style={{
+                  backgroundColor: "var(--teal-soft)",
+                  color: "var(--teal)",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {clients.length} entities
               </span>
             </div>
-          ))}
+
+            {/* Entity list */}
+            <div className="px-5 py-4 space-y-2">
+              {clients.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => { onClientClick(c.id); setShowPopup(false); }}
+                  className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]"
+                >
+                  <div className="min-w-0 flex-1 pr-2">
+                    <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
+                  </div>
+                  <span
+                    className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
+                    style={{
+                      backgroundColor: c.type === "Business" ? "var(--ink)" : "#dfe7e6",
+                      color: c.type === "Business" ? "#fff" : "var(--teal-ink)",
+                    }}
+                  >
+                    {c.type === "Business" ? "BIZ" : "PERS"}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div
+              className="flex items-center justify-end px-5 py-3 sticky bottom-0 rounded-b-xl"
+              style={{
+                backgroundColor: "var(--card)",
+                borderTop: "1px solid var(--line)",
+              }}
+            >
+              <button
+                onClick={() => setShowPopup(false)}
+                className="text-sm font-medium px-4 py-2 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      <style jsx>{`
+        @keyframes modalIn {
+          from { opacity: 0; transform: scale(0.96) translateY(8px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-modal-in {
+          animation: modalIn 0.2s ease-out;
+        }
+      `}</style>
+    </>
   );
 }
 

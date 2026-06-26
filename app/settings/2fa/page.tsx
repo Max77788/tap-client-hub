@@ -184,6 +184,9 @@ export default function TwoFactorSetupPage() {
               <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
                 Enter the 6-digit code below. It expires in 10 minutes.
               </p>
+              <p className="text-xs mt-1 font-bold" style={{ color: "var(--amber)" }}>
+                If you don't see the code check the spam folder in your email
+              </p>
             </div>
 
             {error && (

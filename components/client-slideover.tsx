@@ -32,15 +32,50 @@ interface ClientSlideoverProps {
   onDelete?: (clientId: string) => void;
 }
 
+// ── Editable client info ──
+interface ClientInfo {
+  name: string;
+  type: "Business" | "Personal";
+  group: string;
+  city: string;
+  state: string;
+  emails: string[];
+  phones: string[];
+  address: string;
+  assignedStaff: string;
+}
+
 export default function ClientSlideover({ client, open, onClose, onSave, onDelete }: ClientSlideoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [editable, setEditable] = useState(false);
   const [localServices, setLocalServices] = useState<any[]>(client.services);
+  const [localInfo, setLocalInfo] = useState<ClientInfo>(() => ({
+    name: client.name,
+    type: client.type,
+    group: client.group,
+    city: client.city,
+    state: client.state,
+    emails: client.emails?.length ? [...client.emails] : [""],
+    phones: client.phones?.length ? [...client.phones] : [],
+    address: client.address,
+    assignedStaff: client.assignedStaff || "",
+  }));
 
   // Reset local state when client changes
   useEffect(() => {
     setLocalServices(client.services);
+    setLocalInfo({
+      name: client.name,
+      type: client.type,
+      group: client.group,
+      city: client.city,
+      state: client.state,
+      emails: client.emails?.length ? [...client.emails] : [""],
+      phones: client.phones?.length ? [...client.phones] : [],
+      address: client.address,
+      assignedStaff: client.assignedStaff || "",
+    });
     setExpandedService(null);
     setEditable(false);
   }, [client]);
@@ -62,11 +97,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   if (!open) return null;
 
-  const typeBadgeColor = client.type === "Business"
+  const typeBadgeColor = localInfo.type === "Business"
     ? { bg: "var(--ink)", fg: "#fff" }
     : { bg: "#dfe7e6", fg: "var(--teal-ink)" };
 
-  // ── Section label: 11px 700 uppercase 0.1em (demo .sect) ──
+  // ── Section label ──
   const sectionLabel = "text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--muted)] mb-3";
 
   function toggleService(key: string) {
@@ -77,8 +112,69 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     );
   }
 
-  function handleSave() {
-    onSave?.({ ...client, services: localServices });
+  function updateInfo<K extends keyof ClientInfo>(key: K, value: ClientInfo[K]) {
+    setLocalInfo((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateEmail(idx: number, value: string) {
+    const next = [...localInfo.emails];
+    next[idx] = value;
+    updateInfo("emails", next);
+  }
+
+  function addEmail() {
+    if (localInfo.emails.length < 3) updateInfo("emails", [...localInfo.emails, ""]);
+  }
+
+  function removeEmail(idx: number) {
+    if (localInfo.emails.length <= 1) return;
+    updateInfo("emails", localInfo.emails.filter((_, i) => i !== idx));
+  }
+
+  function updatePhone(idx: number, value: string) {
+    const next = [...localInfo.phones];
+    next[idx] = value;
+    updateInfo("phones", next);
+  }
+
+  function addPhone() {
+    if (localInfo.phones.length < 3) updateInfo("phones", [...localInfo.phones, ""]);
+  }
+
+  function removePhone(idx: number) {
+    updateInfo("phones", localInfo.phones.filter((_, i) => i !== idx));
+  }
+
+  async function handleSave() {
+    const payload = {
+      id: client.id,
+      name: localInfo.name,
+      type: localInfo.type,
+      group: localInfo.group,
+      city: localInfo.city,
+      state: localInfo.state,
+      emails: localInfo.emails.filter((e) => e.trim()),
+      phones: localInfo.phones.filter((p) => p.trim()),
+      address: localInfo.address,
+    };
+
+    try {
+      const res = await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("Failed to save client:", err.error);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to save client:", err);
+      return;
+    }
+
+    onSave?.({ ...client, ...localInfo, services: localServices } as Client);
     setEditable(false);
   }
 
@@ -111,24 +207,45 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           }}
         >
           <div className="min-w-0">
-            <h2
-              className="truncate leading-tight m-0"
-              style={{
-                fontFamily: '"Fraunces", Georgia, serif',
-                fontSize: 23,
-                fontWeight: 600,
-                color: "var(--ink)",
-              }}
-            >
-              {client.name}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span
-                className="inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
-                style={{ backgroundColor: typeBadgeColor.bg, color: typeBadgeColor.fg }}
+            {editable ? (
+              <input
+                type="text"
+                value={localInfo.name}
+                onChange={(e) => updateInfo("name", e.target.value)}
+                className="w-full text-lg font-semibold px-2 py-1 rounded border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                style={{ fontFamily: '"Fraunces", Georgia, serif' }}
+              />
+            ) : (
+              <h2
+                className="truncate leading-tight m-0"
+                style={{
+                  fontFamily: '"Fraunces", Georgia, serif',
+                  fontSize: 23,
+                  fontWeight: 600,
+                  color: "var(--ink)",
+                }}
               >
-                {client.type === "Business" ? "BIZ" : "PERS"}
-              </span>
+                {localInfo.name}
+              </h2>
+            )}
+            <div className="flex items-center gap-2 mt-1">
+              {editable ? (
+                <select
+                  value={localInfo.type}
+                  onChange={(e) => updateInfo("type", e.target.value as "Business" | "Personal")}
+                  className="text-[10.5px] font-bold px-2 py-1 rounded-[20px] border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer"
+                >
+                  <option value="Business">BIZ</option>
+                  <option value="Personal">PERS</option>
+                </select>
+              ) : (
+                <span
+                  className="inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
+                  style={{ backgroundColor: typeBadgeColor.bg, color: typeBadgeColor.fg }}
+                >
+                  {localInfo.type === "Business" ? "BIZ" : "PERS"}
+                </span>
+              )}
             </div>
           </div>
 
@@ -161,15 +278,97 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <h3 className={sectionLabel}>
               Client Information
             </h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <InfoLine label="Address" value={`${client.city}, ${client.state}`} />
-              <InfoLine label="Group" value={client.group} />
-              <InfoLine label="Email" value={client.email} />
-              <InfoLine label="Phone" value={client.phone} />
-            </div>
-            <div className="mt-2">
-              <InfoLine label="Full Address" value={client.address} />
-            </div>
+            {editable ? (
+              <div className="space-y-3">
+                {/* City + State */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <InfoInput label="City" value={localInfo.city} onChange={(v) => updateInfo("city", v)} placeholder="e.g. Austin" />
+                  </div>
+                  <InfoInput label="State" value={localInfo.state} onChange={(v) => updateInfo("state", v)} placeholder="TX" maxLength={2} />
+                </div>
+
+                {/* Group */}
+                <div>
+                  <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">Group</span>
+                  <select
+                    value={localInfo.group}
+                    onChange={(e) => updateInfo("group", e.target.value)}
+                    className="w-full text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
+                  >
+                    {["Terry", "Lindsay", "Misty", "Jill"].map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Emails */}
+                <div>
+                  <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">Emails</span>
+                  <div className="space-y-1.5">
+                    {localInfo.emails.map((email, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => updateEmail(idx, e.target.value)}
+                          placeholder="client@example.com"
+                          className="flex-1 text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                        />
+                        {idx === localInfo.emails.length - 1 && localInfo.emails.length < 3 ? (
+                          <button type="button" onClick={addEmail} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] shrink-0">+ Add</button>
+                        ) : localInfo.emails.length > 1 ? (
+                          <button type="button" onClick={() => removeEmail(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] shrink-0">Remove</button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Phones */}
+                <div>
+                  <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">Phones</span>
+                  <div className="space-y-1.5">
+                    {localInfo.phones.map((phone, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => updatePhone(idx, e.target.value)}
+                          placeholder="(555) 000-0000"
+                          className="flex-1 text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                        />
+                        {idx === localInfo.phones.length - 1 && localInfo.phones.length < 3 ? (
+                          <button type="button" onClick={addPhone} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] shrink-0">+ Add</button>
+                        ) : (
+                          <button type="button" onClick={() => removePhone(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] shrink-0">Remove</button>
+                        )}
+                      </div>
+                    ))}
+                    {localInfo.phones.length === 0 && (
+                      <button type="button" onClick={addPhone} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)]">+ Add Phone</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Address */}
+                <InfoInput label="Full Address" value={localInfo.address} onChange={(v) => updateInfo("address", v)} placeholder="Full street address" />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <InfoLine label="Address" value={`${localInfo.city}, ${localInfo.state}`} />
+                  <div className="col-span-2">
+                    <InfoLine label="Group" value={localInfo.group} />
+                  </div>
+                </div>
+                <div className="mt-2 space-y-1">
+                  <InfoLine label="Emails" value={localInfo.emails?.filter(Boolean).join(", ") || "—"} />
+                  <InfoLine label="Phones" value={localInfo.phones?.filter(Boolean).join(", ") || "—"} />
+                  <InfoLine label="Full Address" value={localInfo.address} />
+                </div>
+              </>
+            )}
           </section>
 
           {/* Services section */}
@@ -486,7 +685,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           {editable && onDelete && (
             <button
               onClick={() => {
-                if (confirm(`Delete ${client.name}?\n\nThis cannot be undone. All timesheet entries and vault credentials for this client will also be removed.`)) {
+                if (confirm(`Delete ${localInfo.name}?\n\nThis cannot be undone. All timesheet entries and vault credentials for this client will also be removed.`)) {
                   onDelete(client.id);
                   onClose();
                 }
@@ -527,7 +726,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   );
 }
 
-// ── Helper ──
+// ── Helpers ──
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -535,6 +734,28 @@ function InfoLine({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <span className="text-sm text-[var(--ink)] break-all">{value}</span>
+    </div>
+  );
+}
+
+function InfoInput({ label, value, onChange, placeholder, maxLength }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  maxLength?: number;
+}) {
+  return (
+    <div>
+      <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">{label}</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className="w-full text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+      />
     </div>
   );
 }

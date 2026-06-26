@@ -65,8 +65,8 @@ export interface Client {
   state: string;
   zip?: string;
   address: string;
-  email?: string;
-  phone?: string;
+  emails: string[];
+  phones: string[];
   services: ClientService[];
   assignedStaff?: string;
 }

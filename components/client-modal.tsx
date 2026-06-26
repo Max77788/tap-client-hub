@@ -51,8 +51,8 @@ function makeEmptyClient(): Omit<Client, "id" | "cid"> {
     group: "Terry",
     city: "",
     state: "TX",
-    email: "",
-    phone: "",
+    emails: [""],
+    phones: [],
     address: "",
     assignedStaff: "Terry Anderson",
     services: EMPTY_SERVICES,
@@ -80,8 +80,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         group: client.group,
         city: client.city,
         state: client.state,
-        email: client.email,
-        phone: client.phone,
+        emails: client.emails?.length ? [...client.emails] : [""],
+        phones: client.phones?.length ? [...client.phones] : [],
         address: client.address,
         status: client.status || "active",
         assignedStaff: client.assignedStaff,
@@ -153,10 +153,12 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = "Client name is required";
     if (!form.city.trim()) errs.city = "City is required";
-    if (!form.email.trim()) {
-      errs.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errs.email = "Invalid email format";
+    const validEmails = form.emails.filter((e) => e.trim());
+    if (validEmails.length === 0) {
+      errs.emails = "At least one email is required";
+    } else {
+      const invalid = validEmails.find((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+      if (invalid) errs.emails = `Invalid email format: ${invalid}`;
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -165,8 +167,43 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    onSave(form as Omit<Client, "id" | "cid">);
+    // Filter out empty values
+    const payload = {
+      ...form,
+      emails: form.emails.filter((e) => e.trim()),
+      phones: form.phones.filter((p) => p.trim()),
+    };
+    onSave(payload as Omit<Client, "id" | "cid">);
     onClose();
+  }
+
+  function updateEmail(idx: number, value: string) {
+    const next = [...form.emails];
+    next[idx] = value;
+    update("emails", next);
+  }
+
+  function addEmail() {
+    if (form.emails.length < 3) update("emails", [...form.emails, ""]);
+  }
+
+  function removeEmail(idx: number) {
+    if (form.emails.length <= 1) return;
+    update("emails", form.emails.filter((_, i) => i !== idx));
+  }
+
+  function updatePhone(idx: number, value: string) {
+    const next = [...form.phones];
+    next[idx] = value;
+    update("phones", next);
+  }
+
+  function addPhone() {
+    if (form.phones.length < 3) update("phones", [...form.phones, ""]);
+  }
+
+  function removePhone(idx: number) {
+    update("phones", form.phones.filter((_, i) => i !== idx));
   }
 
   return (
@@ -234,8 +271,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               />
             </Field>
 
-            {/* Type + Group row */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Type */}
+            <div className="grid grid-cols-1 gap-4">
               <Field label="Type" required>
                 <div className="flex gap-2">
                   {(["Business", "Personal"] as ClientType[]).map((t) => (
@@ -253,18 +290,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                     </button>
                   ))}
                 </div>
-              </Field>
-
-              <Field label="Group Owner">
-                <select
-                  value={form.group}
-                  onChange={(e) => update("group", e.target.value)}
-                  className="field-input"
-                >
-                  {["Terry", "Lindsay", "Misty", "Jill"].map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
               </Field>
             </div>
 
@@ -293,27 +318,62 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               </Field>
             </div>
 
-            {/* Email + Phone row */}
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Email" error={errors.email} required>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => update("email", e.target.value)}
-                  placeholder="client@example.com"
-                  className="field-input"
-                />
-              </Field>
-              <Field label="Phone">
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => update("phone", e.target.value)}
-                  placeholder="(555) 000-0000"
-                  className="field-input"
-                />
-              </Field>
-            </div>
+            {/* Emails */}
+            <Field label="Emails" error={errors.emails} required>
+              <div className="space-y-2">
+                {form.emails.map((email, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => updateEmail(idx, e.target.value)}
+                      placeholder="client@example.com"
+                      className="field-input flex-1"
+                    />
+                    {idx === form.emails.length - 1 && form.emails.length < 3 ? (
+                      <button type="button" onClick={addEmail} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors shrink-0">
+                        + Add
+                      </button>
+                    ) : form.emails.length > 1 ? (
+                      <button type="button" onClick={() => removeEmail(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors shrink-0">
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </Field>
+
+            {/* Phones */}
+            <Field label="Phone Numbers">
+              <div className="space-y-2">
+                {form.phones.map((phone, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => updatePhone(idx, e.target.value)}
+                      placeholder="(555) 000-0000"
+                      className="field-input flex-1"
+                    />
+                    {idx === form.phones.length - 1 && form.phones.length < 3 ? (
+                      <button type="button" onClick={addPhone} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors shrink-0">
+                        + Add
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => removePhone(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors shrink-0">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {form.phones.length === 0 && (
+                  <button type="button" onClick={addPhone} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] transition-colors">
+                    + Add Phone Number
+                  </button>
+                )}
+              </div>
+            </Field>
 
             {/* Address */}
             <Field label="Address">
@@ -521,31 +581,32 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                                 />
                               </div>
 
-                              {/* Tax ID + S/Tax RT */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                  Tax ID
-                                </span>
-                                <input
-                                  type="text"
-                                  value={svc.taxId || ""}
-                                  onChange={(e) => setServiceField(svc.key, "taxId", e.target.value)}
-                                  placeholder="EIN / SSN / ITIN"
-                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                />
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
-                                  RT
-                                </span>
-                                <input
-                                  type="text"
-                                  value={svc.salesTaxRT || ""}
-                                  onChange={(e) => setServiceField(svc.key, "salesTaxRT", e.target.value)}
-                                  placeholder="Sales tax return type"
-                                  className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                                />
+                              {/* Tax ID + S/Tax RT row */}
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                    Tax ID
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={svc.taxId || ""}
+                                    onChange={(e) => setServiceField(svc.key, "taxId", e.target.value)}
+                                    placeholder="EIN / SSN / ITIN"
+                                    className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                    RT
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={svc.salesTaxRT || ""}
+                                    onChange={(e) => setServiceField(svc.key, "salesTaxRT", e.target.value)}
+                                    placeholder="Sales tax return type"
+                                    className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
+                                  />
+                                </div>
                               </div>
 
                               {/* Bank Name / Routing # / Account # */}
