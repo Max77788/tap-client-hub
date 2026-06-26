@@ -5,433 +5,179 @@ import { useState, useMemo } from "react";
 const SUPPORT_EMAIL = "support@aifusioniqlabs.com";
 const SUPPORT_PHONE = "(832) 937-4786";
 
-const AREA_OPTIONS = [
-  "Billing / Invoicing",
-  "Bug Report",
-  "Feature Request",
-  "Client Setup",
-  "Account Access",
-  "General Inquiry",
-  "Other",
+const SUP_AREAS = [
+  "Clients", "Monthly Financials", "Payroll", "Sales Tax", "1099s", "Renditions",
+  "Team Workload", "Password Vault", "Adding / editing a client", "Login or access", "Something else",
 ];
 
 export default function SupportPage() {
   const [name, setName] = useState("");
-  const [firm, setFirm] = useState("");
+  const [firm, setFirm] = useState("TAP Associates");
   const [area, setArea] = useState("");
   const [summary, setSummary] = useState("");
   const [urgent, setUrgent] = useState(false);
-  const [whatHappened, setWhatHappened] = useState("");
+  const [what, setWhat] = useState("");
   const [expected, setExpected] = useState("");
   const [steps, setSteps] = useState("");
+  const [shot, setShot] = useState(false);
 
-  // ── Auto-generated subject preview ──
   const subjectPreview = useMemo(() => {
-    const parts: string[] = [];
-    if (urgent) parts.push("[URGENT]");
-    if (area) parts.push(area);
-    if (summary) {
-      parts.push(summary);
-    } else if (area) {
-      parts.push("Inquiry");
-    }
-    return parts.join(" ") || "Support Request";
-  }, [urgent, area, summary]);
+    const client = firm.trim() || "TAP Associates";
+    const sum = summary.trim() || "(brief summary of the issue)";
+    return `${client}: ${urgent ? "URGENT — " : ""}${sum}`;
+  }, [firm, summary, urgent]);
 
-  // ── Compose email ──
   function openEmail() {
     const body = [
-      `Name: ${name || "[your name]"}`,
-      `Account/Firm: ${firm || "[your firm]"}`,
+      `Reported by: ${name || "(your name)"}`,
+      `Account: ${firm || "TAP Associates"}`,
+      `Area of the app: ${area || "(not specified)"}`,
+      `Priority: ${urgent ? "URGENT" : "Normal"}`,
       "",
-      "## What happened:",
-      whatHappened || "[describe]",
+      "WHAT HAPPENED",
+      what || "(describe what went wrong)",
       "",
-      "## What was expected:",
-      expected || "[describe]",
+      "WHAT I EXPECTED",
+      expected || "(what you expected to happen)",
       "",
-      "## Steps to reproduce:",
-      steps || "[describe]",
+      "STEPS TO REPRODUCE",
+      steps || "1. \n2. \n3. ",
+      "",
+      `Screenshot attached: ${shot ? "Yes" : "NO — please attach before sending"}`,
     ].join("\n");
-
-    const mailto = new URL("mailto:" + SUPPORT_EMAIL);
-    mailto.searchParams.set("subject", subjectPreview);
-    mailto.searchParams.set("body", body);
-    window.open(mailto.toString(), "_blank");
-  }
-
-  // ── Copy request to clipboard ──
-  function copyRequest() {
-    const text = [
-      `Subject: ${subjectPreview}`,
-      `Name: ${name || "—"}`,
-      `Firm: ${firm || "—"}`,
-      `Area: ${area || "—"}`,
-      `Urgent: ${urgent ? "Yes" : "No"}`,
-      "",
-      "What happened:",
-      whatHappened || "—",
-      "",
-      "What was expected:",
-      expected || "—",
-      "",
-      "Steps to reproduce:",
-      steps || "—",
-    ].join("\n");
-    navigator.clipboard.writeText(text).then(() => {
-      alert("Request copied to clipboard!");
-    });
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subjectPreview)}&body=${encodeURIComponent(body)}`;
   }
 
   return (
-    <div className="space-y-6">
-      {/* ── Two-column layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div>
+      <div className="supgrid" style={{ display: "flex", gap: 16, alignItems: "flex-start", marginTop: 16 }}>
         {/* ── Left: Form ── */}
-        <div className="lg:col-span-2 space-y-5">
-          <div
-            className="p-6 rounded-xl"
-            style={{
-              backgroundColor: "var(--card)",
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <h3 className="text-sm font-semibold text-[var(--ink)] mb-5">
-              Submit a Support Request
-            </h3>
+        <div className="supmain" style={{ flex: 2, minWidth: 0 }}>
+          <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", padding: "20px 22px" }}>
+            <div className="suph" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 21 }}>Open a support ticket</div>
+            <div className="suphint" style={{ color: "var(--muted)", fontSize: "13.5px", margin: "5px 0 14px", lineHeight: 1.5 }}>
+              Fill this in and tap <b>Open email</b> — it builds a properly formatted request and drops it into your email, addressed to our team. Add your screenshot, hit send, and we&apos;ll reply with a ticket number.
+            </div>
 
-            <div className="space-y-4">
-              {/* Row 1: Name + Firm */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Smith"
-                    className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                    Account / Firm
-                  </label>
-                  <input
-                    type="text"
-                    value={firm}
-                    onChange={(e) => setFirm(e.target.value)}
-                    placeholder="Your firm name"
-                    className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
-                  />
-                </div>
+            <div className="shot-note" style={{
+              display: "flex", gap: 10, background: "var(--amber-soft)", border: "1px solid #e8d3a6", color: "#7a5210",
+              borderRadius: 12, padding: "12px 14px", fontSize: 13, lineHeight: 1.5, marginBottom: 16,
+            }}>
+              <span>📎</span>
+              <div><b>A screenshot is required.</b> Email can&apos;t pre-attach it for you, so when your email opens, attach the screenshot of the problem before sending. That one picture usually saves a whole back-and-forth.</div>
+            </div>
+
+            <div className="sup2" style={{ display: "flex", gap: 12, margin: 0 }}>
+              <div style={{ flex: 1 }}>
+                <span className="sl" style={slStyle}>Your name</span>
+                <input style={supInputStyle} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Lizette" />
               </div>
-
-              {/* Row 2: Area + Summary */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                    Area
-                  </label>
-                  <select
-                    value={area}
-                    onChange={(e) => setArea(e.target.value)}
-                    className="w-full text-sm rounded-lg px-3 py-2.5 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none"
-                  >
-                    <option value="">Select area…</option>
-                    {AREA_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                    Brief Summary
-                  </label>
-                  <input
-                    type="text"
-                    value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
-                    placeholder="One-line summary of the issue"
-                    className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60"
-                  />
-                </div>
+              <div style={{ flex: 1 }}>
+                <span className="sl" style={slStyle}>Account / firm</span>
+                <input style={supInputStyle} value={firm} onChange={e => setFirm(e.target.value)} />
               </div>
+            </div>
 
-              {/* Urgent checkbox */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={urgent}
-                  onChange={(e) => setUrgent(e.target.checked)}
-                  className="w-4 h-4 rounded accent-[var(--teal)]"
-                />
-                <span className="text-sm text-[var(--ink)]">
-                  This is urgent
-                </span>
-              </label>
+            <span className="sl" style={slStyle}>Where in the app?</span>
+            <select style={supInputStyle} value={area} onChange={e => setArea(e.target.value)}>
+              <option value="">— choose the area —</option>
+              {SUP_AREAS.map(a => <option key={a}>{a}</option>)}
+            </select>
 
-              {/* Textareas */}
-              <div>
-                <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                  What happened?
-                </label>
-                <textarea
-                  value={whatHappened}
-                  onChange={(e) => setWhatHappened(e.target.value)}
-                  placeholder="Describe the issue you encountered…"
-                  rows={3}
-                  className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60 resize-y"
-                />
-              </div>
+            <span className="sl" style={slStyle}>Brief summary <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(this becomes the subject line)</span></span>
+            <input style={supInputStyle} value={summary} onChange={e => setSummary(e.target.value)} placeholder="e.g. Can&rsquo;t save a new payroll client" />
 
-              <div>
-                <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                  What did you expect to happen?
-                </label>
-                <textarea
-                  value={expected}
-                  onChange={(e) => setExpected(e.target.value)}
-                  placeholder="Describe what you expected instead…"
-                  rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60 resize-y"
-                />
-              </div>
+            <label className="urgrow" style={{
+              display: "flex", alignItems: "center", gap: 9, margin: "14px 0 2px", fontSize: "13.5px",
+              cursor: "pointer", background: "#fff", border: "1px solid var(--line)", borderRadius: 10, padding: "11px 13px",
+            }}>
+              <input type="checkbox" checked={urgent} onChange={e => setUrgent(e.target.checked)} style={{ width: "auto" }} />
+              <span><b>This is urgent</b> — it&apos;s blocking work right now</span>
+            </label>
 
-              <div>
-                <label className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
-                  Steps to reproduce
-                </label>
-                <textarea
-                  value={steps}
-                  onChange={(e) => setSteps(e.target.value)}
-                  placeholder="Step-by-step instructions to reproduce the issue…"
-                  rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-lg text-sm border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]/60 resize-y"
-                />
-              </div>
+            <span className="sl" style={slStyle}>What happened?</span>
+            <textarea style={supInputStyle} rows={3} value={what} onChange={e => setWhat(e.target.value)} placeholder="Describe what you were doing and what went wrong." />
 
-              {/* Subject preview */}
-              <div
-                className="p-3 rounded-lg"
-                style={{ backgroundColor: "var(--teal-soft)" }}
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] mb-1">
-                  Subject Preview
-                </p>
-                <p className="text-sm font-medium text-[var(--teal)]">
-                  {subjectPreview}
-                </p>
-              </div>
+            <span className="sl" style={slStyle}>What did you expect to happen? <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></span>
+            <textarea style={supInputStyle} rows={2} value={expected} onChange={e => setExpected(e.target.value)} placeholder="What you thought the app would do." />
 
-              {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  onClick={openEmail}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
-                  style={{
-                    backgroundColor: "var(--teal)",
-                    color: "#ffffff",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
-                  Open email to support
-                </button>
+            <span className="sl" style={slStyle}>Steps to reproduce <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional, but very helpful)</span></span>
+            <textarea style={supInputStyle} rows={3} value={steps} onChange={e => setSteps(e.target.value)} placeholder="1. Opened a client\n2. Switched Payroll on\n3. Clicked Save…" />
 
-                <button
-                  onClick={copyRequest}
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-                  style={{
-                    backgroundColor: "var(--card)",
-                    border: "1px solid var(--line)",
-                    color: "var(--ink)",
-                  }}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  Copy request instead
-                </button>
-              </div>
+            <label className="urgrow" style={{
+              display: "flex", alignItems: "center", gap: 9, margin: "14px 0 2px", fontSize: "13.5px",
+              cursor: "pointer", background: "#fff", border: "1px solid var(--line)", borderRadius: 10, padding: "11px 13px",
+            }}>
+              <input type="checkbox" checked={shot} onChange={e => setShot(e.target.checked)} style={{ width: "auto" }} />
+              <span>I&rsquo;ll attach a screenshot when my email opens</span>
+            </label>
+
+            <div className="subjbox" style={{
+              marginTop: 16, background: "#f3f6fc", border: "1px dashed #c3cde6", borderRadius: 11, padding: "11px 14px",
+            }}>
+              <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)" }}>Subject preview</span>
+              <div style={{ fontSize: "13.5px", marginTop: 4, color: "var(--ink)", wordBreak: "break-word", fontVariantNumeric: "tabular-nums" }}>{subjectPreview}</div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <button className="btn" onClick={openEmail} style={btnStyle(true)}>✉️ Open email to support</button>
+              <button className="btn alt" style={btnStyle(false)} onClick={() => {
+                const txt = `To: ${SUPPORT_EMAIL}\nSubject: ${subjectPreview}\n\nName: ${name}\nFirm: ${firm}`;
+                navigator.clipboard?.writeText(txt);
+                alert("Request copied — paste it into an email to " + SUPPORT_EMAIL);
+              }}>⧉ Copy request instead</button>
             </div>
           </div>
         </div>
 
         {/* ── Right: Sidebar ── */}
-        <div className="space-y-4">
-          {/* Contact info */}
-          <div
-            className="p-5 rounded-xl"
-            style={{
-              backgroundColor: "var(--card)",
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
-              Contact
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--muted)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0 mt-0.5"
-                >
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-                <div>
-                  <p className="text-xs text-[var(--muted)]">Email</p>
-                  <a
-                    href={`mailto:${SUPPORT_EMAIL}`}
-                    className="text-sm font-medium text-[var(--teal)] hover:underline"
-                  >
-                    {SUPPORT_EMAIL}
-                  </a>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--muted)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0 mt-0.5"
-                >
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                </svg>
-                <div>
-                  <p className="text-xs text-[var(--muted)]">Phone</p>
-                  <a
-                    href={`tel:${SUPPORT_PHONE}`}
-                    className="text-sm font-medium text-[var(--teal)] hover:underline"
-                  >
-                    {SUPPORT_PHONE}
-                  </a>
-                </div>
-              </div>
+        <div className="supside" style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Contact */}
+          <div className="panel supcontact" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", padding: "18px 20px" }}>
+            <div className="suph2" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 16, marginBottom: 12 }}>Reach our team</div>
+            <a className="contact" href={`mailto:${SUPPORT_EMAIL}`} style={contactStyle}>
+              <span className="ci" style={{ width: 34, height: 34, borderRadius: 9, background: "var(--teal-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✉️</span>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Email</div><div style={{ fontWeight: 600, fontSize: "13.5px" }}>{SUPPORT_EMAIL}</div></div>
+            </a>
+            <a className="contact" href={`tel:+1832****4786`} style={contactStyle}>
+              <span className="ci" style={{ width: 34, height: 34, borderRadius: 9, background: "var(--teal-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📞</span>
+              <div><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Phone</div><div style={{ fontWeight: 600, fontSize: "13.5px" }}>{SUPPORT_PHONE}</div></div>
+            </a>
+            <div className="provby" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, textAlign: "center" }}>
+              Support provided by <b style={{ color: "var(--teal)" }}>AI Fusion IQ Labs</b>
             </div>
           </div>
 
           {/* How support works */}
-          <div
-            className="p-5 rounded-xl"
-            style={{
-              backgroundColor: "var(--card)",
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
-              How Support Works
-            </h3>
-            <ol className="space-y-3" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {[
-                {
-                  step: "1",
-                  title: "Submit your request",
-                  desc: "Fill out the form with as much detail as possible. The more context you provide, the faster we can help.",
-                },
-                {
-                  step: "2",
-                  title: "We triage",
-                  desc: "Our support team reviews your request within 1 business day. Urgent issues are prioritized.",
-                },
-                {
-                  step: "3",
-                  title: "We investigate",
-                  desc: "A team member will reproduce the issue, check logs, and determine the root cause.",
-                },
-                {
-                  step: "4",
-                  title: "Resolution",
-                  desc: "You'll receive a response with a fix, workaround, or next steps. Escalated issues are tracked until closed.",
-                },
-              ].map((item) => (
-                <li key={item.step} className="flex gap-3">
-                  <span
-                    className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
-                    style={{
-                      backgroundColor: "var(--teal-soft)",
-                      color: "var(--teal)",
-                    }}
-                  >
-                    {item.step}
-                  </span>
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--ink)]">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-[var(--muted)] leading-relaxed">
-                      {item.desc}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+          <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", padding: "18px 20px" }}>
+            <div className="suph2" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 16, marginBottom: 12 }}>How support works</div>
+            {[
+              ["1", "Send your request", "Use the form, or email us directly. Urgent issues — call the number above."],
+              ["2", "We open a ticket", "You\\u2019ll get a ticket number by email so you can track it."],
+              ["3", "We need the details", "What went wrong, what you expected, and a screenshot. The more we have, the faster we fix it."],
+              ["4", "We resolve & follow up", "We\\u2019ll reply on the same ticket and confirm once it\\u2019s sorted."],
+            ].map(([n, t, d]) => (
+              <div key={n} className="step" style={{ display: "flex", gap: 11, padding: "8px 0", borderBottom: "1px solid #eef1f6" }}>
+                <div className="stepn" style={{ flex: "0 0 24px", height: 24, borderRadius: "50%", background: "var(--teal)", color: "#fff", fontWeight: 700, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>{n}</div>
+                <div>
+                  <div className="stept" style={{ fontWeight: 600, fontSize: "13.5px" }}>{t}</div>
+                  <div className="stepd" style={{ fontSize: "12.5px", color: "var(--muted)", lineHeight: 1.45, marginTop: 1 }}>{d}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Good subject lines */}
-          <div
-            className="p-5 rounded-xl"
-            style={{
-              backgroundColor: "var(--card)",
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">
-              Good Subject Lines
-            </h3>
-            <div className="space-y-2">
-              {[
-                "Unable to export client list to Excel",
-                "Payroll totals not matching QuickBooks",
-                "Feature request: bulk status update",
-                "Sales Tax — March filing stuck in 'Submitted'",
-              ].map((ex, i) => (
-                <div
-                  key={i}
-                  className="text-xs text-[var(--muted)] px-3 py-1.5 rounded-lg"
-                  style={{ backgroundColor: "var(--teal-soft)" }}
-                >
-                  &ldquo;{ex}&rdquo;
-                </div>
-              ))}
+          <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", padding: "16px 20px" }}>
+            <div className="suph2" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 16, marginBottom: 12 }}>Good subject lines</div>
+            <div className="egood" style={{ fontSize: "12.5px", color: "var(--green)", marginBottom: 6 }}>
+              ✓ <span className="mono" style={{ fontVariantNumeric: "tabular-nums", color: "var(--ink)" }}>303A Properties: Monthly report won\\u2019t open</span>
+            </div>
+            <div className="egood" style={{ fontSize: "12.5px", color: "var(--green)", marginBottom: 6 }}>
+              ✓ <span className="mono" style={{ fontVariantNumeric: "tabular-nums", color: "var(--ink)" }}>TAP Associates: URGENT — can\\u2019t log in</span>
+            </div>
+            <div className="ebad" style={{ fontSize: "12.5px", color: "var(--red)" }}>
+              ✗ <span className="mono" style={{ fontVariantNumeric: "tabular-nums", color: "var(--ink)" }}>help</span> · <span className="mono" style={{ fontVariantNumeric: "tabular-nums", color: "var(--ink)" }}>it\\u2019s broken</span>
             </div>
           </div>
         </div>
@@ -439,3 +185,25 @@ export default function SupportPage() {
     </div>
   );
 }
+
+const slStyle: React.CSSProperties = {
+  display: "block", fontSize: "11.5px", fontWeight: 700, letterSpacing: ".05em",
+  textTransform: "uppercase", color: "var(--muted)", margin: "14px 0 5px",
+};
+const supInputStyle: React.CSSProperties = {
+  width: "100%", padding: "10px 12px", border: "1px solid var(--line)",
+  borderRadius: 10, font: "inherit", fontSize: 14, background: "#fff", resize: "vertical",
+};
+const contactStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 12, padding: "11px 12px",
+  border: "1px solid var(--line)", borderRadius: 11, marginBottom: 9,
+  textDecoration: "none", color: "var(--ink)", transition: ".12s",
+};
+const btnStyle = (primary: boolean): React.CSSProperties => ({
+  all: "unset", cursor: "pointer",
+  background: primary ? "var(--ink)" : "var(--card)",
+  color: primary ? "#fff" : "var(--ink)",
+  border: primary ? "none" : "1px solid var(--line)",
+  padding: "10px 16px", borderRadius: 11,
+  fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
+});
