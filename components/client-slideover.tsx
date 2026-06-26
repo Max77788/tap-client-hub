@@ -130,11 +130,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   if (!editing) {
     return (
       <>
-        <div className="scrim show" style={{ position: "fixed", inset: 0, background: "rgba(33,31,26,.34)", zIndex: 40 }} onClick={onClose} />
+        <div className="scrim show" onClick={onClose} />
         <div className="over show" style={{
-          position: "fixed", top: 0, right: 0, height: "100vh", width: 460, maxWidth: "92vw",
           background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
-          zIndex: 50, display: "flex", flexDirection: "column", overflow: "hidden",
         }}>
           {/* Header */}
           <div className="ohead" style={{
@@ -294,11 +292,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   return (
     <>
-      <div className="scrim show" style={{ position: "fixed", inset: 0, background: "rgba(33,31,26,.34)", zIndex: 40 }} onClick={() => setEditing(false)} />
+      <div className="scrim show" onClick={() => setEditing(false)} />
       <div className="over show" style={{
-        position: "fixed", top: 0, right: 0, height: "100vh", width: 460, maxWidth: "92vw",
         background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
-        zIndex: 50, display: "flex", flexDirection: "column", overflow: "hidden",
       }}>
         {/* Header */}
         <div className="ohead" style={{ padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)" }}>

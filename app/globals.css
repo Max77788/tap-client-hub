@@ -211,3 +211,65 @@ tbody tr:hover { background: #fcfaf4; }
   input, select, button, a { -webkit-tap-highlight-color: transparent; }
   input, select { font-size: 16px !important; }
 }
+
+/* ── Worklist month cells (demo: 30x30 mcell) ── */
+.mcell {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--line); background: #fff;
+  cursor: pointer; font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto; transition: .1s; user-select: none;
+}
+.mcell:hover { border-color: var(--teal); }
+.mcell.lock, .mcell.lock-hist { cursor: default; }
+.mcell.lock:hover { border-color: transparent; }
+
+/* ── mh-now / mtd-now (current month highlight) ── */
+.mh-now { color: var(--teal) !important; position: relative; }
+.mh-now::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 4px; height: 2px; background: var(--teal); border-radius: 2px; }
+.mtd-now { background: #f3f6fc; }
+
+/* ── Legend icons ── */
+.lgd i.lg-prog { background: var(--blue); }
+.lgd i.lg-wait { background: var(--amber); }
+.lgd i.lg-prep { background: var(--teal); }
+.lgd i.lg-done { background: var(--green); }
+.lgd i.lg-delayed { background: var(--red); }
+.lgd i.lg-na { background: var(--red); }
+.lgd i.lg-lock { background: #c2c8d4; }
+
+/* ── Workload bars ── */
+.wrow-u { opacity: .92; }
+.d-hi { color: var(--amber); }
+.d-lo { color: var(--green); }
+.d-mid { color: var(--muted); }
+.wrow-u .wdiff { color: var(--red); }
+
+/* ── Slideover ── */
+.scrim { position: fixed; inset: 0; background: rgba(33,31,26,.34); opacity: 0; pointer-events: none; transition: .2s; z-index: 40; }
+.scrim.show { opacity: 1; pointer-events: auto; }
+.over { position: fixed; top: 0; right: 0; height: 100vh; width: 460px; max-width: 92vw; transform: translateX(102%); transition: .24s cubic-bezier(.4,0,.2,1); z-index: 50; display: flex; flex-direction: column; }
+.over.show { transform: translateX(0); }
+
+/* ── Modal ── */
+.mscrim.show { display: flex; }
+
+/* ── Client card hover ── */
+.ccard:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #cfc7b5; }
+
+/* ── Client name link ── */
+.lname { font-weight: 600; cursor: pointer; }
+.lname:hover { color: var(--teal); text-decoration: underline; }
+
+/* ── Mono font ── */
+.mono { font-variant-numeric: tabular-nums; }
+
+/* ── Empty state ── */
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+
+/* ── Desktop-only sidebar ── */
+@media (max-width: 720px) {
+  .side { display: none; }
+  .top, .wrap { padding-left: 18px; padding-right: 18px; }
+  .tip { margin-left: 18px; margin-right: 18px; padding-left: 18px; padding-right: 18px; }
+}
