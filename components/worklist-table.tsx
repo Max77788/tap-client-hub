@@ -18,17 +18,17 @@ const STAGE_LABELS: Record<WorklistStage, string> = {
 
 const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 
-// ── Stage colors (matching demo v7 exactly) ──
+// ── Stage colors (brighter) ──
 const STAGE_STYLES: Record<
   WorklistStage,
   { bg: string; fg: string; border?: string }
 > = {
   "": { bg: "transparent", fg: "var(--muted)" },
-  ip: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2" },
-  wc: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6" },
-  pp: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec" },
-  dn: { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6" },
-  na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf" },
+  ip: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#93c5fd" },
+  wc: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#fcd34d" },
+  pp: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#5eead4" },
+  dn: { bg: "var(--green-soft)", fg: "var(--green)", border: "#86efac" },
+  na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#fca5a5" },
 };
 
 // ── Map existing MonthStatus → WorklistStage ──
@@ -474,8 +474,8 @@ export default function WorklistTable({
           className="px-3 py-2 rounded-lg flex gap-2 text-xs"
           style={{
             backgroundColor: "var(--amber-soft)",
-            border: "1px solid #ead9b6",
-            color: "#7a5210",
+            border: "1px solid var(--amber)",
+            color: "var(--amber)",
           }}
         >
           <span>📋</span>
@@ -624,7 +624,7 @@ export default function WorklistTable({
                               onClick={clickable ? (e) => t9Bump(client.id, i, e) : undefined}
                               className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors cursor-${clickable ? "pointer" : "default"} hover:scale-110 hover:shadow-sm active:scale-95`}
                               style={{
-                                backgroundColor: n > 0 ? "#dff0d8" : "transparent",
+                                backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
                                 color: n > 0 ? "var(--green)" : "var(--muted)",
                               }}
                               title={`${mo}: ${n} processed${clickable ? " — click +1, shift-click -1" : ""}`}
@@ -903,7 +903,7 @@ function CellWrapper({
         readOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
       }`}
       style={{
-        backgroundColor: isCurrentMonth ? "#f3f6fc" : "transparent",
+        backgroundColor: isCurrentMonth ? "var(--teal-soft)" : "transparent",
         boxShadow: isPastDue
           ? "0 0 0 2px var(--red)"
           : isCurrentMonth
