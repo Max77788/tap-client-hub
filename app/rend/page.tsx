@@ -8,8 +8,9 @@ export default function RendPage() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("tap_hub_rend_year");
-      return saved ? Number(saved) : currentYear;
+      const params = new URLSearchParams(window.location.search);
+      const y = params.get("year");
+      return y ? Number(y) : currentYear;
     }
     return currentYear;
   });
@@ -18,12 +19,6 @@ export default function RendPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <select value={year} onChange={(e) => { setYear(Number(e.target.value)); localStorage.setItem("tap_hub_rend_year", String(e.target.value)); }}
-          className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none">
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
       <WorklistTable serviceKey="renditions" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "renditions", monthIdx, stage)} />
     </div>
