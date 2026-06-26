@@ -490,6 +490,29 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                             </div>
                           )}
 
+                          {/* Due month picker — financials only */}
+                          {svc.key === "financials" && ["Yearly", "Quarterly"].includes(svc.frequency) && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">
+                                {svc.frequency === "Yearly" ? "Due month" : "Quarter starts"}
+                              </span>
+                              <select
+                                value={svc.financialsMonth ?? (svc.frequency === "Quarterly" ? 0 : 3)}
+                                onChange={(e) => setServiceField(svc.key, "financialsMonth", parseInt(e.target.value))}
+                                className="flex-1 text-[11px] rounded-md px-2 py-1 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
+                              >
+                                {[
+                                  { v: 0, l: "January" }, { v: 1, l: "February" }, { v: 2, l: "March" },
+                                  { v: 3, l: "April" }, { v: 4, l: "May" }, { v: 5, l: "June" },
+                                  { v: 6, l: "July" }, { v: 7, l: "August" }, { v: 8, l: "September" },
+                                  { v: 9, l: "October" }, { v: 10, l: "November" }, { v: 11, l: "December" },
+                                ].map((m) => (
+                                  <option key={m.v} value={m.v}>{m.l}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
                           {/* Processor */}
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] shrink-0">

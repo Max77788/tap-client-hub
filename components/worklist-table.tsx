@@ -54,14 +54,18 @@ function mapMonthStatus(status: MonthStatus): WorklistStage {
 // ── Active months by frequency ──
 function getActiveMonths(
   frequency: ServiceConfig["frequency"],
+  startMonth?: number,
 ): Set<number> {
   switch (frequency) {
     case "Monthly":
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    case "Quarterly":
-      return new Set([0, 3, 6, 9]); // Jan, Apr, Jul, Oct
+    case "Quarterly": {
+      const s = startMonth ?? 0; // default Jan
+      return new Set([s % 12, (s + 3) % 12, (s + 6) % 12, (s + 9) % 12]);
+    }
     case "Annually":
-      return new Set([3]); // April
+    case "Yearly":
+      return new Set([startMonth ?? 3]); // default April
     default:
       return new Set();
   }
@@ -320,7 +324,7 @@ export default function WorklistTable({
     for (const client of serviceClients) {
       const svc = client.services.find((s) => s.key === serviceKey);
       if (!svc) continue;
-      const activeMonths = getActiveMonths(svc.frequency);
+      const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
 
       if (activeMonths.has(currentMonth) && year === currentYear) {
         dueThisMonth++;
@@ -592,7 +596,7 @@ export default function WorklistTable({
             ) : (
               filteredClients.map((client) => {
                 const svc = client.services.find((s) => s.key === serviceKey)!;
-                const activeMonths = getActiveMonths(svc.frequency);
+                const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
                 const key = `${client.id}:${serviceKey}`;
                 const stages = worklistState[key] ?? Array(12).fill("");
 

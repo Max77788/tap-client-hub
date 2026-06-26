@@ -69,6 +69,7 @@ export async function GET() {
         processor: cs.processor || "",
         assignedTo: cs.assigned_to || "",
         expectedAnnual: cs.expected_annual || undefined,
+        financialsMonth: cs.financials_month ?? undefined,
         // Sales Tax fields
         ...(key === "sales_tax" ? {
           salesTaxNotes: cs.sales_tax_notes || "", taxId: cs.tax_id || "",
@@ -101,7 +102,7 @@ export async function GET() {
         services.push({
           csId: "", key, label: SERVICE_META[key].label, enabled: false,
           frequency: "Monthly", processor: "", assignedTo: "",
-          expectedAnnual: undefined, currentStage: "not_started",
+          expectedAnnual: undefined, financialsMonth: undefined, currentStage: "not_started",
           months: Array(12).fill("lock"),
         });
       }
@@ -198,6 +199,11 @@ export async function POST(request: Request) {
       entry.expected_annual = svc.expectedAnnual || 0;
     }
 
+    // Financials month
+    if (svc.key === "financials" && svc.financialsMonth !== undefined) {
+      entry.financials_month = svc.financialsMonth;
+    }
+
     svcInserts.push(entry);
   }
 
@@ -247,6 +253,12 @@ export async function PUT(request: Request) {
   }
   if (contacts.length > 0) {
     await supabase.from("contacts").insert(contacts);
+  }
+
+  // Update financials month on client_services
+  const finSvc = Array.isArray(body.services) ? body.services.find((s: any) => s.key === "financials") : null;
+  if (finSvc?.csId && finSvc.financialsMonth !== undefined) {
+    await supabase.from("client_services").update({ financials_month: finSvc.financialsMonth }).eq("id", finSvc.csId);
   }
 
   return NextResponse.json({ success: true });

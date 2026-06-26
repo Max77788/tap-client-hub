@@ -38,6 +38,7 @@ export interface ClientService {
   expectedAnnual?: number;
   months?: any[];
   salesTaxNotes?: string;
+  financialsMonth?: number;
   taxId?: string;
   bankName?: string;
   bankRouting?: string;
