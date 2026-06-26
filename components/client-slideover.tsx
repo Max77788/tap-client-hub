@@ -194,8 +194,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         style={{
           width: "460px",
           maxWidth: "100vw",
-          backgroundColor: "var(--card)",
+          backgroundColor: "var(--paper)",
           borderLeft: "1px solid var(--line)",
+          boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
         }}
       >
         {/* ── Header ── */}
@@ -229,6 +230,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </h2>
             )}
             <div className="flex items-center gap-2 mt-1">
+              <span className="mono text-xs" style={{ color: "#9a9484" }}>{client.cid || `CID-${client.id}`}</span>
               {editable ? (
                 <select
                   value={localInfo.type}
@@ -246,6 +248,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   {localInfo.type === "Business" ? "BIZ" : "PERS"}
                 </span>
               )}
+              <span className="text-xs" style={{ color: "var(--muted)" }}>
+                &nbsp;{localInfo.group || "—"} · handled by <b style={{ color: "var(--ink)", fontWeight: 600 }}>{localInfo.assignedStaff || "—"}</b>
+              </span>
             </div>
           </div>
 
