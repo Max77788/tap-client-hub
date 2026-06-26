@@ -1,29 +1,40 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Client, MonthStatus, ServiceConfig } from "@/lib/types";
-import { MONTHS_SHORT, SERVICE_META } from "@/lib/data";
+import type { Client } from "@/lib/types";
+import { SERVICE_META } from "@/lib/data";
 
-// ── Module-specific processor options ──
-const PROCESSOR_OPTIONS: Record<string, string[]> = {
-  payroll: ["ADP", "QuickBooks Payroll", "Gusto", "Paychex", "Toast", "Other"],
-  financials: ["QuickBooks", "Xero", "NetSuite", "Other"],
-  sales_tax: ["Avalara", "TaxJar", "Self-filed", "Other"],
-  "1099s": ["Track1099", "Tax1099", "Yearli", "Other"],
-  renditions: ["Manual", "Other"],
-  tax_returns: ["UltraTax", "Lacerte", "ProSeries", "Other"],
-};
-const STATUS_COLORS: Record<MonthStatus, { bg: string; fg: string; label: string }> = {
-  done:   { bg: "var(--green-soft)", fg: "var(--green)", label: "Done" },
-  billed: { bg: "var(--amber-soft)", fg: "var(--amber)", label: "Billed" },
-  paid:   { bg: "var(--paid-soft)",  fg: "var(--paid)",  label: "Paid" },
-  na:     { bg: "var(--red-soft)",   fg: "var(--red)",   label: "N/A" },
-  lock:   { bg: "transparent",       fg: "var(--muted)", label: "—" },
-  in_progress: { bg: "var(--blue-soft)", fg: "var(--blue)", label: "In Progress" },
-  waiting:     { bg: "var(--amber-soft)", fg: "var(--amber)", label: "Waiting" },
+// ── Stage display for month tracking in the slideover ──
+const UNIFIED_STAGES = [
+  { k: "ip", t: "•", cls: "prog", l: "In progress" },
+  { k: "wc", t: "⏳", cls: "wait", l: "Waiting on client" },
+  { k: "pp", t: "✓", cls: "prep", l: "Prepared" },
+  { k: "dn", t: "✓", cls: "done", l: "Done" },
+];
+const NA_STAGE = { k: "na", t: "–", cls: "na", l: "N/A" };
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const STAGE_STYLES: Record<string, { bg: string; fg: string; border: string; cls: string; label: string }> = {
+  "":   { bg: "transparent", fg: "#c2c8d4", border: "transparent", cls: "lock", label: "Not due" },
+  ip:   { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2", cls: "prog", label: "In progress" },
+  wc:   { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6", cls: "wait", label: "Waiting on client" },
+  pp:   { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec", cls: "prep", label: "Prepared" },
+  dn:   { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6", cls: "done", label: "Done" },
+  na:   { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf", cls: "na", label: "N/A" },
 };
 
-// ── Props ──
+const svcMeta: Record<string, { label: string; ic: string; bg: string }> = {
+  financials:  { label: "Monthly Financials", ic: "📊", bg: "var(--green-soft)" },
+  payroll:     { label: "Payroll", ic: "💵", bg: "var(--blue-soft)" },
+  sales_tax:   { label: "Sales Tax", ic: "🧾", bg: "var(--amber-soft)" },
+  tax_returns: { label: "Tax Return", ic: "📋", bg: "#ece7f3" },
+  "1099s":     { label: "1099 Filing", ic: "📄", bg: "#f0e8e2" },
+  renditions:  { label: "Renditions", ic: "🏠", bg: "#e7eee8" },
+};
+const svcLabel = (k: string) => svcMeta[k]?.label || k;
+const svcIc = (k: string) => svcMeta[k]?.ic || "📋";
+const svcBg = (k: string) => svcMeta[k]?.bg || "var(--teal-soft)";
+
 interface ClientSlideoverProps {
   client: Client;
   open: boolean;
@@ -32,735 +43,360 @@ interface ClientSlideoverProps {
   onDelete?: (clientId: string) => void;
 }
 
-// ── Editable client info ──
-interface ClientInfo {
-  name: string;
-  type: "Business" | "Personal";
-  group: string;
-  city: string;
-  state: string;
-  emails: string[];
-  phones: string[];
-  address: string;
-  assignedStaff: string;
-}
-
 export default function ClientSlideover({ client, open, onClose, onSave, onDelete }: ClientSlideoverProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [expandedService, setExpandedService] = useState<string | null>(null);
-  const [editable, setEditable] = useState(false);
-  const [localServices, setLocalServices] = useState<any[]>(client.services);
-  const [localInfo, setLocalInfo] = useState<ClientInfo>(() => ({
-    name: client.name,
-    type: client.type,
-    group: client.group,
-    city: client.city,
-    state: client.state,
-    emails: client.emails?.length ? [...client.emails] : [""],
-    phones: client.phones?.length ? [...client.phones] : [],
-    address: client.address,
-    assignedStaff: client.assignedStaff || "",
-  }));
+  const [editing, setEditing] = useState(false);
+  const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
-  // Reset local state when client changes
+  // Reset when client changes
   useEffect(() => {
-    setLocalServices(client.services);
-    setLocalInfo({
-      name: client.name,
-      type: client.type,
-      group: client.group,
-      city: client.city,
-      state: client.state,
-      emails: client.emails?.length ? [...client.emails] : [""],
-      phones: client.phones?.length ? [...client.phones] : [],
-      address: client.address,
-      assignedStaff: client.assignedStaff || "",
-    });
-    setExpandedService(null);
-    setEditable(false);
+    setLocalSvcs(client.services);
+    setEditing(false);
   }, [client]);
 
   // Close on Escape
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    if (open) {
-      document.addEventListener("keydown", onKey);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    if (open) { document.addEventListener("keydown", onKey); document.body.style.overflow = "hidden"; }
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [open, onClose]);
 
   if (!open) return null;
 
-  const typeBadgeColor = localInfo.type === "Business"
+  const c = client;
+  const typeBadge = c.type === "Business"
     ? { bg: "var(--ink)", fg: "#fff" }
     : { bg: "#dfe7e6", fg: "var(--teal-ink)" };
 
-  // ── Section label ──
-  const sectionLabel = "text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--muted)] mb-3";
+  // Unique assignees
+  const assignees = [...new Set(
+    localSvcs.filter((s: any) => s.enabled).map((s: any) => s.processor || s.assignedTo).filter(Boolean)
+  )];
 
-  function toggleService(key: string) {
-    setLocalServices((prev) =>
-      prev.map((s) =>
-        s.key === key ? { ...s, enabled: !s.enabled, months: s.enabled ? Array(12).fill("lock") : s.months } : s,
-      ),
+  function toggleSvc(key: string) {
+    setLocalSvcs((prev: any[]) =>
+      prev.map((s: any) => s.key === key ? { ...s, enabled: !s.enabled, months: s.enabled ? Array(12).fill("lock") : s.months } : s)
     );
   }
 
-  function updateInfo<K extends keyof ClientInfo>(key: K, value: ClientInfo[K]) {
-    setLocalInfo((prev) => ({ ...prev, [key]: value }));
+  function freqLabel(key: string, svc: any) {
+    if (!svc.enabled) return "off";
+    if (key === "financials") return (svc.frequency || "Monthly") + " · in Financials list";
+    if (key === "payroll") return (svc.frequency || "Bi-Weekly") + " · " + (svc.processor || "-");
+    if (key === "sales_tax") return (svc.frequency || "Monthly") + " · in Sales Tax list";
+    if (key === "tax_returns") return svc.frequency || "Business";
+    if (key === "1099s") return "in 1099 worklist";
+    if (key === "renditions") return "in renditions worklist";
+    return "";
   }
 
-  function updateEmail(idx: number, value: string) {
-    const next = [...localInfo.emails];
-    next[idx] = value;
-    updateInfo("emails", next);
+  // Month tracking for a service - show month-by-month cells
+  function monthCells(svcKey: string) {
+    const svc = localSvcs.find((s: any) => s.key === svcKey);
+    if (!svc?.enabled) return null;
+    const stages = svc.months || [];
+    const now = new Date().getMonth();
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {MONTHS.map((mo, i) => {
+          const stage = (stages[i] || "") as string;
+          const style = STAGE_STYLES[stage] || STAGE_STYLES[""];
+          const t = stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : stage === "dn" ? "✓" : stage === "na" ? "–" : "";
+          const delayed = stage !== "" && stage !== "dn" && stage !== "na" && i < now;
+          return (
+            <div key={mo} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{mo}</div>
+              <div
+                style={{
+                  width: 30, height: 30, borderRadius: 8,
+                  border: `1px solid ${delayed ? "var(--red)" : style.border}`,
+                  background: style.bg,
+                  color: style.fg,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto", fontWeight: 700, fontSize: 14, userSelect: "none",
+                  boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
+                }}
+                title={`${mo} — ${delayed ? "DELAYED · " : ""}${style.label}`}
+              >
+                {t}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
-  function addEmail() {
-    if (localInfo.emails.length < 3) updateInfo("emails", [...localInfo.emails, ""]);
+  // ── Non-edit view ──
+  if (!editing) {
+    return (
+      <>
+        <div className="scrim show" style={{ position: "fixed", inset: 0, background: "rgba(33,31,26,.34)", zIndex: 40 }} onClick={onClose} />
+        <div className="over show" style={{
+          position: "fixed", top: 0, right: 0, height: "100vh", width: 460, maxWidth: "92vw",
+          background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
+          zIndex: 50, display: "flex", flexDirection: "column", overflow: "hidden",
+        }}>
+          {/* Header */}
+          <div className="ohead" style={{
+            padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+              <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
+              <button className="ox" onClick={onClose} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
+            </div>
+            <div className="sub" style={{ color: "var(--muted)", fontSize: 13, marginTop: 5 }}>
+              <span className="mono" style={{ color: "#9a9484" }}>{c.cid || `CID-${c.id}`}</span>{" "}
+              <span className="badge b-biz" style={{
+                fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+                textTransform: "uppercase", letterSpacing: "0.05em",
+                backgroundColor: typeBadge.bg, color: typeBadge.fg,
+              }}>{c.type === "Business" ? "BIZ" : "PERS"}</span>
+              {" "}{c.group || "—"} · handled by <b style={{ color: "var(--ink)", fontWeight: 600 }}>{assignees.length ? assignees.join(", ") : "—"}</b>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
+                Everything about this client
+              </div>
+              <button className="reveal" onClick={() => setEditing(true)} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
+                ✎ Edit details
+              </button>
+            </div>
+
+            {/* Info fields */}
+            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Client ID</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{c.cid || `CID-${c.id}`}</span></div>
+            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Group / Owner</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.group || "—"}</span></div>
+            {(c.emails || []).filter(Boolean).map((email, i) => (
+              <div key={`e${i}`} className="field" style={fieldStyle}>
+                <span className="k" style={{ color: "var(--muted)" }}>{i === 0 ? "Email" : "Additional email"}</span>
+                <span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{email}</span>
+              </div>
+            ))}
+            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Phone</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{(c.phones || []).filter(Boolean).join(", ") || "—"}</span></div>
+            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Address</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.address || "—"}</span></div>
+            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Location</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.city}, {c.state}</span></div>
+            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Type</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.type}</span></div>
+
+            {/* Who's assigned per service */}
+            <div className="sect" style={sectStyle}>Who&apos;s assigned — per service</div>
+            {localSvcs.filter((s: any) => s.enabled).map((svc: any) => (
+              <div key={svc.key} className="field" style={fieldStyle}>
+                <span className="k" style={{ color: "var(--muted)" }}>{svcLabel(svc.key)}</span>
+                <span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{svc.processor || svc.assignedTo || "—"}</span>
+              </div>
+            ))}
+
+            {/* Services — flip on/off */}
+            <div className="sect" style={sectStyle}>Services — flip on/off, no formulas</div>
+            {localSvcs.map((svc: any) => (
+              <div key={svc.key} className="svc" style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 13px",
+                background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, marginBottom: 8,
+              }}>
+                <div className="si" style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: svcBg(svc.key) }}>
+                  {svcIc(svc.key)}
+                </div>
+                <div className="st" style={{ flex: 1 }}>
+                  <div className="t" style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
+                  <div className="d" style={{ fontSize: 12, color: "var(--muted)" }}>{freqLabel(svc.key, svc)}</div>
+                </div>
+                <div
+                  className={`sw ${svc.enabled ? "on" : ""}`}
+                  onClick={() => toggleSvc(svc.key)}
+                  style={{
+                    width: 46, height: 27, borderRadius: 20,
+                    background: svc.enabled ? "var(--teal)" : "#d8d2c4",
+                    position: "relative", cursor: "pointer", transition: ".16s", flex: "0 0 auto",
+                  }}
+                >
+                  <div style={{
+                    position: "absolute", top: 3, left: svc.enabled ? 22 : 3, width: 21, height: 21,
+                    borderRadius: "50%", background: "#fff", transition: ".16s",
+                    boxShadow: "0 1px 3px rgba(0,0,0,.25)",
+                  }} />
+                </div>
+              </div>
+            ))}
+
+            {/* Per-service month tracking */}
+            {localSvcs.filter((s: any) => s.enabled && ["financials","payroll","sales_tax","renditions"].includes(s.key)).map((svc: any) => {
+              const stages = svc.months || [];
+              const leg = UNIFIED_STAGES.map(s => (
+                <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
+                  {s.l}
+                </span>
+              ));
+              return (
+                <div key={svc.key}>
+                  <div className="sect" style={sectStyle}>
+                    {svcLabel(svc.key)} · {svc.frequency} · <span style={{ color: "var(--muted)", fontWeight: 500 }}>{svc.processor || svc.assignedTo || "—"}</span>
+                  </div>
+                  <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, marginBottom: 8, fontSize: 12, color: "var(--muted)" }}>
+                    {leg}
+                    <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 6 }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>N/A</span>
+                  </div>
+                  {monthCells(svc.key)}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10 }}>
+            <button className="danger" onClick={() => { onDelete?.(c.id); onClose(); }} style={{
+              all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
+              padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
+            }}>
+              Remove client
+            </button>
+            <div style={{ flex: 1 }}></div>
+            <button className="btn alt" onClick={onClose} style={{
+              all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
+              border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
+              fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
+            }}>
+              Done
+            </button>
+          </div>
+        </div>
+      </>
+    );
   }
 
-  function removeEmail(idx: number) {
-    if (localInfo.emails.length <= 1) return;
-    updateInfo("emails", localInfo.emails.filter((_, i) => i !== idx));
-  }
+  // ── Edit view ──
+  const [eName, setEName] = useState(c.name);
+  const [eType, setEType] = useState(c.type);
+  const [eGroup, setEGroup] = useState(c.group);
+  const [eEmail, setEEmail] = useState((c.emails || [""])[0] || "");
+  const [eAddEmail, setEAddEmail] = useState((c.emails || [])[1] || "");
+  const [ePhone, setEPhone] = useState((c.phones || [""])[0] || "");
+  const [eAddress, setEAddress] = useState(c.address);
+  const [eCity, setECity] = useState(c.city);
+  const [eState, setEState] = useState(c.state);
+  const [eZip, setEZip] = useState((c as any).zip || "");
 
-  function updatePhone(idx: number, value: string) {
-    const next = [...localInfo.phones];
-    next[idx] = value;
-    updateInfo("phones", next);
-  }
-
-  function addPhone() {
-    if (localInfo.phones.length < 3) updateInfo("phones", [...localInfo.phones, ""]);
-  }
-
-  function removePhone(idx: number) {
-    updateInfo("phones", localInfo.phones.filter((_, i) => i !== idx));
-  }
-
-  async function handleSave() {
-    const payload = {
-      id: client.id,
-      name: localInfo.name,
-      type: localInfo.type,
-      group: localInfo.group,
-      city: localInfo.city,
-      state: localInfo.state,
-      emails: localInfo.emails.filter((e) => e.trim()),
-      phones: localInfo.phones.filter((p) => p.trim()),
-      address: localInfo.address,
-    };
-
-    try {
-      const res = await fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error("Failed to save client:", err.error);
-        return;
-      }
-    } catch (err) {
-      console.error("Failed to save client:", err);
-      return;
-    }
-
-    onSave?.({ ...client, ...localInfo, services: localServices } as Client);
-    setEditable(false);
+  function saveEdit() {
+    const nm = eName.trim();
+    if (!nm) return;
+    onSave?.({
+      ...c,
+      name: nm, type: eType as "Business" | "Personal", group: eGroup,
+      emails: [eEmail, eAddEmail].filter(Boolean), phones: [ePhone].filter(Boolean),
+      address: eAddress, city: eCity, state: eState, zip: eZip,
+      services: localSvcs,
+    } as Client);
+    setEditing(false);
   }
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 transition-opacity duration-300"
-        style={{ backgroundColor: "rgba(33,31,26,0.34)" }}
-        onClick={onClose}
-      />
-
-      {/* Slide-over panel */}
-      <div
-        ref={panelRef}
-        className="fixed top-0 right-0 bottom-0 z-50 flex flex-col overflow-y-auto shadow-2xl animate-slide-in"
-        style={{
-          width: "460px",
-          maxWidth: "100vw",
-          backgroundColor: "var(--paper)",
-          borderLeft: "1px solid var(--line)",
-          boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
-        }}
-      >
-        {/* ── Header ── */}
-        <div
-          className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 shrink-0"
-          style={{
-            backgroundColor: "var(--card)",
-            borderBottom: "1px solid var(--line)",
-          }}
-        >
-          <div className="min-w-0">
-            {editable ? (
-              <input
-                type="text"
-                value={localInfo.name}
-                onChange={(e) => updateInfo("name", e.target.value)}
-                className="w-full text-lg font-semibold px-2 py-1 rounded border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                style={{ fontFamily: '"Fraunces", Georgia, serif' }}
-              />
-            ) : (
-              <h2
-                className="truncate leading-tight m-0"
-                style={{
-                  fontFamily: '"Fraunces", Georgia, serif',
-                  fontSize: 23,
-                  fontWeight: 600,
-                  color: "var(--ink)",
-                }}
-              >
-                {localInfo.name}
-              </h2>
-            )}
-            <div className="flex items-center gap-2 mt-1">
-              <span className="mono text-xs" style={{ color: "#9a9484" }}>{client.cid || `CID-${client.id}`}</span>
-              {editable ? (
-                <select
-                  value={localInfo.type}
-                  onChange={(e) => updateInfo("type", e.target.value as "Business" | "Personal")}
-                  className="text-[10.5px] font-bold px-2 py-1 rounded-[20px] border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer"
-                >
-                  <option value="Business">BIZ</option>
-                  <option value="Personal">PERS</option>
-                </select>
-              ) : (
-                <span
-                  className="inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
-                  style={{ backgroundColor: typeBadgeColor.bg, color: typeBadgeColor.fg }}
-                >
-                  {localInfo.type === "Business" ? "BIZ" : "PERS"}
-                </span>
-              )}
-              <span className="text-xs" style={{ color: "var(--muted)" }}>
-                &nbsp;{localInfo.group || "—"} · handled by <b style={{ color: "var(--ink)", fontWeight: 600 }}>{localInfo.assignedStaff || "—"}</b>
-              </span>
-            </div>
+      <div className="scrim show" style={{ position: "fixed", inset: 0, background: "rgba(33,31,26,.34)", zIndex: 40 }} onClick={() => setEditing(false)} />
+      <div className="over show" style={{
+        position: "fixed", top: 0, right: 0, height: "100vh", width: 460, maxWidth: "92vw",
+        background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
+        zIndex: 50, display: "flex", flexDirection: "column", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div className="ohead" style={{ padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+            <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>Edit client</div>
+            <button className="ox" onClick={() => setEditing(false)} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
           </div>
-
-          <div className="flex items-center gap-1">
-            {!editable ? (
-              <button
-                onClick={() => setEditable(true)}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
-              >
-                Edit
-              </button>
-            ) : null}
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-[var(--teal-soft)]/50 transition-colors"
-              aria-label="Close"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+          <div className="sub" style={{ color: "var(--muted)", fontSize: 13, marginTop: 5 }}>
+            <span className="mono" style={{ color: "#9a9484" }}>{c.cid || `CID-${c.id}`}</span> · changes save instantly, no formulas
           </div>
         </div>
 
-        {/* ── Body ── */}
-        <div className="flex-1 px-6 py-5 space-y-6">
-          {/* Info section */}
-          <section>
-            <h3 className={sectionLabel}>
-              Client Information
-            </h3>
-            {editable ? (
-              <div className="space-y-3">
-                {/* City + State */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2">
-                    <InfoInput label="City" value={localInfo.city} onChange={(v) => updateInfo("city", v)} placeholder="e.g. Austin" />
-                  </div>
-                  <InfoInput label="State" value={localInfo.state} onChange={(v) => updateInfo("state", v)} placeholder="TX" maxLength={2} />
-                </div>
+        {/* Body */}
+        <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
+          <label className="el" style={elStyle}>Client / entity name</label>
+          <input className="ef" style={efStyle} value={eName} onChange={e => setEName(e.target.value)} placeholder={c.name} />
 
-                {/* Group */}
-                <div>
-                  <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">Group</span>
-                  <select
-                    value={localInfo.group}
-                    onChange={(e) => updateInfo("group", e.target.value)}
-                    className="w-full text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none cursor-pointer focus:border-[var(--teal)]"
-                  >
-                    {["Terry", "Lindsay", "Misty", "Jill"].map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Emails */}
-                <div>
-                  <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">Emails</span>
-                  <div className="space-y-1.5">
-                    {localInfo.emails.map((email, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => updateEmail(idx, e.target.value)}
-                          placeholder="client@example.com"
-                          className="flex-1 text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                        />
-                        {idx === localInfo.emails.length - 1 && localInfo.emails.length < 3 ? (
-                          <button type="button" onClick={addEmail} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] shrink-0">+ Add</button>
-                        ) : localInfo.emails.length > 1 ? (
-                          <button type="button" onClick={() => removeEmail(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] shrink-0">Remove</button>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Phones */}
-                <div>
-                  <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">Phones</span>
-                  <div className="space-y-1.5">
-                    {localInfo.phones.map((phone, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => updatePhone(idx, e.target.value)}
-                          placeholder="(555) 000-0000"
-                          className="flex-1 text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-                        />
-                        {idx === localInfo.phones.length - 1 && localInfo.phones.length < 3 ? (
-                          <button type="button" onClick={addPhone} className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)] shrink-0">+ Add</button>
-                        ) : (
-                          <button type="button" onClick={() => removePhone(idx)} className="text-xs px-2 py-1.5 rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] shrink-0">Remove</button>
-                        )}
-                      </div>
-                    ))}
-                    {localInfo.phones.length === 0 && (
-                      <button type="button" onClick={addPhone} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal-soft)]">+ Add Phone</button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Address */}
-                <InfoInput label="Full Address" value={localInfo.address} onChange={(v) => updateInfo("address", v)} placeholder="Full street address" />
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <InfoLine label="Address" value={`${localInfo.city}, ${localInfo.state}`} />
-                  <div className="col-span-2">
-                    <InfoLine label="Group" value={localInfo.group} />
-                  </div>
-                </div>
-                <div className="mt-2 space-y-1">
-                  <InfoLine label="Emails" value={localInfo.emails?.filter(Boolean).join(", ") || "—"} />
-                  <InfoLine label="Phones" value={localInfo.phones?.filter(Boolean).join(", ") || "—"} />
-                  <InfoLine label="Full Address" value={localInfo.address} />
-                </div>
-              </>
-            )}
-          </section>
-
-          {/* Services section */}
-          <section>
-            <h3 className={sectionLabel}>
-              Services
-            </h3>
-            <div className="space-y-2">
-              {localServices.map((svc) => {
-                const meta = (svc.key && (SERVICE_META as any)[svc.key]) || { label: "Unknown", pillColor: "var(--muted)", pillBg: "var(--line)" };
-                const isExpanded = expandedService === svc.key;
-                const enabledMonths = (svc.months as string[]).filter((m: string) => m !== "lock" && m !== "na").length;
-
-                return (
-                  <div
-                    key={svc.key}
-                    className="rounded-lg border transition-colors"
-                    style={{
-                      borderColor: svc.enabled ? meta.pillColor : "var(--line)",
-                      backgroundColor: svc.enabled ? `${meta.pillBg}80` : "transparent",
-                    }}
-                  >
-                    {/* Service header row */}
-                    <div
-                      className="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none"
-                      onClick={() => setExpandedService(isExpanded ? null : svc.key)}
-                    >
-                      {/* Toggle switch (only in edit mode) */}
-                      {editable && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleService(svc.key);
-                          }}
-                          className="relative shrink-0 w-8 h-4 rounded-full transition-colors"
-                          style={{
-                            backgroundColor: svc.enabled ? meta.pillColor : "var(--line)",
-                          }}
-                        >
-                          <span
-                            className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform"
-                            style={{
-                              left: svc.enabled ? "calc(100% - 14px)" : "2px",
-                            }}
-                          />
-                        </button>
-                      )}
-
-                      {/* Service name + pill */}
-                      <div className="flex-1 min-w-0 flex items-center gap-2">
-                        <span
-                          className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                          style={{ backgroundColor: meta.pillBg, color: meta.pillColor }}
-                        >
-                          {meta.label}
-                        </span>
-
-                        {svc.enabled && (
-                          <span className="text-[11px] text-[var(--muted)]">
-                            {svc.frequency} · {enabledMonths}/12 mo
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Expand chevron */}
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="var(--muted)"
-                        strokeWidth="2"
-                        className={`shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                      >
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
-
-                    {/* Expanded details */}
-                    {isExpanded && svc.enabled && (
-                      <div
-                        className="px-3 pb-3 space-y-3"
-                        style={{ borderTop: `1px solid var(--line)` }}
-                      >
-                        {/* Frequency + Processor (skip for 1099s) */}
-                        <div className="flex items-center gap-4 pt-2 text-xs">
-                          {svc.key !== "1099s" && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[var(--muted)]">Frequency:</span>
-                            {editable ? (
-                              <select
-                                value={svc.frequency}
-                                onChange={(e) =>
-                                  setLocalServices((prev) =>
-                                    prev.map((s) =>
-                                      s.key === svc.key
-                                        ? { ...s, frequency: e.target.value as ServiceConfig["frequency"] }
-                                        : s,
-                                    ),
-                                  )
-                                }
-                                className="text-xs rounded border border-[var(--line)] px-1.5 py-0.5 bg-[var(--card)]"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <option>Monthly</option>
-                                <option>Quarterly</option>
-                                <option>Annually</option>
-                                <option>N/A</option>
-                              </select>
-                            ) : (
-                              <span className="font-medium text-[var(--ink)]">{svc.frequency}</span>
-                            )}
-                          </div>
-                          )}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[var(--muted)]">Processor:</span>
-                            {editable ? (
-                              <select
-                                value={svc.processor || ""}
-                                onChange={(e) =>
-                                  setLocalServices((prev) =>
-                                    prev.map((s) =>
-                                      s.key === svc.key
-                                        ? { ...s, processor: e.target.value }
-                                        : s,
-                                    ),
-                                  )
-                                }
-                                className="text-xs rounded border border-[var(--line)] px-1.5 py-0.5 bg-[var(--card)] cursor-pointer"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <option value="">-- select --</option>
-                                {(PROCESSOR_OPTIONS[svc.key] || ["Other"]).map((opt) => (
-                                  <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="font-medium text-[var(--ink)]">{svc.processor || "—"}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Sales Tax specialized fields */}
-                        {svc.key === "sales_tax" && svc.enabled && (
-                          <div className="grid grid-cols-2 gap-2 text-xs pt-1" style={{ borderTop: "1px dashed var(--line)" }}>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-[var(--muted)]">RT Number</span>
-                              {editable ? (
-                                <input
-                                  type="text"
-                                  value={svc.rtNumber || ""}
-                                  onChange={(e) =>
-                                    setLocalServices((prev) =>
-                                      prev.map((s) => s.key === svc.key ? { ...s, rtNumber: e.target.value } : s)
-                                    )
-                                  }
-                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
-                                  placeholder="RT-..."
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className="font-medium text-[var(--ink)]">{svc.rtNumber || "—"}</span>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-[var(--muted)]">Tax ID</span>
-                              {editable ? (
-                                <input
-                                  type="text"
-                                  value={svc.taxId || ""}
-                                  onChange={(e) =>
-                                    setLocalServices((prev) =>
-                                      prev.map((s) => s.key === svc.key ? { ...s, taxId: e.target.value } : s)
-                                    )
-                                  }
-                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
-                                  placeholder="XX-XXXXXXX"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className="font-medium text-[var(--ink)]">{svc.taxId || "—"}</span>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-[var(--muted)]">Bank Routing</span>
-                              {editable ? (
-                                <input
-                                  type="text"
-                                  value={svc.bankRouting || ""}
-                                  onChange={(e) =>
-                                    setLocalServices((prev) =>
-                                      prev.map((s) => s.key === svc.key ? { ...s, bankRouting: e.target.value } : s)
-                                    )
-                                  }
-                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
-                                  placeholder="XXXXXXXXX"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className="font-medium text-[var(--ink)]">{svc.bankRouting || "—"}</span>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] text-[var(--muted)]">Account Number</span>
-                              {editable ? (
-                                <input
-                                  type="text"
-                                  value={svc.accountNumber || ""}
-                                  onChange={(e) =>
-                                    setLocalServices((prev) =>
-                                      prev.map((s) => s.key === svc.key ? { ...s, accountNumber: e.target.value } : s)
-                                    )
-                                  }
-                                  className="text-xs rounded border border-[var(--line)] px-2 py-1 bg-[var(--card)]"
-                                  placeholder="XXXXXXXX"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className="font-medium text-[var(--ink)]">{svc.accountNumber || "—"}</span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Month tracking grid */}
-                        <div>
-                          <p className="text-[11px] text-[var(--muted)] mb-1.5 font-medium uppercase tracking-wider">
-                            Month Tracking
-                          </p>
-                          <div className="grid grid-cols-12 gap-0.5">
-                            {(svc.months as string[]).map((status: string, i: number) => {
-                              const c = (STATUS_COLORS as any)[status];
-                              return (
-                                <div
-                                  key={i}
-                                  className="flex flex-col items-center rounded py-1 text-[9px] leading-tight"
-                                  style={{
-                                    backgroundColor: c.bg,
-                                    color: c.fg,
-                                    border: status === "lock" ? "1px dashed var(--line)" : "none",
-                                  }}
-                                  title={`${MONTHS_SHORT[i]}: ${c.label}`}
-                                >
-                                  <span className="font-semibold">{MONTHS_SHORT[i]}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {/* Legend */}
-                          <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px]">
-                            {(["done", "billed", "paid", "na"] as MonthStatus[]).map((s) => {
-                              const c = STATUS_COLORS[s];
-                              return (
-                                <span key={s} className="flex items-center gap-1">
-                                  <span
-                                    className="w-2.5 h-2.5 rounded-sm"
-                                    style={{ backgroundColor: c.bg, border: `1px solid ${c.fg}` }}
-                                  />
-                                  <span style={{ color: c.fg }}>{c.label}</span>
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+          <div className="two-ef" style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label className="el" style={elStyle}>Type</label>
+              <select className="ef" style={efStyle} value={eType} onChange={e => setEType(e.target.value as any)}>
+                <option>Business</option><option>Personal</option>
+              </select>
             </div>
-          </section>
-
-          {/* Assigned Staff overview */}
-          <section>
-            <h3 className={sectionLabel}>
-              Staff Assignments
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {(() => {
-                const seen = new Set<string>();
-                return localServices
-                  .filter((s) => s.enabled)
-                  .map((s) => s.processor)
-                  .filter((p) => {
-                    if (seen.has(p)) return false;
-                    seen.add(p);
-                    return true;
-                  })
-                  .map((processor) => (
-                    <span
-                      key={processor}
-                      className="inline-flex text-xs font-medium px-2.5 py-1 rounded-full"
-                      style={{
-                        backgroundColor: "var(--teal-soft)",
-                        color: "var(--teal)",
-                      }}
-                    >
-                      {processor}
-                    </span>
-                  ));
-              })()}
+            <div style={{ flex: 1 }}>
+              <label className="el" style={elStyle}>Assigned to</label>
+              <input className="ef" style={efStyle} value={""} placeholder="TBD" readOnly />
             </div>
-          </section>
+          </div>
+
+          <label className="el" style={elStyle}>Group / owner</label>
+          <input className="ef" style={efStyle} value={eGroup} onChange={e => setEGroup(e.target.value)} placeholder="e.g. Gambhir" />
+
+          <label className="el" style={elStyle}>Email</label>
+          <input className="ef" style={efStyle} value={eEmail} onChange={e => setEEmail(e.target.value)} placeholder="client@email.com" />
+
+          <label className="el" style={elStyle}>Additional email</label>
+          <input className="ef" style={efStyle} value={eAddEmail} onChange={e => setEAddEmail(e.target.value)} placeholder="optional" />
+
+          <label className="el" style={elStyle}>Phone</label>
+          <input className="ef" style={efStyle} value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="(713) 555-0100" />
+
+          <label className="el" style={elStyle}>Street address</label>
+          <input className="ef" style={efStyle} value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="123 Main St." />
+
+          <div className="two-ef" style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 2 }}>
+              <label className="el" style={elStyle}>City</label>
+              <input className="ef" style={efStyle} value={eCity} onChange={e => setECity(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="el" style={elStyle}>State</label>
+              <input className="ef" style={efStyle} value={eState} onChange={e => setEState(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="el" style={elStyle}>ZIP</label>
+              <input className="ef" style={efStyle} value={eZip} onChange={e => setEZip(e.target.value)} />
+            </div>
+          </div>
         </div>
 
-        {/* ── Footer ── */}
-        <div
-          className="sticky bottom-0 z-10 flex items-center justify-end gap-3 px-6 py-4 shrink-0"
-          style={{
-            backgroundColor: "var(--card)",
-            borderTop: "1px solid var(--line)",
-          }}
-        >
-          {editable && onDelete && (
-            <button
-              onClick={() => {
-                if (confirm(`Delete ${localInfo.name}?\n\nThis cannot be undone. All timesheet entries and vault credentials for this client will also be removed.`)) {
-                  onDelete(client.id);
-                  onClose();
-                }
-              }}
-              className="text-sm font-medium px-4 py-2 rounded-lg border border-[var(--red)] text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors mr-auto"
-            >
-              Delete Client
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="text-sm font-medium px-4 py-2 rounded-lg border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--teal-soft)] transition-colors"
-          >
-            Close
+        {/* Footer */}
+        <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10 }}>
+          <button className="btn alt" onClick={() => setEditing(false)} style={{
+            all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
+            border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
+            fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
+          }}>
+            Cancel
           </button>
-          {editable && (
-            <button
-              onClick={handleSave}
-              className="text-sm font-semibold px-5 py-2 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity"
-            >
-              Save Changes
-            </button>
-          )}
+          <div style={{ flex: 1 }}></div>
+          <button className="btn" onClick={saveEdit} style={{
+            all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+            padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+            display: "inline-flex", gap: 7, alignItems: "center",
+          }}>
+            Save changes
+          </button>
         </div>
       </div>
-
-      {/* Slide-in animation style */}
-      <style jsx>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        .animate-slide-in {
-          animation: slideInRight 0.25s ease-out;
-        }
-      `}</style>
     </>
   );
 }
 
-// ── Helpers ──
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-0.5">
-        {label}
-      </span>
-      <span className="text-sm text-[var(--ink)] break-all">{value}</span>
-    </div>
-  );
-}
-
-function InfoInput({ label, value, onChange, placeholder, maxLength }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  maxLength?: number;
-}) {
-  return (
-    <div>
-      <span className="block text-[11px] text-[var(--muted)] uppercase tracking-wider mb-1">{label}</span>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        className="w-full text-sm rounded-lg px-2.5 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] outline-none focus:border-[var(--teal)]"
-      />
-    </div>
-  );
-}
+// ── Shared styles ──
+const fieldStyle: React.CSSProperties = {
+  display: "flex", justifyContent: "space-between", gap: 14,
+  padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3",
+};
+const sectStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+  color: "var(--muted)", margin: "22px 0 10px",
+};
+const elStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase",
+  color: "var(--muted)", margin: "12px 0 4px", display: "block",
+};
+const efStyle: React.CSSProperties = {
+  width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9,
+  font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+};
