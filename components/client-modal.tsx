@@ -46,6 +46,14 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [stxFreq, setStxFreq] = useState("Monthly");
   const [taxType, setTaxType] = useState("Business");
 
+  // Per-service assigned staff
+  const [finAssigned, setFinAssigned] = useState("Unassigned");
+  const [prAssigned, setPrAssigned] = useState("Unassigned");
+  const [stxAssigned, setStxAssigned] = useState("Unassigned");
+  const [taxAssigned, setTaxAssigned] = useState("Unassigned");
+  const [t9Assigned, setT9Assigned] = useState("Unassigned");
+  const [rendAssigned, setRendAssigned] = useState("Unassigned");
+
   useEffect(() => {
     if (client) {
       setName(client.name);
@@ -85,20 +93,21 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     const nm = name.trim();
     if (!nm) return;
     const svcs: any[] = [];
-    function addSvc(key: ServiceKey, enabled: boolean, frequency: string, processor?: string) {
+    function addSvc(key: ServiceKey, enabled: boolean, frequency: string, assignedTo: string, processor?: string) {
       if (!enabled) return;
       svcs.push({
         key, enabled: true, frequency,
         processor: processor || "-",
+        assignedTo: assignedTo || "Unassigned",
         months: Array(12).fill("lock"),
       });
     }
-    addSvc("financials", fin, finFreq);
-    addSvc("payroll", pr, prFreq, prProc);
-    addSvc("sales_tax", stx, stxFreq);
-    addSvc("tax_returns", tax, "Yearly", taxType);
-    addSvc("1099s", t9, "Yearly");
-    addSvc("renditions", rend, "Yearly");
+    addSvc("financials", fin, finFreq, finAssigned);
+    addSvc("payroll", pr, prFreq, prAssigned, prProc);
+    addSvc("sales_tax", stx, stxFreq, stxAssigned);
+    addSvc("tax_returns", tax, "Yearly", taxAssigned, taxType);
+    addSvc("1099s", t9, "Yearly", t9Assigned);
+    addSvc("renditions", rend, "Yearly", rendAssigned);
 
     onSave({
       name: nm, type: type as "Business" | "Personal", status: "active",
@@ -209,6 +218,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 <input style={inputStyle} value={fee} onChange={e => setFee(e.target.value)} placeholder="750" />
               </div>
             </div>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={finAssigned} onChange={e => setFinAssigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
+            </select>
           </ServiceCard>
 
           {/* Payroll */}
@@ -227,6 +240,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 </select>
               </div>
             </div>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={prAssigned} onChange={e => setPrAssigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
+            </select>
           </ServiceCard>
 
           {/* Sales Tax */}
@@ -234,6 +251,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <label style={{ ...labelStyle, marginTop: 8 }}>Filing frequency</label>
             <select style={inputStyle} value={stxFreq} onChange={e => setStxFreq(e.target.value)}>
               <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+            </select>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={stxAssigned} onChange={e => setStxAssigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -243,13 +264,27 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <select style={inputStyle} value={taxType} onChange={e => setTaxType(e.target.value)}>
               <option>Business</option><option>1040</option><option>1065</option><option>1120</option><option>1120-S</option><option>990</option>
             </select>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
+            </select>
           </ServiceCard>
 
           {/* 1099 Filing */}
-          <ServiceCard icon="📄" label="1099 Filing" checked={t9} onChange={setT9} />
+          <ServiceCard icon="📄" label="1099 Filing" checked={t9} onChange={setT9}>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={t9Assigned} onChange={e => setT9Assigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </ServiceCard>
 
           {/* Renditions */}
-          <ServiceCard icon="🏠" label="Renditions (property tax)" checked={rend} onChange={setRend} />
+          <ServiceCard icon="🏠" label="Renditions (property tax)" checked={rend} onChange={setRend}>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </ServiceCard>
         </div>
 
         <div className="mfoot" style={{
