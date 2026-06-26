@@ -724,7 +724,9 @@ export default function WorklistTable({
       ) : (
       <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
         {!isHistorical
-          ? "Every service uses one workflow: In progress → Waiting on client → Prepared → Done. Anything past due flags red on its own. Click a cell to advance through the stages."
+          ? serviceKey === "financials"
+            ? "Every service uses one workflow: In progress \u2192 Waiting on client \u2192 Prepared \u2192 Done. Anything past due flags red on its own. Fees and billing are owner-only and stay out of the team\u2019s view."
+            : "Every service uses one workflow: In progress \u2192 Waiting on client \u2192 Prepared \u2192 Done. \u201CWaiting on client\u201D signals you\u2019re blocked; anything past due flags red automatically."
           : `Read-only history for ${year}. Switch the Year selector back to ${currentYear} to make changes.`}
       </p>
       )}
