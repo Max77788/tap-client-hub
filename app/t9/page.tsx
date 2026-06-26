@@ -30,10 +30,7 @@ export default function T9Page() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-[var(--ink)]">1099s</h1>
-          <p className="text-xs text-[var(--muted)]">{enabledCount} active clients</p>
-        </div>
+        <div className="text-xs text-[var(--muted)]">{enabledCount} active clients</div>
         <select value={year} onChange={(e) => { setYear(Number(e.target.value)); localStorage.setItem("tap_hub_t9_year", String(e.target.value)); }}
           className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none">
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
