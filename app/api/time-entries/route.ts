@@ -90,3 +90,39 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+// PATCH /api/time-entries?id=UUID — update a time entry (who, client, task, seconds, edited flag)
+export async function PATCH(request: Request) {
+  const supabase = await createClient();
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
+  }
+
+  const body = await request.json();
+  const updates: Record<string, any> = {};
+
+  if (body.who !== undefined) updates.who = body.who;
+  if (body.client_id !== undefined) updates.client_id = body.client_id;
+  if (body.task !== undefined) updates.task = body.task;
+  if (body.seconds !== undefined) updates.seconds = body.seconds;
+  if (body.edited !== undefined) updates.edited = body.edited;
+  if (body.edited) {
+    updates.edited_at = new Date().toISOString();
+  }
+
+  const { data, error } = await supabase
+    .from("time_entries")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || "Update failed" }, { status: 500 });
+  }
+
+  return NextResponse.json({ entry: data });
+}

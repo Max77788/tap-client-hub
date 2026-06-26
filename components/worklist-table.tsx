@@ -195,22 +195,59 @@ export default function WorklistTable({
     return map;
   }, [serviceClients]);
 
-  // ── T9 actual counts lookup — uses real expected_annual from services
-  const t9ActualCounts = useMemo<Record<string, number[]>>(() => {
+  // ── T9 counts local state ──
+  const [t9Counts, setT9Counts] = useState<Record<string, number[]>>(() => {
     const map: Record<string, number[]> = {};
-    for (const client of serviceClients) {
-      const svc = client.services.find((s: any) => s.key === serviceKey);
-      const expected = svc?.expectedAnnual || 0;
-      const counts: number[] = [];
-      for (let m = 0; m < 12; m++) {
-        counts.push(m === 3 ? expected : 0); // Only April (month 3) has the expected count
+    for (const client of clients) {
+      const svc = client.services.find((s: any) => s.key === "1099s");
+      if (!svc?.enabled) continue;
+      const key = `${client.id}:1099s`;
+      if (svc.t9Counts && Array.isArray(svc.t9Counts)) {
+        map[key] = [...svc.t9Counts];
+      } else {
+        map[key] = Array(12).fill(0);
       }
-      map[client.id] = counts;
     }
     return map;
-  }, [serviceClients, serviceKey]);
+  });
 
-  // ── Stage picker state ──
+  // Re-sync t9 counts when clients change
+  useEffect(() => {
+    setT9Counts((prev) => {
+      const next: Record<string, number[]> = {};
+      for (const client of clients) {
+        const svc = client.services.find((s: any) => s.key === "1099s");
+        if (!svc?.enabled) continue;
+        const key = `${client.id}:1099s`;
+        if (prev[key]) { next[key] = prev[key]; }
+        else if (svc.t9Counts && Array.isArray(svc.t9Counts)) { next[key] = [...svc.t9Counts]; }
+        else { next[key] = Array(12).fill(0); }
+      }
+      return next;
+    });
+  }, [clients]);
+
+  // ── T9 bump handler ──
+  const t9Bump = useCallback((clientId: string, monthIdx: number, ev: React.MouseEvent) => {
+    if (isHistorical) return;
+    const key = `${clientId}:1099s`;
+    setT9Counts((prev) => {
+      const counts = [...(prev[key] ?? Array(12).fill(0))];
+      const delta = ev.shiftKey ? -1 : 1;
+      counts[monthIdx] = Math.max(0, (counts[monthIdx] || 0) + delta);
+      // Persist
+      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
+      if (svc?.csId) {
+        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+        fetch("/api/period-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
+        }).catch(() => {});
+      }
+      return { ...prev, [key]: counts };
+    });
+  }, [isHistorical, clients, year]);
   const [pickerTarget, setPickerTarget] = useState<{ clientId: string; monthIdx: number } | null>(null);
 
   // ── Cell click handler — opens stage picker ──
@@ -247,6 +284,31 @@ export default function WorklistTable({
 
   // ── Stats ──
   const stats = useMemo(() => {
+    if (variant === "t9") {
+      const isCur = !isHistorical;
+      let expTot = 0, doneTot = 0;
+      for (const client of serviceClients) {
+        const svc = client.services.find((s) => s.key === serviceKey);
+        if (!svc) continue;
+        const exp = svc.expectedAnnual || 0;
+        expTot += exp;
+        const t9key = `${client.id}:1099s`;
+        const counts = t9Counts[t9key] ?? Array(12).fill(0);
+        const done = counts.reduce((s: number, n: number) => s + (n || 0), 0);
+        doneTot += done;
+      }
+      const curMonthCount = isCur ? (() => {
+        let c = 0;
+        for (const client of serviceClients) {
+          const t9key = `${client.id}:1099s`;
+          const counts = t9Counts[t9key] ?? Array(12).fill(0);
+          c += (counts[currentMonth] || 0);
+        }
+        return c;
+      })() : 0;
+      return { expTot, doneTot, rem: Math.max(0, expTot - doneTot), curMonthCount, currentMonthName: MONTHS_SHORT[currentMonth], isCur };
+    }
+
     const currentMonthName = MONTHS_SHORT[currentMonth];
     let dueThisMonth = 0;
     let inProgress = 0;
@@ -308,11 +370,35 @@ export default function WorklistTable({
     "text-center text-[11px] font-semibold uppercase tracking-tight";
 
   // ── Count of columns before month columns (for colspan) ──
-  const colCount = 2 + (variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0) + (variant === "payroll" ? 1 : 0) + 12;
+  const baseCols = 2; // Client + Assigned
+  const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
+  const payrollCols = variant === "payroll" ? 1 : 0;
+  const t9PostCols = variant === "t9" ? 2 : 0; // Done + Left
+  const t9PreCols = variant === "t9" ? 1 : 0; // Expected
+  const colCount = baseCols + extraCols + payrollCols + t9PreCols + 12 + t9PostCols;
 
   return (
     <div className="space-y-3">
       {/* ── Compact stats row ── */}
+      {variant === "t9" ? (
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          <span style={{ color: "var(--ink)" }}>
+            <strong>{stats.expTot}</strong> Expected (year)
+          </span>
+          <span className="text-[var(--muted)]">·</span>
+          <span style={{ color: "var(--green)" }}>
+            <strong>{stats.doneTot}</strong> Processed
+          </span>
+          <span className="text-[var(--muted)]">·</span>
+          <span style={{ color: stats.rem > 0 ? "var(--amber)" : "var(--green)" }}>
+            <strong>{stats.rem}</strong> Remaining
+          </span>
+          <span className="text-[var(--muted)]">·</span>
+          <span style={{ color: "var(--blue)" }}>
+            <strong>{stats.curMonthCount}</strong> In {stats.currentMonthName}
+          </span>
+        </div>
+      ) : (
       <div className="flex items-center gap-4 text-xs flex-wrap">
         <span className="font-semibold text-[var(--ink)]">{serviceClients.length} clients</span>
         <span className="text-[var(--muted)]">·</span>
@@ -332,8 +418,10 @@ export default function WorklistTable({
           <strong>{stats.done}</strong> done
         </span>
       </div>
+      )}
 
       {/* ── Search ── */}
+      {variant !== "t9" && (
       <div className="flex gap-2 items-center">
         <input
           type="search"
@@ -348,8 +436,10 @@ export default function WorklistTable({
           </span>
         )}
       </div>
+      )}
 
       {/* ── Legend ── */}
+      {variant !== "t9" && (
       <div className="flex flex-wrap items-center gap-2 text-xs">
         {legendItems.map(({ stage, dot }) => {
           const style = STAGE_STYLES[stage];
@@ -376,6 +466,7 @@ export default function WorklistTable({
           <span className="text-[var(--muted)]">Delayed</span>
         </span>
       </div>
+      )}
 
       {/* ── Historical banner (if applicable) ── */}
       {isHistorical && (
@@ -404,6 +495,15 @@ export default function WorklistTable({
         </div>
       )}
 
+      {/* ── T9 count text ── */}
+      {variant === "t9" && (
+        <div className="text-xs text-[var(--muted)]" style={{ margin: "8px 2px 6px" }}>
+          {!isHistorical
+            ? "Counted by month — a client\u2019s 1099s don\u2019t all arrive together. Counts feed your per-1099 billing."
+            : `${year} history — read-only. Switch the Year selector back to ${currentYear} to log counts.`}
+        </div>
+      )}
+
       {/* ── Main table (horizontally scrollable on mobile) ── */}
       <div
         className="overflow-hidden"
@@ -417,6 +517,19 @@ export default function WorklistTable({
         <div className="overflow-x-auto">
         <table className="border-collapse table-fixed" style={{ minWidth: 800, width: "100%" }}>
           <thead>
+            {variant === "t9" ? (
+            <tr style={{ borderBottom: "2px solid var(--line)" }} className="text-left">
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "22%" }}>Client</th>
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>Assigned</th>
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)] text-center" style={{ width: "7%" }}>Expected</th>
+              {MONTHS_SHORT.map((m, i) => {
+                const isCM = i === currentMonth && !isHistorical;
+                return <th key={m} className={monthColClass + " px-0.5 py-2"} style={{ width: "auto", color: isCM ? "var(--teal)" : "var(--muted)", backgroundColor: isCM ? "var(--teal-soft)" : "transparent", borderBottom: isCM ? "2px solid var(--teal)" : "none" }}>{m}</th>;
+              })}
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)] text-center" style={{ width: "6%" }}>Done</th>
+              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)] text-center" style={{ width: "6%" }}>Left</th>
+            </tr>
+            ) : (
             <tr
               style={{ borderBottom: "2px solid var(--line)" }}
               className="text-left"
@@ -430,7 +543,7 @@ export default function WorklistTable({
               <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
                 Assigned
               </th>
-              {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+              {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
               <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "11%" }}>
                 Cadence
               </th>
@@ -464,6 +577,7 @@ export default function WorklistTable({
                 );
               })}
             </tr>
+            )}
           </thead>
           <tbody>
             {filteredClients.length === 0 ? (
@@ -472,7 +586,7 @@ export default function WorklistTable({
                   colSpan={colCount}
                   className="px-4 py-8 text-center text-xs text-[var(--muted)]"
                 >
-                  No clients with this service enabled.
+                  {variant === "t9" ? "No 1099 clients yet. Open a client and switch 1099 Filing on." : "No clients with this service enabled."}
                 </td>
               </tr>
             ) : (
@@ -482,9 +596,47 @@ export default function WorklistTable({
                 const key = `${client.id}:${serviceKey}`;
                 const stages = worklistState[key] ?? Array(12).fill("");
 
-                // Payroll processor lookup
                 const payrollSvc = client.services.find((s: any) => s.key === "payroll");
                 const processor = payrollSvc?.processor || "-";
+
+                // ── T9 variant: count-based table ──
+                if (variant === "t9") {
+                  const exp = svc.expectedAnnual || 0;
+                  const t9key = `${client.id}:1099s`;
+                  const counts = t9Counts[t9key] ?? Array(12).fill(0);
+                  const done = counts.reduce((a: number, b: number) => a + (b || 0), 0);
+                  const left = Math.max(0, exp - done);
+                  return (
+                    <tr key={client.id} className="transition-colors" style={{ borderBottom: "1px solid var(--line)" }}>
+                      <td className="px-2 py-1.5">
+                        <button onClick={() => onClientClick?.(client.id)}
+                          className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
+                      </td>
+                      <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.processor || svc.assignedTo || "-"}</td>
+                      <td className="px-2 py-1.5 text-center text-xs font-semibold text-[var(--ink)] tabular-nums">{exp || "—"}</td>
+                      {MONTHS_SHORT.map((mo, i) => {
+                        const n = +counts[i] || 0;
+                        const isCM = i === currentMonth && !isHistorical;
+                        const clickable = !isHistorical;
+                        return (
+                          <td key={mo} className={`px-0 py-1.5 ${isCM ? "bg-[var(--teal-soft)]" : ""}`}>
+                            <div
+                              onClick={clickable ? (e) => t9Bump(client.id, i, e) : undefined}
+                              className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors cursor-${clickable ? "pointer" : "default"} hover:scale-110 hover:shadow-sm active:scale-95`}
+                              style={{
+                                backgroundColor: n > 0 ? "#dff0d8" : "transparent",
+                                color: n > 0 ? "var(--green)" : "var(--muted)",
+                              }}
+                              title={`${mo}: ${n} processed${clickable ? " — click +1, shift-click -1" : ""}`}
+                            >{n || "·"}</div>
+                          </td>
+                        );
+                      })}
+                      <td className="px-2 py-1.5 text-center text-xs font-semibold tabular-nums" style={{ color: "var(--green)" }}>{done}</td>
+                      <td className={`px-2 py-1.5 text-center text-xs font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{left}</td>
+                    </tr>
+                  );
+                }
 
                 return (
                   <tr
@@ -509,7 +661,7 @@ export default function WorklistTable({
                     </td>
 
                     {/* Cadence */}
-                    {variant !== "t9" && serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+                    {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                     <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
                       {variant === "payroll"
                         ? payrollCadences[client.id] ?? "Monthly"
@@ -562,50 +714,6 @@ export default function WorklistTable({
                               >
                                 {completed}/{expected}
                               </span>
-                            </CellWrapper>
-                          </td>
-                        );
-                      }
-
-                      // ── T9 variant: show count badges ──
-                      if (variant === "t9" && isActive) {
-                        const expected = getT9ExpectedCount(client.id);
-                        const actual = t9ActualCounts[client.id]?.[i] ?? 0;
-                        const pct = Math.min(
-                          100,
-                          Math.round((actual / expected) * 100),
-                        );
-
-                        return (
-                          <td key={i} className="px-0 py-1.5">
-                            <CellWrapper
-                              isCurrentMonth={isCurrentMonth}
-                              isPastDue={isPastDue}
-                              readOnly={cellReadOnly}
-                              onClick={() => handleCellClick(client.id, i)}
-                            >
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span
-                                  className="text-[9px] font-semibold leading-none"
-                                  style={{ color: style.fg }}
-                                >
-                                  {actual}/{expected}
-                                </span>
-                                <div
-                                  className="w-full h-0.5 rounded-full"
-                                  style={{
-                                    backgroundColor: "var(--line)",
-                                  }}
-                                >
-                                  <div
-                                    className="h-full rounded-full transition-[width]"
-                                    style={{
-                                      width: `${pct}%`,
-                                      backgroundColor: style.fg,
-                                    }}
-                                  />
-                                </div>
-                              </div>
                             </CellWrapper>
                           </td>
                         );
@@ -667,14 +775,23 @@ export default function WorklistTable({
       </div>
 
       {/* ── Fine-print note ── */}
+      {variant === "t9" ? (
+        <p className="text-[10px] text-[var(--muted)] leading-relaxed italic">
+          Set each client&rsquo;s expected total on their card; log how many you
+          process each month here. &ldquo;Left&rdquo; stays amber until the
+          expected count is cleared. Click a month to add one, shift-click to
+          subtract.
+        </p>
+      ) : (
       <p className="text-[10px] text-[var(--muted)] leading-relaxed italic">
         Click a cell to open the stage picker. Past-due months that aren&apos;t
         marked Done or N/A are flagged with a red border. Cells are only active
         for months aligned with the service frequency cadence.
       </p>
+      )}
 
       {/* ── Stage Picker overlay ── */}
-      {pickerTarget && (
+      {pickerTarget && variant !== "t9" && (
         <>
           {/* Backdrop */}
           <div
