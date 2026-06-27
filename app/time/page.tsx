@@ -49,6 +49,7 @@ export default function TimePage() {
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedService, setSelectedService] = useState("fin");
+  const [timerNote, setTimerNote] = useState("");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [viewingAs, setViewingAs] = useState("");
@@ -122,29 +123,29 @@ export default function TimePage() {
         clientName: client.name, clientId: client.id,
         personName: person.name, personId: person.id,
         serviceKey: selectedService, serviceLabel: svc?.label || TASK_LABEL[selectedService] || "-",
-        duration: elapsed, date: new Date().toISOString(), note: "",
+        duration: elapsed, date: new Date().toISOString(), note: timerNote,
       };
       setEntries((prev) => [entry, ...prev]);
+      setTimerNote("");
       fetch("/api/time-entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           who: person.id, client_id: client.id,
           task: svc?.label || TASK_LABEL[selectedService] || "", seconds: elapsed,
-          started_at: new Date().toISOString(), note: "",
+          started_at: new Date().toISOString(), note: timerNote,
         }),
       }).catch(() => {});
     }
     setRunning(false);
     setElapsed(0);
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-  }, [elapsed, selectedClient, selectedPerson, selectedService, clients, staff]);
+  }, [elapsed, selectedClient, selectedPerson, selectedService, timerNote, clients, staff]);
 
   useEffect(() => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
-  // ── Clock update while running ──
   useEffect(() => {
     if (!running) return;
     const iv = setInterval(() => {
@@ -188,6 +189,7 @@ export default function TimePage() {
         client_id: client?.id || entry.clientId,
         task: entry.serviceLabel,
         seconds: entry.duration,
+        note: entry.note,
         edited: true,
       }),
     }).catch(() => {});
@@ -208,7 +210,7 @@ export default function TimePage() {
       {/* ── styles ── */}
       <style jsx>{`
         .tw-timer {
-          display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;
+          display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
           background: var(--card); border: 1px solid var(--line);
           border-radius: 16px; padding: 18px 20px;
         }
@@ -217,12 +219,13 @@ export default function TimePage() {
           font-size: 11px; font-weight: 700; letter-spacing: .05em;
           text-transform: uppercase; color: var(--muted);
         }
-        .tw-timer select {
+        .tw-timer select, .tw-timer input[type=text] {
           padding: 9px 11px; border: 1px solid var(--line);
           border-radius: 9px; font: inherit; font-size: 14px;
-          background: var(--card); min-width: 150px; color: var(--ink);
+          background: var(--card); min-width: 80px; color: var(--ink);
           cursor: pointer; outline: none;
         }
+        .tw-timer select { min-width: 140px; }
         .tw-clock {
           font-variant-numeric: tabular-nums; font-size: 40px;
           font-weight: 800; color: var(--muted); letter-spacing: 1px;
@@ -232,7 +235,7 @@ export default function TimePage() {
         .tw-go {
           all: unset; cursor: pointer; background: var(--green);
           color: #fff; padding: 13px 24px; border-radius: 12px;
-          font-weight: 700; font-size: 15px;
+          font-weight: 700; font-size: 15px; white-space: nowrap;
         }
         .tw-go.stop { background: var(--red); }
         .tw-live {
@@ -282,7 +285,8 @@ export default function TimePage() {
           margin: 14px 2px 0; font-style: italic;
         }
         .edit-inp { width: 42px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; text-align: center; }
-        .edit-sel { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
+        .edit-sel { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; max-width: 200px; }
+        .edit-note-inp { width: 160px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
       `}</style>
 
       {/* ── Timer bar ── */}
@@ -323,6 +327,16 @@ export default function TimePage() {
               <option key={k} value={k}>{TASK_LABEL[k]}</option>
             ))}
           </select>
+        </div>
+        <div className="fld">
+          <label>Notes</label>
+          <input
+            type="text"
+            value={timerNote}
+            onChange={(e) => setTimerNote(e.target.value)}
+            placeholder="Quick note..."
+            disabled={running}
+          />
         </div>
         <div className="fld">
           <label>
@@ -366,8 +380,8 @@ export default function TimePage() {
               <th>Who</th>
               <th>Client</th>
               <th>Task</th>
-              <th>Time</th>
-              <th>When</th>
+              <th style={{ whiteSpace: "nowrap" }}>Time &amp; When</th>
+              <th>Notes</th>
               <th></th>
             </tr>
           </thead>
@@ -384,8 +398,9 @@ export default function TimePage() {
                   <td className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <i style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", animation: "twpulse 1.1s infinite", display: "inline-block" }}></i>
                     {fmtClock(elapsed)}
+                    <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>Now</span>
                   </td>
-                  <td style={{ color: "var(--green)", fontWeight: 600 }}>Now</td>
+                  <td></td>
                   <td></td>
                 </tr>
               );
@@ -433,7 +448,7 @@ export default function TimePage() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td style={{ whiteSpace: "nowrap" }}>
                         <input
                           className="edit-inp"
                           type="number" min={0}
@@ -459,7 +474,16 @@ export default function TimePage() {
                           }}
                         />m
                       </td>
-                      <td colSpan={2}>
+                      <td>
+                        <input
+                          className="edit-note-inp"
+                          type="text"
+                          value={entry.note}
+                          onChange={(e) => handleEdit(idx, "note", e.target.value)}
+                          placeholder="note..."
+                        />
+                      </td>
+                      <td style={{ whiteSpace: "nowrap" }}>
                         <button className="reveal" onClick={() => saveEdit(idx)} style={{ marginRight: 10 }}>Save</button>
                         <button className="reveal" onClick={cancelEdit}>Cancel</button>
                       </td>
@@ -472,14 +496,19 @@ export default function TimePage() {
                     <td style={{ fontWeight: 500, color: "var(--ink)" }}>{entry.personName}</td>
                     <td className="lname">{shortName(entry.clientName)}</td>
                     <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
-                    <td className="mono">
-                      {fmtDur(entry.duration)}
-                      {entry.edited && <span className="edited">edited</span>}
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span className="mono">
+                        {fmtDur(entry.duration)}
+                        {entry.edited && <span className="edited">edited</span>}
+                      </span>
+                      <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>
+                        {entry.date.slice(0, 10) === today
+                          ? ""
+                          : new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
                     </td>
-                    <td style={{ color: "var(--muted)" }}>
-                      {entry.date.slice(0, 10) === new Date().toISOString().slice(0, 10)
-                        ? "Today"
-                        : new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {entry.note || "\u2014"}
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <button className="reveal" onClick={() => setEditIdx(idx)} style={{ marginRight: 10 }}>edit</button>
