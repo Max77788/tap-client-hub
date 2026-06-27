@@ -186,11 +186,19 @@ export default function TimePage() {
   const startTimer = useCallback(() => {
     if (!selectedClient || !selectedPerson) return;
     setRunning(true);
-    startTimeRef.current = Date.now() - elapsed * 1000;
+    const now = Date.now();
+    startTimeRef.current = now - elapsed * 1000;
     intervalRef.current = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 200);
-  }, [elapsed, selectedClient, selectedPerson]);
+    // Persist so session survives page reload
+    try {
+      localStorage.setItem("tap_timer", JSON.stringify({
+        startTime: startTimeRef.current,
+        selectedClient, selectedPerson, selectedService, timerNote,
+      }));
+    } catch {}
+  }, [elapsed, selectedClient, selectedPerson, selectedService, timerNote]);
 
   const stopTimer = useCallback(() => {
     try {
@@ -224,8 +232,31 @@ export default function TimePage() {
       setRunning(false);
       setElapsed(0);
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      try { localStorage.removeItem("tap_timer"); } catch {}
     }
   }, [elapsed, selectedClient, selectedPerson, selectedService, timerNote, clients, staff]);
+
+  // ── Auto-resume timer from localStorage on page load ──
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("tap_timer");
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved.startTime || !saved.selectedClient || !saved.selectedPerson) return;
+      const age = Date.now() - saved.startTime;
+      if (age > 12 * 3600 * 1000) { localStorage.removeItem("tap_timer"); return; }
+      setSelectedClient(saved.selectedClient);
+      setSelectedPerson(saved.selectedPerson);
+      setSelectedService(saved.selectedService || "fin");
+      setTimerNote(saved.timerNote || "");
+      startTimeRef.current = saved.startTime;
+      setElapsed(Math.floor(age / 1000));
+      setRunning(true);
+      intervalRef.current = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - saved.startTime) / 1000));
+      }, 200);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
