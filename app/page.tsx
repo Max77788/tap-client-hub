@@ -6,7 +6,6 @@ import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   SERVICE_META,
   filterClients,
-  getStats,
   getGroups,
   getStaffOptions,
   deleteVaultEntriesByClient,
@@ -21,23 +20,33 @@ type DisplayItem =
   | { kind: "single"; client: Client };
 
 export default function ClientsPage() {
-  // ── State from Supabase API ──
+  // ── State from Supabase API (backend filters by type) ──
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
+  const [typeFilter, setTypeFilter] = useState<ClientType | "All">("Business");
   const [staffFilter, setStaffFilter] = useState<string>("");
-  const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading } = useClientsState(typeFilter);
+  const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading, stats } = useClientsState(typeFilter);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // ── Derived data ──
+  // Compute type-specific stats from loaded clients
+  const clientStats = useMemo(() => {
+    const mf = clients.filter(c => c.services.some(s => s.key === "financials" && s.enabled)).length;
+    const behind = clients.filter(c =>
+      c.services.some(s => {
+        if (!s.enabled || !s.months) return false;
+        const now = new Date().getMonth();
+        return s.months[now] && s.months[now] !== "done" && s.months[now] !== "lock" && s.months[now] !== "na";
+      })
+    ).length;
+    return { ...stats, monthlyFinancials: mf, behindThisMonth: behind };
+  }, [clients, stats]);
   const groups = useMemo(() => getGroups(clients), [clients]);
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
-  const stats = useMemo(() => getStats(clients), [clients]);
 
   const filteredClients = useMemo(
-    () => filterClients(clients, { search, type: typeFilter, staff: staffFilter }),
-    [clients, search, typeFilter, staffFilter],
+    () => filterClients(clients, { search, type: "All", staff: staffFilter }),
+    [clients, search, staffFilter],
   );
 
   // Group filtered clients: multi-client groups become one group card, singles stay as-is
@@ -166,11 +175,11 @@ export default function ClientsPage() {
         <>
           {/* ── Stat cards row ── */}
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-        <StatCard label="Total clients" value={stats.total} color="var(--ink)" />
-        <StatCard label="Business" value={stats.business} color="var(--teal)" />
-        <StatCard label="Personal" value={stats.personal} color="var(--blue)" />
-        <StatCard label="Monthly financials" value={stats.monthlyFinancials} color="var(--green)" />
-        <StatCard label="Behind this month" value={stats.behindThisMonth} color="var(--amber)" />
+        <StatCard label="Total clients" value={clientStats.total} color="var(--ink)" />
+        <StatCard label="Business" value={clientStats.business} color="var(--teal)" />
+        <StatCard label="Personal" value={clientStats.personal} color="var(--blue)" />
+        <StatCard label="Monthly financials" value={clientStats.monthlyFinancials} color="var(--green)" />
+        <StatCard label="Behind this month" value={clientStats.behindThisMonth} color="var(--amber)" />
       </div>
 
       {/* ── Controls: Search + Filters + Actions ── */}

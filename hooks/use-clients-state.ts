@@ -5,18 +5,18 @@ import type { Client, ClientType, ServiceKey } from "@/lib/types";
 
 type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
 
-export function useClientsState(typeFilter?: ClientType | "All") {
+export function useClientsState(typeFilter: ClientType | "All" = "All") {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({ total: 0, business: 0, personal: 0 });
 
   useEffect(() => {
     let cancelled = false;
     async function fetchFromSupabase() {
       try {
-        // Build URL with optional type filter
         let url = "/api/clients";
-        if (typeFilter && typeFilter !== "All") {
+        if (typeFilter !== "All") {
           url += `?type=${typeFilter.toLowerCase()}`;
         }
 
@@ -26,13 +26,15 @@ export function useClientsState(typeFilter?: ClientType | "All") {
         clearTimeout(timeoutId);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
-        if (!cancelled && data.clients?.length > 0) {
+        if (cancelled) return;
+
+        if (data.clients) {
           setClients(data.clients);
-        } else if (!cancelled && data.clients) {
-          // Empty array is valid (e.g. no Personal clients)
-          setClients(data.clients);
-        } else if (!cancelled) {
+        } else {
           setError("No clients returned from API");
+        }
+        if (data.stats) {
+          setStats(data.stats);
         }
       } catch (err: any) {
         if (!cancelled) setError(err.message || "Failed to load clients");
@@ -115,6 +117,6 @@ export function useClientsState(typeFilter?: ClientType | "All") {
 
   return {
     clients, setClients, updateClient, updateServiceMonth,
-    deleteClient, addClient, loading, error,
+    deleteClient, addClient, loading, error, stats,
   };
 }

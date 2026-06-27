@@ -18,7 +18,14 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
 
-  // ── Build clients query ──
+  // Always fetch stats (lightweight, no joins) — so counts stay accurate even when filtered
+  const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
+    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
+    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
+  ]);
+
+  // Build clients query
   let clientsQuery = supabase
     .from("clients")
     .select("*, contacts(*)")
@@ -154,7 +161,10 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ clients });
+  return NextResponse.json({
+    clients,
+    stats: { total: totalCount ?? 0, business: bizCount ?? 0, personal: persCount ?? 0 },
+  });
 }
 
 export async function POST(request: Request) {
