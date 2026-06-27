@@ -101,15 +101,23 @@ export default function ClientsPage() {
     setModalOpen(true);
   }
 
-  const handleSlideoverSave = useCallback((updated: Client) => {
+  const handleSlideoverSave = useCallback(async (updated: Client) => {
     // Optimistic local update
     updateClient(updated.id, updated);
     // Persist to API
-    fetch("/api/clients", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    }).catch(e => console.error("Failed to save client:", e));
+    try {
+      const res = await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error("PUT /api/clients failed:", res.status, errData);
+      }
+    } catch (e) {
+      console.error("Failed to save client:", e);
+    }
   }, [updateClient]);
 
   const handleSlideoverDelete = useCallback((clientId: string) => {

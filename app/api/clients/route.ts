@@ -4,12 +4,12 @@ import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
-  FIN: "financials",
+  FN: "financials",
   PR: "payroll",
-  STX: "sales_tax",
+  ST: "sales_tax",
   T9: "1099s",
-  REND: "renditions",
-  TAX: "tax_returns",
+  RD: "renditions",
+  TR: "tax_returns",
 };
 
 export async function GET(request: Request) {
@@ -254,8 +254,8 @@ export async function PUT(request: Request) {
   if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
 
   const KEY_TO_SERVICE_CODE: Record<string, string> = {
-    financials: "FIN", payroll: "PR", sales_tax: "STX",
-    "1099s": "T9", renditions: "REND", tax_returns: "TAX",
+    financials: "FN", payroll: "PR", sales_tax: "ST",
+    "1099s": "T9", renditions: "RD", tax_returns: "TR",
   };
 
   // 1. Fetch service template IDs
