@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     .eq("status", "active");
 
   if (typeFilter === "business" || typeFilter === "personal") {
-    clientsQuery = clientsQuery.eq("type", typeFilter);
+    clientsQuery = clientsQuery.ilike("type", typeFilter);
   }
 
   clientsQuery = clientsQuery.order("name");
