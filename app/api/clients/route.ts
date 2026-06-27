@@ -38,19 +38,22 @@ export async function GET() {
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Load work_periods for current year (one query per month to avoid 1000-row limit)
+  // Load work_periods for current year — single query instead of 12 sequential
   const periodByCsId: Record<string, Record<number, string>> = {};
   try {
-    for (let m = 0; m < 12; m++) {
-      const periodStr = `${currentYear}-${String(m + 1).padStart(2, "0")}`;
-      const { data: monthData } = await supabase
-        .from("work_periods").select("client_service_id, stage")
-        .eq("period", periodStr);
-      if (monthData) {
-        for (const wp of monthData) {
-          if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
-          periodByCsId[wp.client_service_id][m] = wp.stage;
-        }
+    const { data: allPeriods } = await supabase
+      .from("work_periods")
+      .select("client_service_id, stage, period")
+      .gte("period", `${currentYear}-01`)
+      .lte("period", `${currentYear}-12`);
+    if (allPeriods) {
+      for (const wp of allPeriods) {
+        const match = wp.period?.match(/^\d{4}-(\d{2})$/);
+        if (!match) continue;
+        const monthIdx = parseInt(match[1], 10) - 1;
+        if (monthIdx < 0 || monthIdx > 11) continue;
+        if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
+        periodByCsId[wp.client_service_id][monthIdx] = wp.stage;
       }
     }
   } catch {}

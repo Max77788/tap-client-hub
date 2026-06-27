@@ -14,7 +14,10 @@ export function useClientsState() {
     let cancelled = false;
     async function fetchFromSupabase() {
       try {
-        const res = await fetch("/api/clients");
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch("/api/clients", { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
         if (!cancelled && data.clients?.length > 0) {
