@@ -178,7 +178,7 @@ export default function ClientsPage() {
         <StatCard label="Total clients" value={clientStats.total} color="var(--ink)" />
         <StatCard label="Business" value={clientStats.business} color="var(--teal)" />
         <StatCard label="Personal" value={clientStats.personal} color="var(--blue)" />
-        <StatCard label="Monthly financials" value={clientStats.monthlyFinancials} color="var(--green)" />
+        <StatCard label="Financials" value={clientStats.monthlyFinancials} color="var(--green)" />
         <StatCard label="Behind this month" value={clientStats.behindThisMonth} color="var(--amber)" />
       </div>
 
