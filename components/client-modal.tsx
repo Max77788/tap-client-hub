@@ -16,7 +16,6 @@ const STAFF = ["Terry Anderson", "Lindsay", "Misty", "Jill", "Unassigned"];
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
 
-  // Generate preview CID
   const [previewCid] = useState(() => "TP|BS|" + String(Math.floor(1000 + Math.random() * 9000)).padStart(4, "0"));
 
   // ── Form fields ──
@@ -27,6 +26,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [email, setEmail] = useState("");
   const [addEmail, setAddEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [addPhone, setAddPhone] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [st, setSt] = useState("TX");
@@ -36,23 +36,26 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [fin, setFin] = useState(false);
   const [pr, setPr] = useState(false);
   const [stx, setStx] = useState(false);
-  const [tax, setTax] = useState(false);
   const [t9, setT9] = useState(false);
   const [rend, setRend] = useState(false);
+  const [tax, setTax] = useState(false);
   const [finFreq, setFinFreq] = useState("Monthly");
+  const [finMonth, setFinMonth] = useState("1");
   const [fee, setFee] = useState("");
   const [prFreq, setPrFreq] = useState("Bi-Weekly");
-  const [prProc, setPrProc] = useState("ADP");
+  const [prPaydate, setPrPaydate] = useState("");
+  const [prPin, setPrPin] = useState("");
   const [stxFreq, setStxFreq] = useState("Monthly");
+  const [t9Count, setT9Count] = useState("");
   const [taxType, setTaxType] = useState("Business");
 
   // Per-service assigned staff
   const [finAssigned, setFinAssigned] = useState("Unassigned");
   const [prAssigned, setPrAssigned] = useState("Unassigned");
   const [stxAssigned, setStxAssigned] = useState("Unassigned");
-  const [taxAssigned, setTaxAssigned] = useState("Unassigned");
   const [t9Assigned, setT9Assigned] = useState("Unassigned");
   const [rendAssigned, setRendAssigned] = useState("Unassigned");
+  const [taxAssigned, setTaxAssigned] = useState("Unassigned");
 
   useEffect(() => {
     if (client) {
@@ -63,6 +66,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setEmail((client.emails || [""])[0] || "");
       setAddEmail((client.emails || [])[1] || "");
       setPhone((client.phones || [""])[0] || "");
+      setAddPhone((client.phones || [])[1] || "");
       setAddress(client.address || "");
       setCity(client.city || "");
       setSt(client.state || "TX");
@@ -71,13 +75,25 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setFin(svcs.find(s => s.key === "financials")?.enabled || false);
       setPr(svcs.find(s => s.key === "payroll")?.enabled || false);
       setStx(svcs.find(s => s.key === "sales_tax")?.enabled || false);
-      setTax(svcs.find(s => s.key === "tax_returns")?.enabled || false);
       setT9(svcs.find(s => s.key === "1099s")?.enabled || false);
       setRend(svcs.find(s => s.key === "renditions")?.enabled || false);
+      setTax(svcs.find(s => s.key === "tax_returns")?.enabled || false);
+      // Restore service-specific fields
+      const finSvc = svcs.find(s => s.key === "financials");
+      if (finSvc) { setFinFreq(finSvc.frequency || "Monthly"); setFinMonth(String(finSvc.financialsMonth || 1)); }
+      const prSvc = svcs.find(s => s.key === "payroll");
+      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); }
+      const t9Svc = svcs.find(s => s.key === "1099s");
+      if (t9Svc) setT9Count(String(t9Svc.expectedAnnual || ""));
     } else {
       setName(""); setType("Business"); setGroup(""); setAssigned("Unassigned");
-      setEmail(""); setAddEmail(""); setPhone(""); setAddress(""); setCity(""); setSt("TX"); setZip("");
-      setFin(false); setPr(false); setStx(false); setTax(false); setT9(false); setRend(false);
+      setEmail(""); setAddEmail(""); setPhone(""); setAddPhone("");
+      setAddress(""); setCity(""); setSt("TX"); setZip("");
+      setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
+      setFinFreq("Monthly"); setFinMonth("1"); setFee(""); setPrFreq("Bi-Weekly"); setPrPaydate(""); setPrPin("");
+      setStxFreq("Monthly"); setT9Count(""); setTaxType("Business");
+      setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
+      setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
     }
   }, [client, open]);
 
@@ -93,27 +109,40 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     const nm = name.trim();
     if (!nm) return;
     const svcs: any[] = [];
-    function addSvc(key: ServiceKey, enabled: boolean, frequency: string, assignedTo: string, processor?: string) {
+    function addSvc(
+      key: ServiceKey, enabled: boolean, frequency: string,
+      assignedTo: string, extra?: Record<string, any>
+    ) {
       if (!enabled) return;
       svcs.push({
         key, enabled: true, frequency,
-        processor: processor || "-",
         assignedTo: assignedTo || "Unassigned",
         months: Array(12).fill("lock"),
+        ...extra,
       });
     }
-    addSvc("financials", fin, finFreq, finAssigned);
-    addSvc("payroll", pr, prFreq, prAssigned, prProc);
+    // Order: Fin → PR → STX → 1099s → Rend → Tax
+    addSvc("financials", fin, finFreq, finAssigned, {
+      financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
+    });
+    addSvc("payroll", pr, prFreq, prAssigned, {
+      paydate: prPaydate || undefined,
+      payrollPassword: prPin || undefined,
+    });
     addSvc("sales_tax", stx, stxFreq, stxAssigned);
-    addSvc("tax_returns", tax, "Yearly", taxAssigned, taxType);
-    addSvc("1099s", t9, "Yearly", t9Assigned);
+    addSvc("1099s", t9, "Yearly", t9Assigned, {
+      expectedAnnual: t9Count ? parseInt(t9Count) : undefined,
+    });
     addSvc("renditions", rend, "Yearly", rendAssigned);
+    addSvc("tax_returns", tax, "Yearly", taxAssigned, {
+      processor: taxType,
+    });
 
     onSave({
       name: nm, type: type as "Business" | "Personal", status: "active",
       group, assignedStaff: assigned,
       emails: [email, addEmail].filter(Boolean),
-      phones: [phone].filter(Boolean),
+      phones: [phone, addPhone].filter(Boolean),
       address, city, state: st,
       services: svcs.length ? svcs : [],
     } as any);
@@ -167,7 +196,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               </select>
             </div>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Group / owner</label>
+              <label style={labelStyle}>Group name</label>
               <input style={inputStyle} value={group} onChange={e => setGroup(e.target.value)} placeholder="e.g. Gambhir" />
             </div>
           </div>
@@ -184,6 +213,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <input style={inputStyle} value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="cc@email.com" />
           <label style={labelStyle}>Phone</label>
           <input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="(713) 555-0100" />
+          <label style={labelStyle}>Additional phone <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <input style={inputStyle} value={addPhone} onChange={e => setAddPhone(e.target.value)} placeholder="(713) 555-0200" />
           <label style={labelStyle}>Street address</label>
           <input style={inputStyle} value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St." />
           <div className="two" style={{ display: "flex", gap: 12 }}>
@@ -201,7 +232,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
           </div>
 
-          {/* ── Services section ── */}
+          {/* ── Services section (order: Fin → PR → STX → T9 → Rend → Tax) ── */}
           <div className="fsect" style={fsectStyle}>Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them; details appear as you tick</span></div>
 
           {/* Financials */}
@@ -218,6 +249,17 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 <input style={inputStyle} value={fee} onChange={e => setFee(e.target.value)} placeholder="750" />
               </div>
             </div>
+            {finFreq === "Yearly" && (
+              <div style={{ marginTop: 8 }}>
+                <label style={labelStyle}>Processing month</label>
+                <select style={inputStyle} value={finMonth} onChange={e => setFinMonth(e.target.value)}>
+                  {["January","February","March","April","May","June",
+                    "July","August","September","October","November","December"].map((m, i) => (
+                    <option key={m} value={String(i+1)}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={finAssigned} onChange={e => setFinAssigned(e.target.value)}>
               {STAFF.map(s => <option key={s}>{s}</option>)}
@@ -234,11 +276,13 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ ...labelStyle, marginTop: 8 }}>Processor</label>
-                <select style={inputStyle} value={prProc} onChange={e => setPrProc(e.target.value)}>
-                  <option>ADP</option><option>Sure Payroll</option><option>QuickBooks Desktop</option><option>Gusto</option><option>Heartland</option><option>Toast</option><option>Paychex</option>
-                </select>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Pay date / day</label>
+                <input style={inputStyle} value={prPaydate} onChange={e => setPrPaydate(e.target.value)} placeholder="e.g. Friday" />
               </div>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <label style={labelStyle}>PIN / EFTPS password</label>
+              <input style={inputStyle} type="password" value={prPin} onChange={e => setPrPin(e.target.value)} placeholder="EFT pin" />
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={prAssigned} onChange={e => setPrAssigned(e.target.value)}>
@@ -258,20 +302,12 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </select>
           </ServiceCard>
 
-          {/* Tax Return */}
-          <ServiceCard icon="📋" label="Tax Return" checked={tax} onChange={setTax}>
-            <label style={{ ...labelStyle, marginTop: 8 }}>Return type</label>
-            <select style={inputStyle} value={taxType} onChange={e => setTaxType(e.target.value)}>
-              <option>Business</option><option>1040</option><option>1065</option><option>1120</option><option>1120-S</option><option>990</option>
-            </select>
-            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
-            <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </ServiceCard>
-
           {/* 1099 Filing */}
           <ServiceCard icon="📄" label="1099 Filing" checked={t9} onChange={setT9}>
+            <div style={{ marginTop: 8 }}>
+              <label style={labelStyle}>Expected annual count</label>
+              <input style={inputStyle} type="number" value={t9Count} onChange={e => setT9Count(e.target.value)} placeholder="e.g. 15" min="0" />
+            </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={t9Assigned} onChange={e => setT9Assigned(e.target.value)}>
               {STAFF.map(s => <option key={s}>{s}</option>)}
@@ -282,6 +318,18 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <ServiceCard icon="🏠" label="Renditions (property tax)" checked={rend} onChange={setRend}>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
+              {STAFF.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </ServiceCard>
+
+          {/* Tax Return (last) */}
+          <ServiceCard icon="📋" label="Tax Return" checked={tax} onChange={setTax}>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Return type</label>
+            <select style={inputStyle} value={taxType} onChange={e => setTaxType(e.target.value)}>
+              <option>Business</option><option>1040</option><option>1065</option><option>1120</option><option>1120-S</option><option>990</option>
+            </select>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
+            <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
               {STAFF.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
@@ -320,7 +368,7 @@ function ServiceCard({ icon, label, checked, onChange, children }: {
       </label>
       {children && (
         <div className={`svcsub${checked ? " open" : ""}`} style={{
-          maxHeight: checked ? 200 : 0, opacity: checked ? 1 : 0,
+          maxHeight: checked ? 400 : 0, opacity: checked ? 1 : 0,
           padding: checked ? "6px 13px 13px" : "0 13px",
           transition: ".18s", background: "#faf7f0",
           borderTop: checked ? "1px solid var(--line)" : "none",
