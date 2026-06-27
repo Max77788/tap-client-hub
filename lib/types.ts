@@ -23,6 +23,16 @@ export interface ServiceConfig {
   currentStage?: string;
 }
 
+export interface SalesTaxLineItem {
+  serviceName: string;
+  rt: string;
+  taxId: string;
+  bankName?: string;
+  bankRouting?: string;
+  bankAccount?: string;
+  frequency?: string;
+}
+
 export interface ClientService {
   id: string;
   csId?: string;
@@ -45,7 +55,7 @@ export interface ClientService {
   bankAccount?: string;
   groupAssignedTo?: string;
   salesTaxRT?: string;
-  salesTaxLineItems?: Array<{ jurisdiction: string; rt: string }>;
+  salesTaxLineItems?: SalesTaxLineItem[];
   processorOther?: string;
   cdg?: string;
   eftps?: string;
