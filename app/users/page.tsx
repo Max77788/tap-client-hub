@@ -16,7 +16,9 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalUser, setModalUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState<Partial<User>>({});
+  const [editForm, setEditForm] = useState<Partial<User & { password?: string }>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +45,71 @@ export default function UsersPage() {
 
   function openModal(user: User | null) {
     setModalUser(user);
-    setEditForm(user ? { name: user.name, location: user.location, role: user.role, mgr: user.mgr, username: user.username, modules: [...user.modules] } : { name: "", location: "", role: "Staff", mgr: "—", username: "", modules: [] });
+    setSaveError(null);
+    setEditForm(user ? {
+      name: user.name, location: user.location, role: user.role,
+      mgr: user.mgr, username: user.username, modules: [...user.modules],
+      email: user.email,
+    } : {
+      name: "", location: "", role: "Staff", mgr: "—", username: "",
+      email: "", password: "", modules: [],
+    });
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (modalUser) {
+        // Update existing user
+        const res = await fetch("/api/profiles", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: modalUser.id,
+            full_name: editForm.name,
+            role: (editForm.role || "Staff").toLowerCase().replace(/ /g, "_"),
+            location: editForm.location,
+            reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
+            modules: editForm.modules || [],
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to update");
+        }
+      } else {
+        // Create new user
+        if (!editForm.email || !editForm.password || !editForm.name) {
+          throw new Error("Name, email, and password are required");
+        }
+        const res = await fetch("/api/profiles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: editForm.name,
+            email: editForm.email,
+            password: editForm.password,
+            role: (editForm.role || "Staff").toLowerCase().replace(/ /g, "_"),
+            location: editForm.location,
+            reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
+            modules: editForm.modules || [],
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Failed to create user");
+        }
+      }
+      setModalUser(null);
+      // Refresh list
+      const res = await fetch("/api/profiles");
+      if (res.ok) setUsers(await res.json());
+    } catch (err: any) {
+      setSaveError(err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) return <PageSkeleton rows={6} />;
@@ -101,10 +167,6 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {users.map(u => {
-              const chips = u.modules.length > 4
-                ? [...u.modules.slice(0, 4).map(m => `<span class="uchip">${m}</span>`), `<span class="uchip">+${u.modules.length - 4}</span>`]
-                : u.modules.map(m => `<span class="uchip">${m}</span>`);
-              const sc = u.status === "Active" ? "act" : "inv";
               return (
                 <tr key={u.id} onClick={() => openModal(u)} style={{ cursor: "pointer" }}>
                   <td className="lname">{u.name}</td>
@@ -120,7 +182,7 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="mono">{u.username}</td>
-                  <td><span className={`ustat ${sc}`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: u.status === "Active" ? "var(--green-soft)" : "var(--amber-soft)", color: u.status === "Active" ? "var(--green)" : "var(--amber)" }}>{u.status}</span></td>
+                  <td><span className={`ustat`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: u.status === "Active" ? "var(--green-soft)" : "var(--amber-soft)", color: u.status === "Active" ? "var(--green)" : "var(--amber)" }}>{u.status}</span></td>
                 </tr>
               );
             })}
@@ -135,18 +197,28 @@ export default function UsersPage() {
           <div className="mscrim show" onClick={() => setModalUser(null)} />
           <div className="modal" style={{
             position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            zIndex: 61, background: "var(--paper)", borderRadius: 18, width: 480,
+            zIndex: 61, background: "var(--paper)", borderRadius: 18, width: 520,
             maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow)",
           }} onClick={e => e.stopPropagation()}>
             <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600, padding: "20px 24px 4px", margin: 0 }}>
               {modalUser ? "Edit user" : "Add a user"}
             </h2>
             <div className="msub" style={{ color: "var(--muted)", fontSize: 13, padding: "0 24px 14px", borderBottom: "1px solid var(--line)" }}>
-              Set who they are, what they can open, and who they report to.
+              {modalUser ? "Update their details and access." : "Provision a new login — the user signs in with their email and the password you set."}
             </div>
             <div className="mform" style={{ padding: "18px 24px" }}>
               <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Full name</label>
               <input className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+
+              {!modalUser && (
+                <>
+                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Email address</label>
+                  <input className="ef" type="email" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="user@tapallc.com" />
+
+                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Initial password</label>
+                  <input className="ef" type="password" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.password || ""} onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))} placeholder="Min 6 characters" />
+                </>
+              )}
 
               <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Location</label>
               <input className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.location || ""} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Houston, TX or Pune, India" />
@@ -167,9 +239,6 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Username</label>
-              <input className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.username || ""} onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))} placeholder="auto from first name if blank" />
-
               <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Modules they can access</label>
               <div className="modgrid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 7, marginTop: 6 }}>
                 {MODULES_LIST.map(m => (
@@ -184,10 +253,16 @@ export default function UsersPage() {
                   </label>
                 ))}
               </div>
+
+              {saveError && (
+                <div style={{ background: "var(--red-soft)", color: "var(--red)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px", justifyContent: "flex-end" }}>
-              <button className="btn alt" onClick={() => setModalUser(null)} style={{ all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)", border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Cancel</button>
-              <button className="btn" onClick={() => setModalUser(null)} style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Save changes</button>
+              <button className="btn alt" onClick={() => setModalUser(null)} disabled={saving} style={{ all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)", border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Cancel</button>
+              <button className="btn" onClick={handleSave} disabled={saving} style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>{saving ? "Saving..." : "Save changes"}</button>
             </div>
           </div>
         </>
