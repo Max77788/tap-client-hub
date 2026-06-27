@@ -203,7 +203,7 @@ export default function VaultPage() {
                         <>
                           <td className="mono" style={{ color: "var(--muted)" }}>— linked —</td>
                           <td>
-                            <a className="reveal" href="#" onClick={e => { e.preventDefault(); alert("Opening TAP Bank secure portal (in-office only)"); }}
+                            <a className="reveal" href="https://example.com" target="_blank" rel="noopener noreferrer"
                               style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
                               Open in TAP&nbsp;Bank ↗
                             </a>
