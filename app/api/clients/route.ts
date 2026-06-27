@@ -15,17 +15,19 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const typeFilter = searchParams.get("type")?.toLowerCase(); // "business" | "personal" | undefined
+  const limit = parseInt(searchParams.get("limit") || "50");
+  const offset = parseInt(searchParams.get("offset") || "0");
 
   const supabase = await createClient();
 
-  // Always fetch stats (lightweight, no joins) — so counts stay accurate even when filtered
+  // Always fetch stats (lightweight, no joins)
   const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
     supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
     supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
   ]);
 
-  // Build clients query
+  // Build clients query with pagination
   let clientsQuery = supabase
     .from("clients")
     .select("*, contacts(*)")
@@ -35,7 +37,7 @@ export async function GET(request: Request) {
     clientsQuery = clientsQuery.ilike("type", typeFilter);
   }
 
-  clientsQuery = clientsQuery.order("name");
+  clientsQuery = clientsQuery.order("name").range(offset, offset + limit - 1);
 
   const { data: dbClients, error: clientsError } = await clientsQuery;
 
@@ -43,22 +45,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: clientsError?.message }, { status: 500 });
   }
 
-  // ── Build client_services query ──
-  let svcQuery = supabase
-    .from("client_services")
-    .select("*, service:services(*)")
-    .eq("active", true);
-
-  if (typeFilter === "business" || typeFilter === "personal") {
-    // Only fetch services for clients of the requested type
-    const clientIds = dbClients.map((c: any) => c.id);
-    if (clientIds.length === 0) {
-      return NextResponse.json({ clients: [], stats: { business: 0, personal: 0 } });
-    }
-    svcQuery = svcQuery.in("client_id", clientIds);
+  if (dbClients.length === 0) {
+    return NextResponse.json({ clients: [], stats: { total: totalCount ?? 0, business: bizCount ?? 0, personal: persCount ?? 0 }, hasMore: false });
   }
 
-  const { data: dbServices, error: svcError } = await svcQuery;
+  // Only fetch services for the returned page of clients
+  const clientIds = dbClients.map((c: any) => c.id);
+  const { data: dbServices, error: svcError } = await supabase
+    .from("client_services")
+    .select("*, service:services(*)")
+    .eq("active", true)
+    .in("client_id", clientIds);
 
   if (svcError) {
     return NextResponse.json({ error: svcError.message }, { status: 500 });

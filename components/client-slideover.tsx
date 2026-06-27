@@ -65,6 +65,18 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setStxLineItems(stxSvc?.salesTaxLineItems || []);
   }, [client]);
 
+  // ── Edit view state (declared here to obey Rules of Hooks — never conditional) ──
+  const [eName, setEName] = useState(client.name);
+  const [eType, setEType] = useState(client.type);
+  const [eGroup, setEGroup] = useState(client.group);
+  const [eEmail, setEEmail] = useState((client.emails || [""])[0] || "");
+  const [eAddEmail, setEAddEmail] = useState((client.emails || [])[1] || "");
+  const [ePhone, setEPhone] = useState((client.phones || [""])[0] || "");
+  const [eAddress, setEAddress] = useState(client.address);
+  const [eCity, setECity] = useState(client.city);
+  const [eState, setEState] = useState(client.state);
+  const [eZip, setEZip] = useState((client as any).zip || "");
+
   // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -378,16 +390,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }
 
   // ── Edit view ──
-  const [eName, setEName] = useState(c.name);
-  const [eType, setEType] = useState(c.type);
-  const [eGroup, setEGroup] = useState(c.group);
-  const [eEmail, setEEmail] = useState((c.emails || [""])[0] || "");
-  const [eAddEmail, setEAddEmail] = useState((c.emails || [])[1] || "");
-  const [ePhone, setEPhone] = useState((c.phones || [""])[0] || "");
-  const [eAddress, setEAddress] = useState(c.address);
-  const [eCity, setECity] = useState(c.city);
-  const [eState, setEState] = useState(c.state);
-  const [eZip, setEZip] = useState((c as any).zip || "");
 
   function saveEdit() {
     const nm = eName.trim();
