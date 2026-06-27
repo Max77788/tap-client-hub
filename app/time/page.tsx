@@ -59,6 +59,18 @@ export default function TimePage() {
   const [editingTime, setEditingTime] = useState(false);
   const [timeInput, setTimeInput] = useState("");
 
+  // Mode toggle
+  const [mode, setMode] = useState<"timer" | "manual">("timer");
+
+  // Manual entry form state
+  const [mWho, setMWho] = useState("");
+  const [mClient, setMClient] = useState("");
+  const [mTask, setMTask] = useState("fin");
+  const [mHours, setMHours] = useState("");
+  const [mMinutes, setMMinutes] = useState("");
+  const [mNote, setMNote] = useState("");
+  const [mDate, setMDate] = useState(new Date().toISOString().slice(0, 10));
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -82,7 +94,6 @@ export default function TimePage() {
     const secs = parseTimeInput(timeInput);
     if (secs > 0) {
       if (running) {
-        // Adjust the start time reference so elapsed = secs
         startTimeRef.current = Date.now() - secs * 1000;
         setElapsed(secs);
       } else {
@@ -91,6 +102,39 @@ export default function TimePage() {
     }
     setEditingTime(false);
     setTimeInput("");
+  }
+
+  function submitManualEntry() {
+    const person = staff.find((s) => s.id === mWho);
+    const client = clients.find((c) => c.id === mClient);
+    const hours = parseInt(mHours) || 0;
+    const minutes = parseInt(mMinutes) || 0;
+    const duration = hours * 3600 + minutes * 60;
+    if (!person || !client || duration <= 0) return;
+
+    const svc = (SERVICE_META as any)[mTask];
+    const entry: TimeEntry = {
+      id: crypto.randomUUID(),
+      clientName: client.name, clientId: client.id,
+      personName: person.name, personId: person.id,
+      serviceKey: mTask, serviceLabel: svc?.label || TASK_LABEL[mTask] || "-",
+      duration, date: `${mDate}T12:00:00.000Z`, note: mNote,
+    };
+    setEntries((prev) => [entry, ...prev]);
+
+    // Reset form
+    setMHours(""); setMMinutes(""); setMNote("");
+    setMDate(new Date().toISOString().slice(0, 10));
+
+    fetch("/api/time-entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        who: person.id, client_id: client.id,
+        task: svc?.label || TASK_LABEL[mTask] || "", seconds: duration,
+        started_at: `${mDate}T12:00:00.000Z`, note: mNote,
+      }),
+    }).catch(() => {});
   }
 
   useEffect(() => {
@@ -323,8 +367,41 @@ export default function TimePage() {
         .edit-note-inp { width: 160px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
       `}</style>
 
-      {/* ── Timer bar ── */}
-      <div className="tw-timer">
+      {/* ── Mode toggle ── */}
+      <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
+        <button
+          onClick={() => setMode("timer")}
+          style={{
+            all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
+            fontWeight: 600, fontSize: 14,
+            background: mode === "timer" ? "var(--card)" : "transparent",
+            color: mode === "timer" ? "var(--ink)" : "var(--muted)",
+            border: mode === "timer" ? "1px solid var(--line)" : "1px solid transparent",
+            borderBottom: mode === "timer" ? "1px solid var(--card)" : "1px solid transparent",
+            marginBottom: -1, position: "relative", zIndex: mode === "timer" ? 1 : 0,
+          }}
+        >
+          ⏱ Timer
+        </button>
+        <button
+          onClick={() => setMode("manual")}
+          style={{
+            all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
+            fontWeight: 600, fontSize: 14,
+            background: mode === "manual" ? "var(--card)" : "transparent",
+            color: mode === "manual" ? "var(--ink)" : "var(--muted)",
+            border: mode === "manual" ? "1px solid var(--line)" : "1px solid transparent",
+            borderBottom: mode === "manual" ? "1px solid var(--card)" : "1px solid transparent",
+            marginBottom: -1, position: "relative", zIndex: mode === "manual" ? 1 : 0,
+          }}
+        >
+          ✎ Manual Entry
+        </button>
+      </div>
+
+      {/* ── Timer mode ── */}
+      {mode === "timer" && (
+      <div className="tw-timer" style={{ borderTopLeftRadius: 0 }}>
         <div className="fld">
           <label>Who</label>
           <select
@@ -332,6 +409,7 @@ export default function TimePage() {
             onChange={(e) => setSelectedPerson(e.target.value)}
             disabled={running}
           >
+            <option value="">— choose —</option>
             {whoOpts.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -371,7 +449,6 @@ export default function TimePage() {
           {editingTime ? (
             <input
               autoFocus
-              className="tw-clock-edit"
               type="text"
               value={timeInput}
               onChange={(e) => setTimeInput(e.target.value)}
@@ -402,7 +479,6 @@ export default function TimePage() {
         >
           {running ? "\u25A0 Stop & log" : "\u25B6 Start"}
         </button>
-        {/* Notes — full width textarea below */}
         <div className="tw-notes-row">
           <label style={{ marginTop: 4 }}>Notes</label>
           <textarea
@@ -413,6 +489,83 @@ export default function TimePage() {
           />
         </div>
       </div>
+      )}
+
+      {/* ── Manual entry mode ── */}
+      {mode === "manual" && (
+      <div className="tw-timer" style={{ borderTopLeftRadius: 0, flexDirection: "column" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+          <div className="fld">
+            <label>Who</label>
+            <select value={mWho} onChange={(e) => setMWho(e.target.value)}>
+              <option value="">— choose —</option>
+              {whoOpts.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="fld">
+            <label>Client</label>
+            <select value={mClient} onChange={(e) => setMClient(e.target.value)}>
+              <option value="">— choose client —</option>
+              {sorted.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="fld">
+            <label>Task</label>
+            <select value={mTask} onChange={(e) => setMTask(e.target.value)}>
+              {taskKeys.map((k) => (
+                <option key={k} value={k}>{TASK_LABEL[k]}</option>
+              ))}
+            </select>
+          </div>
+          <div className="fld">
+            <label>Hours</label>
+            <input
+              type="number" min={0}
+              value={mHours} onChange={(e) => setMHours(e.target.value)}
+              placeholder="0"
+              style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }}
+            />
+          </div>
+          <div className="fld">
+            <label>Minutes</label>
+            <input
+              type="number" min={0} max={59}
+              value={mMinutes} onChange={(e) => setMMinutes(e.target.value)}
+              placeholder="0"
+              style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }}
+            />
+          </div>
+          <div className="fld">
+            <label>Date</label>
+            <input
+              type="date"
+              value={mDate} onChange={(e) => setMDate(e.target.value)}
+              style={{ width: 140, padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)" }}
+            />
+          </div>
+        </div>
+        <div className="tw-notes-row">
+          <label style={{ marginTop: 4 }}>Notes</label>
+          <textarea
+            value={mNote}
+            onChange={(e) => setMNote(e.target.value)}
+            placeholder="What was done? Any details..."
+          />
+        </div>
+        <button
+          className="tw-go"
+          onClick={submitManualEntry}
+          disabled={!mWho || !mClient || (!mHours && !mMinutes)}
+          style={{ alignSelf: "flex-end", marginTop: 4 }}
+        >
+          ＋ Log Entry
+        </button>
+      </div>
+      )}
 
       {/* ── Stats cards ── */}
       <div className="stats">
@@ -597,7 +750,7 @@ export default function TimePage() {
             ) : (
               <tr>
                 <td colSpan={6} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>
-                  No time logged yet — start the timer above.
+                  No time logged yet — use Timer or Manual Entry above.
                 </td>
               </tr>
             )}
