@@ -219,13 +219,15 @@ export default function TimePage() {
           font-size: 11px; font-weight: 700; letter-spacing: .05em;
           text-transform: uppercase; color: var(--muted);
         }
-        .tw-timer select, .tw-timer input[type=text] {
+        .tw-timer select, .tw-timer textarea {
           padding: 9px 11px; border: 1px solid var(--line);
           border-radius: 9px; font: inherit; font-size: 14px;
-          background: var(--card); min-width: 80px; color: var(--ink);
-          cursor: pointer; outline: none;
+          background: var(--card); color: var(--ink);
+          cursor: pointer; outline: none; resize: vertical;
         }
         .tw-timer select { min-width: 140px; }
+        .tw-timer textarea { width: 100%; min-height: 52px; cursor: text; }
+        .tw-timer .tw-notes-row { width: 100%; flex-basis: 100%; }
         .tw-clock {
           font-variant-numeric: tabular-nums; font-size: 40px;
           font-weight: 800; color: var(--muted); letter-spacing: 1px;
@@ -329,16 +331,6 @@ export default function TimePage() {
           </select>
         </div>
         <div className="fld">
-          <label>Notes</label>
-          <input
-            type="text"
-            value={timerNote}
-            onChange={(e) => setTimerNote(e.target.value)}
-            placeholder="Quick note..."
-            disabled={running}
-          />
-        </div>
-        <div className="fld">
           <label>
             {running ? (
               <span className="tw-live"><i></i>Recording</span>
@@ -355,6 +347,16 @@ export default function TimePage() {
         >
           {running ? "\u25A0 Stop & log" : "\u25B6 Start"}
         </button>
+        {/* Notes — full width textarea below */}
+        <div className="tw-notes-row">
+          <label style={{ marginTop: 4 }}>Notes</label>
+          <textarea
+            value={timerNote}
+            onChange={(e) => setTimerNote(e.target.value)}
+            placeholder="What are you working on? Quick note..."
+            disabled={running}
+          />
+        </div>
       </div>
 
       {/* ── Stats cards ── */}
