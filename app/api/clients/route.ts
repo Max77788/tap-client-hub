@@ -15,7 +15,7 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const typeFilter = searchParams.get("type")?.toLowerCase(); // "business" | "personal" | undefined
-  const limit = parseInt(searchParams.get("limit") || "50");
+  const limit = parseInt(searchParams.get("limit") || "1000");
   const offset = parseInt(searchParams.get("offset") || "0");
 
   const supabase = await createClient();
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     .eq("status", "active");
 
   if (typeFilter === "business" || typeFilter === "personal") {
-    clientsQuery = clientsQuery.ilike("type", typeFilter);
+    clientsQuery = clientsQuery.filter('"type"', 'ilike', typeFilter);
   }
 
   clientsQuery = clientsQuery.order("name").range(offset, offset + limit - 1);
