@@ -56,10 +56,42 @@ export default function TimePage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [editingTime, setEditingTime] = useState(false);
+  const [timeInput, setTimeInput] = useState("");
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
 
   const { clients, loading: clientsLoading } = useClientsState();
+
+  function parseTimeInput(val: string) {
+    // Accept: "1:30", "0:45", "90", "1.5"
+    val = val.trim();
+    if (!val) return 0;
+    if (val.includes(":")) {
+      const parts = val.split(":");
+      return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60;
+    }
+    // Treat as minutes if no colon
+    const n = parseFloat(val);
+    if (isNaN(n)) return 0;
+    return Math.round(n * 60); // decimal = hours, whole number = minutes
+  }
+
+  function commitTimeInput() {
+    const secs = parseTimeInput(timeInput);
+    if (secs > 0) {
+      if (running) {
+        // Adjust the start time reference so elapsed = secs
+        startTimeRef.current = Date.now() - secs * 1000;
+        setElapsed(secs);
+      } else {
+        setElapsed(secs);
+      }
+    }
+    setEditingTime(false);
+    setTimeInput("");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -251,6 +283,7 @@ export default function TimePage() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.3; }
         }
+        .tw-live-row:hover { background: var(--green-soft) !important; }
         .stats { display: flex; gap: 10px; flex-wrap: wrap; }
         .statcard {
           flex: 1; min-width: 120px; background: var(--card);
@@ -335,9 +368,32 @@ export default function TimePage() {
               <span className="tw-live"><i></i>Recording</span>
             ) : "Elapsed"}
           </label>
-          <div className={`tw-clock${running ? " run" : ""}`}>
-            {fmtClock(elapsed)}
-          </div>
+          {editingTime ? (
+            <input
+              autoFocus
+              className="tw-clock-edit"
+              type="text"
+              value={timeInput}
+              onChange={(e) => setTimeInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") commitTimeInput(); if (e.key === "Escape") { setEditingTime(false); setTimeInput(""); } }}
+              onBlur={commitTimeInput}
+              placeholder="1:30 or 90"
+              style={{
+                fontVariantNumeric: "tabular-nums", fontSize: 28, fontWeight: 800,
+                width: 130, padding: "4px 8px", border: "1px solid var(--teal)",
+                borderRadius: 8, color: "var(--ink)", background: "var(--card)",
+              }}
+            />
+          ) : (
+            <div
+              className={`tw-clock${running ? " run" : ""}`}
+              onClick={() => { setEditingTime(true); setTimeInput(""); }}
+              title="Click to type time manually"
+              style={{ cursor: "pointer" }}
+            >
+              {fmtClock(elapsed)}
+            </div>
+          )}
         </div>
         <button
           className={`tw-go${running ? " stop" : ""}`}
@@ -407,7 +463,12 @@ export default function TimePage() {
               const c = sorted.find((cl) => cl.id === selectedClient);
               const svc = selectedService ? (SERVICE_META as any)[selectedService] : null;
               return (
-                <tr style={{ background: "var(--surface-bg, rgba(0,0,0,.02))" }}>
+                <tr
+                  className="tw-live-row"
+                  onClick={stopTimer}
+                  style={{ background: "var(--surface-bg, rgba(0,0,0,.02))", cursor: "pointer" }}
+                  title="Click to stop timer"
+                >
                   <td style={{ fontWeight: 500 }}>{p?.name || "..."}</td>
                   <td className="lname">{shortName(c?.name || "")}</td>
                   <td style={{ color: "var(--muted)" }}>{svc?.label || TASK_LABEL[selectedService] || "-"}</td>
