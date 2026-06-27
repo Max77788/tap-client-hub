@@ -627,14 +627,14 @@ export default function WorklistTable({
                               />
                             ) : (
                               <div
-                                onClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
-                                onDoubleClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
+                                onClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
+                                onDoubleClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
                                 className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
                                 style={{
                                   backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
                                   color: n > 0 ? "var(--green)" : "var(--muted)",
                                 }}
-                                title={`${mo}: ${n} processed${!isHistorical ? " — click +1, shift-click -1, double-click to type" : ""}`}
+                                title={`${mo}: ${n} processed${!isHistorical ? " — click to type, double-click ±1" : ""}`}
                               >{n || "·"}</div>
                             )}
                           </td>
