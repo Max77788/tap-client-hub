@@ -52,7 +52,7 @@ export default function TimePage() {
   const [timerNote, setTimerNote] = useState("");
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
-  const [viewingAs, setViewingAs] = useState("");
+  const [viewingAs, setViewingAs] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,8 +71,7 @@ export default function TimePage() {
         if (!cancelled && Array.isArray(data)) {
           const members = data.map((u: any) => ({ id: u.id, name: u.name, role: u.role }));
           setStaff(members);
-          const me = members.find((m: any) => m.name.toLowerCase().includes("tushar")) || members[0];
-          if (me) setViewingAs(me.id);
+          // Don't auto-set viewingAs — show all entries by default
         }
       } catch {} finally {
         if (!cancelled) setLoading(false);
@@ -374,7 +373,22 @@ export default function TimePage() {
       </div>
 
       {/* ── Today's entries ── */}
-      <div className="count">Today&rsquo;s entries</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="count">Today&rsquo;s entries</div>
+        <select
+          value={viewingAs ?? ""}
+          onChange={(e) => setViewingAs(e.target.value || null)}
+          style={{
+            padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 8,
+            font: "inherit", fontSize: 12, background: "var(--card)", color: "var(--ink)",
+          }}
+        >
+          <option value="">All staff</option>
+          {whoOpts.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+      </div>
       <div className="panel" style={{ overflowX: "auto" }}>
         <table>
           <thead>
