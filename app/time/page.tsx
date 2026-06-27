@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { SERVICE_META } from "@/lib/data";
 import { useClientsState } from "@/hooks/use-clients-state";
 import type { ServiceKey } from "@/lib/types";
@@ -14,10 +14,11 @@ interface TimeEntry {
   personId: string;
   serviceKey: string;
   serviceLabel: string;
-  duration: number;
-  date: string;
+  duration: number;       // 0 = still running, >0 = stopped
+  date: string;           // started_at from DB
   note: string;
   edited?: boolean;
+  isRunning?: boolean;    // derived: duration === 0
 }
 
 interface StaffMember { id: string; name: string; role: string; }
@@ -34,6 +35,7 @@ function shortName(n: string) {
 }
 
 function fmtDur(s: number) {
+  if (s <= 0) return "0m";
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return (h ? h + "h " : "") + m + "m";
 }
@@ -44,25 +46,14 @@ function fmtClock(s: number) {
 }
 
 export default function TimePage() {
-  const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [selectedClient, setSelectedClient] = useState("");
+  // Timer form state
   const [selectedPerson, setSelectedPerson] = useState("");
+  const [selectedClient, setSelectedClient] = useState("");
   const [selectedService, setSelectedService] = useState("fin");
   const [timerNote, setTimerNote] = useState("");
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [editIdx, setEditIdx] = useState<number | null>(null);
-  const [viewingAs, setViewingAs] = useState<string | null>(null);
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const [editingTime, setEditingTime] = useState(false);
-  const [timeInput, setTimeInput] = useState("");
-
-  // Mode toggle
+  // Manual entry form
   const [mode, setMode] = useState<"timer" | "manual">("timer");
-
-  // Manual entry form state
   const [mWho, setMWho] = useState("");
   const [mClient, setMClient] = useState("");
   const [mTask, setMTask] = useState("fin");
@@ -71,39 +62,125 @@ export default function TimePage() {
   const [mNote, setMNote] = useState("");
   const [mDate, setMDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
+  // Table state
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [viewingAs, setViewingAs] = useState<string | null>(null);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Live clock tick for running entries
+  const [, setTick] = useState(0);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { clients, loading: clientsLoading } = useClientsState();
 
-  function parseTimeInput(val: string) {
-    // Accept: "1:30", "0:45", "90", "1.5"
-    val = val.trim();
-    if (!val) return 0;
-    if (val.includes(":")) {
-      const parts = val.split(":");
-      return (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60;
-    }
-    // Treat as minutes if no colon
-    const n = parseFloat(val);
-    if (isNaN(n)) return 0;
-    return Math.round(n * 60); // decimal = hours, whole number = minutes
-  }
+  // Tick every second so running entries' elapsed time updates
+  useEffect(() => {
+    tickRef.current = setInterval(() => setTick(t => t + 1), 1000);
+    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, []);
 
-  function commitTimeInput() {
-    const secs = parseTimeInput(timeInput);
-    if (secs > 0) {
-      if (running) {
-        startTimeRef.current = Date.now() - secs * 1000;
-        setElapsed(secs);
-      } else {
-        setElapsed(secs);
+  // Load staff
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/profiles");
+        if (!res.ok) throw new Error("Failed");
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          setStaff(data.map((u: any) => ({ id: u.id, name: u.name, role: u.role })));
+        }
+      } catch {} finally {
+        if (!cancelled) setLoading(false);
       }
     }
-    setEditingTime(false);
-    setTimeInput("");
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load entries from API
+  const loadEntries = useCallback(async () => {
+    try {
+      const res = await fetch("/api/time-entries");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.entries) {
+        setEntries(data.entries.map((e: any) => ({
+          id: e.id,
+          clientName: e.clientName || "", clientId: e.clientId || "",
+          personName: e.personName || "", personId: e.personId || "",
+          serviceKey: "", serviceLabel: e.serviceLabel || "",
+          duration: e.duration || 0, date: e.date || "",
+          note: e.note || "", edited: e.edited || false,
+          isRunning: (e.duration || 0) === 0,
+        })));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadEntries(); }, [loadEntries]);
+
+  function uid() {
+    try { return crypto.randomUUID(); } catch { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
   }
 
+  // ── Start: POST entry immediately to DB ──
+  const startTimer = useCallback(async () => {
+    if (!selectedClient || !selectedPerson) return;
+    const client = clients.find((c) => c.id === selectedClient);
+    const person = staff.find((s) => s.id === selectedPerson);
+    if (!client || !person) return;
+
+    const svc = (SERVICE_META as any)[selectedService];
+    const entryId = uid();
+    const now = new Date().toISOString();
+
+    // Optimistic local add
+    const entry: TimeEntry = {
+      id: entryId,
+      clientName: client.name, clientId: client.id,
+      personName: person.name, personId: person.id,
+      serviceKey: selectedService, serviceLabel: svc?.label || TASK_LABEL[selectedService] || "-",
+      duration: 0, date: now, note: timerNote, isRunning: true,
+    };
+    setEntries((prev) => [entry, ...prev]);
+    setTimerNote("");
+
+    // Persist
+    fetch("/api/time-entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: entryId,
+        who: person.id, client_id: client.id,
+        task: svc?.label || TASK_LABEL[selectedService] || "",
+        seconds: 0, started_at: now, note: timerNote,
+      }),
+    }).catch((e) => console.error("Start save failed:", e));
+  }, [selectedClient, selectedPerson, selectedService, timerNote, clients, staff]);
+
+  // ── Stop: PATCH the entry with final seconds ──
+  const stopEntry = useCallback(async (entryId: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry || !entry.isRunning) return;
+
+    const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
+
+    // Optimistic update
+    setEntries((prev) => prev.map((e) =>
+      e.id === entryId ? { ...e, duration: elapsed, isRunning: false } : e
+    ));
+
+    fetch(`/api/time-entries?id=${encodeURIComponent(entryId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seconds: elapsed }),
+    }).catch((e) => console.error("Stop save failed:", e));
+  }, [entries]);
+
+  // ── Manual entry submit ──
   function submitManualEntry() {
     const person = staff.find((s) => s.id === mWho);
     const client = clients.find((c) => c.id === mClient);
@@ -118,11 +195,9 @@ export default function TimePage() {
       clientName: client.name, clientId: client.id,
       personName: person.name, personId: person.id,
       serviceKey: mTask, serviceLabel: svc?.label || TASK_LABEL[mTask] || "-",
-      duration, date: `${mDate}T12:00:00.000Z`, note: mNote,
+      duration, date: `${mDate}T12:00:00.000Z`, note: mNote, isRunning: false,
     };
     setEntries((prev) => [entry, ...prev]);
-
-    // Reset form
     setMHours(""); setMMinutes(""); setMNote("");
     setMDate(new Date().toISOString().slice(0, 10));
 
@@ -136,151 +211,6 @@ export default function TimePage() {
       }),
     }).catch(() => {});
   }
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/profiles");
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
-        if (!cancelled && Array.isArray(data)) {
-          const members = data.map((u: any) => ({ id: u.id, name: u.name, role: u.role }));
-          setStaff(members);
-          // Don't auto-set viewingAs — show all entries by default
-        }
-      } catch {} finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/time-entries");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.entries) {
-          setEntries(data.entries.map((e: any) => ({
-            id: e.id, clientName: e.clientName || "", clientId: e.clientId || "",
-            personName: e.personName || "", personId: e.personId || "",
-            serviceKey: "", serviceLabel: e.serviceLabel || "",
-            duration: e.duration || 0, date: e.date || "",
-            note: e.note || "", edited: e.edited || false,
-          })));
-        }
-      } catch {}
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  function uid() {
-    try { return crypto.randomUUID(); } catch { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
-  }
-
-  const startTimer = useCallback(() => {
-    if (!selectedClient || !selectedPerson) return;
-    setRunning(true);
-    const now = Date.now();
-    startTimeRef.current = now - elapsed * 1000;
-    intervalRef.current = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 200);
-    // Persist so session survives page reload
-    try {
-      localStorage.setItem("tap_timer", JSON.stringify({
-        startTime: startTimeRef.current,
-        selectedClient, selectedPerson, selectedService, timerNote,
-      }));
-    } catch {}
-  }, [elapsed, selectedClient, selectedPerson, selectedService, timerNote]);
-
-  const stopTimer = useCallback(() => {
-    try {
-      const client = clients.find((c) => c.id === selectedClient);
-      const person = staff.find((s) => s.id === selectedPerson);
-      if (elapsed > 0 && client && person) {
-        const svc = selectedService ? (SERVICE_META as any)[selectedService] : null;
-        const note = timerNote; // capture before clearing
-        const entry: TimeEntry = {
-          id: uid(),
-          clientName: client.name, clientId: client.id,
-          personName: person.name, personId: person.id,
-          serviceKey: selectedService, serviceLabel: svc?.label || TASK_LABEL[selectedService] || "-",
-          duration: elapsed, date: new Date().toISOString(), note,
-        };
-        setEntries((prev) => [entry, ...prev]);
-        setTimerNote("");
-        fetch("/api/time-entries", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            who: person.id, client_id: client.id,
-            task: svc?.label || TASK_LABEL[selectedService] || "", seconds: elapsed,
-            started_at: new Date().toISOString(), note,
-          }),
-        }).catch((e) => console.error("Time entry save failed:", e));
-      }
-    } catch (e) {
-      console.error("stopTimer error:", e);
-    } finally {
-      setRunning(false);
-      setElapsed(0);
-      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-      try { localStorage.removeItem("tap_timer"); } catch {}
-    }
-  }, [elapsed, selectedClient, selectedPerson, selectedService, timerNote, clients, staff]);
-
-  // ── Auto-resume timer from localStorage on page load ──
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("tap_timer");
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!saved.startTime || !saved.selectedClient || !saved.selectedPerson) return;
-      const age = Date.now() - saved.startTime;
-      if (age > 12 * 3600 * 1000) { localStorage.removeItem("tap_timer"); return; }
-      setSelectedClient(saved.selectedClient);
-      setSelectedPerson(saved.selectedPerson);
-      setSelectedService(saved.selectedService || "fin");
-      setTimerNote(saved.timerNote || "");
-      startTimeRef.current = saved.startTime;
-      setElapsed(Math.floor(age / 1000));
-      setRunning(true);
-      intervalRef.current = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - saved.startTime) / 1000));
-      }, 200);
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, []);
-
-  useEffect(() => {
-    if (!running) return;
-    const iv = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [running]);
-
-  const today = new Date().toISOString().slice(0, 10);
-  const todayEntries = entries.filter((e) => e.date.slice(0, 10) === today);
-  const displayEntries = viewingAs
-    ? todayEntries.filter((e) => e.personId === viewingAs)
-    : todayEntries;
-
-  const totalToday = todayEntries.reduce((s, e) => s + e.duration, 0);
-
-  const byWho: Record<string, number> = {};
-  todayEntries.forEach((e) => { byWho[e.personName] = (byWho[e.personName] || 0) + e.duration; });
-  const whoCards = Object.keys(byWho).sort((a, b) => byWho[b] - byWho[a]);
 
   async function deleteEntry(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
@@ -311,19 +241,36 @@ export default function TimePage() {
     }).catch(() => {});
   }
 
-  function cancelEdit() {
-    setEditIdx(null);
-  }
+  // ── Derived data ──
+  const today = new Date().toISOString().slice(0, 10);
+  const displayEntries = useMemo(() => {
+    let list = entries.filter((e) => e.date.slice(0, 10) === today);
+    if (viewingAs) list = list.filter((e) => e.personId === viewingAs);
+    // Sort: running first, then by date desc
+    return [...list].sort((a, b) => {
+      if (a.isRunning && !b.isRunning) return -1;
+      if (!a.isRunning && b.isRunning) return 1;
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  }, [entries, today, viewingAs]);
 
-  const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
-  const whoOpts = staff.filter((s) => s.name !== "Unassigned");
+  const totalToday = displayEntries.reduce((s, e) => s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
+
+  const byWho: Record<string, number> = {};
+  displayEntries.forEach((e) => {
+    const elapsed = e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration;
+    byWho[e.personName] = (byWho[e.personName] || 0) + elapsed;
+  });
+  const whoCards = Object.keys(byWho).sort((a, b) => byWho[b] - byWho[a]);
+
+  const sorted = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
+  const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
   const taskKeys = Object.keys(TASK_LABEL);
 
   if (loading || clientsLoading) return <PageSkeleton rows={6} />;
 
   return (
     <div className="space-y-5">
-      {/* ── styles ── */}
       <style jsx>{`
         .tw-timer {
           display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
@@ -335,7 +282,7 @@ export default function TimePage() {
           font-size: 11px; font-weight: 700; letter-spacing: .05em;
           text-transform: uppercase; color: var(--muted);
         }
-        .tw-timer select, .tw-timer textarea {
+        .tw-timer select, .tw-timer textarea, .tw-timer input {
           padding: 9px 11px; border: 1px solid var(--line);
           border-radius: 9px; font: inherit; font-size: 14px;
           background: var(--card); color: var(--ink);
@@ -344,31 +291,12 @@ export default function TimePage() {
         .tw-timer select { min-width: 140px; }
         .tw-timer textarea { width: 100%; min-height: 52px; cursor: text; }
         .tw-timer .tw-notes-row { width: 100%; flex-basis: 100%; }
-        .tw-clock {
-          font-variant-numeric: tabular-nums; font-size: 40px;
-          font-weight: 800; color: var(--muted); letter-spacing: 1px;
-          min-width: 182px; line-height: 1;
-        }
-        .tw-clock.run { color: var(--green); }
         .tw-go {
           all: unset; cursor: pointer; background: var(--green);
           color: #fff; padding: 13px 24px; border-radius: 12px;
           font-weight: 700; font-size: 15px; white-space: nowrap;
         }
-        .tw-go.stop { background: var(--red); }
-        .tw-live {
-          display: inline-flex; align-items: center; gap: 6px;
-          font-size: 12px; font-weight: 700; color: var(--green);
-        }
-        .tw-live i {
-          width: 9px; height: 9px; border-radius: 50%;
-          background: var(--green); animation: twpulse 1.1s infinite;
-        }
-        @keyframes twpulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        .tw-live-row:hover { background: var(--green-soft) !important; }
+        .tw-go:disabled { opacity: 0.4; cursor: not-allowed; }
         .stats { display: flex; gap: 10px; flex-wrap: wrap; }
         .statcard {
           flex: 1; min-width: 120px; background: var(--card);
@@ -394,50 +322,44 @@ export default function TimePage() {
         .panel td { padding: 12px 16px; border-bottom: 1px solid var(--line); }
         .panel tr:last-child td { border-bottom: none; }
         .mono { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--teal); }
-        .lname { font-weight: 600; cursor: pointer; }
-        .lname:hover { color: var(--teal); text-decoration: underline; }
-        .edited { font-size: 10px; color: var(--muted); font-style: italic; margin-left: 6px; }
+        .lname { font-weight: 600; }
         .reveal { all: unset; cursor: pointer; color: var(--teal); font-weight: 600; font-size: 12.5px; }
         .reveal:hover { text-decoration: underline; }
-        .fineprint {
-          font-size: 11.5px; color: var(--muted); line-height: 1.5;
-          margin: 14px 2px 0; font-style: italic;
-        }
+        .fineprint { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin: 14px 2px 0; font-style: italic; }
         .edit-inp { width: 42px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; text-align: center; }
         .edit-sel { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; max-width: 200px; }
         .edit-note-inp { width: 160px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
+        .running-row { background: var(--green-soft); }
+        .running-row:hover { background: #d4ede0 !important; }
+        .stop-btn {
+          all: unset; cursor: pointer; background: var(--red); color: #fff;
+          padding: 5px 12px; border-radius: 7px; font-weight: 600; font-size: 12px;
+        }
+        .stop-btn:hover { opacity: 0.85; }
+        @keyframes twpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: twpulse 1.1s infinite; display: inline-block; }
       `}</style>
 
       {/* ── Mode toggle ── */}
       <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
-        <button
-          onClick={() => setMode("timer")}
-          style={{
-            all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
-            fontWeight: 600, fontSize: 14,
-            background: mode === "timer" ? "var(--card)" : "transparent",
-            color: mode === "timer" ? "var(--ink)" : "var(--muted)",
-            border: mode === "timer" ? "1px solid var(--line)" : "1px solid transparent",
-            borderBottom: mode === "timer" ? "1px solid var(--card)" : "1px solid transparent",
-            marginBottom: -1, position: "relative", zIndex: mode === "timer" ? 1 : 0,
-          }}
-        >
-          ⏱ Timer
-        </button>
-        <button
-          onClick={() => setMode("manual")}
-          style={{
-            all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
-            fontWeight: 600, fontSize: 14,
-            background: mode === "manual" ? "var(--card)" : "transparent",
-            color: mode === "manual" ? "var(--ink)" : "var(--muted)",
-            border: mode === "manual" ? "1px solid var(--line)" : "1px solid transparent",
-            borderBottom: mode === "manual" ? "1px solid var(--card)" : "1px solid transparent",
-            marginBottom: -1, position: "relative", zIndex: mode === "manual" ? 1 : 0,
-          }}
-        >
-          ✎ Manual Entry
-        </button>
+        <button onClick={() => setMode("timer")} style={{
+          all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
+          fontWeight: 600, fontSize: 14,
+          background: mode === "timer" ? "var(--card)" : "transparent",
+          color: mode === "timer" ? "var(--ink)" : "var(--muted)",
+          border: mode === "timer" ? "1px solid var(--line)" : "1px solid transparent",
+          borderBottom: mode === "timer" ? "1px solid var(--card)" : "1px solid transparent",
+          marginBottom: -1, position: "relative", zIndex: mode === "timer" ? 1 : 0,
+        }}>⏱ Timer</button>
+        <button onClick={() => setMode("manual")} style={{
+          all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
+          fontWeight: 600, fontSize: 14,
+          background: mode === "manual" ? "var(--card)" : "transparent",
+          color: mode === "manual" ? "var(--ink)" : "var(--muted)",
+          border: mode === "manual" ? "1px solid var(--line)" : "1px solid transparent",
+          borderBottom: mode === "manual" ? "1px solid var(--card)" : "1px solid transparent",
+          marginBottom: -1, position: "relative", zIndex: mode === "manual" ? 1 : 0,
+        }}>✎ Manual Entry</button>
       </div>
 
       {/* ── Timer mode ── */}
@@ -445,89 +367,30 @@ export default function TimePage() {
       <div className="tw-timer" style={{ borderTopLeftRadius: 0 }}>
         <div className="fld">
           <label>Who</label>
-          <select
-            value={selectedPerson}
-            onChange={(e) => setSelectedPerson(e.target.value)}
-            disabled={running}
-          >
+          <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)}>
             <option value="">— choose —</option>
-            {whoOpts.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+            {whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
           </select>
         </div>
         <div className="fld">
           <label>Client</label>
-          <select
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-            disabled={running}
-          >
+          <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)}>
             <option value="">— choose client —</option>
-            {sorted.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            {sorted.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
           </select>
         </div>
         <div className="fld">
           <label>Task</label>
-          <select
-            value={selectedService}
-            onChange={(e) => setSelectedService(e.target.value)}
-            disabled={running}
-          >
-            {taskKeys.map((k) => (
-              <option key={k} value={k}>{TASK_LABEL[k]}</option>
-            ))}
+          <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
+            {taskKeys.map((k) => (<option key={k} value={k}>{TASK_LABEL[k]}</option>))}
           </select>
         </div>
-        <div className="fld">
-          <label>
-            {running ? (
-              <span className="tw-live"><i></i>Recording</span>
-            ) : "Elapsed"}
-          </label>
-          {editingTime ? (
-            <input
-              autoFocus
-              type="text"
-              value={timeInput}
-              onChange={(e) => setTimeInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") commitTimeInput(); if (e.key === "Escape") { setEditingTime(false); setTimeInput(""); } }}
-              onBlur={commitTimeInput}
-              placeholder="1:30 or 90"
-              style={{
-                fontVariantNumeric: "tabular-nums", fontSize: 28, fontWeight: 800,
-                width: 130, padding: "4px 8px", border: "1px solid var(--teal)",
-                borderRadius: 8, color: "var(--ink)", background: "var(--card)",
-              }}
-            />
-          ) : (
-            <div
-              className={`tw-clock${running ? " run" : ""}`}
-              onClick={() => { setEditingTime(true); setTimeInput(""); }}
-              title="Click to type time manually"
-              style={{ cursor: "pointer" }}
-            >
-              {fmtClock(elapsed)}
-            </div>
-          )}
-        </div>
-        <button
-          className={`tw-go${running ? " stop" : ""}`}
-          onClick={running ? stopTimer : startTimer}
-          disabled={!running && (!selectedClient || !selectedPerson)}
-        >
-          {running ? "\u25A0 Stop & log" : "\u25B6 Start"}
+        <button className="tw-go" onClick={startTimer} disabled={!selectedClient || !selectedPerson}>
+          ▶ Start Tracking
         </button>
         <div className="tw-notes-row">
           <label style={{ marginTop: 4 }}>Notes</label>
-          <textarea
-            value={timerNote}
-            onChange={(e) => setTimerNote(e.target.value)}
-            placeholder="What are you working on? Quick note..."
-            disabled={running}
-          />
+          <textarea value={timerNote} onChange={(e) => setTimerNote(e.target.value)} placeholder="What are you starting? Quick note..." />
         </div>
       </div>
       )}
@@ -536,148 +399,62 @@ export default function TimePage() {
       {mode === "manual" && (
       <div className="tw-timer" style={{ borderTopLeftRadius: 0, flexDirection: "column" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-          <div className="fld">
-            <label>Who</label>
-            <select value={mWho} onChange={(e) => setMWho(e.target.value)}>
-              <option value="">— choose —</option>
-              {whoOpts.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="fld">
-            <label>Client</label>
-            <select value={mClient} onChange={(e) => setMClient(e.target.value)}>
-              <option value="">— choose client —</option>
-              {sorted.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="fld">
-            <label>Task</label>
-            <select value={mTask} onChange={(e) => setMTask(e.target.value)}>
-              {taskKeys.map((k) => (
-                <option key={k} value={k}>{TASK_LABEL[k]}</option>
-              ))}
-            </select>
-          </div>
-          <div className="fld">
-            <label>Hours</label>
-            <input
-              type="number" min={0}
-              value={mHours} onChange={(e) => setMHours(e.target.value)}
-              placeholder="0"
-              style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }}
-            />
-          </div>
-          <div className="fld">
-            <label>Minutes</label>
-            <input
-              type="number" min={0} max={59}
-              value={mMinutes} onChange={(e) => setMMinutes(e.target.value)}
-              placeholder="0"
-              style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }}
-            />
-          </div>
-          <div className="fld">
-            <label>Date</label>
-            <input
-              type="date"
-              value={mDate} onChange={(e) => setMDate(e.target.value)}
-              style={{ width: 140, padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)" }}
-            />
-          </div>
+          <div className="fld"><label>Who</label><select value={mWho} onChange={(e) => setMWho(e.target.value)}><option value="">— choose —</option>{whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}</select></div>
+          <div className="fld"><label>Client</label><select value={mClient} onChange={(e) => setMClient(e.target.value)}><option value="">— choose client —</option>{sorted.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
+          <div className="fld"><label>Task</label><select value={mTask} onChange={(e) => setMTask(e.target.value)}>{taskKeys.map((k) => (<option key={k} value={k}>{TASK_LABEL[k]}</option>))}</select></div>
+          <div className="fld"><label>Hours</label><input type="number" min={0} value={mHours} onChange={(e) => setMHours(e.target.value)} placeholder="0" style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }} /></div>
+          <div className="fld"><label>Minutes</label><input type="number" min={0} max={59} value={mMinutes} onChange={(e) => setMMinutes(e.target.value)} placeholder="0" style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }} /></div>
+          <div className="fld"><label>Date</label><input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} style={{ width: 140, padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)" }} /></div>
         </div>
-        <div className="tw-notes-row">
-          <label style={{ marginTop: 4 }}>Notes</label>
-          <textarea
-            value={mNote}
-            onChange={(e) => setMNote(e.target.value)}
-            placeholder="What was done? Any details..."
-          />
-        </div>
-        <button
-          className="tw-go"
-          onClick={submitManualEntry}
-          disabled={!mWho || !mClient || (!mHours && !mMinutes)}
-          style={{ alignSelf: "flex-end", marginTop: 4 }}
-        >
-          ＋ Log Entry
-        </button>
+        <div className="tw-notes-row"><label style={{ marginTop: 4 }}>Notes</label><textarea value={mNote} onChange={(e) => setMNote(e.target.value)} placeholder="What was done? Any details..." /></div>
+        <button className="tw-go" onClick={submitManualEntry} disabled={!mWho || !mClient || (!mHours && !mMinutes)} style={{ alignSelf: "flex-end", marginTop: 4 }}>＋ Log Entry</button>
       </div>
       )}
 
       {/* ── Stats cards ── */}
       <div className="stats">
-        <div className="statcard">
-          <div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalToday)}</div>
-          <div className="sl">Logged today</div>
-        </div>
-        {whoCards.map((name) => (
-          <div key={name} className="statcard">
-            <div className="sn" style={{ color: "var(--ink)" }}>{fmtDur(byWho[name])}</div>
-            <div className="sl">{name}</div>
-          </div>
-        ))}
+        <div className="statcard"><div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalToday)}</div><div className="sl">Logged today</div></div>
+        {whoCards.map((name) => (<div key={name} className="statcard"><div className="sn" style={{ color: "var(--ink)" }}>{fmtDur(byWho[name])}</div><div className="sl">{name}</div></div>))}
       </div>
 
-      {/* ── Today's entries ── */}
+      {/* ── Entries table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div className="count">Today&rsquo;s entries</div>
-        <select
-          value={viewingAs ?? ""}
-          onChange={(e) => setViewingAs(e.target.value || null)}
-          style={{
-            padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 8,
-            font: "inherit", fontSize: 12, background: "var(--card)", color: "var(--ink)",
-          }}
-        >
+        <select value={viewingAs ?? ""} onChange={(e) => setViewingAs(e.target.value || null)} style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 8, font: "inherit", fontSize: 12, background: "var(--card)", color: "var(--ink)" }}>
           <option value="">All staff</option>
-          {whoOpts.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
+          {whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
         </select>
       </div>
       <div className="panel" style={{ overflowX: "auto" }}>
         <table>
           <thead>
             <tr>
-              <th>Who</th>
-              <th>Client</th>
-              <th>Task</th>
-              <th style={{ whiteSpace: "nowrap" }}>Time &amp; When</th>
-              <th>Notes</th>
-              <th></th>
+              <th>Who</th><th>Client</th><th>Task</th><th style={{ whiteSpace: "nowrap" }}>Time</th><th>Notes</th><th></th>
             </tr>
           </thead>
           <tbody>
-            {running && (() => {
-              const p = staff.find((s) => s.id === selectedPerson);
-              const c = sorted.find((cl) => cl.id === selectedClient);
-              const svc = selectedService ? (SERVICE_META as any)[selectedService] : null;
-              return (
-                <tr
-                  className="tw-live-row"
-                  onClick={stopTimer}
-                  style={{ background: "var(--surface-bg, rgba(0,0,0,.02))", cursor: "pointer" }}
-                  title="Click to stop timer"
-                >
-                  <td style={{ fontWeight: 500 }}>{p?.name || "..."}</td>
-                  <td className="lname">{shortName(c?.name || "")}</td>
-                  <td style={{ color: "var(--muted)" }}>{svc?.label || TASK_LABEL[selectedService] || "-"}</td>
-                  <td className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <i style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--green)", animation: "twpulse 1.1s infinite", display: "inline-block" }}></i>
-                    {fmtClock(elapsed)}
-                    <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>Now</span>
-                  </td>
-                  <td></td>
-                  <td></td>
-                </tr>
-              );
-            })()}
             {displayEntries.length > 0 ? (
               displayEntries.map((entry, idx) => {
+                if (entry.isRunning) {
+                  const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
+                  return (
+                    <tr key={entry.id} className="running-row">
+                      <td style={{ fontWeight: 500 }}>{entry.personName}</td>
+                      <td className="lname">{shortName(entry.clientName)}</td>
+                      <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
+                      <td className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span className="pulse-dot" />
+                        {fmtClock(elapsed)}
+                        <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>running</span>
+                      </td>
+                      <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "\u2014"}</td>
+                      <td>
+                        <button className="stop-btn" onClick={() => stopEntry(entry.id)}>■ Stop</button>
+                      </td>
+                    </tr>
+                  );
+                }
+
                 const isEditing = editIdx === idx;
                 const h = Math.floor(entry.duration / 3600);
                 const m = Math.floor((entry.duration % 3600) / 60);
@@ -685,79 +462,15 @@ export default function TimePage() {
                 if (isEditing) {
                   return (
                     <tr key={entry.id}>
-                      <td>
-                        <select
-                          className="edit-sel"
-                          defaultValue={entry.personName}
-                          onChange={(e) => handleEdit(idx, "personName", e.target.value)}
-                        >
-                          {whoOpts.map((s) => (
-                            <option key={s.id} value={s.name}>{s.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <select
-                          className="edit-sel"
-                          defaultValue={entry.clientName}
-                          onChange={(e) => handleEdit(idx, "clientName", e.target.value)}
-                          style={{ maxWidth: 220 }}
-                        >
-                          {sorted.map((c) => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <select
-                          className="edit-sel"
-                          defaultValue={entry.serviceLabel}
-                          onChange={(e) => handleEdit(idx, "serviceLabel", e.target.value)}
-                        >
-                          {taskKeys.map((k) => (
-                            <option key={k} value={TASK_LABEL[k]}>{TASK_LABEL[k]}</option>
-                          ))}
-                        </select>
-                      </td>
+                      <td><select className="edit-sel" defaultValue={entry.personName} onChange={(e) => handleEdit(idx, "personName", e.target.value)}>{whoOpts.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}</select></td>
+                      <td><select className="edit-sel" defaultValue={entry.clientName} onChange={(e) => handleEdit(idx, "clientName", e.target.value)} style={{ maxWidth: 220 }}>{sorted.map((c) => (<option key={c.id} value={c.name}>{c.name}</option>))}</select></td>
+                      <td><select className="edit-sel" defaultValue={entry.serviceLabel} onChange={(e) => handleEdit(idx, "serviceLabel", e.target.value)}>{taskKeys.map((k) => (<option key={k} value={TASK_LABEL[k]}>{TASK_LABEL[k]}</option>))}</select></td>
                       <td style={{ whiteSpace: "nowrap" }}>
-                        <input
-                          className="edit-inp"
-                          type="number" min={0}
-                          defaultValue={h}
-                          onChange={(e) => {
-                            const newH = parseInt(e.target.value) || 0;
-                            const newM = m;
-                            setEntries((prev) => prev.map((ev, i) =>
-                              i !== idx ? ev : { ...ev, duration: newH * 3600 + newM * 60, edited: true }
-                            ));
-                          }}
-                        />h{" "}
-                        <input
-                          className="edit-inp"
-                          type="number" min={0} max={59}
-                          defaultValue={m}
-                          onChange={(e) => {
-                            const newM = parseInt(e.target.value) || 0;
-                            const newH = h;
-                            setEntries((prev) => prev.map((ev, i) =>
-                              i !== idx ? ev : { ...ev, duration: newH * 3600 + newM * 60, edited: true }
-                            ));
-                          }}
-                        />m
+                        <input className="edit-inp" type="number" min={0} defaultValue={h} onChange={(e) => { const newH = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: newH * 3600 + m * 60, edited: true })); }} />h{" "}
+                        <input className="edit-inp" type="number" min={0} max={59} defaultValue={m} onChange={(e) => { const newM = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: h * 3600 + newM * 60, edited: true })); }} />m
                       </td>
-                      <td>
-                        <input
-                          className="edit-note-inp"
-                          type="text"
-                          value={entry.note}
-                          onChange={(e) => handleEdit(idx, "note", e.target.value)}
-                          placeholder="note..."
-                        />
-                      </td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <button className="reveal" onClick={() => saveEdit(idx)} style={{ marginRight: 10 }}>Save</button>
-                        <button className="reveal" onClick={cancelEdit}>Cancel</button>
-                      </td>
+                      <td><input className="edit-note-inp" type="text" value={entry.note} onChange={(e) => handleEdit(idx, "note", e.target.value)} placeholder="note..." /></td>
+                      <td style={{ whiteSpace: "nowrap" }}><button className="reveal" onClick={() => saveEdit(idx)} style={{ marginRight: 10 }}>Save</button><button className="reveal" onClick={() => setEditIdx(null)}>Cancel</button></td>
                     </tr>
                   );
                 }
@@ -768,19 +481,10 @@ export default function TimePage() {
                     <td className="lname">{shortName(entry.clientName)}</td>
                     <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
-                      <span className="mono">
-                        {fmtDur(entry.duration)}
-                        {entry.edited && <span className="edited">edited</span>}
-                      </span>
-                      <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>
-                        {entry.date.slice(0, 10) === today
-                          ? ""
-                          : new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </span>
+                      <span className="mono">{fmtDur(entry.duration)}{entry.edited && <span style={{ fontSize: 10, color: "var(--muted)", fontStyle: "italic", marginLeft: 6 }}>edited</span>}</span>
+                      <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>{entry.date.slice(0, 10) !== today ? new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span>
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {entry.note || "\u2014"}
-                    </td>
+                    <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "\u2014"}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <button className="reveal" onClick={() => setEditIdx(idx)} style={{ marginRight: 10 }}>edit</button>
                       <button className="reveal" onClick={() => deleteEntry(entry.id)} style={{ color: "var(--red)" }}>delete</button>
@@ -789,20 +493,13 @@ export default function TimePage() {
                 );
               })
             ) : (
-              <tr>
-                <td colSpan={6} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>
-                  No time logged yet — use Timer or Manual Entry above.
-                </td>
-              </tr>
+              <tr><td colSpan={6} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>No time logged yet — use Timer or Manual Entry above.</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* ── Fine print ── */}
-      <p className="fineprint">
-        Lean &amp; live: pick a client, hit Start, the clock runs in real time, Stop logs it — built to replace the separate QuickBooks Time subscription. <b>Entries are editable</b> — anyone can fix their own time (wrong client, fat-fingered minutes, forgot to stop) without asking an admin; corrected rows show an &ldquo;edited&rdquo; tag. Profitability (time vs. fee) and baseline standard-times come as the first enhancement.
-      </p>
+      <p className="fineprint">Lean &amp; live: pick a client, hit Start, a row appears in the table with a live clock. Stop it anytime — the full duration is saved. Start multiple timers simultaneously. <b>Entries are editable</b> — anyone can fix their own time without asking an admin.</p>
     </div>
   );
 }
