@@ -12,18 +12,46 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
   TAX: "tax_returns",
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const typeFilter = searchParams.get("type")?.toLowerCase(); // "business" | "personal" | undefined
+
   const supabase = await createClient();
 
-  const { data: dbClients, error: clientsError } = await supabase
-    .from("clients").select("*, contacts(*)").eq("status", "active").order("name");
+  // ── Build clients query ──
+  let clientsQuery = supabase
+    .from("clients")
+    .select("*, contacts(*)")
+    .eq("status", "active");
+
+  if (typeFilter === "business" || typeFilter === "personal") {
+    clientsQuery = clientsQuery.eq("type", typeFilter);
+  }
+
+  clientsQuery = clientsQuery.order("name");
+
+  const { data: dbClients, error: clientsError } = await clientsQuery;
 
   if (clientsError || !dbClients) {
     return NextResponse.json({ error: clientsError?.message }, { status: 500 });
   }
 
-  const { data: dbServices, error: svcError } = await supabase
-    .from("client_services").select("*, service:services(*)").eq("active", true);
+  // ── Build client_services query ──
+  let svcQuery = supabase
+    .from("client_services")
+    .select("*, service:services(*)")
+    .eq("active", true);
+
+  if (typeFilter === "business" || typeFilter === "personal") {
+    // Only fetch services for clients of the requested type
+    const clientIds = dbClients.map((c: any) => c.id);
+    if (clientIds.length === 0) {
+      return NextResponse.json({ clients: [], stats: { business: 0, personal: 0 } });
+    }
+    svcQuery = svcQuery.in("client_id", clientIds);
+  }
+
+  const { data: dbServices, error: svcError } = await svcQuery;
 
   if (svcError) {
     return NextResponse.json({ error: svcError.message }, { status: 500 });
@@ -38,22 +66,26 @@ export async function GET() {
     servicesByClient[cs.client_id].push(cs);
   }
 
-  // Load work_periods for current year — single query instead of 12 sequential
+  // Load work_periods for current year — single query
   const periodByCsId: Record<string, Record<number, string>> = {};
   try {
-    const { data: allPeriods } = await supabase
-      .from("work_periods")
-      .select("client_service_id, stage, period")
-      .gte("period", `${currentYear}-01`)
-      .lte("period", `${currentYear}-12`);
-    if (allPeriods) {
-      for (const wp of allPeriods) {
-        const match = wp.period?.match(/^\d{4}-(\d{2})$/);
-        if (!match) continue;
-        const monthIdx = parseInt(match[1], 10) - 1;
-        if (monthIdx < 0 || monthIdx > 11) continue;
-        if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
-        periodByCsId[wp.client_service_id][monthIdx] = wp.stage;
+    const allCsIds = (dbServices || []).map((cs: any) => cs.id);
+    if (allCsIds.length > 0) {
+      const { data: allPeriods } = await supabase
+        .from("work_periods")
+        .select("client_service_id, stage, period")
+        .gte("period", `${currentYear}-01`)
+        .lte("period", `${currentYear}-12`)
+        .in("client_service_id", allCsIds);
+      if (allPeriods) {
+        for (const wp of allPeriods) {
+          const match = wp.period?.match(/^\d{4}-(\d{2})$/);
+          if (!match) continue;
+          const monthIdx = parseInt(match[1], 10) - 1;
+          if (monthIdx < 0 || monthIdx > 11) continue;
+          if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
+          periodByCsId[wp.client_service_id][monthIdx] = wp.stage;
+        }
       }
     }
   } catch {}
@@ -73,14 +105,12 @@ export async function GET() {
         assignedTo: cs.assigned_to || "",
         expectedAnnual: cs.expected_annual || undefined,
         financialsMonth: cs.financials_month ?? undefined,
-        // Sales Tax fields
         ...(key === "sales_tax" ? {
           salesTaxNotes: cs.sales_tax_notes || "", taxId: cs.tax_id || "",
           bankName: cs.bank_name || "", bankRouting: cs.bank_routing || "",
           bankAccount: cs.bank_account || "", groupAssignedTo: cs.group_assigned_to || "",
           salesTaxRT: cs.sales_tax_rt || "",
         } : {}),
-        // Payroll fields
         ...(key === "payroll" ? {
           cdg: cs.cdg || "", eftps: cs.eftps || "",
           payrollPassword: cs.payroll_password || "", paydate: cs.paydate || "",
@@ -131,7 +161,6 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
 
-  // Create client
   const { data: client, error } = await supabase
     .from("clients").insert({
       name: body.name, type: body.type?.toLowerCase() || "business",
@@ -144,12 +173,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error?.message || "Insert failed" }, { status: 500 });
   }
 
-  // Save contacts (emails and phones)
   const contacts: { client_id: string; email: string; phone: string; is_primary: boolean }[] = [];
   const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
   const phones = Array.isArray(body.phones) ? body.phones.filter((p: string) => p.trim()) : [];
 
-  // Create contacts from emails and phones
   const maxLen = Math.max(emails.length, phones.length, 1);
   for (let i = 0; i < maxLen; i++) {
     contacts.push({
@@ -164,7 +191,6 @@ export async function POST(request: Request) {
     await supabase.from("contacts").insert(contacts);
   }
 
-  // Create client_services for enabled services
   const services = Array.isArray(body.services) ? body.services : [];
   const svcInserts: any[] = [];
 
@@ -179,7 +205,6 @@ export async function POST(request: Request) {
       active: true,
     };
 
-    // Sales Tax fields
     if (svc.key === "sales_tax") {
       entry.sales_tax_notes = svc.salesTaxNotes || "";
       entry.tax_id = svc.taxId || "";
@@ -190,7 +215,6 @@ export async function POST(request: Request) {
       entry.sales_tax_rt = svc.salesTaxRT || "";
     }
 
-    // Payroll fields
     if (svc.key === "payroll") {
       entry.cdg = svc.cdg || "";
       entry.eftps = svc.eftps || "";
@@ -202,7 +226,6 @@ export async function POST(request: Request) {
       entry.expected_annual = svc.expectedAnnual || 0;
     }
 
-    // Financials month
     if (svc.key === "financials" && svc.financialsMonth !== undefined) {
       entry.financials_month = svc.financialsMonth;
     }
@@ -223,7 +246,6 @@ export async function PUT(request: Request) {
   const id = body.id;
   if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
 
-  // Update client record
   const { error: clientError } = await supabase
     .from("clients").update({
       name: body.name,
@@ -239,7 +261,6 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: clientError.message }, { status: 500 });
   }
 
-  // Replace contacts: delete all, then re-insert
   await supabase.from("contacts").delete().eq("client_id", id);
 
   const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
@@ -258,7 +279,6 @@ export async function PUT(request: Request) {
     await supabase.from("contacts").insert(contacts);
   }
 
-  // Update financials month on client_services
   const finSvc = Array.isArray(body.services) ? body.services.find((s: any) => s.key === "financials") : null;
   if (finSvc?.csId && finSvc.financialsMonth !== undefined) {
     await supabase.from("client_services").update({ financials_month: finSvc.financialsMonth }).eq("id", finSvc.csId);

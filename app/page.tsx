@@ -22,10 +22,10 @@ type DisplayItem =
 
 export default function ClientsPage() {
   // ── State from Supabase API ──
-  const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading } = useClientsState();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
+  const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading } = useClientsState(typeFilter);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);

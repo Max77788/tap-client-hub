@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Client, ServiceKey } from "@/lib/types";
+import type { Client, ClientType, ServiceKey } from "@/lib/types";
 
 type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
 
-export function useClientsState() {
+export function useClientsState(typeFilter?: ClientType | "All") {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,13 +14,22 @@ export function useClientsState() {
     let cancelled = false;
     async function fetchFromSupabase() {
       try {
+        // Build URL with optional type filter
+        let url = "/api/clients";
+        if (typeFilter && typeFilter !== "All") {
+          url += `?type=${typeFilter.toLowerCase()}`;
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const res = await fetch("/api/clients", { signal: controller.signal });
+        const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
         if (!cancelled && data.clients?.length > 0) {
+          setClients(data.clients);
+        } else if (!cancelled && data.clients) {
+          // Empty array is valid (e.g. no Personal clients)
           setClients(data.clients);
         } else if (!cancelled) {
           setError("No clients returned from API");
@@ -33,7 +42,7 @@ export function useClientsState() {
     }
     fetchFromSupabase();
     return () => { cancelled = true; };
-  }, []);
+  }, [typeFilter]);
 
   const updateClient = useCallback((clientId: string, updates: Partial<Client>) => {
     setClients(prev =>
