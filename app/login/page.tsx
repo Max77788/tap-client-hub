@@ -11,6 +11,7 @@ function LoginContent() {
   const [step, setStep] = useState<"login" | "2fa">("login");
   const [twoFACode, setTwoFACode] = useState("");
   const [twoFAMessage, setTwoFAMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -283,10 +284,11 @@ function LoginContent() {
                   </label>
                   {/* Forgot password? — contact admin for reset */}
                 </div>
+                <div style={{ position: "relative" }}>
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
                   value={password}
@@ -297,6 +299,7 @@ function LoginContent() {
                     borderColor: "var(--line)",
                     backgroundColor: "var(--card)",
                     color: "var(--ink)",
+                    paddingRight: 40,
                   }}
                   onFocus={(e) => {
                     e.target.style.borderColor = "var(--teal)";
@@ -307,6 +310,32 @@ function LoginContent() {
                     e.target.style.boxShadow = "none";
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 4,
+                    color: "var(--muted)",
+                    fontSize: 18,
+                    lineHeight: 1,
+                  }}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  )}
+                </button>
+              </div>
               </div>
 
               {error && (

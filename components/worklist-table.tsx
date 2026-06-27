@@ -66,6 +66,9 @@ function getActiveMonths(
 ): Set<number> {
   switch (frequency) {
     case "Monthly":
+    case "Weekly":
+    case "Bi-Weekly":
+    case "Semi-Monthly":
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     case "Quarterly": {
       const s = startMonth ?? 0; // default Jan
@@ -700,14 +703,8 @@ export default function WorklistTable({
                       const isCurrentMonth = i === currentMonth && !isHistorical;
                       const cellReadOnly = readOnly || isHistorical;
 
-                      // ── Payroll variant: show run counts ──
+                      // ── Payroll variant: cells cycle same as default ──
                       if (variant === "payroll" && isActive) {
-                        const cadence = payrollCadences[client.id] ?? "Monthly";
-                        const expected = getExpectedRuns(cadence);
-                        const completed = stage === "dn"
-                          ? expected
-                          : Math.max(0, expected - 1 - (i % 2));
-
                         return (
                           <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
                             <CellWrapper
@@ -720,7 +717,12 @@ export default function WorklistTable({
                                 className="text-[9px] font-semibold leading-none"
                                 style={{ color: style.fg }}
                               >
-                                {completed}/{expected}
+                                {stage === "" ? (isPastDue && !isHistorical ? "!" : "·")
+                                  : stage === "ip" ? "•"
+                                  : stage === "wc" ? "⏳"
+                                  : stage === "pp" ? "✓"
+                                  : stage === "dn" ? "✓"
+                                  : stage === "na" ? "–" : ""}
                               </span>
                             </CellWrapper>
                           </td>

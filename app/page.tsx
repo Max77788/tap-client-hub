@@ -102,9 +102,14 @@ export default function ClientsPage() {
   }
 
   const handleSlideoverSave = useCallback((updated: Client) => {
+    // Optimistic local update
     updateClient(updated.id, updated);
-    setSelectedClientId(null); // force re-select to refresh slideover
-    setTimeout(() => setSelectedClientId(updated.id), 0);
+    // Persist to API
+    fetch("/api/clients", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    }).catch(e => console.error("Failed to save client:", e));
   }, [updateClient]);
 
   const handleSlideoverDelete = useCallback((clientId: string) => {

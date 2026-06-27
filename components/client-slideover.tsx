@@ -72,10 +72,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eEmail, setEEmail] = useState((client.emails || [""])[0] || "");
   const [eAddEmail, setEAddEmail] = useState((client.emails || [])[1] || "");
   const [ePhone, setEPhone] = useState((client.phones || [""])[0] || "");
+  const [eAddPhone, setEAddPhone] = useState((client.phones || [])[1] || "");
   const [eAddress, setEAddress] = useState(client.address);
   const [eCity, setECity] = useState(client.city);
   const [eState, setEState] = useState(client.state);
   const [eZip, setEZip] = useState((client as any).zip || "");
+  const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
 
   // Close on Escape
   useEffect(() => {
@@ -97,9 +99,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   )];
 
   function toggleSvc(key: string) {
-    setLocalSvcs((prev: any[]) =>
-      prev.map((s: any) => s.key === key ? { ...s, enabled: !s.enabled, months: s.enabled ? Array(12).fill("lock") : s.months } : s)
+    const updated = localSvcs.map((s: any) =>
+      s.key === key ? { ...s, enabled: !s.enabled, months: s.enabled ? Array(12).fill("lock") : s.months } : s
     );
+    setLocalSvcs(updated);
+    // Persist immediately
+    onSave?.({ ...client, services: updated });
   }
 
   function freqLabel(key: string, svc: any) {
@@ -401,8 +406,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     onSave?.({
       ...c,
       name: nm, type: eType as "Business" | "Personal", group: eGroup,
-      emails: [eEmail, eAddEmail].filter(Boolean), phones: [ePhone].filter(Boolean),
+      emails: [eEmail, eAddEmail].filter(Boolean), phones: [ePhone, eAddPhone].filter(Boolean),
       address: eAddress, city: eCity, state: eState, zip: eZip,
+      assignedStaff: eAssigned,
       services: updatedSvcs,
     } as Client);
     setEditing(false);
@@ -439,7 +445,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             </div>
             <div style={{ flex: 1 }}>
               <label className="el" style={elStyle}>Assigned to</label>
-              <input className="ef" style={efStyle} value={""} placeholder="TBD" readOnly />
+              <select className="ef" style={efStyle} value={eAssigned} onChange={e => setEAssigned(e.target.value)}>
+                {["Terry Anderson", "Lindsay", "Misty", "Jill", "Tushar", "Sam", "Amruta", "Sanket", "Lizette", "Shilpa", "Janeth", "LB", "Alvarez", "Sandeep", "Shelpa", "Valerie", "Unassigned"].map(s => <option key={s}>{s}</option>)}
+              </select>
             </div>
           </div>
 
@@ -454,6 +462,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           <label className="el" style={elStyle}>Phone</label>
           <input className="ef" style={efStyle} value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="(713) 555-0100" />
+
+          <label className="el" style={elStyle}>Additional phone <span style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif', fontSize: 11 }}>(optional)</span></label>
+          <input className="ef" style={efStyle} value={eAddPhone} onChange={e => setEAddPhone(e.target.value)} placeholder="(713) 555-0200" />
 
           <label className="el" style={elStyle}>Street address</label>
           <input className="ef" style={efStyle} value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="123 Main St." />

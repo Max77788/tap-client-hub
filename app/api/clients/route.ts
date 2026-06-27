@@ -253,6 +253,28 @@ export async function PUT(request: Request) {
   const id = body.id;
   if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
 
+  const KEY_TO_SERVICE_CODE: Record<string, string> = {
+    financials: "FIN", payroll: "PR", sales_tax: "STX",
+    "1099s": "T9", renditions: "REND", tax_returns: "TAX",
+  };
+
+  // 1. Fetch service template IDs
+  const { data: serviceTemplates } = await supabase
+    .from("services").select("id, code");
+  const codeToSvcId: Record<string, string> = {};
+  for (const s of serviceTemplates || []) {
+    codeToSvcId[s.code] = s.id;
+  }
+
+  // 2. Fetch existing client_services for this client (including inactive)
+  const { data: existingSvc } = await supabase
+    .from("client_services").select("id, service_id").eq("client_id", id);
+  const existingBySvcId = new Map<string, string>(); // service_id → csId
+  for (const cs of existingSvc || []) {
+    existingBySvcId.set(cs.service_id, cs.id);
+  }
+
+  // 3. Update client row
   const { error: clientError } = await supabase
     .from("clients").update({
       name: body.name,
@@ -268,28 +290,63 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: clientError.message }, { status: 500 });
   }
 
+  // 4. Sync contacts
   await supabase.from("contacts").delete().eq("client_id", id);
-
   const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
   const phones = Array.isArray(body.phones) ? body.phones.filter((p: string) => p.trim()) : [];
   const contacts: any[] = [];
   const maxLen = Math.max(emails.length, phones.length, 1);
   for (let i = 0; i < maxLen; i++) {
-    contacts.push({
-      client_id: id,
-      email: emails[i] || "",
-      phone: phones[i] || "",
-      is_primary: i === 0,
-    });
+    contacts.push({ client_id: id, email: emails[i] || "", phone: phones[i] || "", is_primary: i === 0 });
   }
   if (contacts.length > 0) {
     await supabase.from("contacts").insert(contacts);
   }
 
-  const finSvc = Array.isArray(body.services) ? body.services.find((s: any) => s.key === "financials") : null;
-  if (finSvc?.csId && finSvc.financialsMonth !== undefined) {
-    await supabase.from("client_services").update({ financials_month: finSvc.financialsMonth }).eq("id", finSvc.csId);
+  // 5. Sync client_services based on incoming services array
+  const services = Array.isArray(body.services) ? body.services : [];
+
+  // Handle client-level assignedStaff — store on first enabled service
+  if (body.assignedStaff) {
+    const firstEnabled = services.find((s: any) => s.enabled);
+    if (firstEnabled && !firstEnabled.assignedTo) {
+      firstEnabled.assignedTo = body.assignedStaff;
+    }
   }
+
+  for (const svc of services) {
+    const code = KEY_TO_SERVICE_CODE[svc.key];
+    if (!code) continue;
+    const svcId = codeToSvcId[code];
+    if (!svcId) continue;
+
+    const existingCsId = existingBySvcId.get(svcId);
+
+    if (svc.enabled) {
+      const payload: any = { active: true, frequency: svc.frequency || "Monthly" };
+      if (svc.assignedTo !== undefined) payload.assigned_to = svc.assignedTo || null;
+      if (svc.processor !== undefined) payload.processor = svc.processor || null;
+      if (svc.expectedAnnual !== undefined) payload.expected_annual = svc.expectedAnnual || null;
+      if (svc.financialsMonth !== undefined) payload.financials_month = svc.financialsMonth;
+
+      if (existingCsId) {
+        await supabase.from("client_services").update(payload).eq("id", existingCsId);
+      } else {
+        await supabase.from("client_services").insert({
+          client_id: id, service_id: svcId, ...payload,
+        });
+      }
+    } else {
+      // Disable the service
+      if (existingCsId) {
+        await supabase.from("client_services").update({ active: false }).eq("id", existingCsId);
+      }
+    }
+  }
+
+  // 6. Handle assignedStaff — store on the first enabled service's assigned_to
+  //    (GET maps assignedStaff from the first client_service.assigned_to)
+  //    For now, assignedStaff is handled per-service above. Client-level assigned is informational.
 
   return NextResponse.json({ success: true });
 }
