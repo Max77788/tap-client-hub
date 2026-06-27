@@ -125,9 +125,9 @@ export default function TwoFactorSetupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "var(--paper)" }}>
-      <div className="w-full max-w-md p-6 sm:p-8 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
-        <h1 className="text-xl font-semibold text-center mb-2" style={{ color: "var(--ink)" }}>
+    <div className="p-4 sm:p-8" style={{ backgroundColor: "var(--paper)" }}>
+      <div className="w-full max-w-md mx-auto p-6 sm:p-8 rounded-xl" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+        <h1 className="text-xl font-semibold text-center mb-2" style={{ color: "var(--ink)", fontFamily: '"Fraunces", Georgia, serif' }}>
           Two-Factor Authentication
         </h1>
         <p className="text-sm text-center mb-6" style={{ color: "var(--muted)" }}>

@@ -297,35 +297,6 @@ export default function TimePage() {
           font-weight: 700; font-size: 15px; white-space: nowrap;
         }
         .tw-go:disabled { opacity: 0.4; cursor: not-allowed; }
-        .stats { display: flex; gap: 10px; flex-wrap: wrap; }
-        .statcard {
-          flex: 1; min-width: 120px; background: var(--card);
-          border: 1px solid var(--line); border-radius: 13px;
-          padding: 13px 16px;
-        }
-        .statcard .sn {
-          font-family: "Fraunces", Georgia, serif;
-          font-weight: 600; font-size: 26px; line-height: 1;
-        }
-        .statcard .sl { font-size: 12px; color: var(--muted); margin-top: 4px; }
-        .count { color: var(--muted); font-size: 13px; margin: 12px 2px 6px; }
-        .panel {
-          background: var(--card); border: 1px solid var(--line);
-          border-radius: 16px; overflow: hidden;
-        }
-        .panel table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .panel th {
-          text-align: left; padding: 14px 16px; font-size: 11px;
-          font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-          color: var(--muted); border-bottom: 1px solid var(--line);
-        }
-        .panel td { padding: 12px 16px; border-bottom: 1px solid var(--line); }
-        .panel tr:last-child td { border-bottom: none; }
-        .mono { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--teal); }
-        .lname { font-weight: 600; }
-        .reveal { all: unset; cursor: pointer; color: var(--teal); font-weight: 600; font-size: 12.5px; }
-        .reveal:hover { text-decoration: underline; }
-        .fineprint { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin: 14px 2px 0; font-style: italic; }
         .edit-inp { width: 42px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; text-align: center; }
         .edit-sel { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; max-width: 200px; }
         .edit-note-inp { width: 160px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }

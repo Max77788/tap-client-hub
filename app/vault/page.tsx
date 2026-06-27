@@ -117,6 +117,18 @@ export default function VaultPage() {
   }
 
   if (loading) return <PageSkeleton rows={6} />;
+  if (error) {
+    return (
+      <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" }}>
+        <div className="empty" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          Failed to load credentials.{" "}
+          <button onClick={() => loadCredentials()} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600 }}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

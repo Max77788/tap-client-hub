@@ -139,7 +139,7 @@ export default function SupportPage() {
               <span className="ci" style={{ width: 34, height: 34, borderRadius: 9, background: "var(--teal-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✉️</span>
               <div><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Email</div><div style={{ fontWeight: 600, fontSize: "13.5px" }}>{SUPPORT_EMAIL}</div></div>
             </a>
-            <a className="contact" href={`tel:+1832****4786`} style={contactStyle}>
+            <a className="contact" href={`tel:+18329374786`} style={contactStyle}>
               <span className="ci" style={{ width: 34, height: 34, borderRadius: 9, background: "var(--teal-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📞</span>
               <div><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Phone</div><div style={{ fontWeight: 600, fontSize: "13.5px" }}>{SUPPORT_PHONE}</div></div>
             </a>

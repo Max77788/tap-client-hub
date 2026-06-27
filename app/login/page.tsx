@@ -3,6 +3,8 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { PageSkeleton } from "@/components/loading-skeleton";
+
 function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -142,7 +144,7 @@ function LoginContent() {
         {/* === 2FA STEP === */}
         {step === "2fa" ? (
           <>
-            <h1 className="text-xl font-semibold text-center mb-2">
+            <h1 className="text-xl font-semibold text-center mb-2" style={{ fontFamily: '"Fraunces", Georgia, serif', color: "var(--ink)" }}>
               Two-Factor Authentication
             </h1>
             <p className="text-sm text-center mb-2" style={{ color: "var(--muted)" }}>
@@ -234,7 +236,7 @@ function LoginContent() {
         ) : (
           <>
             {/* === PASSWORD STEP === */}
-            <h1 className="text-xl font-semibold text-center mb-6">
+            <h1 className="text-xl font-semibold text-center mb-6" style={{ fontFamily: '"Fraunces", Georgia, serif', color: "var(--ink)" }}>
               Sign in to your account
             </h1>
 
@@ -380,19 +382,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div
-          className="min-h-screen flex items-center justify-center"
-          style={{ backgroundColor: "var(--paper)" }}
-        >
-          <div
-            className="w-full max-w-sm p-8 rounded-xl text-center"
-            style={{
-              backgroundColor: "var(--card)",
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <p style={{ color: "var(--muted)" }}>Loading...</p>
-          </div>
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--paper)" }}>
+          <PageSkeleton rows={3} />
         </div>
       }
     >

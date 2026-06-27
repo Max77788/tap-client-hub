@@ -15,16 +15,10 @@ export default function FinPage() {
     return currentYear;
   });
   const { clients, loading, updateServiceMonth } = useClientsState();
-  const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
 
-  const enabledCount = useMemo(
-    () => clients.filter((c) => c.services?.find((s) => s.key === "financials")?.enabled).length,
-    [clients],
-  );
 
   const handleClientClick = useCallback((clientId: string) => {
-    // TODO: open client side panel — will be wired to a slide-over component
-    console.log("Open client panel:", clientId);
+    console.log("Open client:", clientId);
   }, []);
 
   return (
