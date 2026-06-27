@@ -114,7 +114,7 @@ export default function TimePage() {
 
     const svc = (SERVICE_META as any)[mTask];
     const entry: TimeEntry = {
-      id: crypto.randomUUID(),
+      id: uid(),
       clientName: client.name, clientId: client.id,
       personName: person.name, personId: person.id,
       serviceKey: mTask, serviceLabel: svc?.label || TASK_LABEL[mTask] || "-",
@@ -179,6 +179,10 @@ export default function TimePage() {
     return () => { cancelled = true; };
   }, []);
 
+  function uid() {
+    try { return crypto.randomUUID(); } catch { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+  }
+
   const startTimer = useCallback(() => {
     if (!selectedClient || !selectedPerson) return;
     setRunning(true);
@@ -189,32 +193,38 @@ export default function TimePage() {
   }, [elapsed, selectedClient, selectedPerson]);
 
   const stopTimer = useCallback(() => {
-    const client = clients.find((c) => c.id === selectedClient);
-    const person = staff.find((s) => s.id === selectedPerson);
-    if (elapsed > 0 && client && person) {
-      const svc = selectedService ? (SERVICE_META as any)[selectedService] : null;
-      const entry: TimeEntry = {
-        id: crypto.randomUUID(),
-        clientName: client.name, clientId: client.id,
-        personName: person.name, personId: person.id,
-        serviceKey: selectedService, serviceLabel: svc?.label || TASK_LABEL[selectedService] || "-",
-        duration: elapsed, date: new Date().toISOString(), note: timerNote,
-      };
-      setEntries((prev) => [entry, ...prev]);
-      setTimerNote("");
-      fetch("/api/time-entries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          who: person.id, client_id: client.id,
-          task: svc?.label || TASK_LABEL[selectedService] || "", seconds: elapsed,
-          started_at: new Date().toISOString(), note: timerNote,
-        }),
-      }).catch(() => {});
+    try {
+      const client = clients.find((c) => c.id === selectedClient);
+      const person = staff.find((s) => s.id === selectedPerson);
+      if (elapsed > 0 && client && person) {
+        const svc = selectedService ? (SERVICE_META as any)[selectedService] : null;
+        const note = timerNote; // capture before clearing
+        const entry: TimeEntry = {
+          id: uid(),
+          clientName: client.name, clientId: client.id,
+          personName: person.name, personId: person.id,
+          serviceKey: selectedService, serviceLabel: svc?.label || TASK_LABEL[selectedService] || "-",
+          duration: elapsed, date: new Date().toISOString(), note,
+        };
+        setEntries((prev) => [entry, ...prev]);
+        setTimerNote("");
+        fetch("/api/time-entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            who: person.id, client_id: client.id,
+            task: svc?.label || TASK_LABEL[selectedService] || "", seconds: elapsed,
+            started_at: new Date().toISOString(), note,
+          }),
+        }).catch((e) => console.error("Time entry save failed:", e));
+      }
+    } catch (e) {
+      console.error("stopTimer error:", e);
+    } finally {
+      setRunning(false);
+      setElapsed(0);
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     }
-    setRunning(false);
-    setElapsed(0);
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
   }, [elapsed, selectedClient, selectedPerson, selectedService, timerNote, clients, staff]);
 
   useEffect(() => {
