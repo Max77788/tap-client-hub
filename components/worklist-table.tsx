@@ -239,6 +239,10 @@ export default function WorklistTable({
     });
   }, [clients]);
 
+  // ── T9 count edit-in-place state ──
+  const [editingT9, setEditingT9] = useState<string | null>(null);
+  const [editT9Value, setEditT9Value] = useState("");
+
   // ── T9 bump handler ──
   const t9Bump = useCallback((clientId: string, monthIdx: number, ev: React.MouseEvent) => {
     if (isHistorical) return;
@@ -260,6 +264,32 @@ export default function WorklistTable({
       return { ...prev, [key]: counts };
     });
   }, [isHistorical, clients, year]);
+
+  const t9StartEdit = useCallback((clientId: string, monthIdx: number, currentVal: number) => {
+    if (isHistorical) return;
+    setEditingT9(`${clientId}:${monthIdx}`);
+    setEditT9Value(String(currentVal || 0));
+  }, [isHistorical]);
+
+  const t9CommitEdit = useCallback((clientId: string, monthIdx: number) => {
+    const val = parseInt(editT9Value) || 0;
+    const key = `${clientId}:1099s`;
+    setT9Counts((prev) => {
+      const counts = [...(prev[key] ?? Array(12).fill(0))];
+      counts[monthIdx] = Math.max(0, val);
+      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
+      if (svc?.csId) {
+        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+        fetch("/api/period-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
+        }).catch(() => {});
+      }
+      return { ...prev, [key]: counts };
+    });
+    setEditingT9(null);
+  }, [editT9Value, clients, year]);
 
   // ── Cell click handler — directly cycles stage (no picker) ──
   const handleCellClick = useCallback(
@@ -571,18 +601,42 @@ export default function WorklistTable({
                       {MONTHS_SHORT.map((mo, i) => {
                         const n = +counts[i] || 0;
                         const isCM = i === currentMonth && !isHistorical;
-                        const clickable = !isHistorical;
+                        const cellEditKey = `${client.id}:${i}`;
+                        const isEditing = editingT9 === cellEditKey;
                         return (
                           <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`}>
-                            <div
-                              onClick={clickable ? (e) => t9Bump(client.id, i, e) : undefined}
-                              className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors cursor-${clickable ? "pointer" : "default"} hover:scale-110 hover:shadow-sm active:scale-95`}
-                              style={{
-                                backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
-                                color: n > 0 ? "var(--green)" : "var(--muted)",
-                              }}
-                              title={`${mo}: ${n} processed${clickable ? " — click +1, shift-click -1" : ""}`}
-                            >{n || "·"}</div>
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={editT9Value}
+                                onChange={(e) => setEditT9Value(e.target.value)}
+                                onBlur={() => t9CommitEdit(client.id, i)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") t9CommitEdit(client.id, i);
+                                  if (e.key === "Escape") setEditingT9(null);
+                                }}
+                                autoFocus
+                                className="inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums text-center"
+                                style={{
+                                  backgroundColor: "#fff",
+                                  border: "2px solid var(--teal)",
+                                  color: "var(--ink)",
+                                  outline: "none",
+                                }}
+                              />
+                            ) : (
+                              <div
+                                onClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
+                                onDoubleClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
+                                className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
+                                style={{
+                                  backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
+                                  color: n > 0 ? "var(--green)" : "var(--muted)",
+                                }}
+                                title={`${mo}: ${n} processed${!isHistorical ? " — click +1, shift-click -1, double-click to type" : ""}`}
+                              >{n || "·"}</div>
+                            )}
                           </td>
                         );
                       })}
