@@ -255,7 +255,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <div className="fsect" style={fsectStyle}>Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them; details appear as you tick</span></div>
 
           {/* Financials */}
-          <ServiceCard icon="📊" label="Monthly Financials" checked={fin} onChange={setFin}>
+          <ServiceCard icon="📊" label="Financials" checked={fin} onChange={setFin}>
             <div className="two" style={{ display: "flex", gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>

@@ -6,7 +6,7 @@ const SUPPORT_EMAIL = "support@aifusioniqlabs.com";
 const SUPPORT_PHONE = "(832) 937-4786";
 
 const SUP_AREAS = [
-  "Clients", "Monthly Financials", "Payroll", "Sales Tax", "1099s", "Renditions",
+  "Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions",
   "Team Workload", "Password Vault", "Adding / editing a client", "Login or access", "Something else",
 ];
 

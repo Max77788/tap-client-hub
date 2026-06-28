@@ -24,7 +24,7 @@ const STAGE_STYLES: Record<string, { bg: string; fg: string; border: string; cls
 };
 
 const svcMeta: Record<string, { label: string; ic: string; bg: string }> = {
-  financials:  { label: "Monthly Financials", ic: "📊", bg: "var(--green-soft)" },
+  financials:  { label: "Financials", ic: "📊", bg: "var(--green-soft)" },
   payroll:     { label: "Payroll", ic: "💵", bg: "var(--blue-soft)" },
   sales_tax:   { label: "Sales Tax", ic: "🧾", bg: "var(--amber-soft)" },
   tax_returns: { label: "Tax Return", ic: "📋", bg: "#ece7f3" },
