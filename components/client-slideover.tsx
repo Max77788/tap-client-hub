@@ -406,7 +406,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     onSave?.({
       ...c,
       name: nm, type: eType as "Business" | "Personal", group: eGroup,
-      emails: [eEmail, eAddEmail].filter(Boolean), phones: [ePhone, eAddPhone].filter(Boolean),
+      emails: [...new Set([eEmail, eAddEmail].filter(Boolean))], phones: [ePhone, eAddPhone].filter(Boolean),
       address: eAddress, city: eCity, state: eState, zip: eZip,
       assignedStaff: eAssigned,
       services: updatedSvcs,

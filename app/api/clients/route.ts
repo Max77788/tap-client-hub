@@ -88,7 +88,7 @@ export async function GET(request: Request) {
         name: db.name, type: db.type === "business" ? "Business" : "Personal",
         group: db.group_owner || "Unassigned", status: db.status || "active",
         city: db.city || "", state: db.state || "TX",
-        emails: (db.contacts || []).map((c: any) => c.email).filter(Boolean),
+        emails: [...new Set((db.contacts || []).map((c: any) => c.email).filter(Boolean))],
         phones: (db.contacts || []).map((c: any) => c.phone).filter(Boolean),
         address: db.address || "",
         assignedStaff: staffNames[svcs[0]?.assigned_to || ""] || svcs[0]?.assigned_to || "Unassigned",
