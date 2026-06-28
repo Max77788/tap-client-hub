@@ -2,15 +2,22 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+function reverseName(name: string): string {
+  // "Tushar Patil" -> "Patil, Tushar"
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  const last = parts.pop()!;
+  return `${last}, ${parts.join(" ")}`;
+}
+
 export async function GET(request: Request) {
   try {
-    // Read user email from demo cookie
     const cookieHeader = request.headers.get("cookie") || "";
-    const match = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
-    if (!match) {
+    const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
+    if (!nameMatch) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    const email = decodeURIComponent(match[1]);
+    const demoName = decodeURIComponent(nameMatch[1]);
 
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(
@@ -19,10 +26,11 @@ export async function GET(request: Request) {
       { db: { schema: "tap_hub_project" } }
     );
 
+    // Try direct match first, then reversed "Last, First" format
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .eq("email", email)
+      .eq("full_name", reverseName(demoName))
       .maybeSingle();
 
     if (!profile) {
@@ -31,7 +39,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       id: profile.id,
-      email: profile.email || email,
+      email: profile.email || "",
       name: profile.full_name || "",
       role: profile.role || "",
       location: profile.location || "",

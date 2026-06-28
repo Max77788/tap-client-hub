@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+function reverseName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  const last = parts.pop()!;
+  return `${last}, ${parts.join(" ")}`;
+}
+
 export async function GET(request: Request) {
   try {
-    // Read user email from demo cookie
     const cookieHeader = request.headers.get("cookie") || "";
-    const match = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
-    if (!match) {
+    const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
+    if (!nameMatch) {
       return NextResponse.json({ enabled: false, authenticated: false });
     }
 
@@ -21,7 +27,7 @@ export async function GET(request: Request) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("email_2fa_enabled")
-      .eq("email", decodeURIComponent(match[1]))
+      .eq("full_name", reverseName(decodeURIComponent(nameMatch[1])))
       .maybeSingle();
 
     return NextResponse.json({
