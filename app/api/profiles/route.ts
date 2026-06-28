@@ -8,7 +8,6 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   const supabase = await createClient();
-  const adminSupabase = createAdminClient();
 
   const { data: profiles, error } = await supabase
     .from("profiles")
@@ -23,9 +22,10 @@ export async function GET() {
     return NextResponse.json([]);
   }
 
-  // Fetch real emails from auth.users via admin client
+  // Try to get real emails from auth.users (admin client may not have service_role key)
   let emailMap: Record<string, string> = {};
   try {
+    const adminSupabase = createAdminClient();
     const { data: authUsers, error: authError } = await adminSupabase.auth.admin.listUsers();
     if (!authError && authUsers?.users) {
       for (const u of authUsers.users) {
@@ -33,7 +33,7 @@ export async function GET() {
       }
     }
   } catch {
-    // Fallback: derive email from name
+    // Fallback: derive email from name (no service_role key available)
   }
 
   // ── DB → User mapping ──
