@@ -199,7 +199,7 @@ export default function WorkloadPage() {
 
       {/* ── Fine print ── */}
       <p className="fineprint" style={{ fontSize: "11.5px", color: "var(--muted)", lineHeight: 1.5, margin: "14px 2px 0", fontStyle: "italic" }}>
-        &ldquo;Load&rdquo; is an estimate of yearly touchpoints: monthly financials = 12, weekly payroll = 52,
+        &ldquo;Load&rdquo; is an estimate of yearly touchpoints: financials = 12, weekly payroll = 52,
         bi-weekly = 26, quarterly sales tax = 4, plus a flat weight for tax returns, 1099s and renditions.
         Adjust the weights to match how your firm actually scopes effort.
       </p>
