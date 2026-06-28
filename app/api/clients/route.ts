@@ -1,15 +1,7 @@
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
-
-async function await getDb() {
-  const { createClient } = await import("@supabase/supabase-js");
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { db: { schema: "tap_hub_project" } }
-  );
-}
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FN: "financials",
@@ -27,21 +19,23 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get("limit") || "1000");
   const offset = parseInt(searchParams.get("offset") || "0");
 
+  const supabase = await createClient();
+
   // Always fetch stats (lightweight, no joins)
   const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
-    await getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
-    await getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
-    await getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
+    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
+    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
   ]);
 
   // Build clients query with pagination
-  let clientsQuery = await getDb()
+  let clientsQuery = supabase
     .from("clients")
     .select("*, contacts(*)")
     .eq("status", "active");
 
   if (typeFilter === "business" || typeFilter === "personal") {
-    clientsQuery = clientsQuery.filter('"type"', "ilike", typeFilter);
+    clientsQuery = clientsQuery.filter('"type"', 'ilike', typeFilter);
   }
 
   clientsQuery = clientsQuery.order("name").range(offset, offset + limit - 1);
@@ -58,7 +52,7 @@ export async function GET(request: Request) {
 
   // Only fetch services for the returned page of clients
   const clientIds = dbClients.map((c: any) => c.id);
-  const { data: dbServices, error: svcError } = await getDb()
+  const { data: dbServices, error: svcError } = await supabase
     .from("client_services")
     .select("*, service:services(*)")
     .eq("active", true)
@@ -82,7 +76,7 @@ export async function GET(request: Request) {
   try {
     const allCsIds = (dbServices || []).map((cs: any) => cs.id);
     if (allCsIds.length > 0) {
-      const { data: allPeriods } = await getDb()
+      const { data: allPeriods } = await supabase
         .from("work_periods")
         .select("client_service_id, stage, period")
         .gte("period", `${currentYear}-01`)
@@ -101,8 +95,8 @@ export async function GET(request: Request) {
     }
   } catch {}
 
-  // Build staff name lookup map (resolve UUIDs to names)
-  const { data: allStaff } = await getDb().from("profiles").select("id, name");
+  // Resolve staff UUIDs to names
+  const { data: allStaff } = await supabase.from("profiles").select("id, name");
   const staffMap: Record<string, string> = {};
   for (const s of allStaff || []) staffMap[s.id] = s.name;
 
@@ -175,14 +169,15 @@ export async function GET(request: Request) {
     stats: { total: totalCount ?? 0, business: bizCount ?? 0, personal: persCount ?? 0 },
   });
   } catch (e: any) {
-    return NextResponse.json({ error: String(e?.message || e), stack: e?.stack?.split("\n")?.slice(0,3)?.join(" | ") || "" }, { status: 500 });
+    return NextResponse.json({ error: e?.message || String(e), stack: (e?.stack || "").split("\n").slice(0,4).join(" | ") }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
   const body = await request.json();
 
-  const { data: client, error } = await getDb()
+  const { data: client, error } = await supabase
     .from("clients").insert({
       name: body.name, type: body.type?.toLowerCase() || "business",
       group_owner: body.group || null, status: body.status || "active",
@@ -209,7 +204,7 @@ export async function POST(request: Request) {
   }
 
   if (contacts.length > 0) {
-    await getDb().from("contacts").insert(contacts);
+    await supabase.from("contacts").insert(contacts);
   }
 
   const services = Array.isArray(body.services) ? body.services : [];
@@ -255,13 +250,14 @@ export async function POST(request: Request) {
   }
 
   if (svcInserts.length > 0) {
-    await getDb().from("client_services").insert(svcInserts);
+    await supabase.from("client_services").insert(svcInserts);
   }
 
   return NextResponse.json({ client }, { status: 201 });
 }
 
 export async function PUT(request: Request) {
+  const supabase = await createClient();
   const body = await request.json();
   const id = body.id;
   if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
@@ -272,7 +268,7 @@ export async function PUT(request: Request) {
   };
 
   // 1. Fetch service template IDs
-  const { data: serviceTemplates } = await getDb()
+  const { data: serviceTemplates } = await supabase
     .from("services").select("id, code");
   const codeToSvcId: Record<string, string> = {};
   for (const s of serviceTemplates || []) {
@@ -280,15 +276,15 @@ export async function PUT(request: Request) {
   }
 
   // 2. Fetch existing client_services for this client (including inactive)
-  const { data: existingSvc } = await getDb()
+  const { data: existingSvc } = await supabase
     .from("client_services").select("id, service_id").eq("client_id", id);
-  const existingBySvcId = new Map<string, string>();
+  const existingBySvcId = new Map<string, string>(); // service_id → csId
   for (const cs of existingSvc || []) {
     existingBySvcId.set(cs.service_id, cs.id);
   }
 
   // 3. Update client row
-  const { error: clientError } = await getDb()
+  const { error: clientError } = await supabase
     .from("clients").update({
       name: body.name,
       type: body.type?.toLowerCase() || "business",
@@ -304,7 +300,7 @@ export async function PUT(request: Request) {
   }
 
   // 4. Sync contacts
-  await getDb().from("contacts").delete().eq("client_id", id);
+  await supabase.from("contacts").delete().eq("client_id", id);
   const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
   const phones = Array.isArray(body.phones) ? body.phones.filter((p: string) => p.trim()) : [];
   const contacts: any[] = [];
@@ -313,12 +309,13 @@ export async function PUT(request: Request) {
     contacts.push({ client_id: id, email: emails[i] || "", phone: phones[i] || "", is_primary: i === 0 });
   }
   if (contacts.length > 0) {
-    await getDb().from("contacts").insert(contacts);
+    await supabase.from("contacts").insert(contacts);
   }
 
-  // 5. Sync client_services
+  // 5. Sync client_services based on incoming services array
   const services = Array.isArray(body.services) ? body.services : [];
 
+  // Handle client-level assignedStaff — store on first enabled service
   if (body.assignedStaff) {
     const firstEnabled = services.find((s: any) => s.enabled);
     if (firstEnabled && !firstEnabled.assignedTo) {
@@ -342,27 +339,33 @@ export async function PUT(request: Request) {
       if (svc.financialsMonth !== undefined) payload.financials_month = svc.financialsMonth;
 
       if (existingCsId) {
-        await getDb().from("client_services").update(payload).eq("id", existingCsId);
+        await supabase.from("client_services").update(payload).eq("id", existingCsId);
       } else {
-        await getDb().from("client_services").insert({
+        await supabase.from("client_services").insert({
           client_id: id, service_id: svcId, ...payload,
         });
       }
     } else {
+      // Disable the service
       if (existingCsId) {
-        await getDb().from("client_services").update({ active: false }).eq("id", existingCsId);
+        await supabase.from("client_services").update({ active: false }).eq("id", existingCsId);
       }
     }
   }
+
+  // 6. Handle assignedStaff — store on the first enabled service's assigned_to
+  //    (GET maps assignedStaff from the first client_service.assigned_to)
+  //    For now, assignedStaff is handled per-service above. Client-level assigned is informational.
 
   return NextResponse.json({ success: true });
 }
 
 export async function DELETE(request: Request) {
+  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
-  const { error } = await getDb().from("clients").delete().eq("id", id);
+  const { error } = await supabase.from("clients").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
