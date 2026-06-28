@@ -179,15 +179,15 @@ export default function WorkloadPage() {
                       return (
                         <span key={k} className="schip" style={{
                           fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20,
-                          background: `color-mix(in srgb, ${v.col} 12%, #fff)`,
-                          color: v.col, border: `1px solid color-mix(in srgb, ${v.col} 25%, #fff)`,
+                          background: "#f0f2f5",
+                          color: v.col, border: `1px solid ${v.col}40`,
                         }}>
                           {v.ic} {v.l} <b style={{ fontWeight: 700 }}>{cnt}</b>
                         </span>
                       );
                     })}
                     {Object.values(s.services).reduce((a, b) => a + b, 0) === 0 && (
-                      <span className="schip" style={{ fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20, background: "color-mix(in srgb, #aaa 12%, #fff)", color: "#aaa", border: "1px solid color-mix(in srgb, #aaa 25%, #fff)" }}>none</span>
+                      <span className="schip" style={{ fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20, background: "#f0f2f5", color: "#aaa", border: "1px solid #aaa40" }}>none</span>
                     )}
                   </div>
                 </td>
