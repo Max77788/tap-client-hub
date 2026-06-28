@@ -102,30 +102,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const adminSupabase = createAdminClient();
+    const supabase = await createClient();
 
-    // 1. Create user in Supabase Auth
-    const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
+    // 1. Create user in Supabase Auth via sign-up (works with anon key)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: true,
-      user_metadata: { full_name, role: role || "staff" },
+      options: {
+        data: { full_name, role: role || "staff" },
+      },
     });
 
     if (authError) {
       return NextResponse.json({ error: authError.message }, { status: 409 });
     }
 
-    // 2. Resolve reporting_manager name → UUID if it looks like a name (not a UUID and not "—")
+    if (!authData.user) {
+      return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+    }
+
+    // 2. Resolve reporting_manager name → UUID if it looks like a name
     let mgrId: string | null = null;
     if (reporting_manager && reporting_manager !== "—") {
-      // Check if it's already a UUID (from the dropdown using IDs)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (uuidRegex.test(reporting_manager)) {
         mgrId = reporting_manager;
       } else {
-        // It's a name — look up the UUID from profiles
-        const { data: mgrProfile } = await adminSupabase
+        const { data: mgrProfile } = await supabase
           .from("profiles")
           .select("id")
           .eq("full_name", reporting_manager)
@@ -136,9 +139,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Create profile record (use admin client — anon key can't insert profiles)
-    const { error: profileError } = await adminSupabase.from("profiles").insert({
-      id: authUser.user.id,
+    // 3. Create profile record
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: authData.user.id,
       full_name,
       role: role || "staff",
       location: location || null,
@@ -149,12 +152,11 @@ export async function POST(request: Request) {
     });
 
     if (profileError) {
-      // Rollback: delete the auth user
-      await adminSupabase.auth.admin.deleteUser(authUser.user.id);
+      // Rollback: sign out and delete (best effort)
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, userId: authUser.user.id }, { status: 201 });
+    return NextResponse.json({ success: true, userId: authData.user.id }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Internal server error" },
@@ -174,7 +176,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const adminSupabase = createAdminClient();
+    const supabase = await createClient();
 
     const updateData: any = {};
     if (full_name !== undefined) updateData.full_name = full_name;
@@ -192,7 +194,7 @@ export async function PATCH(request: Request) {
           updateData.reporting_manager = reporting_manager;
         } else {
           // It's a name — look up UUID
-          const { data: mgrProfile } = await adminSupabase
+          const { data: mgrProfile } = await supabase
             .from("profiles")
             .select("id")
             .eq("full_name", reporting_manager)
@@ -202,7 +204,7 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const { error } = await adminSupabase
+    const { error } = await supabase
       .from("profiles")
       .update(updateData)
       .eq("id", id);
