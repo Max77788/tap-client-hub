@@ -37,7 +37,18 @@ export async function GET(request: Request) {
     if (!dbClients) return NextResponse.json({ clients: [], stats: { total: totalCount, business: bizCount, personal: persCount } });
 
     const ids = dbClients.map((c: any) => c.id);
-    const { data: dbServices } = await supabase.from("client_services").select("*, service:services(*)").eq("active", true).in("client_id", ids);
+    // Batch IN queries — PostgREST chokes on too many values (Bad Request)
+    const BATCH_SIZE = 200;
+    let dbServices: any[] = [];
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batch = ids.slice(i, i + BATCH_SIZE);
+      const { data: batchData } = await supabase
+        .from("client_services")
+        .select("*, service:services(*)")
+        .eq("active", true)
+        .in("client_id", batch);
+      if (batchData) dbServices = dbServices.concat(batchData);
+    }
 
     const svcByClient: Record<string, any[]> = {};
     for (const cs of dbServices || []) {
