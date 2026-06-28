@@ -1,7 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://phgogybfgovrlcdmifpv.supabase.co";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoZ29neWJmZ292cmxjZG1pZnB2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE0OTQ2MiwiZXhwIjoyMDkwNzI1NDYyfQ.SkCAD-o8b8k_FsBlHRNaLQkv9GcBYqCIZBzFAxnYYP0";
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FN: "financials",
@@ -18,7 +21,7 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get("limit") || "1000");
   const offset = parseInt(searchParams.get("offset") || "0");
 
-  const supabase = await createClient();
+  const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: "tap_hub_project" } });
 
   // Always fetch stats (lightweight, no joins)
   const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
@@ -165,7 +168,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: "tap_hub_project" } });
   const body = await request.json();
 
   const { data: client, error } = await supabase
@@ -248,7 +251,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = await createClient();
+  const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: "tap_hub_project" } });
   const body = await request.json();
   const id = body.id;
   if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
@@ -352,7 +355,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = await createClient();
+  const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: "tap_hub_project" } });
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
