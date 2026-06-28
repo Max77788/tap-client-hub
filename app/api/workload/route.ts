@@ -86,9 +86,9 @@ export async function GET() {
       const load = loads.get(staffName) || {
         totalTouchpoints: 0,
         clientCount: 0,
-        services: {},
+        services: {} as Record<string, number>,
         monthCounts: Array(12).fill(0),
-        clients: [],
+        clients: [] as string[],
       };
 
       const key = CODE_TO_KEY[cs.service?.code || ""] || "financials";

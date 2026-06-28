@@ -74,7 +74,7 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!form.site.trim()) errs.site = "Site is required";
-    if (!form.isBank && !form.password.trim()) errs.password = "Password is required";
+    if (!form.isBank && !form.password?.trim()) errs.password = "Password is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
