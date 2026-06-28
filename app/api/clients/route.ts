@@ -1,9 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
-function getDb() {
+async function await getDb() {
+  const { createClient } = await import("@supabase/supabase-js");
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,13 +29,13 @@ export async function GET(request: Request) {
 
   // Always fetch stats (lightweight, no joins)
   const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
-    getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
-    getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
-    getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
+    await getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
+    await getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
+    await getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
   ]);
 
   // Build clients query with pagination
-  let clientsQuery = getDb()
+  let clientsQuery = await getDb()
     .from("clients")
     .select("*, contacts(*)")
     .eq("status", "active");
