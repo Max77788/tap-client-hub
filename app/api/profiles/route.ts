@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
 
   const { data: profiles, error } = await supabase
     .from("profiles")
@@ -20,6 +21,19 @@ export async function GET() {
 
   if (!profiles) {
     return NextResponse.json([]);
+  }
+
+  // Fetch real emails from auth.users via admin client
+  let emailMap: Record<string, string> = {};
+  try {
+    const { data: authUsers, error: authError } = await adminSupabase.auth.admin.listUsers();
+    if (!authError && authUsers?.users) {
+      for (const u of authUsers.users) {
+        emailMap[u.id] = u.email || "";
+      }
+    }
+  } catch {
+    // Fallback: derive email from name
   }
 
   // ── DB → User mapping ──
@@ -36,14 +50,28 @@ export async function GET() {
     disabled: "Inactive",
   };
 
+  // Build profile name lookup for reporting_manager UUID → name resolution
+  const nameMap: Record<string, string> = {};
+  for (const p of profiles) {
+    nameMap[p.id] = p.full_name || "";
+  }
+
   const users = profiles.map((p: any) => {
-    // Derive email: lowercase first + dot + last @tapallc.com
-    const nameParts = (p.full_name || "").trim().split(/\s+/);
-    const first = (nameParts[0] || "").toLowerCase();
-    const last = nameParts.length > 1
-      ? nameParts[nameParts.length - 1].toLowerCase()
-      : "";
-    const email = `${first}.${last}@tapallc.com`;
+    // Use real email from auth.users if available, otherwise derive
+    let email = emailMap[p.id] || "";
+    if (!email) {
+      const nameParts = (p.full_name || "").trim().split(/\s+/);
+      const first = (nameParts[0] || "").toLowerCase();
+      const last = nameParts.length > 1
+        ? nameParts[nameParts.length - 1].toLowerCase()
+        : "";
+      email = `${first}.${last}@tapallc.com`;
+    }
+
+    // Resolve reporting_manager UUID to display name
+    const mgrName = p.reporting_manager
+      ? (nameMap[p.reporting_manager] || p.reporting_manager)
+      : "—";
 
     return {
       id: p.id,
@@ -52,7 +80,7 @@ export async function GET() {
       username: email.split("@")[0],
       role: ROLE_MAP[p.role] || p.role || "Staff",
       location: p.location || "",
-      mgr: p.reporting_manager || "—",
+      mgr: mgrName,
       modules: Array.isArray(p.modules) ? p.modules : [],
       status: STATUS_MAP[p.invite_status] ||
         (p.active ? "Active" : "Inactive"),
@@ -74,7 +102,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
     const adminSupabase = createAdminClient();
 
     // 1. Create user in Supabase Auth
@@ -89,13 +116,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authError.message }, { status: 409 });
     }
 
-    // 2. Create profile record
-    const { error: profileError } = await supabase.from("profiles").insert({
+    // 2. Resolve reporting_manager name → UUID if it looks like a name (not a UUID and not "—")
+    let mgrId: string | null = null;
+    if (reporting_manager && reporting_manager !== "—") {
+      // Check if it's already a UUID (from the dropdown using IDs)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(reporting_manager)) {
+        mgrId = reporting_manager;
+      } else {
+        // It's a name — look up the UUID from profiles
+        const { data: mgrProfile } = await adminSupabase
+          .from("profiles")
+          .select("id")
+          .eq("full_name", reporting_manager)
+          .maybeSingle();
+        if (mgrProfile) {
+          mgrId = mgrProfile.id;
+        }
+      }
+    }
+
+    // 3. Create profile record (use admin client — anon key can't insert profiles)
+    const { error: profileError } = await adminSupabase.from("profiles").insert({
       id: authUser.user.id,
       full_name,
       role: role || "staff",
       location: location || null,
-      reporting_manager: reporting_manager || null,
+      reporting_manager: mgrId,
       modules: Array.isArray(modules) ? modules : [],
       active: true,
       invite_status: "active",
@@ -127,16 +174,35 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
 
     const updateData: any = {};
     if (full_name !== undefined) updateData.full_name = full_name;
     if (role !== undefined) updateData.role = role;
     if (location !== undefined) updateData.location = location;
-    if (reporting_manager !== undefined) updateData.reporting_manager = reporting_manager;
     if (modules !== undefined) updateData.modules = modules;
 
-    const { error } = await supabase
+    // Resolve reporting_manager name → UUID if needed
+    if (reporting_manager !== undefined) {
+      if (!reporting_manager || reporting_manager === "—") {
+        updateData.reporting_manager = null;
+      } else {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(reporting_manager)) {
+          updateData.reporting_manager = reporting_manager;
+        } else {
+          // It's a name — look up UUID
+          const { data: mgrProfile } = await adminSupabase
+            .from("profiles")
+            .select("id")
+            .eq("full_name", reporting_manager)
+            .maybeSingle();
+          updateData.reporting_manager = mgrProfile ? mgrProfile.id : null;
+        }
+      }
+    }
+
+    const { error } = await adminSupabase
       .from("profiles")
       .update(updateData)
       .eq("id", id);

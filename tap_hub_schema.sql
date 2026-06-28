@@ -25,6 +25,7 @@ create table if not exists tap_hub_project.services (
 create table if not exists tap_hub_project.profiles (
   id                uuid primary key default gen_random_uuid(),
   full_name         text not null,
+  email             text,
   role              text not null default 'staff',
   location          text,
   active            boolean not null default true,
@@ -32,7 +33,7 @@ create table if not exists tap_hub_project.profiles (
   org_id            uuid,
   user_id           uuid,
   avatar_url        text,
-  reporting_manager uuid,
+  reporting_manager text,
   modules           text[] not null default '{}',
   invite_status     text not null default 'invited',
   invited_at        timestamptz,
