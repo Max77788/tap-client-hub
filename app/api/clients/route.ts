@@ -1,7 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
+
+function getDb() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
+}
+const supabase = getDb();
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FN: "financials",
@@ -13,13 +22,15 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
 };
 
 export async function GET(request: Request) {
-  try {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
   const { searchParams } = new URL(request.url);
   const typeFilter = searchParams.get("type")?.toLowerCase();
   const limit = parseInt(searchParams.get("limit") || "1000");
   const offset = parseInt(searchParams.get("offset") || "0");
-
-  const supabase = await createClient();
 
   // Always fetch stats (lightweight, no joins)
   const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
@@ -35,7 +46,7 @@ export async function GET(request: Request) {
     .eq("status", "active");
 
   if (typeFilter === "business" || typeFilter === "personal") {
-    clientsQuery = clientsQuery.filter('"type"', 'ilike', typeFilter);
+    clientsQuery = clientsQuery.filter('"type"', "ilike", typeFilter);
   }
 
   clientsQuery = clientsQuery.order("name").range(offset, offset + limit - 1);
@@ -95,7 +106,7 @@ export async function GET(request: Request) {
     }
   } catch {}
 
-  // Resolve staff UUIDs to names
+  // Build staff name lookup map (resolve UUIDs to names)
   const { data: allStaff } = await supabase.from("profiles").select("id, name");
   const staffMap: Record<string, string> = {};
   for (const s of allStaff || []) staffMap[s.id] = s.name;
@@ -168,13 +179,14 @@ export async function GET(request: Request) {
     clients,
     stats: { total: totalCount ?? 0, business: bizCount ?? 0, personal: persCount ?? 0 },
   });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || String(e), stack: (e?.stack || "").split("\n").slice(0,4).join(" | ") }, { status: 500 });
-  }
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
   const body = await request.json();
 
   const { data: client, error } = await supabase
@@ -257,7 +269,11 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = await createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
   const body = await request.json();
   const id = body.id;
   if (!id) return NextResponse.json({ error: "Missing client id" }, { status: 400 });
@@ -278,7 +294,7 @@ export async function PUT(request: Request) {
   // 2. Fetch existing client_services for this client (including inactive)
   const { data: existingSvc } = await supabase
     .from("client_services").select("id, service_id").eq("client_id", id);
-  const existingBySvcId = new Map<string, string>(); // service_id → csId
+  const existingBySvcId = new Map<string, string>();
   for (const cs of existingSvc || []) {
     existingBySvcId.set(cs.service_id, cs.id);
   }
@@ -312,10 +328,9 @@ export async function PUT(request: Request) {
     await supabase.from("contacts").insert(contacts);
   }
 
-  // 5. Sync client_services based on incoming services array
+  // 5. Sync client_services
   const services = Array.isArray(body.services) ? body.services : [];
 
-  // Handle client-level assignedStaff — store on first enabled service
   if (body.assignedStaff) {
     const firstEnabled = services.find((s: any) => s.enabled);
     if (firstEnabled && !firstEnabled.assignedTo) {
@@ -346,22 +361,21 @@ export async function PUT(request: Request) {
         });
       }
     } else {
-      // Disable the service
       if (existingCsId) {
         await supabase.from("client_services").update({ active: false }).eq("id", existingCsId);
       }
     }
   }
 
-  // 6. Handle assignedStaff — store on the first enabled service's assigned_to
-  //    (GET maps assignedStaff from the first client_service.assigned_to)
-  //    For now, assignedStaff is handled per-service above. Client-level assigned is informational.
-
   return NextResponse.json({ success: true });
 }
 
 export async function DELETE(request: Request) {
-  const supabase = await createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
