@@ -10,7 +10,6 @@ function getDb() {
     { db: { schema: "tap_hub_project" } }
   );
 }
-const supabase = getDb();
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FN: "financials",
@@ -22,6 +21,7 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
 };
 
 export async function GET(request: Request) {
+  try {
   const { searchParams } = new URL(request.url);
   const typeFilter = searchParams.get("type")?.toLowerCase();
   const limit = parseInt(searchParams.get("limit") || "1000");
@@ -29,13 +29,13 @@ export async function GET(request: Request) {
 
   // Always fetch stats (lightweight, no joins)
   const [{ count: totalCount }, { count: bizCount }, { count: persCount }] = await Promise.all([
-    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
-    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
-    supabase.from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
+    getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active"),
+    getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
+    getDb().from("clients").select("*", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
   ]);
 
   // Build clients query with pagination
-  let clientsQuery = supabase
+  let clientsQuery = getDb()
     .from("clients")
     .select("*, contacts(*)")
     .eq("status", "active");
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
   // Only fetch services for the returned page of clients
   const clientIds = dbClients.map((c: any) => c.id);
-  const { data: dbServices, error: svcError } = await supabase
+  const { data: dbServices, error: svcError } = await getDb()
     .from("client_services")
     .select("*, service:services(*)")
     .eq("active", true)
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   try {
     const allCsIds = (dbServices || []).map((cs: any) => cs.id);
     if (allCsIds.length > 0) {
-      const { data: allPeriods } = await supabase
+      const { data: allPeriods } = await getDb()
         .from("work_periods")
         .select("client_service_id, stage, period")
         .gte("period", `${currentYear}-01`)
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
   } catch {}
 
   // Build staff name lookup map (resolve UUIDs to names)
-  const { data: allStaff } = await supabase.from("profiles").select("id, name");
+  const { data: allStaff } = await getDb().from("profiles").select("id, name");
   const staffMap: Record<string, string> = {};
   for (const s of allStaff || []) staffMap[s.id] = s.name;
 
@@ -174,12 +174,15 @@ export async function GET(request: Request) {
     clients,
     stats: { total: totalCount ?? 0, business: bizCount ?? 0, personal: persCount ?? 0 },
   });
+  } catch (e: any) {
+    return NextResponse.json({ error: String(e?.message || e), stack: e?.stack?.split("\n")?.slice(0,3)?.join(" | ") || "" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
   const body = await request.json();
 
-  const { data: client, error } = await supabase
+  const { data: client, error } = await getDb()
     .from("clients").insert({
       name: body.name, type: body.type?.toLowerCase() || "business",
       group_owner: body.group || null, status: body.status || "active",
@@ -206,7 +209,7 @@ export async function POST(request: Request) {
   }
 
   if (contacts.length > 0) {
-    await supabase.from("contacts").insert(contacts);
+    await getDb().from("contacts").insert(contacts);
   }
 
   const services = Array.isArray(body.services) ? body.services : [];
@@ -252,7 +255,7 @@ export async function POST(request: Request) {
   }
 
   if (svcInserts.length > 0) {
-    await supabase.from("client_services").insert(svcInserts);
+    await getDb().from("client_services").insert(svcInserts);
   }
 
   return NextResponse.json({ client }, { status: 201 });
@@ -269,7 +272,7 @@ export async function PUT(request: Request) {
   };
 
   // 1. Fetch service template IDs
-  const { data: serviceTemplates } = await supabase
+  const { data: serviceTemplates } = await getDb()
     .from("services").select("id, code");
   const codeToSvcId: Record<string, string> = {};
   for (const s of serviceTemplates || []) {
@@ -277,7 +280,7 @@ export async function PUT(request: Request) {
   }
 
   // 2. Fetch existing client_services for this client (including inactive)
-  const { data: existingSvc } = await supabase
+  const { data: existingSvc } = await getDb()
     .from("client_services").select("id, service_id").eq("client_id", id);
   const existingBySvcId = new Map<string, string>();
   for (const cs of existingSvc || []) {
@@ -285,7 +288,7 @@ export async function PUT(request: Request) {
   }
 
   // 3. Update client row
-  const { error: clientError } = await supabase
+  const { error: clientError } = await getDb()
     .from("clients").update({
       name: body.name,
       type: body.type?.toLowerCase() || "business",
@@ -301,7 +304,7 @@ export async function PUT(request: Request) {
   }
 
   // 4. Sync contacts
-  await supabase.from("contacts").delete().eq("client_id", id);
+  await getDb().from("contacts").delete().eq("client_id", id);
   const emails = Array.isArray(body.emails) ? body.emails.filter((e: string) => e.trim()) : [];
   const phones = Array.isArray(body.phones) ? body.phones.filter((p: string) => p.trim()) : [];
   const contacts: any[] = [];
@@ -310,7 +313,7 @@ export async function PUT(request: Request) {
     contacts.push({ client_id: id, email: emails[i] || "", phone: phones[i] || "", is_primary: i === 0 });
   }
   if (contacts.length > 0) {
-    await supabase.from("contacts").insert(contacts);
+    await getDb().from("contacts").insert(contacts);
   }
 
   // 5. Sync client_services
@@ -339,15 +342,15 @@ export async function PUT(request: Request) {
       if (svc.financialsMonth !== undefined) payload.financials_month = svc.financialsMonth;
 
       if (existingCsId) {
-        await supabase.from("client_services").update(payload).eq("id", existingCsId);
+        await getDb().from("client_services").update(payload).eq("id", existingCsId);
       } else {
-        await supabase.from("client_services").insert({
+        await getDb().from("client_services").insert({
           client_id: id, service_id: svcId, ...payload,
         });
       }
     } else {
       if (existingCsId) {
-        await supabase.from("client_services").update({ active: false }).eq("id", existingCsId);
+        await getDb().from("client_services").update({ active: false }).eq("id", existingCsId);
       }
     }
   }
@@ -359,7 +362,7 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
-  const { error } = await supabase.from("clients").delete().eq("id", id);
+  const { error } = await getDb().from("clients").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
