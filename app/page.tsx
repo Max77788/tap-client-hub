@@ -21,7 +21,7 @@ type DisplayItem =
 export default function ClientsPage() {
   // ── State from Supabase API (backend filters by type) ──
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<ClientType | "All">("Business");
+  const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
   const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading, stats } = useClientsState(typeFilter);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -215,7 +215,7 @@ export default function ClientsPage() {
             background: "var(--card)", font: "inherit", fontSize: "13.5px", color: "var(--ink)",
           }}
         >
-          <option value="">All</option>
+          <option value="">All staff</option>
           {staffOptions.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}

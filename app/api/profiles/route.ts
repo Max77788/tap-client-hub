@@ -84,6 +84,7 @@ export async function GET() {
       modules: Array.isArray(p.modules) ? p.modules : [],
       status: STATUS_MAP[p.invite_status] ||
         (p.active ? "Active" : "Inactive"),
+      email_2fa_enabled: p.email_2fa_enabled ?? false,
     };
   });
 

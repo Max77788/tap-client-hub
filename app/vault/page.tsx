@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import type { VaultEntry } from "@/lib/types";
 import { useClientsState } from "@/hooks/use-clients-state";
 import VaultModal from "@/components/vault-modal";
+import User2faList from "@/components/user-2fa-list";
 import { PageSkeleton } from "@/components/loading-skeleton";
 
 export default function VaultPage() {
@@ -167,6 +168,27 @@ export default function VaultPage() {
           ＋ Add credential
         </button>
       </div>
+
+      {/* ── 2FA Admin Management ── */}
+      <details className="vgroup" style={{
+        background: "var(--card)", border: "1px solid var(--line)", borderRadius: 13,
+        marginBottom: 10, overflow: "hidden",
+      }}>
+        <summary style={{
+          cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center",
+          gap: 10, padding: "13px 16px", fontSize: 14,
+        }}>
+          <span style={{ fontSize: 16 }}>🔐</span>
+          <b>User 2FA Status</b>
+          <span className="vcount" style={{
+            marginLeft: "auto", background: "var(--teal-soft)", color: "var(--teal-ink)",
+            fontSize: "11.5px", fontWeight: 700, padding: "3px 10px", borderRadius: 999,
+          }}>Admin manage</span>
+        </summary>
+        <div style={{ padding: "0 14px 14px" }}>
+          <User2faList />
+        </div>
+      </details>
 
       {/* ── Vault groups (details/summary) ── */}
       {grouped.map(([name, entries]) => (

@@ -3,8 +3,8 @@ import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
-  FN: "financials", PR: "payroll", ST: "sales_tax",
-  T9: "1099s", RD: "renditions", TR: "tax_returns",
+  FIN: "financials", PR: "payroll", STX: "sales_tax",
+  T9: "1099s", REND: "renditions", TAX: "tax_returns",
 };
 
 export const dynamic = "force-dynamic";
@@ -60,9 +60,9 @@ export async function GET(request: Request) {
       }
     }
 
-    const { data: staffRows } = await supabase.from("profiles").select("id, name");
+    const { data: staffRows } = await supabase.from("profiles").select("id, full_name");
     const staffNames: Record<string, string> = {};
-    for (const s of staffRows || []) staffNames[s.id] = s.name;
+    for (const s of staffRows || []) staffNames[s.id] = s.full_name;
 
     const clients = dbClients.map((db: any) => {
       const svcs = svcByClient[db.id] || [];
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
-        name: db.name, type: db.type === "business" ? "Business" : "Personal",
+        name: db.name, type: db.type === "Business" ? "Business" : "Personal",
         group: db.group_owner || "Unassigned", status: db.status || "active",
         city: db.city || "", state: db.state || "TX",
         emails: [...new Set((db.contacts || []).map((c: any) => c.email).filter(Boolean))],

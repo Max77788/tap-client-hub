@@ -6,6 +6,7 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 interface User {
   id: string; name: string; email: string; username: string;
   role: string; location: string; mgr: string; modules: string[]; status: string;
+  email_2fa_enabled?: boolean;
 }
 
 const MODULES_LIST = ["Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions", "Timesheet", "Vault", "Workload", "Users & Access"];
@@ -194,7 +195,7 @@ export default function UsersPage() {
       <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Name</th><th>Location</th><th>Role</th><th>Reports to</th><th>Modules</th><th>Username</th><th>Status</th><th></th></tr>
+            <tr><th>Name</th><th>Location</th><th>Role</th><th>Reports to</th><th>Modules</th><th>Username</th><th>2FA</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {users.map(u => {
@@ -213,6 +214,15 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="mono">{u.username}</td>
+                  <td>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap",
+                      background: u.email_2fa_enabled ? "var(--green-soft)" : "var(--line)",
+                      color: u.email_2fa_enabled ? "var(--green)" : "var(--muted)",
+                    }}>
+                      {u.email_2fa_enabled ? "✅ On" : "○ Off"}
+                    </span>
+                  </td>
                   <td><span className={`ustat`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: u.status === "Active" ? "var(--green-soft)" : "var(--amber-soft)", color: u.status === "Active" ? "var(--green)" : "var(--amber)" }}>{u.status}</span></td>
                   <td>
                     <span onClick={e => { e.stopPropagation(); setPasswordUser(u); setNewPassword(""); setPasswordError(null); setPasswordSuccess(null); }} style={{ cursor: "pointer", fontSize: 12, color: "var(--teal)", fontWeight: 600, whiteSpace: "nowrap" }}>🔑 Change password</span>
@@ -220,7 +230,7 @@ export default function UsersPage() {
                 </tr>
               );
             })}
-            {users.length === 0 && <tr><td colSpan={8} className="empty">No users found</td></tr>}
+            {users.length === 0 && <tr><td colSpan={9} className="empty">No users found</td></tr>}
           </tbody>
         </table>
       </div>
@@ -291,6 +301,52 @@ export default function UsersPage() {
               {saveError && (
                 <div style={{ background: "var(--red-soft)", color: "var(--red)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
                   {saveError}
+                </div>
+              )}
+
+              {/* ── 2FA admin toggle ── */}
+              {modalUser && (
+                <div className="twofa-admin" style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>Two-factor authentication</div>
+                    <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
+                      {modalUser.email_2fa_enabled
+                        ? "Email 2FA is active for this user."
+                        : "Not enabled. Toggle to activate via admin override."}
+                    </div>
+                  </div>
+                  <button
+                    className="btn"
+                    onClick={async () => {
+                      const res = await fetch("/api/2fa/admin-toggle", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          target_user_id: modalUser.id,
+                          enabled: !modalUser.email_2fa_enabled,
+                        }),
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setUsers(prev => prev.map(u =>
+                          u.id === modalUser.id ? { ...u, email_2fa_enabled: data.enabled } : u
+                        ));
+                        setModalUser({ ...modalUser, email_2fa_enabled: data.enabled });
+                      } else {
+                        const data = await res.json();
+                        alert(data.error || "Failed to toggle 2FA");
+                      }
+                    }}
+                    style={{
+                      all: "unset", cursor: "pointer",
+                      background: modalUser.email_2fa_enabled ? "var(--red-soft)" : "var(--green-soft)",
+                      color: modalUser.email_2fa_enabled ? "var(--red)" : "var(--green)",
+                      padding: "7px 14px", borderRadius: 9, fontWeight: 600, fontSize: 12,
+                      display: "inline-flex", gap: 6, alignItems: "center", whiteSpace: "nowrap",
+                    }}
+                  >
+                    {modalUser.email_2fa_enabled ? "🔴 Disable 2FA" : "🟢 Enable 2FA"}
+                  </button>
                 </div>
               )}
             </div>

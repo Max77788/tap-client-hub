@@ -25,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault", icon: "🔒" },
   { label: "Users & Access", href: "/users", icon: "🪪", role: "owner" },
+  { label: "Settings", href: "/settings", icon: "⚙️" },
   { label: "Help & Support", href: "/support", icon: "🛟" },
 ];
 
@@ -41,6 +42,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/vault": { title: "Password Vault", subtitle: "Portal logins. Kept separate from client files, on purpose." },
   "/users": { title: "Users & Access", subtitle: "Who can get into the platform, what they can see, and who they report to. Owner-controlled." },
   "/support": { title: "Help & Support", subtitle: "Stuck on something? Open a ticket and our team will jump on it." },
+  "/settings": { title: "Settings", subtitle: "Your account details, password, and security settings." },
 };
 
 // ── Mobile sidebar ──
