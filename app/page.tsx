@@ -360,139 +360,150 @@ function GroupCard({
   clients: Client[];
   onClientClick: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [popupOpen, setPopupOpen] = useState(false);
   // Collect unique locations and services across all group members
   const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
   const allServices = new Set<string>();
   clients.forEach((c) => c.services.filter((s) => s.enabled && s.key).forEach((s) => allServices.add(s.key!)));
 
   return (
-    <div
-      className="group p-[15px_16px] border"
-      style={{
-        backgroundColor: "var(--card)",
-        borderColor: "var(--line)",
-        borderRadius: "14px",
-        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
-        transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "var(--shadow)";
-        e.currentTarget.style.borderColor = "#cfc7b5";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "";
-        e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
-        e.currentTarget.style.borderColor = "var(--line)";
-      }}
-    >
-      {/* Top row: Group name + count badge + expand/collapse button */}
-      <div className="flex items-start justify-between gap-2 mb-[3px]">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="shrink-0 p-0.5 rounded hover:bg-[var(--teal-soft)]/50 transition-colors"
-            title={expanded ? "Collapse group" : "Expand group"}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--muted)"
-              strokeWidth="2.5"
-              style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-          <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight truncate"
-            style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
-            {groupName}
-          </h3>
-        </div>
-        <span
-          className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
-          style={{
-            backgroundColor: "var(--teal-soft)",
-            color: "var(--teal)",
-            letterSpacing: "0.02em",
-          }}
-        >
-          {clients.length} entities
-        </span>
-      </div>
-
-      {/* Locations */}
-      <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2 ml-[22px]">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
-        <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
-      </div>
-
-      {/* Service pills */}
-      <div className="flex flex-wrap gap-1.5 mb-3 ml-[22px]">
-        {[...allServices].slice(0, 5).map((key) => {
-          const meta = SERVICE_META[key as ServiceKey];
-          if (!meta) return null;
-          return (
-            <span
-              key={key}
-              className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
-              style={{ backgroundColor: meta.pillBg, color: meta.pillColor, letterSpacing: "0.02em" }}
-              title={meta.label}
-            >
-              {meta.label}
-            </span>
-          );
-        })}
-        {allServices.size > 5 && (
-          <span className="text-[10px] text-[var(--muted)]">+{allServices.size - 5} more</span>
-        )}
-        {allServices.size === 0 && (
-          <span className="text-[10px] text-[var(--muted)] italic">No services</span>
-        )}
-      </div>
-
-      {/* Expand button hint */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-[10px] text-[var(--muted)] hover:text-[var(--teal)] transition-colors text-left ml-[22px]"
+    <>
+      <div
+        className="group p-[15px_16px] border"
+        style={{
+          backgroundColor: "var(--card)",
+          borderColor: "var(--line)",
+          borderRadius: "14px",
+          boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+          transition: "transform 0.14s, box-shadow 0.14s, border-color 0.14s",
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "var(--shadow)";
+          e.currentTarget.style.borderColor = "#cfc7b5";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "";
+          e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
+          e.currentTarget.style.borderColor = "var(--line)";
+        }}
+        onClick={() => setPopupOpen(true)}
       >
-        {expanded ? "▲ Hide entities" : `▼ View ${clients.length} entities`}
-      </button>
+        {/* Top row: Group name + count badge */}
+        <div className="flex items-start justify-between gap-2 mb-[3px]">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight truncate"
+              style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
+              {groupName}
+            </h3>
+          </div>
+          <span
+            className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
+            style={{
+              backgroundColor: "var(--teal-soft)",
+              color: "var(--teal)",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {clients.length} entities
+          </span>
+        </div>
 
-      {/* ── Inline expanded member list ── */}
-      {expanded && (
-        <div
-          className="mt-3 pt-3 ml-0 border-t border-[var(--line)]"
-          style={{ animation: "fadeIn 0.15s ease-out" }}
-        >
-          <div className="space-y-2">
-            {clients.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => onClientClick(c.id)}
-                className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]"
+        {/* Locations */}
+        <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
+        </div>
+
+        {/* Service pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {[...allServices].slice(0, 5).map((key) => {
+            const meta = SERVICE_META[key as ServiceKey];
+            if (!meta) return null;
+            return (
+              <span
+                key={key}
+                className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
+                style={{ backgroundColor: meta.pillBg, color: meta.pillColor, letterSpacing: "0.02em" }}
+                title={meta.label}
               >
-                <div className="min-w-0 flex-1 pr-2">
-                  <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
-                  <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
-                </div>
-                <span
-                  className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
-                  style={{
-                    backgroundColor: c.type === "Business" ? "var(--ink)" : "#dfe7e6",
-                    color: c.type === "Business" ? "#fff" : "var(--teal-ink)",
-                  }}
+                {meta.label}
+              </span>
+            );
+          })}
+          {allServices.size > 5 && (
+            <span className="text-[10px] text-[var(--muted)]">+{allServices.size - 5} more</span>
+          )}
+          {allServices.size === 0 && (
+            <span className="text-[10px] text-[var(--muted)] italic">No services</span>
+          )}
+        </div>
+
+        {/* View entities hint */}
+        <div className="mt-2 text-[10px] text-[var(--muted)]" style={{ letterSpacing: "0.02em" }}>
+          Click to view {clients.length} entities →
+        </div>
+      </div>
+
+      {/* ── Group popup modal (centered) ── */}
+      {popupOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+          onClick={() => setPopupOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
+            style={{ animation: "fadeIn 0.12s ease-out" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--line)] shrink-0">
+              <h2 className="text-lg font-semibold text-[var(--ink)] truncate"
+                style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
+                {groupName}
+              </h2>
+              <span className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
+                style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)" }}>
+                {clients.length} entities
+              </span>
+              <button
+                onClick={() => setPopupOpen(false)}
+                className="shrink-0 ml-3 p-1 rounded-lg hover:bg-[var(--teal-soft)] transition-colors"
+                style={{ lineHeight: 1, fontSize: 18, color: "var(--muted)" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Client list */}
+            <div className="overflow-y-auto p-3 space-y-2 flex-1">
+              {clients.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => { setPopupOpen(false); onClientClick(c.id); }}
+                  className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]"
                 >
-                  {c.type === "Business" ? "BIZ" : "PERS"}
-                </span>
-              </div>
-            ))}
+                  <div className="min-w-0 flex-1 pr-2">
+                    <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
+                  </div>
+                  <span
+                    className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
+                    style={{
+                      backgroundColor: c.type === "Business" ? "var(--ink)" : "#dfe7e6",
+                      color: c.type === "Business" ? "#fff" : "var(--teal-ink)",
+                    }}
+                  >
+                    {c.type === "Business" ? "BIZ" : "PERS"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -503,7 +514,7 @@ function GroupCard({
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-    </div>
+    </>
   );
 }
 
