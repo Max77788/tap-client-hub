@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         return {
           csId: cs.id, key, label: SERVICE_META[key]?.label,
           enabled: true, frequency: cs.frequency || "Monthly",
-          processor: cs.processor || "", assignedTo: cs.assigned_to || "",
+          processor: cs.processor || "", assignedTo: staffNames[cs.assigned_to || ""] || cs.assigned_to || "",
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
