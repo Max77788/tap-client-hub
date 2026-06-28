@@ -23,11 +23,20 @@ export async function GET(request: Request) {
     const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
     if (nameMatch) {
       const demoName = decodeURIComponent(nameMatch[1]);
-      const { data: profile } = await supabase
+      // Try raw name first (e.g. "Max Matronin"), then reversed ("Matronin, Max")
+      let { data: profile } = await supabase
         .from("profiles")
         .select("*")
-        .eq("full_name", reverseName(demoName))
+        .eq("full_name", demoName)
         .maybeSingle();
+      if (!profile) {
+        const { data: rev } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("full_name", reverseName(demoName))
+          .maybeSingle();
+        profile = rev;
+      }
       if (profile) {
         return NextResponse.json({
           id: profile.id,

@@ -382,10 +382,28 @@ export default function TimePage() {
       </div>
       )}
 
-      {/* ── Stats cards ── */}
-      <div className="stats">
-        <div className="statcard"><div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalToday)}</div><div className="sl">Logged today</div></div>
-        {whoCards.map((name) => (<div key={name} className="statcard"><div className="sn" style={{ color: "var(--ink)" }}>{fmtDur(byWho[name])}</div><div className="sl">{name}</div></div>))}
+      {/* ── Today's summary table ── */}
+      <div className="panel" style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Staff</th>
+              <th style={{ whiteSpace: "nowrap" }}>Time logged</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ background: "var(--green-soft)" }}>
+              <td style={{ fontWeight: 600 }}>Logged today</td>
+              <td className="mono" style={{ fontWeight: 700 }}>{fmtDur(totalToday)}</td>
+            </tr>
+            {whoCards.map((name) => (
+              <tr key={name}>
+                <td>{name}</td>
+                <td className="mono">{fmtDur(byWho[name])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* ── Entries table ── */}

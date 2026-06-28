@@ -23,11 +23,21 @@ export async function GET(request: Request) {
     // Strategy 1: tap_demo_user cookie
     const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
     if (nameMatch) {
-      const { data } = await supabase
+      const demoName = decodeURIComponent(nameMatch[1]);
+      // Try raw name first, then reversed
+      let { data } = await supabase
         .from("profiles")
         .select("email_2fa_enabled")
-        .eq("full_name", reverseName(decodeURIComponent(nameMatch[1])))
+        .eq("full_name", demoName)
         .maybeSingle();
+      if (!data) {
+        const { data: rev } = await supabase
+          .from("profiles")
+          .select("email_2fa_enabled")
+          .eq("full_name", reverseName(demoName))
+          .maybeSingle();
+        data = rev;
+      }
       profile = data;
     }
 
