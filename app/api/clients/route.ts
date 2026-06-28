@@ -3,11 +3,14 @@ import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { db: { schema: "tap_hub_project" } }
-);
+function getDb() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
+}
+const supabase = getDb();
 
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FN: "financials",
@@ -98,6 +101,11 @@ export async function GET(request: Request) {
     }
   } catch {}
 
+  // Build staff name lookup map (resolve UUIDs to names)
+  const { data: allStaff } = await supabase.from("profiles").select("id, name");
+  const staffMap: Record<string, string> = {};
+  for (const s of allStaff || []) staffMap[s.id] = s.name;
+
   const clients = dbClients.map((db: any) => {
     const clientServices = servicesByClient[db.id] || [];
     const services = clientServices.map((cs: any) => {
@@ -157,7 +165,7 @@ export async function GET(request: Request) {
       emails: (db.contacts || []).map((c: any) => c.email).filter(Boolean),
       phones: (db.contacts || []).map((c: any) => c.phone).filter(Boolean),
       address: db.address || "",
-      assignedStaff: clientServices[0]?.assigned_to || "Unassigned",
+      assignedStaff: staffMap[clientServices[0]?.assigned_to || ""] || clientServices[0]?.assigned_to || "Unassigned",
       services,
     };
   });
