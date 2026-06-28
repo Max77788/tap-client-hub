@@ -19,6 +19,12 @@ export default function UsersPage() {
   const [editForm, setEditForm] = useState<Partial<User & { password?: string }>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Password change state
+  const [passwordUser, setPasswordUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +118,31 @@ export default function UsersPage() {
     }
   }
 
+  async function handleChangePassword() {
+    if (!passwordUser || !newPassword.trim()) return;
+    setPasswordSaving(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    try {
+      const res = await fetch(`/api/profiles/${passwordUser.id}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to change password");
+      }
+      setPasswordSuccess("Password updated successfully.");
+      setNewPassword("");
+      setTimeout(() => { setPasswordUser(null); setPasswordSuccess(null); }, 1500);
+    } catch (err: any) {
+      setPasswordError(err.message);
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
   if (loading) return <PageSkeleton rows={6} />;
   if (error) return <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" }}><div className="empty" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Failed to load users. <button onClick={() => window.location.reload()} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600 }}>Retry</button></div></div>;
 
@@ -163,7 +194,7 @@ export default function UsersPage() {
       <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Name</th><th>Location</th><th>Role</th><th>Reports to</th><th>Modules</th><th>Username</th><th>Status</th></tr>
+            <tr><th>Name</th><th>Location</th><th>Role</th><th>Reports to</th><th>Modules</th><th>Username</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {users.map(u => {
@@ -183,10 +214,13 @@ export default function UsersPage() {
                   </td>
                   <td className="mono">{u.username}</td>
                   <td><span className={`ustat`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: u.status === "Active" ? "var(--green-soft)" : "var(--amber-soft)", color: u.status === "Active" ? "var(--green)" : "var(--amber)" }}>{u.status}</span></td>
+                  <td>
+                    <span onClick={e => { e.stopPropagation(); setPasswordUser(u); setNewPassword(""); setPasswordError(null); setPasswordSuccess(null); }} style={{ cursor: "pointer", fontSize: 12, color: "var(--teal)", fontWeight: 600, whiteSpace: "nowrap" }}>🔑 Change password</span>
+                  </td>
                 </tr>
               );
             })}
-            {users.length === 0 && <tr><td colSpan={7} className="empty">No users found</td></tr>}
+            {users.length === 0 && <tr><td colSpan={8} className="empty">No users found</td></tr>}
           </tbody>
         </table>
       </div>
@@ -263,6 +297,44 @@ export default function UsersPage() {
             <div style={{ display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px", justifyContent: "flex-end" }}>
               <button className="btn alt" onClick={() => setModalUser(null)} disabled={saving} style={{ all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)", border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Cancel</button>
               <button className="btn" onClick={handleSave} disabled={saving} style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>{saving ? "Saving..." : "Save changes"}</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Password change modal ── */}
+      {passwordUser !== null && (
+        <>
+          <div className="mscrim show" onClick={() => { setPasswordUser(null); setPasswordSuccess(null); }} />
+          <div className="modal" style={{
+            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+            zIndex: 61, background: "var(--paper)", borderRadius: 18, width: 400,
+            maxWidth: "90vw", boxShadow: "var(--shadow)",
+          }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600, padding: "20px 24px 4px", margin: 0 }}>
+              Change password
+            </h2>
+            <div className="msub" style={{ color: "var(--muted)", fontSize: 13, padding: "0 24px 14px", borderBottom: "1px solid var(--line)" }}>
+              Set a new password for <strong>{passwordUser.name}</strong> ({passwordUser.username || passwordUser.email}).
+            </div>
+            <div className="mform" style={{ padding: "18px 24px" }}>
+              <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>New password</label>
+              <input className="ef" type="password" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 6 characters" autoFocus />
+
+              {passwordError && (
+                <div style={{ background: "var(--red-soft)", color: "var(--red)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div style={{ background: "var(--green-soft)", color: "var(--green)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
+                  {passwordSuccess}
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px", justifyContent: "flex-end" }}>
+              <button className="btn alt" onClick={() => { setPasswordUser(null); setPasswordSuccess(null); }} disabled={passwordSaving} style={{ all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)", border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Cancel</button>
+              <button className="btn" onClick={handleChangePassword} disabled={passwordSaving || !newPassword.trim()} style={{ all: "unset", cursor: "pointer", background: !newPassword.trim() ? "var(--line)" : "var(--ink)", color: "#fff", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>{passwordSaving ? "Updating..." : "Update password"}</button>
             </div>
           </div>
         </>

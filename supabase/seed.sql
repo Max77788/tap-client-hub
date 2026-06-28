@@ -939,4 +939,124 @@ BEGIN
   END IF;
 END $$;
 
+-- ═══════════════════════════════════════════════════════════════
+-- Additional service assignments: FN (Financials), T9 (1099s),
+-- RD (Renditions) — so each worklist page shows 10+ clients
+-- ═══════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  v_client_id UUID;
+  v_service_id UUID;
+BEGIN
+
+  -- ── FN (Financials) assignments ────────────────────────────
+  -- Assign to 12 clients
+
+  FOREACH v_client_id IN ARRAY ARRAY(
+    SELECT id FROM public.clients
+    WHERE name IN (
+      'ASC Anesthesia Associates Inc',
+      'Aaron Edwards PLLC (dba Katy Dental Studio)',
+      'Bdantowitz LLC',
+      'Benry Utility Services LLC',
+      'Bianca Asan Borja MD PLLC',
+      'C&H Transportation & Bus Rentals LLC',
+      'Carlin Barnes MD PA',
+      'DMW Food Services LLC',
+      'ERE Industrial LLC',
+      'Galaxy Interests Inc',
+      'H & P Wealth Management LLC',
+      'Hadimba Travel Inc'
+    )
+  )
+  LOOP
+    SELECT id INTO v_service_id FROM public.services WHERE code = 'FN' LIMIT 1;
+    INSERT INTO public.client_services (client_id, service_id, frequency, processor, assigned_to, expected_annual, active)
+    VALUES (v_client_id, v_service_id, 'Monthly', 'MC', 'MC', 12, true)
+    ON CONFLICT (client_id, service_id) DO NOTHING;
+  END LOOP;
+
+  -- ── T9 (1099s) assignments ─────────────────────────────────
+  -- Add 10 more clients (beyond Clark, Devyani, Marace, Max Box, Pristine Energy)
+
+  FOREACH v_client_id IN ARRAY ARRAY(
+    SELECT id FROM public.clients
+    WHERE name IN (
+      'ASC Anesthesia Associates Inc',
+      'Aaron Edwards PLLC (dba Katy Dental Studio)',
+      'Acclaimed Trading Inc',
+      'American Book Buy.Com Inc (MI)',
+      'Back to Naturel LLC',
+      'Barclay Operations LLC',
+      'Benry Utility Services LLC',
+      'D''Souza Inc (Wallisville Dry Clean Super Center)',
+      'Global Dealership Services LLC',
+      'LDH 2020 LLC (dba Diamond Food Mart)'
+    )
+  )
+  LOOP
+    SELECT id INTO v_service_id FROM public.services WHERE code = 'T9' LIMIT 1;
+    INSERT INTO public.client_services (client_id, service_id, frequency, processor, assigned_to, expected_annual, active)
+    VALUES (v_client_id, v_service_id, 'Annually', 'JD', 'JD', 1, true)
+    ON CONFLICT (client_id, service_id) DO NOTHING;
+  END LOOP;
+
+  -- ── RD (Renditions) assignments ────────────────────────────
+  -- Add 10 more clients (beyond Clark, Devyani, Marace, Max Box, Pristine Energy)
+
+  FOREACH v_client_id IN ARRAY ARRAY(
+    SELECT id FROM public.clients
+    WHERE name IN (
+      'ASC Anesthesia Associates Inc',
+      'Aaron Edwards PLLC (dba Katy Dental Studio)',
+      'Acclaimed Trading Inc',
+      'American Book Buy.Com Inc (MI)',
+      'Back to Naturel LLC',
+      'Barclay Operations LLC',
+      'Benry Utility Services LLC',
+      'D''Souza Inc (Wallisville Dry Clean Super Center)',
+      'Global Dealership Services LLC',
+      'LDH 2020 LLC (dba Diamond Food Mart)'
+    )
+  )
+  LOOP
+    SELECT id INTO v_service_id FROM public.services WHERE code = 'RD' LIMIT 1;
+    INSERT INTO public.client_services (client_id, service_id, frequency, processor, assigned_to, expected_annual, active)
+    VALUES (v_client_id, v_service_id, 'Annually', 'LB', 'LB', 1, true)
+    ON CONFLICT (client_id, service_id) DO NOTHING;
+  END LOOP;
+
+  -- ── Additional ST (Sales Tax) assignments ──────────────────
+  -- Add ST to some payroll-only clients that don't have it yet
+
+  FOREACH v_client_id IN ARRAY ARRAY(
+    SELECT id FROM public.clients
+    WHERE name IN (
+      'ASC Anesthesia Associates Inc',
+      'Aaron Edwards PLLC (dba Katy Dental Studio)',
+      'Bianca Asan Borja MD PLLC',
+      'C&H Transportation & Bus Rentals LLC',
+      'Carlin Barnes MD PA',
+      'DMW Food Services LLC',
+      'ERE Industrial LLC',
+      'FF&E Solutions LLC',
+      'Galaxy Interests Inc',
+      'Galloper Chauffeured Services LLC',
+      'H & P Wealth Management LLC',
+      'Hadimba Travel Inc',
+      'India House Inc',
+      'Iqbal M Mirza MD Professional Corporation',
+      'JAP Construction Company LLC',
+      'Jai Ganesh Hospitality Inc'
+    )
+  )
+  LOOP
+    SELECT id INTO v_service_id FROM public.services WHERE code = 'ST' LIMIT 1;
+    INSERT INTO public.client_services (client_id, service_id, frequency, processor, assigned_to, expected_annual, active)
+    VALUES (v_client_id, v_service_id, 'Quarterly', 'Sam', 'Sam', 4, true)
+    ON CONFLICT (client_id, service_id) DO NOTHING;
+  END LOOP;
+
+END $$;
+
 -- Stats: 50 clients, 121 service links, 6 service types

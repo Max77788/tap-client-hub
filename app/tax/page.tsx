@@ -1,31 +1,61 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useClientsState } from "@/hooks/use-clients-state";
 import WorklistTable, { type WorklistStage } from "@/components/worklist-table";
+import ClientSlideover from "@/components/client-slideover";
 
 export default function TaxPage() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("tap_hub_tax_year");
-      return saved ? Number(saved) : currentYear;
+      const params = new URLSearchParams(window.location.search);
+      const y = params.get("year");
+      return y ? Number(y) : currentYear;
     }
     return currentYear;
   });
-  const { clients, loading, updateServiceMonth } = useClientsState();
-  const years = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
+  const { clients, loading, updateServiceMonth, updateClient } = useClientsState();
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [slideoverOpen, setSlideoverOpen] = useState(false);
+
+  const selectedClient = useMemo(
+    () => (selectedClientId ? clients.find((c: any) => c.id === selectedClientId) ?? null : null),
+    [clients, selectedClientId],
+  );
+
+  const handleClientClick = useCallback((clientId: string) => {
+    setSelectedClientId(clientId);
+    setSlideoverOpen(true);
+  }, []);
+
+  const handleSlideoverSave = useCallback(async (updated: any) => {
+    updateClient(updated.id, updated);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) console.error("PUT /api/clients failed:", res.status);
+    } catch (e) {
+      console.error("Failed to save client:", e);
+    }
+  }, [updateClient]);
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <select value={year} onChange={(e) => { setYear(Number(e.target.value)); localStorage.setItem("tap_hub_tax_year", String(e.target.value)); }}
-          className="text-sm rounded-lg px-3 py-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] cursor-pointer outline-none">
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
       <WorklistTable serviceKey="tax_returns" clients={clients} year={year} loading={loading}
-        onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "tax_returns", monthIdx, stage)} />
+        onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "tax_returns", monthIdx, stage)}
+        onClientClick={handleClientClick} />
+      {selectedClient && (
+        <ClientSlideover
+          client={selectedClient}
+          open={slideoverOpen}
+          onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
+          onSave={handleSlideoverSave}
+        />
+      )}
     </div>
   );
 }

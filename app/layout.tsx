@@ -356,7 +356,7 @@ export default function RootLayout({
                   </span>
                 )}
                 {/* ── Year selector for worklist pages ── */}
-                {["/fin", "/pr", "/stx", "/t9", "/rend"].includes(pathname) && (
+                {["/fin", "/pr", "/stx", "/t9", "/rend", "/tax"].includes(pathname) && (
                   <div className="hidden sm:flex items-center gap-2">
                     <span className="text-[12px] font-bold uppercase tracking-[0.04em] text-[var(--muted)]">Year</span>
                     <select

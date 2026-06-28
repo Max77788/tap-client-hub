@@ -159,14 +159,14 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
               </Field>
             </div>
 
-            {/* Email + Password row */}
+            {/* Username + Password row */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Email">
+              <Field label="Username">
                 <input
-                  type="email"
+                  type="text"
                   value={form.email}
                   onChange={(e) => update("email", e.target.value)}
-                  placeholder="client@example.com"
+                  placeholder="client@example.com or login ID"
                   className="field-input"
                 />
               </Field>

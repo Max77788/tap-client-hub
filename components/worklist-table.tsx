@@ -405,7 +405,7 @@ export default function WorklistTable({
           <StatCard label="Expected (year)" value={stats.expTot} color="var(--ink)" />
           <StatCard label="Processed" value={stats.doneTot} color="var(--green)" />
           <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
-          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Viewing ${year}`} value={stats.isCur ? stats.curMonthCount : year} color="var(--blue)" />
+          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
         </div>
       ) : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
@@ -420,7 +420,7 @@ export default function WorklistTable({
           </>
         ) : (
           <>
-            <StatCard label={`Periods ${year}`} value={stats.yDue} color="var(--ink)" />
+            <StatCard label="Total periods" value={stats.yDue} color="var(--ink)" />
             <StatCard label="Completed" value={stats.yDone} color="var(--green)" />
             <StatCard label="Not completed" value={Math.max(0, stats.yDue - stats.yDone)} color="var(--amber)" />
           </>
@@ -516,8 +516,8 @@ export default function WorklistTable({
           border: "1px solid var(--line)",
         }}
       >
-        <div className="overflow-x-auto">
-        <table style={{ minWidth: 800, width: "100%" }}>
+        <div className="overflow-x-auto" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <table style={{ minWidth: 950 }}>
           <thead>
             {variant === "t9" ? (
             <tr style={{ borderBottom: "2px solid var(--line)" }} className="text-left">
