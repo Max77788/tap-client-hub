@@ -12,23 +12,60 @@ function reverseName(name: string): string {
 export async function GET(request: Request) {
   try {
     const cookieHeader = request.headers.get("cookie") || "";
-    const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
-    if (!nameMatch) {
-      return NextResponse.json({ enabled: false, authenticated: false });
-    }
-
     const { createClient } = await import("@supabase/supabase-js");
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { db: { schema: "tap_hub_project" } }
     );
+    let profile: any = null;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("email_2fa_enabled")
-      .eq("full_name", reverseName(decodeURIComponent(nameMatch[1])))
-      .maybeSingle();
+    // Strategy 1: tap_demo_user cookie
+    const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
+    if (nameMatch) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("email_2fa_enabled")
+        .eq("full_name", reverseName(decodeURIComponent(nameMatch[1])))
+        .maybeSingle();
+      profile = data;
+    }
+
+    // Strategy 2: Supabase auth token
+    if (!profile) {
+      const authMatch = cookieHeader.match(/sb-[^-]+-auth-token=([^;]+)/);
+      if (authMatch) {
+        try {
+          const token = JSON.parse(decodeURIComponent(authMatch[1]));
+          const supabaseAuth = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          );
+          const { data: { user } } = await supabaseAuth.auth.getUser(token.access_token);
+          if (user) {
+            const { data } = await supabase
+              .from("profiles")
+              .select("email_2fa_enabled")
+              .eq("id", user.id)
+              .maybeSingle();
+            profile = data;
+          }
+        } catch {}
+      }
+    }
+
+    // Strategy 3: tap_demo_email cookie
+    if (!profile) {
+      const emailMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+      if (emailMatch) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("email_2fa_enabled")
+          .eq("email", decodeURIComponent(emailMatch[1]))
+          .maybeSingle();
+        profile = data;
+      }
+    }
 
     return NextResponse.json({
       enabled: profile?.email_2fa_enabled ?? false,

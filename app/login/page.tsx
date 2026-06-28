@@ -71,6 +71,7 @@ function LoginContent() {
           .catch(() => setTwoFAMessage("Enter the code from your email"));
       } else {
         // No 2FA - proceed
+        document.cookie = `tap_demo_user=${encodeURIComponent(demo?.name || email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
         document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
         router.push(next);
         router.refresh();
@@ -104,6 +105,7 @@ function LoginContent() {
         return;
       }
 
+      document.cookie = `tap_demo_user=${encodeURIComponent(email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
 
       router.push(next);
