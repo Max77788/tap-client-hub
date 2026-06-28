@@ -50,8 +50,8 @@ export default function ClientsPage() {
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
 
   const filteredClients = useMemo(
-    () => filterClients(clients, { search, type: "All", staff: staffFilter }),
-    [clients, search, staffFilter],
+    () => filterClients(clients, { search, type: typeFilter, staff: staffFilter }),
+    [clients, search, typeFilter, staffFilter],
   );
 
   // Group filtered clients: multi-client groups become one group card, singles stay as-is
