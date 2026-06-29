@@ -223,160 +223,155 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             ))}
 
-            {/* Services — flip on/off */}
+            {/* Services — flip on/off with inline month tracking beneath each */}
             <div className="sect" style={sectStyle}>Services — flip on/off, no formulas</div>
             {localSvcs.map((svc: any) => (
-              <div key={svc.key} className="svc" style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 13px",
-                background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, marginBottom: 8,
-              }}>
-                <div className="si" style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: svcBg(svc.key) }}>
-                  {svcIc(svc.key)}
-                </div>
-                <div className="st" style={{ flex: 1 }}>
-                  <div className="t" style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
-                  <div className="d" style={{ fontSize: 12, color: "var(--muted)" }}>{freqLabel(svc.key, svc)}</div>
-                </div>
-                <div
-                  className={`sw ${svc.enabled ? "on" : ""}`}
-                  onClick={() => toggleSvc(svc.key)}
-                  style={{
-                    width: 46, height: 27, borderRadius: 20,
-                    background: svc.enabled ? "var(--teal)" : "#d8d2c4",
-                    position: "relative", cursor: "pointer", transition: ".16s", flex: "0 0 auto",
-                  }}
-                >
-                  <div style={{
-                    position: "absolute", top: 3, left: svc.enabled ? 22 : 3, width: 21, height: 21,
-                    borderRadius: "50%", background: "#fff", transition: ".16s",
-                    boxShadow: "0 1px 3px rgba(0,0,0,.25)",
-                  }} />
-                </div>
-              </div>
-            ))}
-
-            {/* Sales Tax — line items */}
-            {localSvcs.find((s: any) => s.key === "sales_tax")?.enabled && (
-              <div style={{ marginTop: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div className="sect" style={{ ...sectStyle, margin: 0 }}>Sales Tax · line items</div>
-                  <button
-                    onClick={() => setAddingStx(!addingStx)}
-                    className="reveal"
-                    style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}
+              <div key={svc.key} style={{ marginBottom: 12, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
+                {/* Toggle card row */}
+                <div className="svc" style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 13px",
+                }}>
+                  <div className="si" style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: svcBg(svc.key) }}>
+                    {svcIc(svc.key)}
+                  </div>
+                  <div className="st" style={{ flex: 1 }}>
+                    <div className="t" style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
+                    <div className="d" style={{ fontSize: 12, color: "var(--muted)" }}>{freqLabel(svc.key, svc)}</div>
+                  </div>
+                  <div
+                    className={`sw ${svc.enabled ? "on" : ""}`}
+                    onClick={() => toggleSvc(svc.key)}
+                    style={{
+                      width: 46, height: 27, borderRadius: 20,
+                      background: svc.enabled ? "var(--teal)" : "#d8d2c4",
+                      position: "relative", cursor: "pointer", transition: ".16s", flex: "0 0 auto",
+                    }}
                   >
-                    {addingStx ? "Cancel" : "＋ Add line item"}
-                  </button>
+                    <div style={{
+                      position: "absolute", top: 3, left: svc.enabled ? 22 : 3, width: 21, height: 21,
+                      borderRadius: "50%", background: "#fff", transition: ".16s",
+                      boxShadow: "0 1px 3px rgba(0,0,0,.25)",
+                    }} />
+                  </div>
                 </div>
 
-                {addingStx && (
-                  <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, padding: 14, marginBottom: 10 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
-                        <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
-                        <select style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
-                          <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
-                        <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
-                        <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
-                      </div>
+                {/* Month tracking right under the service card (when enabled) */}
+                {svc.enabled && monthCells(svc.key) && (
+                  <div style={{ padding: "6px 13px 12px", borderTop: "1px dashed var(--line)" }}>
+                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
+                      {UNIFIED_STAGES.map(s => (
+                        <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
+                          {s.l}
+                        </span>
+                      ))}
+                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>N/A</span>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
-                        <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
-                        <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
-                        <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
-                      </div>
-                    </div>
-                    <button
-                      className="reveal"
-                      style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "7px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13 }}
-                      onClick={() => {
-                        if (!newStxName.trim()) return;
-                        setStxLineItems(prev => [...prev, {
-                          serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
-                          bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
-                          frequency: newStxFreq,
-                        }]);
-                        setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                        setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
-                        setAddingStx(false);
-                      }}
-                    >
-                      Add line item
-                    </button>
+                    {monthCells(svc.key)}
                   </div>
                 )}
 
-                {stxLineItems.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {stxLineItems.map((item: any, i: number) => (
-                      <div key={i} style={{
-                        display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center",
-                        background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: "11px 13px",
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{item.serviceName}</div>
-                          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 12, color: "var(--muted)" }}>
-                            <span>{item.frequency || "Monthly"}</span>
-                            {item.rt && <span>RT: {item.rt}</span>}
-                            {item.taxId && <span>Tax ID: {item.taxId}</span>}
-                            {item.bankName && <span>{item.bankName} {item.bankRouting && `· ${item.bankRouting}`} {item.bankAccount && `· ${item.bankAccount}`}</span>}
+                {/* Sales Tax — line items under the sales_tax card */}
+                {svc.key === "sales_tax" && svc.enabled && (
+                  <div style={{ padding: "6px 13px 12px", borderTop: "1px dashed var(--line)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>Line items</div>
+                      <button
+                        onClick={() => setAddingStx(!addingStx)}
+                        className="reveal"
+                        style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12px" }}
+                      >
+                        {addingStx ? "Cancel" : "＋ Add"}
+                      </button>
+                    </div>
+
+                    {addingStx && (
+                      <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
+                            <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                            <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
+                              <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
+                            <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
+                            <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
+                            <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
+                            <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
+                            <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                           </div>
                         </div>
                         <button
                           className="reveal"
-                          style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 12 }}
-                          onClick={() => setStxLineItems(prev => prev.filter((_, j) => j !== i))}
+                          style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12 }}
+                          onClick={() => {
+                            if (!newStxName.trim()) return;
+                            setStxLineItems(prev => [...prev, {
+                              serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
+                              bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                              frequency: newStxFreq,
+                            }]);
+                            setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
+                            setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                            setAddingStx(false);
+                          }}
                         >
-                          ✕
+                          Add line item
                         </button>
                       </div>
-                    ))}
+                    )}
+
+                    {stxLineItems.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {stxLineItems.map((item: any, i: number) => (
+                          <div key={i} style={{
+                            display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center",
+                            background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "9px 11px",
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{item.serviceName}</div>
+                              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
+                                <span>{item.frequency || "Monthly"}</span>
+                                {item.rt && <span>RT: {item.rt}</span>}
+                                {item.taxId && <span>Tax ID: {item.taxId}</span>}
+                                {item.bankName && <span>{item.bankName} {item.bankRouting && `· ${item.bankRouting}`} {item.bankAccount && `· ${item.bankAccount}`}</span>}
+                              </div>
+                            </div>
+                            <button
+                              className="reveal"
+                              style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 11 }}
+                              onClick={() => setStxLineItems(prev => prev.filter((_, j) => j !== i))}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Per-service month tracking */}
-            {localSvcs.filter((s: any) => s.enabled && ["financials","payroll","sales_tax","renditions"].includes(s.key)).map((svc: any) => {
-              const stages = svc.months || [];
-              const leg = UNIFIED_STAGES.map(s => (
-                <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
-                  {s.l}
-                </span>
-              ));
-              return (
-                <div key={svc.key}>
-                  <div className="sect" style={sectStyle}>
-                    {svcLabel(svc.key)} · {svc.frequency} · <span style={{ color: "var(--muted)", fontWeight: 500 }}>{svc.processor || svc.assignedTo || "—"}</span>
-                  </div>
-                  <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, marginBottom: 8, fontSize: 12, color: "var(--muted)" }}>
-                    {leg}
-                    <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 6 }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>N/A</span>
-                  </div>
-                  {monthCells(svc.key)}
-                </div>
-              );
-            })}
+            ))}
           </div>
 
           {/* Footer */}
