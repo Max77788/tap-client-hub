@@ -68,8 +68,15 @@ function getActiveMonths(
     case "Monthly":
     case "Weekly":
     case "Bi-Weekly":
-    case "Semi-Monthly":
+    case "Semi-Monthly": {
+      // If a start month is set, only mark months from start onwards as active
+      if (startMonth !== undefined && startMonth >= 0) {
+        const s = new Set<number>();
+        for (let m = startMonth; m < 12; m++) s.add(m);
+        return s;
+      }
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    }
     case "Quarterly": {
       const s = startMonth ?? 0; // default Jan
       return new Set([s % 12, (s + 3) % 12, (s + 6) % 12, (s + 9) % 12]);
@@ -581,7 +588,7 @@ export default function WorklistTable({
   const baseCols = 2; // Client + Assigned
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
   const payrollCols = variant === "payroll" ? 1 : 0;
-  const t9PostCols = variant === "t9" ? 2 : 0; // Done + Left
+  const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
   const colCount = baseCols + extraCols + payrollCols + t9PreCols + 12 + t9PostCols;
 
@@ -688,8 +695,18 @@ export default function WorklistTable({
           : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
       </div>
 
-      {/* ── Main table ── */}
-      <div style={{ overflowX: "auto", borderRadius: 14, border: "1px solid var(--line)" }}>
+      {/* ── Main table with scroll arrows ── */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => {
+            const el = document.getElementById(`table-scroll-${serviceKey}`);
+            if (el) el.scrollBy({ left: -200, behavior: "smooth" });
+          }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-md border border-[var(--line)] cursor-pointer hover:scale-110 transition-transform"
+          style={{ background: "var(--card)", color: "var(--ink)", fontSize: 14, lineHeight: 1 }}
+          aria-label="Scroll left"
+        >{'\u2039'}</button>
+      <div id={`table-scroll-${serviceKey}`} style={{ overflowX: "auto", borderRadius: 14, border: "1px solid var(--line)", scrollBehavior: "smooth" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
@@ -709,7 +726,6 @@ export default function WorklistTable({
             ))}
             {variant === "t9" && (
             <>
-              <th className="text-center text-[10px] font-semibold text-[var(--green)] uppercase tracking-wider px-0.5 py-2">Done</th>
               <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2">Left</th>
             </>
             )}
@@ -749,7 +765,26 @@ export default function WorklistTable({
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
-                    <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.processor || svc.assignedTo || "-"}</td>
+                    <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                      <select
+                        value={assignedOverrides[`${client.id}:1099s`] ?? (svc.assignedTo || svc.processor || "")}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAssignedOverrides((prev) => ({ ...prev, [`${client.id}:1099s`]: val }));
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[120px]"
+                      >
+                        <option value="">Unassigned</option>
+                        {staffList.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </td>
                     {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                     <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
                     )}
@@ -796,8 +831,7 @@ export default function WorklistTable({
                         </td>
                       );
                     })}
-                    <td className="px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums" style={{ color: "var(--green)" }}>{done}</td>
-                    <td className={`px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{left}</td>
+                    <td className={`px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{done}/{exp}</td>
                   </tr>
                 );
               }
@@ -826,22 +860,27 @@ export default function WorklistTable({
                   </td>
                   )}
 
-                  {/* Assigned — inline editable dropdown */}
+                  {/* Assigned — inline editable dropdown (all services) */}
                   <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
-                    {variant === "payroll" ? (
-                      <select
-                        value={assignedOverrides[`${client.id}:payroll`] ?? (svc.assignedTo || "")}
-                        onChange={(e) => handleAssignedChange(client, svc, e.target.value)}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px]"
-                      >
-                        <option value="">Unassigned</option>
-                        {staffList.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      svc.processor || svc.assignedTo || "-"
-                    )}
+                    <select
+                      value={assignedOverrides[`${client.id}:${serviceKey}`] ?? (svc.assignedTo || svc.processor || "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const key = `${client.id}:${serviceKey}`;
+                        setAssignedOverrides((prev) => ({ ...prev, [key]: val }));
+                        fetch("/api/clients", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
+                        }).catch(() => {});
+                      }}
+                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[120px]"
+                    >
+                      <option value="">Unassigned</option>
+                      {staffList.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                   </td>
 
                   {/* Cadence */}
@@ -966,6 +1005,16 @@ export default function WorklistTable({
           )}
         </tbody>
       </table>
+      </div>
+        <button
+          onClick={() => {
+            const el = document.getElementById(`table-scroll-${serviceKey}`);
+            if (el) el.scrollBy({ left: 200, behavior: "smooth" });
+          }}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-md border border-[var(--line)] cursor-pointer hover:scale-110 transition-transform"
+          style={{ background: "var(--card)", color: "var(--ink)", fontSize: 14, lineHeight: 1 }}
+          aria-label="Scroll right"
+        >{'\u203A'}</button>
       </div>
 
       {/* ── Fine-print note ── */}

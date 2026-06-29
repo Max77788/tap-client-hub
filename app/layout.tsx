@@ -380,7 +380,7 @@ export default function RootLayout({
                     >
                       {(() => {
                         const currentYear = new Date().getFullYear();
-                        return [currentYear, currentYear - 1].filter(y => y >= 2024).map((y, idx) => (
+                        return [currentYear].filter(y => y >= 2024).map((y, idx) => (
                           <option key={y} value={y}>{y}{idx === 0 ? " (current)" : ""}</option>
                         ));
                       })()}

@@ -211,7 +211,7 @@ export default function VaultPage() {
           <div style={{ margin: "0 6px 8px" }}>
             <table>
               <thead>
-                <tr><th>Portal</th><th>Username</th><th>Password</th></tr>
+                <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Notes</th></tr>
               </thead>
               <tbody>
                 {entries.map(entry => {
@@ -230,6 +230,8 @@ export default function VaultPage() {
                               Open in TAP&nbsp;Bank ↗
                             </a>
                           </td>
+                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
+                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
                         </>
                       ) : (
                         <>
@@ -245,6 +247,18 @@ export default function VaultPage() {
                           </td>
                         </>
                       )}
+                      <td className="mono" style={{ fontSize: 11, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {entry.url ? (
+                          <a href={entry.url} target="_blank" rel="noopener noreferrer" className="reveal"
+                            style={{ color: "var(--teal)", fontWeight: 500, fontSize: "12px" }}>
+                            {entry.url.length > 30 ? entry.url.slice(0, 30) + "..." : entry.url} ↗
+                          </a>
+                        ) : "—"}
+                      </td>
+                      <td className="mono" style={{ fontSize: 11, color: "var(--muted)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        title={entry.notes || ""}>
+                        {entry.notes || "—"}
+                      </td>
                     </tr>
                   );
                 })}
