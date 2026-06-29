@@ -361,7 +361,7 @@ export default function TimePage() {
         </button>
         <div className="tw-notes-row">
           <label style={{ marginTop: 4 }}>Notes</label>
-          <textarea value={timerNote} onChange={(e) => setTimerNote(e.target.value)} placeholder="What are you starting? Quick note..." />
+          <textarea value={timerNote} onChange={(e) => setTimerNote(e.target.value)} placeholder="Notes..." />
         </div>
       </div>
       )}
@@ -405,6 +405,8 @@ export default function TimePage() {
           </tbody>
         </table>
       </div>
+
+      <hr style={{ border: "none", borderTop: "1px solid var(--line)", margin: "20px 0" }} />
 
       {/* ── Entries table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

@@ -146,6 +146,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       payrollPassword: prPin || undefined,
       eftps: prEftps || undefined,
       processor: prProcessor === "Other" ? (prProcessorOther || "Other") : (prProcessor || undefined),
+      financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
     });
     addSvc("sales_tax", stx, stxFreq, stxAssigned, {
       salesTaxLineItems: stxLineItems.length > 0 ? stxLineItems : undefined,
