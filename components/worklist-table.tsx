@@ -82,16 +82,13 @@ function getActiveMonths(
   }
 }
 
-// ── Payroll run count logic ──
+// ── Payroll: max runs per month by cadence ──
 type PayrollCadence = "Weekly" | "Bi-Weekly" | "Monthly";
-function getExpectedRuns(cadence: PayrollCadence): number {
+function getMaxRunsPerMonth(cadence: PayrollCadence): number {
   switch (cadence) {
-    case "Weekly":
-      return 4;
-    case "Bi-Weekly":
-      return 2;
-    case "Monthly":
-      return 1;
+    case "Weekly":   return 5;
+    case "Bi-Weekly": return 2;
+    case "Monthly":  return 1;
   }
 }
 
@@ -194,21 +191,264 @@ export default function WorklistTable({
     setWorklistState(buildWorklistState(clients, serviceKey));
   }, [clients, serviceKey]);
 
-  // ── Payroll cadence lookup ──
-  const payrollCadences = useMemo<Record<string, PayrollCadence>>(() => {
-    const map: Record<string, PayrollCadence> = {};
-    const cadences: PayrollCadence[] = [
-      "Weekly",
-      "Bi-Weekly",
-      "Monthly",
-    ];
-    let idx = 0;
-    for (const client of serviceClients) {
-      map[client.id] = cadences[idx % cadences.length];
-      idx++;
+  // ── Payroll count state (number of runs completed per month) ──
+  const [prCounts, setPrCounts] = useState<Record<string, number[]>>(() => {
+    const map: Record<string, number[]> = {};
+    for (const client of clients) {
+      const svc = client.services.find((s: any) => s.key === "payroll");
+      if (!svc?.enabled) continue;
+      const key = `${client.id}:payroll`;
+      if (svc.prCounts && Array.isArray(svc.prCounts)) {
+        map[key] = [...svc.prCounts];
+      } else {
+        map[key] = Array(12).fill(0);
+      }
     }
     return map;
-  }, [serviceClients]);
+  });
+
+  // Re-sync prCounts when clients change
+  useEffect(() => {
+    setPrCounts((prev) => {
+      const next: Record<string, number[]> = {};
+      for (const client of clients) {
+        const svc = client.services.find((s: any) => s.key === "payroll");
+        if (!svc?.enabled) continue;
+        const key = `${client.id}:payroll`;
+        if (prev[key]) { next[key] = prev[key]; }
+        else if (svc.prCounts && Array.isArray(svc.prCounts)) { next[key] = [...svc.prCounts]; }
+        else { next[key] = Array(12).fill(0); }
+      }
+      return next;
+    });
+  }, [clients]);
+
+  // Load payroll counts from period_counts API on mount
+  useEffect(() => {
+    if (variant !== "payroll" || serviceClients.length === 0) return;
+    const yearStr = String(year);
+    const promises = serviceClients.map(async (client) => {
+      const svc = client.services?.find((s: any) => s.key === "payroll");
+      if (!svc?.csId) return;
+      try {
+        const res = await fetch(`/api/period-counts?client_service_id=${svc.csId}&year=${yearStr}`);
+        const data = await res.json();
+        if (!data.counts || !Array.isArray(data.counts)) return;
+        const counts = Array(12).fill(0);
+        for (const c of data.counts) {
+          const parts = c.period?.split("-");
+          if (parts && parts.length >= 2) {
+            const monthIdx = parseInt(parts[1]) - 1;
+            if (monthIdx >= 0 && monthIdx < 12) {
+              counts[monthIdx] = Math.max(0, c.processed || 0);
+            }
+          }
+        }
+        const key = `${client.id}:payroll`;
+        setPrCounts((prev) => ({ ...prev, [key]: counts }));
+      } catch {}
+    });
+    Promise.all(promises).catch(() => {});
+  }, [variant, serviceClients, year]);
+
+  // ── Payroll: get real cadence from client service ──
+  function getClientPayrollCadence(client: any): PayrollCadence {
+    const svc = client.services?.find((s: any) => s.key === "payroll");
+    const freq = svc?.frequency || "Monthly";
+    if (freq === "Weekly") return "Weekly";
+    if (freq === "Bi-Weekly" || freq === "Semi-Monthly") return "Bi-Weekly";
+    return "Monthly";
+  }
+
+  // ── Payroll bump handler ──
+  const prBump = useCallback((clientId: string, monthIdx: number, ev: React.MouseEvent) => {
+    if (isHistorical) return;
+    const client = serviceClients.find((c: any) => c.id === clientId);
+    if (!client) return;
+    const svc = client.services?.find((s: any) => s.key === "payroll");
+    const maxRuns = getMaxRunsPerMonth(getClientPayrollCadence(client));
+    const key = `${clientId}:payroll`;
+    setPrCounts((prev) => {
+      const counts = [...(prev[key] ?? Array(12).fill(0))];
+      const delta = ev.shiftKey ? -1 : 1;
+      const current = counts[monthIdx] || 0;
+      const next = ev.shiftKey ? Math.max(0, current - 1) : Math.min(maxRuns, current + 1);
+      counts[monthIdx] = next;
+      // Persist
+      if (svc?.csId) {
+        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+        fetch("/api/period-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, processed: next }),
+        }).catch(() => {});
+      }
+      return { ...prev, [key]: counts };
+    });
+  }, [isHistorical, serviceClients, year]);
+
+  // ── Payroll start edit ──
+  const [editingPr, setEditingPr] = useState<string | null>(null);
+  const [editPrValue, setEditPrValue] = useState("");
+
+  const prStartEdit = useCallback((clientId: string, monthIdx: number, currentVal: number) => {
+    if (isHistorical) return;
+    setEditingPr(`${clientId}:${monthIdx}`);
+    setEditPrValue(String(currentVal || 0));
+  }, [isHistorical]);
+
+  const prCommitEdit = useCallback((clientId: string, monthIdx: number) => {
+    const client = serviceClients.find((c: any) => c.id === clientId);
+    if (!client) return;
+    const svc = client.services?.find((s: any) => s.key === "payroll");
+    const maxRuns = getMaxRunsPerMonth(getClientPayrollCadence(client));
+    let val = parseInt(editPrValue) || 0;
+    val = Math.max(0, Math.min(maxRuns, val));
+    const key = `${clientId}:payroll`;
+    setPrCounts((prev) => {
+      const counts = [...(prev[key] ?? Array(12).fill(0))];
+      counts[monthIdx] = val;
+      // Persist
+      if (svc?.csId) {
+        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+        fetch("/api/period-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, processed: val }),
+        }).catch(() => {});
+      }
+      return { ...prev, [key]: counts };
+    });
+    setEditingPr(null);
+  }, [editPrValue, serviceClients, year]);
+
+  // ── Cell click handler — directly cycles stage (no picker) ──
+  const handleCellClick = useCallback(
+    (clientId: string, monthIdx: number) => {
+      if (readOnly || isHistorical) return;
+      const key = `${clientId}:${serviceKey}`;
+      const stages = [...(worklistState[key] ?? [])];
+      if (!stages.length) return;
+      const current = (stages[monthIdx] || "") as WorklistStage;
+      const next = nextStage(current);
+      stages[monthIdx] = next;
+      setWorklistState((prev) => ({ ...prev, [key]: stages }));
+      if (onStageChange) onStageChange(clientId, monthIdx, next);
+    },
+    [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
+  );
+
+  // ── Stats ──
+  const stats = useMemo(() => {
+    if (variant === "t9") {
+      const isCur = !isHistorical;
+      let expTot = 0, doneTot = 0;
+      for (const client of serviceClients) {
+        const svc = client.services.find((s) => s.key === serviceKey);
+        if (!svc) continue;
+        const exp = svc.expectedAnnual || 0;
+        expTot += exp;
+        const t9key = `${client.id}:1099s`;
+        const counts = t9Counts[t9key] ?? Array(12).fill(0);
+        const done = counts.reduce((s: number, n: number) => s + (n || 0), 0);
+        doneTot += done;
+      }
+      const curMonthCount = isCur ? (() => {
+        let c = 0;
+        for (const client of serviceClients) {
+          const t9key = `${client.id}:1099s`;
+          const counts = t9Counts[t9key] ?? Array(12).fill(0);
+          c += (counts[currentMonth] || 0);
+        }
+        return c;
+      })() : 0;
+      return { expTot, doneTot, rem: Math.max(0, expTot - doneTot), curMonthCount, currentMonthName: MONTHS_SHORT[currentMonth], isCur };
+    }
+
+    if (variant === "payroll") {
+      const isCur = !isHistorical;
+      let totalRuns = 0;
+      let totalMax = 0;
+      let monthRuns = 0;
+      for (const client of serviceClients) {
+        const cadence = getClientPayrollCadence(client);
+        const maxRuns = getMaxRunsPerMonth(cadence);
+        totalMax += maxRuns * 12;
+        const key = `${client.id}:payroll`;
+        const counts = prCounts[key] ?? Array(12).fill(0);
+        for (let m = 0; m < 12; m++) {
+          totalRuns += (counts[m] || 0);
+        }
+        if (isCur) {
+          monthRuns += (counts[currentMonth] || 0);
+        }
+      }
+      const pct = totalMax > 0 ? Math.round((totalRuns / totalMax) * 100) : 0;
+      return {
+        totalRuns, totalMax, pct,
+        monthRuns, currentMonthName: MONTHS_SHORT[currentMonth], isCur,
+      };
+    }
+
+    const currentMonthName = MONTHS_SHORT[currentMonth];
+    let dueThisMonth = 0;
+    let inProgress = 0;
+    let waiting = 0;
+    let prepared = 0;
+    let done = 0;
+    let behind = 0;
+    let notStarted = 0;
+    let yDue = 0, yDone = 0;
+
+    for (const client of serviceClients) {
+      const svc = client.services.find((s) => s.key === serviceKey);
+      if (!svc) continue;
+      const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
+
+      const key = `${client.id}:${serviceKey}`;
+      const stages = worklistState[key] ?? [];
+      for (let m = 0; m < 12; m++) {
+        if (!activeMonths.has(m)) continue;
+        yDue++;
+        if (stages[m] === "dn") yDone++;
+
+        if (m === currentMonth && year === currentYear) {
+          dueThisMonth++;
+          if (!stages[m] || stages[m] === "") notStarted++;
+        }
+        // Past due check: month is before current, not done, not na, not empty
+        if (m < currentMonth && stages[m] !== "dn" && stages[m] !== "na" && stages[m] !== "" && !isHistorical) {
+          behind++;
+        }
+        switch (stages[m]) {
+          case "ip": inProgress++; break;
+          case "wc": waiting++; break;
+          case "pp": prepared++; break;
+          case "dn": done++; break;
+        }
+      }
+    }
+
+    return { dueThisMonth, inProgress, waiting, prepared, done, behind, notStarted, currentMonthName, yDue, yDone };
+  }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical, prCounts]);
+
+  // ── Stage legend ──
+  const legendItems: { stage: WorklistStage; dot: string }[] = [
+    { stage: "", dot: "·" },
+    { stage: "ip", dot: "●" },
+    { stage: "wc", dot: "●" },
+    { stage: "pp", dot: "●" },
+    { stage: "dn", dot: "●" },
+    { stage: "na", dot: "●" },
+  ];
+
+  // ── Count of columns before month columns (for colspan) ──
+  const baseCols = 2; // Client + Assigned
+  const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
+  const payrollCols = variant === "payroll" ? 1 : 0;
+  const t9PostCols = variant === "t9" ? 2 : 0; // Done + Left
+  const t9PreCols = variant === "t9" ? 1 : 0; // Expected
+  const colCount = baseCols + extraCols + payrollCols + t9PreCols + 12 + t9PostCols;
 
   // ── T9 counts local state ──
   const [t9Counts, setT9Counts] = useState<Record<string, number[]>>(() => {
@@ -294,108 +534,16 @@ export default function WorklistTable({
     setEditingT9(null);
   }, [editT9Value, clients, year]);
 
-  // ── Cell click handler — directly cycles stage (no picker) ──
-  const handleCellClick = useCallback(
-    (clientId: string, monthIdx: number) => {
-      if (readOnly || isHistorical) return;
-      const key = `${clientId}:${serviceKey}`;
-      const stages = [...(worklistState[key] ?? [])];
-      if (!stages.length) return;
-      const current = (stages[monthIdx] || "") as WorklistStage;
-      const next = nextStage(current);
-      stages[monthIdx] = next;
-      setWorklistState((prev) => ({ ...prev, [key]: stages }));
-      if (onStageChange) onStageChange(clientId, monthIdx, next);
-    },
-    [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
-  );
-
-  // ── Stats ──
-  const stats = useMemo(() => {
-    if (variant === "t9") {
-      const isCur = !isHistorical;
-      let expTot = 0, doneTot = 0;
-      for (const client of serviceClients) {
-        const svc = client.services.find((s) => s.key === serviceKey);
-        if (!svc) continue;
-        const exp = svc.expectedAnnual || 0;
-        expTot += exp;
-        const t9key = `${client.id}:1099s`;
-        const counts = t9Counts[t9key] ?? Array(12).fill(0);
-        const done = counts.reduce((s: number, n: number) => s + (n || 0), 0);
-        doneTot += done;
-      }
-      const curMonthCount = isCur ? (() => {
-        let c = 0;
-        for (const client of serviceClients) {
-          const t9key = `${client.id}:1099s`;
-          const counts = t9Counts[t9key] ?? Array(12).fill(0);
-          c += (counts[currentMonth] || 0);
-        }
-        return c;
-      })() : 0;
-      return { expTot, doneTot, rem: Math.max(0, expTot - doneTot), curMonthCount, currentMonthName: MONTHS_SHORT[currentMonth], isCur };
-    }
-
-    const currentMonthName = MONTHS_SHORT[currentMonth];
-    let dueThisMonth = 0;
-    let inProgress = 0;
-    let waiting = 0;
-    let prepared = 0;
-    let done = 0;
-    let behind = 0;
-    let notStarted = 0;
-    let yDue = 0, yDone = 0;
-
-    for (const client of serviceClients) {
-      const svc = client.services.find((s) => s.key === serviceKey);
-      if (!svc) continue;
-      const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
-
-      const key = `${client.id}:${serviceKey}`;
-      const stages = worklistState[key] ?? [];
-      for (let m = 0; m < 12; m++) {
-        if (!activeMonths.has(m)) continue;
-        yDue++;
-        if (stages[m] === "dn") yDone++;
-
-        if (m === currentMonth && year === currentYear) {
-          dueThisMonth++;
-          if (!stages[m] || stages[m] === "") notStarted++;
-        }
-        // Past due check: month is before current, not done, not na, not empty
-        if (m < currentMonth && stages[m] !== "dn" && stages[m] !== "na" && stages[m] !== "" && !isHistorical) {
-          behind++;
-        }
-        switch (stages[m]) {
-          case "ip": inProgress++; break;
-          case "wc": waiting++; break;
-          case "pp": prepared++; break;
-          case "dn": done++; break;
-        }
-      }
-    }
-
-    return { dueThisMonth, inProgress, waiting, prepared, done, behind, notStarted, currentMonthName, yDue, yDone };
-  }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical]);
-
-  // ── Stage legend ──
-  const legendItems: { stage: WorklistStage; dot: string }[] = [
-    { stage: "", dot: "·" },
-    { stage: "ip", dot: "●" },
-    { stage: "wc", dot: "●" },
-    { stage: "pp", dot: "●" },
-    { stage: "dn", dot: "●" },
-    { stage: "na", dot: "●" },
-  ];
-
-  // ── Count of columns before month columns (for colspan) ──
-  const baseCols = 2; // Client + Assigned
-  const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
-  const payrollCols = variant === "payroll" ? 1 : 0;
-  const t9PostCols = variant === "t9" ? 2 : 0; // Done + Left
-  const t9PreCols = variant === "t9" ? 1 : 0; // Expected
-  const colCount = baseCols + extraCols + payrollCols + t9PreCols + 12 + t9PostCols;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-6 h-6 border-2 border-[var(--teal)] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-xs text-[var(--muted)]">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -406,6 +554,13 @@ export default function WorklistTable({
           <StatCard label="Processed" value={stats.doneTot} color="var(--green)" />
           <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
           <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
+        </div>
+      ) : variant === "payroll" ? (
+        <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+          <StatCard label="Total payroll runs" value={stats.totalRuns} color="var(--ink)" />
+          <StatCard label={`Runs in ${stats.currentMonthName}`} value={stats.monthRuns} color="var(--blue)" />
+          <StatCard label="Total capacity" value={stats.totalMax} color="var(--amber)" />
+          <StatCard label="Utilization" value={`${stats.pct}%`} color="var(--green)" />
         </div>
       ) : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
@@ -447,6 +602,7 @@ export default function WorklistTable({
       )}
 
       {/* ── Legend ── */}
+      {variant !== "payroll" && (
       <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ margin: "14px 0 2px" }}>
         {STAGE_CYCLE.filter(s => s !== "").map(s => (
           <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
@@ -461,312 +617,279 @@ export default function WorklistTable({
           {!isHistorical ? "click a cell to advance · red ring = past due, flagged automatically" : `${year} — read-only history`}
         </span>
       </div>
+      )}
 
       {/* ── Count line ── */}
       <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
-        {!isHistorical
+        {variant === "payroll"
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add a run, shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
+          : !isHistorical
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
           : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
       </div>
 
-      {/* ── Historical banner (if applicable) ── */}
-      {isHistorical && (
-        <div
-          className="px-3 py-2 rounded-lg flex gap-2 text-xs"
-          style={{
-            backgroundColor: "var(--amber-soft)",
-            border: "1px solid var(--amber)",
-            color: "var(--amber)",
-          }}
-        >
-          <span>📋</span>
-          <span>Historical view for <strong>{year}</strong>. Read-only.</span>
-        </div>
-      )}
-
-      {/* ── Loading state ── */}
-      {loading && (
-        <div className="flex items-center justify-center py-20 rounded-lg" style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)", border: "1px solid var(--line)" }}>
-          <div className="flex flex-col items-center gap-3">
-            <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-            <span className="text-sm font-medium" style={{ color: "var(--teal)" }}>Loading data...</span>
-          </div>
-        </div>
-      )}
-
-      {/* ── T9 count text ── */}
-      {variant === "t9" && (
-        <div className="text-xs text-[var(--muted)]" style={{ margin: "8px 2px 6px" }}>
-          {!isHistorical
-            ? "Counted by month — a client\u2019s 1099s don\u2019t all arrive together. Counts feed your per-1099 billing."
-            : `${year} history — read-only. Switch the Year selector back to ${currentYear} to log counts.`}
-        </div>
-      )}
-
-      {/* ── Main table (horizontally scrollable on mobile) ── */}
-      <div
-        className="worklist-panel"
-        style={{
-          backgroundColor: "var(--card)",
-          borderRadius: "16px",
-          overflow: "hidden",
-          marginTop: 6,
-          border: "1px solid var(--line)",
-        }}
-      >
-        <div className="overflow-x-auto" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-        <table style={{ minWidth: 950 }}>
-          <thead>
-            {variant === "t9" ? (
-            <tr style={{ borderBottom: "2px solid var(--line)" }} className="text-left">
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "22%" }}>Client</th>
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>Assigned</th>
-              <th className="mh">Expected</th>
-              {MONTHS_SHORT.map((m, i) => {
-                const isCM = i === currentMonth && !isHistorical;
-                return <th key={m} className={`mh${isCM ? " mh-now" : ""}`}>{m}</th>;
-              })}
-              <th className="mh">Done</th>
-              <th className="mh">Left</th>
-            </tr>
-            ) : (
-            <tr
-              style={{ borderBottom: "2px solid var(--line)" }}
-              className="text-left"
-            >
-              <th
-                className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]"
-                style={{ width: "22%" }}
-              >
-                Client
-              </th>
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
-                Assigned
-              </th>
-              {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "11%" }}>
-                Cadence
-              </th>
-              )}
-              {variant === "payroll" && (
-              <th className="px-2 py-2 font-semibold uppercase tracking-wider text-[var(--muted)]" style={{ width: "12%" }}>
-                Processor
-              </th>
-              )}
-              {MONTHS_SHORT.map((m, i) => {
-                const isCurrentMonth = i === currentMonth && !isHistorical;
-                return (
-                  <th key={m} className={`mh${isCurrentMonth ? " mh-now" : ""}`}>
-                    {m}
-                  </th>
-                );
-              })}
-            </tr>
+      {/* ── Main table ── */}
+      <div style={{ overflowX: "auto", borderRadius: 14, border: "1px solid var(--line)" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+        <thead>
+          <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
+            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Client</th>
+            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Assigned</th>
+            {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Cadence</th>
             )}
-          </thead>
-          <tbody>
-            {filteredClients.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={colCount}
-                  className="px-4 py-8 text-center text-xs text-[var(--muted)]"
-                >
-                  {variant === "t9" ? "No 1099 clients yet. Open a client and switch 1099 Filing on." : "No clients with this service enabled."}
-                </td>
-              </tr>
-            ) : (
-              filteredClients.map((client) => {
-                const svc = client.services.find((s) => s.key === serviceKey)!;
-                const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
-                const key = `${client.id}:${serviceKey}`;
-                const stages = worklistState[key] ?? Array(12).fill("");
+            {variant === "payroll" && (
+            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Processor</th>
+            )}
+            {variant === "t9" && (
+            <th className="text-center text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Expected</th>
+            )}
+            {MONTHS_SHORT.map((m) => (
+              <th key={m} className="text-center text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2.5" style={{ width: 38 }}>{m}</th>
+            ))}
+            {variant === "t9" && (
+            <>
+              <th className="text-center text-[11px] font-semibold text-[var(--green)] uppercase tracking-wider px-1 py-2.5">Done</th>
+              <th className="text-center text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2.5">Left</th>
+            </>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {filteredClients.length === 0 ? (
+            <tr>
+              <td colSpan={colCount} className="text-center py-8 text-sm text-[var(--muted)]">
+                No clients found.
+              </td>
+            </tr>
+          ) : (
+            filteredClients.map((client) => {
+              const svc = client.services.find((s) => s.key === serviceKey)!;
+              const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
+              const key = `${client.id}:${serviceKey}`;
+              const stages = worklistState[key] ?? Array(12).fill("");
 
-                const payrollSvc = client.services.find((s: any) => s.key === "payroll");
-                const processor = payrollSvc?.processor || "-";
+              const payrollSvc = client.services.find((s: any) => s.key === "payroll");
+              const processor = payrollSvc?.processor || "-";
+              const prCadence = getClientPayrollCadence(client);
+              const maxRuns = getMaxRunsPerMonth(prCadence);
+              const prKey = `${client.id}:payroll`;
+              const prCountsArr = prCounts[prKey] ?? Array(12).fill(0);
 
-                // ── T9 variant: count-based table ──
-                if (variant === "t9") {
-                  const exp = svc.expectedAnnual || 0;
-                  const t9key = `${client.id}:1099s`;
-                  const counts = t9Counts[t9key] ?? Array(12).fill(0);
-                  const done = counts.reduce((a: number, b: number) => a + (b || 0), 0);
-                  const left = Math.max(0, exp - done);
-                  return (
-                    <tr key={client.id} className="transition-colors" style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td className="px-2 py-1.5">
-                        <button onClick={() => onClientClick?.(client.id)}
-                          className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
-                      </td>
-                      <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.processor || svc.assignedTo || "-"}</td>
-                      <td className="px-2 py-1.5 text-center text-xs font-semibold text-[var(--ink)] tabular-nums">{exp || "—"}</td>
-                      {MONTHS_SHORT.map((mo, i) => {
-                        const n = +counts[i] || 0;
-                        const isCM = i === currentMonth && !isHistorical;
-                        const cellEditKey = `${client.id}:${i}`;
-                        const isEditing = editingT9 === cellEditKey;
-                        return (
-                          <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`}>
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                min="0"
-                                value={editT9Value}
-                                onChange={(e) => setEditT9Value(e.target.value)}
-                                onBlur={() => t9CommitEdit(client.id, i)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") t9CommitEdit(client.id, i);
-                                  if (e.key === "Escape") setEditingT9(null);
-                                }}
-                                autoFocus
-                                className="inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums text-center"
-                                style={{
-                                  backgroundColor: "#fff",
-                                  border: "2px solid var(--teal)",
-                                  color: "var(--ink)",
-                                  outline: "none",
-                                }}
-                              />
-                            ) : (
-                              <div
-                                onClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
-                                onDoubleClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
-                                className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
-                                style={{
-                                  backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
-                                  color: n > 0 ? "var(--green)" : "var(--muted)",
-                                }}
-                                title={`${mo}: ${n} processed${!isHistorical ? " — click to type, double-click ±1" : ""}`}
-                              >{n || "·"}</div>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td className="px-2 py-1.5 text-center text-xs font-semibold tabular-nums" style={{ color: "var(--green)" }}>{done}</td>
-                      <td className={`px-2 py-1.5 text-center text-xs font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{left}</td>
-                    </tr>
-                  );
-                }
-
+              // ── T9 variant: count-based table ──
+              if (variant === "t9") {
+                const exp = svc.expectedAnnual || 0;
+                const t9key = `${client.id}:1099s`;
+                const counts = t9Counts[t9key] ?? Array(12).fill(0);
+                const done = counts.reduce((a: number, b: number) => a + (b || 0), 0);
+                const left = Math.max(0, exp - done);
                 return (
-                  <tr
-                    key={client.id}
-                    className="transition-colors"
-                    style={{ borderBottom: "1px solid var(--line)" }}
-                  >
-                    {/* Client name (clickable) */}
+                  <tr key={client.id} className="transition-colors" style={{ borderBottom: "1px solid var(--line)" }}>
                     <td className="px-2 py-1.5">
-                      <button
-                        onClick={() => onClientClick?.(client.id)}
-                        className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
-                        title={`Open ${client.name} details`}
-                      >
-                        {client.name}
-                      </button>
+                      <button onClick={() => onClientClick?.(client.id)}
+                        className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
-
-                    {/* Assigned */}
-                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
-                      {svc.processor || svc.assignedTo || "-"}
-                    </td>
-
-                    {/* Cadence */}
-                    {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
-                      {variant === "payroll"
-                        ? payrollCadences[client.id] ?? "Monthly"
-                        : svc.frequency}
-                    </td>
-                    )}
-
-                    {/* Processor column (payroll only) */}
-                    {variant === "payroll" && (
-                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
-                      {processor}
-                    </td>
-                    )}
-
-                    {/* Month cells */}
-                    {MONTHS_SHORT.map((_m, i) => {
-                      const stage = (stages[i] || "") as WorklistStage;
-                      const style = STAGE_STYLES[stage];
-                      const isActive = activeMonths.has(i);
-                      const isPastDue =
-                        isActive &&
-                        i < currentMonth &&
-                        stage !== "dn" &&
-                        stage !== "na" &&
-                        stage !== "" &&
-                        !isHistorical;
-
-                      const isCurrentMonth = i === currentMonth && !isHistorical;
-                      const cellReadOnly = readOnly || isHistorical;
-
-                      // ── Payroll variant: cells cycle same as default ──
-                      if (variant === "payroll" && isActive) {
-                        return (
-                          <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
-                            <CellWrapper
-                              isCurrentMonth={isCurrentMonth}
-                              isPastDue={isPastDue}
-                              readOnly={cellReadOnly}
-                              onClick={() => handleCellClick(client.id, i)}
-                            >
-                              <span
-                                className="text-[9px] font-semibold leading-none"
-                                style={{ color: style.fg }}
-                              >
-                                {stage === "" ? (isPastDue && !isHistorical ? "!" : "·")
-                                  : stage === "ip" ? "•"
-                                  : stage === "wc" ? "⏳"
-                                  : stage === "pp" ? "✓"
-                                  : stage === "dn" ? "✓"
-                                  : stage === "na" ? "–" : ""}
-                              </span>
-                            </CellWrapper>
-                          </td>
-                        );
-                      }
-
-                      // ── Default variant: mcell squares (demo v7 style) ──
-                      const t = stage === "" ? (isPastDue && !isHistorical ? "!" : "·")
-                        : stage === "ip" ? "•"
-                        : stage === "wc" ? "⏳"
-                        : stage === "pp" ? "✓"
-                        : stage === "dn" ? "✓"
-                        : stage === "na" ? "–" : "";
-                      const delayed = isPastDue && !isHistorical;
-                      const lockHist = isHistorical && isActive;
+                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.processor || svc.assignedTo || "-"}</td>
+                    <td className="px-2 py-1.5 text-center text-xs font-semibold text-[var(--ink)] tabular-nums">{exp || "—"}</td>
+                    {MONTHS_SHORT.map((mo, i) => {
+                      const n = +counts[i] || 0;
+                      const isCM = i === currentMonth && !isHistorical;
+                      const cellEditKey = `${client.id}:${i}`;
+                      const isEditing = editingT9 === cellEditKey;
                       return (
-                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
-                          <div
-                            onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
-                            className="mcell"
-                            style={{
-                              width: 30, height: 30, borderRadius: 8,
-                              border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
-                              background: !isActive ? "transparent" : style.bg,
-                              color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              margin: "0 auto",
-                              fontWeight: 700, fontSize: 14, userSelect: "none",
-                              cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
-                              boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
-                              opacity: !isActive && !lockHist ? 0 : 1,
-                            } as React.CSSProperties}
-                            title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${STAGE_LABELS[stage]}${isHistorical ? ` (${year})` : ""}`}
-                          >{isActive || lockHist ? t : ""}</div>
+                        <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`}>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min="0"
+                              value={editT9Value}
+                              onChange={(e) => setEditT9Value(e.target.value)}
+                              onBlur={() => t9CommitEdit(client.id, i)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") t9CommitEdit(client.id, i);
+                                if (e.key === "Escape") setEditingT9(null);
+                              }}
+                              autoFocus
+                              className="inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums text-center"
+                              style={{
+                                backgroundColor: "#fff",
+                                border: "2px solid var(--teal)",
+                                color: "var(--ink)",
+                                outline: "none",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              onClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
+                              onDoubleClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
+                              className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
+                              style={{
+                                backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
+                                color: n > 0 ? "var(--green)" : "var(--muted)",
+                              }}
+                              title={`${mo}: ${n} processed${!isHistorical ? " — click to type, double-click ±1" : ""}`}
+                            >{n || "·"}</div>
+                          )}
                         </td>
                       );
                     })}
+                    <td className="px-2 py-1.5 text-center text-xs font-semibold tabular-nums" style={{ color: "var(--green)" }}>{done}</td>
+                    <td className={`px-2 py-1.5 text-center text-xs font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{left}</td>
                   </tr>
                 );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+              }
+
+              return (
+                <tr
+                  key={client.id}
+                  className="transition-colors"
+                  style={{ borderBottom: "1px solid var(--line)" }}
+                >
+                  {/* Client name (clickable) */}
+                  <td className="px-2 py-1.5">
+                    <button
+                      onClick={() => onClientClick?.(client.id)}
+                      className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
+                      title={`Open ${client.name} details`}
+                    >
+                      {client.name}
+                    </button>
+                  </td>
+
+                  {/* Assigned */}
+                  <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                    {svc.processor || svc.assignedTo || "-"}
+                  </td>
+
+                  {/* Cadence */}
+                  {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+                  <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                    {variant === "payroll"
+                      ? prCadence
+                      : svc.frequency}
+                  </td>
+                  )}
+
+                  {/* Processor column (payroll only) */}
+                  {variant === "payroll" && (
+                  <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                    {processor}
+                  </td>
+                  )}
+
+                  {/* Month cells */}
+                  {MONTHS_SHORT.map((_m, i) => {
+                    const isActive = activeMonths.has(i);
+                    const isCurrentMonth = i === currentMonth && !isHistorical;
+                    const cellReadOnly = readOnly || isHistorical;
+
+                    // ── Payroll variant: count-based cells ──
+                    if (variant === "payroll" && isActive) {
+                      const prCount = prCountsArr[i] || 0;
+                      const isEditing = editingPr === `${client.id}:${i}`;
+                      const pct = maxRuns > 0 ? prCount / maxRuns : 0;
+
+                      return (
+                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min="0"
+                              max={maxRuns}
+                              value={editPrValue}
+                              onChange={(e) => setEditPrValue(e.target.value)}
+                              onBlur={() => prCommitEdit(client.id, i)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") prCommitEdit(client.id, i);
+                                if (e.key === "Escape") setEditingPr(null);
+                              }}
+                              autoFocus
+                              className="inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums text-center"
+                              style={{
+                                backgroundColor: "#fff",
+                                border: "2px solid var(--teal)",
+                                color: "var(--ink)",
+                                outline: "none",
+                              }}
+                            />
+                          ) : (
+                            <button
+                              onClick={cellReadOnly ? undefined : (e) => prBump(client.id, i, e)}
+                              onDoubleClick={cellReadOnly ? undefined : () => prStartEdit(client.id, i, prCount)}
+                              disabled={cellReadOnly}
+                              className={`inline-flex items-center justify-center w-full h-8 rounded text-xs font-semibold tabular-nums transition-colors ${
+                                cellReadOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
+                              }`}
+                              style={{
+                                backgroundColor: prCount > 0
+                                  ? pct >= 1 ? "var(--green-soft)"
+                                    : pct >= 0.5 ? "var(--amber-soft)"
+                                    : "var(--blue-soft)"
+                                  : "transparent",
+                                color: prCount > 0
+                                  ? pct >= 1 ? "var(--green)"
+                                    : pct >= 0.5 ? "var(--amber)"
+                                    : "var(--blue)"
+                                  : "var(--muted)",
+                                border: "none",
+                                outline: "none",
+                              }}
+                              title={`${MONTHS_SHORT[i]}: ${prCount}/${maxRuns} runs — click +1, shift-click -1, double-click to type`}
+                            >
+                              {prCount > 0 ? `${prCount}/${maxRuns}` : "·"}
+                            </button>
+                          )}
+                        </td>
+                      );
+                    }
+
+                    // ── Default variant: mcell squares (demo v7 style) ──
+                    const stage = (stages[i] || "") as WorklistStage;
+                    const style = STAGE_STYLES[stage];
+                    const isPastDue =
+                      isActive &&
+                      i < currentMonth &&
+                      stage !== "dn" &&
+                      stage !== "na" &&
+                      stage !== "" &&
+                      !isHistorical;
+
+                    const t = stage === "" ? (isPastDue && !isHistorical ? "!" : "·")
+                      : stage === "ip" ? "•"
+                      : stage === "wc" ? "⏳"
+                      : stage === "pp" ? "✓"
+                      : stage === "dn" ? "✓"
+                      : stage === "na" ? "–" : "";
+                    const delayed = isPastDue && !isHistorical;
+                    const lockHist = isHistorical && isActive;
+                    return (
+                      <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
+                        <div
+                          onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
+                          className="mcell"
+                          style={{
+                            width: 30, height: 30, borderRadius: 8,
+                            border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
+                            background: !isActive ? "transparent" : style.bg,
+                            color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            margin: "0 auto",
+                            fontWeight: 700, fontSize: 14, userSelect: "none",
+                            cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
+                            boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
+                            opacity: !isActive && !lockHist ? 0 : 1,
+                          } as React.CSSProperties}
+                          title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${STAGE_LABELS[stage]}${isHistorical ? ` (${year})` : ""}`}
+                        >{isActive || lockHist ? t : ""}</div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
       </div>
 
       {/* ── Fine-print note ── */}
@@ -777,17 +900,21 @@ export default function WorklistTable({
           expected count is cleared. Click a month to add one, shift-click to
           subtract.
         </p>
+      ) : variant === "payroll" ? (
+        <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
+          Click a month cell to add one payroll run, shift-click to remove one.
+          The cadence (Weekly=&thinsp;5, Bi-Weekly=&thinsp;2, Monthly=&thinsp;1) sets the maximum
+          runs per month for each client. Double-click to type a specific number.
+        </p>
       ) : (
       <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
         {!isHistorical
           ? serviceKey === "financials"
-            ? "Every service uses one workflow: In progress \u2192 Waiting on client \u2192 Prepared \u2192 Done. Anything past due flags red on its own. Fees and billing are owner-only and stay out of the team\u2019s view."
-            : "Every service uses one workflow: In progress \u2192 Waiting on client \u2192 Prepared \u2192 Done. \u201CWaiting on client\u201D signals you\u2019re blocked; anything past due flags red automatically."
+            ? "Every service uses one workflow: In progress → Waiting on client → Prepared → Done. Anything past due flags red on its own. Fees and billing are owner-only and stay out of the team&rsquo;s view."
+            : "Every service uses one workflow: In progress → Waiting on client → Prepared → Done. &ldquo;Waiting on client&rdquo; signals you&rsquo;re blocked; anything past due flags red automatically."
           : `Read-only history for ${year}. Switch the Year selector back to ${currentYear} to make changes.`}
       </p>
       )}
-
-      {/* ── Stage Picker — removed: single-click cycling now ── */}
     </div>
   );
 }
@@ -841,7 +968,7 @@ function StatCard({
   color,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   color?: string;
 }) {
   return (
