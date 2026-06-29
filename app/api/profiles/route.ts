@@ -1,13 +1,19 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/profiles
  * List all profiles mapped to the User shape used by app/users
  */
 export async function GET() {
-  const supabase = await createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
 
   const { data: profiles, error } = await supabase
     .from("profiles")
@@ -103,7 +109,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { db: { schema: "tap_hub_project" } }
+    );
 
     // 1. Create user in Supabase Auth via sign-up (works with anon key)
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -177,7 +187,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { db: { schema: "tap_hub_project" } }
+    );
 
     const updateData: any = {};
     if (full_name !== undefined) updateData.full_name = full_name;

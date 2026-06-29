@@ -187,7 +187,15 @@ export default function RootLayout({
         const res = await fetch("/api/profiles");
         if (!res.ok) return;
         const users = await res.json();
-        const currentUser = Array.isArray(users) ? users.find((u: any) => u.email === "tushar@tapallc.com") : null;
+        if (!Array.isArray(users)) return;
+        // Read current user's name from cookie (profiles has no email column)
+        const cookieMatch = document.cookie.match(/(?:^|;\\s*)tap_demo_user=([^;]*)/);
+        const userName = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
+        if (!userName) return;
+        const currentUser = users.find((u: any) => {
+          const dbName = (u.name || "").trim().toLowerCase();
+          return dbName === userName.toLowerCase() || dbName.startsWith(userName.split(" ").pop()?.toLowerCase() || "");
+        });
         if (currentUser?.modules) {
           setUserModules(currentUser.modules as string[]);
         }
