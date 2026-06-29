@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * Auth proxy — replaces middleware.ts in Next.js 16.
- * Refreshes Supabase sessions and protects all routes except
- * /login and /auth/callback.
+ * Checks for demo cookie or Supabase session cookie.
+ * Protects all routes except /login and /auth/callback.
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
@@ -13,36 +13,13 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({
-            request,
-          });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
-      },
-    },
-  );
+  const cookieHeader = request.headers.get("cookie") || "";
 
-  // Refresh the session (required for server-side auth to work)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Check for demo login cookie
+  const hasDemoCookie = /(?:^|;\s*)tap_demo_user=([^;]*)/.test(cookieHeader);
 
-  // Also check for demo login cookie
-  const hasDemoCookie = request.cookies.get("tap_demo_user")?.value;
+  // Check for Supabase auth token cookie
+  const hasAuthToken = /(?:^|;\s*)sb-[^-]+-auth-token=/.test(cookieHeader);
 
   const { pathname } = request.nextUrl;
 
@@ -52,14 +29,14 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/auth/callback") ||
     pathname.startsWith("/api/");
 
-  if (!user && !hasDemoCookie && !isPublicRoute) {
+  if (!hasDemoCookie && !hasAuthToken && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // Redirect authenticated users away from login
-  if ((user || hasDemoCookie) && pathname.startsWith("/login")) {
+  if ((hasDemoCookie || hasAuthToken) && pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
