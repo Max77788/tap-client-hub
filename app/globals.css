@@ -98,15 +98,15 @@ main a:hover {
   text-align: left;
   font-weight: 600;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 13px 14px;
+  padding: 10px 10px;
   background: #faf7f0;
   border-bottom: 1px solid var(--line);
 }
 .worklist-panel td {
-  padding: 12px 14px;
+  padding: 8px 10px;
   border-bottom: 1px solid #efeade;
   vertical-align: middle;
 }
@@ -118,11 +118,11 @@ main a:hover {
 }
 .worklist-panel .mh {
   text-align: center;
-  padding: 11px 4px;
+  padding: 10px 2px;
 }
 .worklist-panel .mtd {
   text-align: center;
-  padding: 7px 3px;
+  padding: 4px 2px;
 }
 
 /* ── Input / Select / Textarea base (demo style) ── */
@@ -212,11 +212,11 @@ tbody tr:hover { background: #fcfaf4; }
   input, select { font-size: 16px !important; }
 }
 
-/* ── Worklist month cells (demo: 30x30 mcell) ── */
+/* ── Worklist month cells (compact: 26x26 to fit 12 months) ── */
 .mcell {
-  width: 30px; height: 30px; border-radius: 8px;
+  width: 26px; height: 26px; border-radius: 6px;
   border: 1px solid var(--line); background: #fff;
-  cursor: pointer; font-weight: 700; font-size: 14px;
+  cursor: pointer; font-weight: 600; font-size: 11px;
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto; transition: .1s; user-select: none;
 }

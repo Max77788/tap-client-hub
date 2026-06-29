@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 
+// ── Helper: create a Supabase client ──
+async function getSupabase() {
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
+}
+
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FIN: "financials", PR: "payroll", STX: "sales_tax",
   T9: "1099s", REND: "renditions", TAX: "tax_returns",
@@ -108,6 +118,50 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount } });
+  } catch (e: any) {
+    return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
+  }
+}
+
+// ── PATCH /api/clients — update a client service field (e.g. assigned_to) ──
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await getSupabase();
+    const body = await request.json();
+    const { csId, assignedTo } = body;
+
+    if (!csId) {
+      return NextResponse.json({ error: "csId is required" }, { status: 400 });
+    }
+
+    // If assignedTo is a display name, resolve it to profile UUID
+    let assignedToId: string | null = null;
+    if (assignedTo && assignedTo !== "Unassigned" && assignedTo !== "") {
+      // Check if it's already a UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(assignedTo)) {
+        assignedToId = assignedTo;
+      } else {
+        // Look up UUID from display name
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("full_name", assignedTo)
+          .maybeSingle();
+        assignedToId = profile?.id || null;
+      }
+    }
+
+    const { error } = await supabase
+      .from("client_services")
+      .update({ assigned_to: assignedToId })
+      .eq("id", csId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, assignedTo });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }

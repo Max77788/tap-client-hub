@@ -171,14 +171,59 @@ export default function WorklistTable({
 
   // ── Search state ──
   const [search, setSearch] = useState("");
+  const [cadenceFilter, setCadenceFilter] = useState<string>("All");
   const filteredClients = useMemo(
-    () =>
-      search
-        ? serviceClients.filter((c) =>
-            c.name.toLowerCase().includes(search.toLowerCase()),
-          )
-        : serviceClients,
-    [serviceClients, search],
+    () => {
+      let list = serviceClients;
+      if (search) {
+        list = list.filter((c) =>
+          c.name.toLowerCase().includes(search.toLowerCase()),
+        );
+      }
+      if (variant === "payroll" && cadenceFilter !== "All") {
+        list = list.filter((c) => {
+          const svc = c.services?.find((s: any) => s.key === "payroll");
+          const freq = svc?.frequency || "Monthly";
+          const cadence = freq === "Weekly" ? "Weekly"
+            : (freq === "Bi-Weekly" || freq === "Semi-Monthly") ? "Bi-Weekly"
+            : "Monthly";
+          return cadence === cadenceFilter;
+        });
+      }
+      return list;
+    },
+    [serviceClients, search, cadenceFilter, variant],
+  );
+
+  // ── Staff list for Assigned dropdown ──
+  const [staffList, setStaffList] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/profiles")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setStaffList(data.map((p: any) => p.name).filter(Boolean));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Handle Assigned change (payroll inline dropdown) ──
+  const [assignedOverrides, setAssignedOverrides] = useState<Record<string, string>>({});
+  const handleAssignedChange = useCallback(
+    (client: any, svc: any, value: string) => {
+      if (!svc?.csId) return;
+      const key = `${client.id}:payroll`;
+      // Optimistic local update
+      setAssignedOverrides((prev) => ({ ...prev, [key]: value }));
+      // Persist via PATCH /api/clients
+      fetch("/api/clients", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csId: svc.csId, assignedTo: value }),
+      }).catch((e) => console.error("Failed to update assigned:", e));
+    },
+    [],
   );
 
   // ── Initialize worklist state from client data ──
@@ -343,6 +388,91 @@ export default function WorklistTable({
     [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
   );
 
+
+  // ── T9 counts local state ──
+  const [t9Counts, setT9Counts] = useState<Record<string, number[]>>(() => {
+    const map: Record<string, number[]> = {};
+    for (const client of clients) {
+      const svc = client.services.find((s: any) => s.key === "1099s");
+      if (!svc?.enabled) continue;
+      const key = `${client.id}:1099s`;
+      if (svc.t9Counts && Array.isArray(svc.t9Counts)) {
+        map[key] = [...svc.t9Counts];
+      } else {
+        map[key] = Array(12).fill(0);
+      }
+    }
+    return map;
+  });
+
+  // Re-sync t9 counts when clients change
+  useEffect(() => {
+    setT9Counts((prev) => {
+      const next: Record<string, number[]> = {};
+      for (const client of clients) {
+        const svc = client.services.find((s: any) => s.key === "1099s");
+        if (!svc?.enabled) continue;
+        const key = `${client.id}:1099s`;
+        if (prev[key]) { next[key] = prev[key]; }
+        else if (svc.t9Counts && Array.isArray(svc.t9Counts)) { next[key] = [...svc.t9Counts]; }
+        else { next[key] = Array(12).fill(0); }
+      }
+      return next;
+    });
+  }, [clients]);
+
+  // ── T9 count edit-in-place state ──
+  const [editingT9, setEditingT9] = useState<string | null>(null);
+  const [editT9Value, setEditT9Value] = useState("");
+
+  // ── T9 bump handler ──
+  const t9Bump = useCallback((clientId: string, monthIdx: number, ev: React.MouseEvent) => {
+    if (isHistorical) return;
+    const key = `${clientId}:1099s`;
+    setT9Counts((prev) => {
+      const counts = [...(prev[key] ?? Array(12).fill(0))];
+      const delta = ev.shiftKey ? -1 : 1;
+      counts[monthIdx] = Math.max(0, (counts[monthIdx] || 0) + delta);
+      // Persist
+      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
+      if (svc?.csId) {
+        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+        fetch("/api/period-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
+        }).catch(() => {});
+      }
+      return { ...prev, [key]: counts };
+    });
+  }, [isHistorical, clients, year]);
+
+  const t9StartEdit = useCallback((clientId: string, monthIdx: number, currentVal: number) => {
+    if (isHistorical) return;
+    setEditingT9(`${clientId}:${monthIdx}`);
+    setEditT9Value(String(currentVal || 0));
+  }, [isHistorical]);
+
+  const t9CommitEdit = useCallback((clientId: string, monthIdx: number) => {
+    const val = parseInt(editT9Value) || 0;
+    const key = `${clientId}:1099s`;
+    setT9Counts((prev) => {
+      const counts = [...(prev[key] ?? Array(12).fill(0))];
+      counts[monthIdx] = Math.max(0, val);
+      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
+      if (svc?.csId) {
+        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
+        fetch("/api/period-counts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
+        }).catch(() => {});
+      }
+      return { ...prev, [key]: counts };
+    });
+    setEditingT9(null);
+  }, [editT9Value, clients, year]);
+
   // ── Stats ──
   const stats = useMemo(() => {
     if (variant === "t9") {
@@ -435,7 +565,7 @@ export default function WorklistTable({
     }
 
     return { dueThisMonth, inProgress, waiting, prepared, done, behind, notStarted, currentMonthName, yDue, yDone };
-  }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical, prCounts]);
+  }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical, prCounts, t9Counts]);
 
   // ── Stage legend ──
   const legendItems: { stage: WorklistStage; dot: string }[] = [
@@ -454,90 +584,6 @@ export default function WorklistTable({
   const t9PostCols = variant === "t9" ? 2 : 0; // Done + Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
   const colCount = baseCols + extraCols + payrollCols + t9PreCols + 12 + t9PostCols;
-
-  // ── T9 counts local state ──
-  const [t9Counts, setT9Counts] = useState<Record<string, number[]>>(() => {
-    const map: Record<string, number[]> = {};
-    for (const client of clients) {
-      const svc = client.services.find((s: any) => s.key === "1099s");
-      if (!svc?.enabled) continue;
-      const key = `${client.id}:1099s`;
-      if (svc.t9Counts && Array.isArray(svc.t9Counts)) {
-        map[key] = [...svc.t9Counts];
-      } else {
-        map[key] = Array(12).fill(0);
-      }
-    }
-    return map;
-  });
-
-  // Re-sync t9 counts when clients change
-  useEffect(() => {
-    setT9Counts((prev) => {
-      const next: Record<string, number[]> = {};
-      for (const client of clients) {
-        const svc = client.services.find((s: any) => s.key === "1099s");
-        if (!svc?.enabled) continue;
-        const key = `${client.id}:1099s`;
-        if (prev[key]) { next[key] = prev[key]; }
-        else if (svc.t9Counts && Array.isArray(svc.t9Counts)) { next[key] = [...svc.t9Counts]; }
-        else { next[key] = Array(12).fill(0); }
-      }
-      return next;
-    });
-  }, [clients]);
-
-  // ── T9 count edit-in-place state ──
-  const [editingT9, setEditingT9] = useState<string | null>(null);
-  const [editT9Value, setEditT9Value] = useState("");
-
-  // ── T9 bump handler ──
-  const t9Bump = useCallback((clientId: string, monthIdx: number, ev: React.MouseEvent) => {
-    if (isHistorical) return;
-    const key = `${clientId}:1099s`;
-    setT9Counts((prev) => {
-      const counts = [...(prev[key] ?? Array(12).fill(0))];
-      const delta = ev.shiftKey ? -1 : 1;
-      counts[monthIdx] = Math.max(0, (counts[monthIdx] || 0) + delta);
-      // Persist
-      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
-      if (svc?.csId) {
-        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
-        fetch("/api/period-counts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
-        }).catch(() => {});
-      }
-      return { ...prev, [key]: counts };
-    });
-  }, [isHistorical, clients, year]);
-
-  const t9StartEdit = useCallback((clientId: string, monthIdx: number, currentVal: number) => {
-    if (isHistorical) return;
-    setEditingT9(`${clientId}:${monthIdx}`);
-    setEditT9Value(String(currentVal || 0));
-  }, [isHistorical]);
-
-  const t9CommitEdit = useCallback((clientId: string, monthIdx: number) => {
-    const val = parseInt(editT9Value) || 0;
-    const key = `${clientId}:1099s`;
-    setT9Counts((prev) => {
-      const counts = [...(prev[key] ?? Array(12).fill(0))];
-      counts[monthIdx] = Math.max(0, val);
-      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
-      if (svc?.csId) {
-        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
-        fetch("/api/period-counts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
-        }).catch(() => {});
-      }
-      return { ...prev, [key]: counts };
-    });
-    setEditingT9(null);
-  }, [editT9Value, clients, year]);
 
   if (loading) {
     return (
@@ -562,10 +608,7 @@ export default function WorklistTable({
         </div>
       ) : variant === "payroll" ? (
         <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-          <StatCard label="Total payroll runs" value={stats.totalRuns} color="var(--ink)" />
-          <StatCard label={`Runs in ${stats.currentMonthName}`} value={stats.monthRuns} color="var(--blue)" />
-          <StatCard label="Total capacity" value={stats.totalMax} color="var(--amber)" />
-          <StatCard label="Utilization" value={`${stats.pct}%`} color="var(--green)" />
+          <StatCard label="Total missing runs" value={Math.max(0, stats.totalMax - stats.totalRuns)} color="var(--red)" />
         </div>
       ) : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
@@ -588,7 +631,7 @@ export default function WorklistTable({
       </div>
       )}
 
-      {/* ── Search ── */}
+      {/* ── Search + Cadence filter ── */}
       {variant !== "t9" && (
       <div className="flex gap-2 items-center">
         <input
@@ -598,6 +641,18 @@ export default function WorklistTable({
           placeholder="Search clients..."
           className="flex-1 px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
         />
+        {variant === "payroll" && (
+          <select
+            value={cadenceFilter}
+            onChange={(e) => setCadenceFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] cursor-pointer"
+          >
+            <option value="All">All cadences</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Bi-Weekly">Bi-Weekly</option>
+            <option value="Monthly">Monthly</option>
+          </select>
+        )}
         {search && filteredClients.length < serviceClients.length && (
           <span className="text-[11px] text-[var(--muted)] whitespace-nowrap">
             {filteredClients.length} of {serviceClients.length}
@@ -635,27 +690,27 @@ export default function WorklistTable({
 
       {/* ── Main table ── */}
       <div style={{ overflowX: "auto", borderRadius: 14, border: "1px solid var(--line)" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
-            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Client</th>
-            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Assigned</th>
-            {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Cadence</th>
-            )}
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2">Client</th>
             {variant === "payroll" && (
-            <th className="text-left text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Processor</th>
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2">Processor</th>
+            )}
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2">Assigned</th>
+            {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2">Cadence</th>
             )}
             {variant === "t9" && (
-            <th className="text-center text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-2 py-2.5">Expected</th>
+            <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2">Expected</th>
             )}
             {MONTHS_SHORT.map((m) => (
-              <th key={m} className="text-center text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2.5" style={{ width: 38 }}>{m}</th>
+              <th key={m} className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2" style={{ width: 30 }}>{m}</th>
             ))}
             {variant === "t9" && (
             <>
-              <th className="text-center text-[11px] font-semibold text-[var(--green)] uppercase tracking-wider px-1 py-2.5">Done</th>
-              <th className="text-center text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2.5">Left</th>
+              <th className="text-center text-[10px] font-semibold text-[var(--green)] uppercase tracking-wider px-0.5 py-2">Done</th>
+              <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2">Left</th>
             </>
             )}
           </tr>
@@ -690,12 +745,15 @@ export default function WorklistTable({
                 const left = Math.max(0, exp - done);
                 return (
                   <tr key={client.id} className="transition-colors" style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td className="px-2 py-1.5">
+                    <td className="px-1.5 py-1">
                       <button onClick={() => onClientClick?.(client.id)}
-                        className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
+                        className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
-                    <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.processor || svc.assignedTo || "-"}</td>
-                    <td className="px-2 py-1.5 text-center text-xs font-semibold text-[var(--ink)] tabular-nums">{exp || "—"}</td>
+                    <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.processor || svc.assignedTo || "-"}</td>
+                    {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+                    <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
+                    )}
+                    <td className="px-1.5 py-1 text-center text-[11px] font-semibold text-[var(--ink)] tabular-nums">{exp || "—"}</td>
                     {MONTHS_SHORT.map((mo, i) => {
                       const n = +counts[i] || 0;
                       const isCM = i === currentMonth && !isHistorical;
@@ -715,7 +773,7 @@ export default function WorklistTable({
                                 if (e.key === "Escape") setEditingT9(null);
                               }}
                               autoFocus
-                              className="inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums text-center"
+                              className="inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums text-center"
                               style={{
                                 backgroundColor: "#fff",
                                 border: "2px solid var(--teal)",
@@ -727,7 +785,7 @@ export default function WorklistTable({
                             <div
                               onClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
                               onDoubleClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
-                              className={`inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
+                              className={`inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
                               style={{
                                 backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
                                 color: n > 0 ? "var(--green)" : "var(--muted)",
@@ -738,8 +796,8 @@ export default function WorklistTable({
                         </td>
                       );
                     })}
-                    <td className="px-2 py-1.5 text-center text-xs font-semibold tabular-nums" style={{ color: "var(--green)" }}>{done}</td>
-                    <td className={`px-2 py-1.5 text-center text-xs font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{left}</td>
+                    <td className="px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums" style={{ color: "var(--green)" }}>{done}</td>
+                    <td className={`px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{left}</td>
                   </tr>
                 );
               }
@@ -751,34 +809,47 @@ export default function WorklistTable({
                   style={{ borderBottom: "1px solid var(--line)" }}
                 >
                   {/* Client name (clickable) */}
-                  <td className="px-2 py-1.5">
+                  <td className="px-1.5 py-1">
                     <button
                       onClick={() => onClientClick?.(client.id)}
-                      className="text-sm font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
+                      className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
                       title={`Open ${client.name} details`}
                     >
                       {client.name}
                     </button>
                   </td>
 
-                  {/* Assigned */}
-                  <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
-                    {svc.processor || svc.assignedTo || "-"}
+                  {/* Processor column (payroll only) */}
+                  {variant === "payroll" && (
+                  <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                    {processor}
+                  </td>
+                  )}
+
+                  {/* Assigned — inline editable dropdown */}
+                  <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                    {variant === "payroll" ? (
+                      <select
+                        value={assignedOverrides[`${client.id}:payroll`] ?? (svc.assignedTo || "")}
+                        onChange={(e) => handleAssignedChange(client, svc, e.target.value)}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px]"
+                      >
+                        <option value="">Unassigned</option>
+                        {staffList.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      svc.processor || svc.assignedTo || "-"
+                    )}
                   </td>
 
                   {/* Cadence */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-                  <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                  <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
                     {variant === "payroll"
                       ? prCadence
                       : svc.frequency}
-                  </td>
-                  )}
-
-                  {/* Processor column (payroll only) */}
-                  {variant === "payroll" && (
-                  <td className="px-2 py-1.5 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
-                    {processor}
                   </td>
                   )}
 
@@ -809,7 +880,7 @@ export default function WorklistTable({
                                 if (e.key === "Escape") setEditingPr(null);
                               }}
                               autoFocus
-                              className="inline-flex items-center justify-center w-full h-7 rounded text-xs font-semibold tabular-nums text-center"
+                              className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums text-center"
                               style={{
                                 backgroundColor: "#fff",
                                 border: "2px solid var(--teal)",
@@ -822,7 +893,7 @@ export default function WorklistTable({
                               onClick={cellReadOnly ? undefined : (e) => prBump(client.id, i, e)}
                               onDoubleClick={cellReadOnly ? undefined : () => prStartEdit(client.id, i, prCount)}
                               disabled={cellReadOnly}
-                              className={`inline-flex items-center justify-center w-full h-8 rounded text-xs font-semibold tabular-nums transition-colors ${
+                              className={`inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums transition-colors ${
                                 cellReadOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
                               }`}
                               style={{
@@ -873,13 +944,13 @@ export default function WorklistTable({
                           onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
                           className="mcell"
                           style={{
-                            width: 30, height: 30, borderRadius: 8,
+                            width: 26, height: 26, borderRadius: 6,
                             border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
                             background: !isActive ? "transparent" : style.bg,
                             color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto",
-                            fontWeight: 700, fontSize: 14, userSelect: "none",
+                            fontWeight: 600, fontSize: 11, userSelect: "none",
                             cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
                             boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
                             opacity: !isActive && !lockHist ? 0 : 1,

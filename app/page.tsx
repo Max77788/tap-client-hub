@@ -30,21 +30,12 @@ export default function ClientsPage() {
 
   // Compute type-specific stats and service metrics from loaded clients
   const clientStats = useMemo(() => {
-    const mf = clients.filter(c => c.services.some(s => s.key === "financials" && s.enabled)).length;
-    const behind = clients.filter(c =>
-      c.services.some(s => {
-        if (!s.enabled || !s.months) return false;
-        const now = new Date().getMonth();
-        return s.months[now] && s.months[now] !== "done" && s.months[now] !== "lock" && s.months[now] !== "na";
-      })
-    ).length;
     const finCount = clients.filter(c => c.services.some(s => s.key === "financials" && s.enabled)).length;
     const prCount = clients.filter(c => c.services.some(s => s.key === "payroll" && s.enabled)).length;
     const stxCount = clients.filter(c => c.services.some(s => s.key === "sales_tax" && s.enabled)).length;
     const t9Count = clients.filter(c => c.services.some(s => s.key === "1099s" && s.enabled)).length;
     const rendCount = clients.filter(c => c.services.some(s => s.key === "renditions" && s.enabled)).length;
-    const taxCount = clients.filter(c => c.services.some(s => s.key === "tax_returns" && s.enabled)).length;
-    return { ...stats, monthlyFinancials: mf, behindThisMonth: behind, finCount, prCount, stxCount, t9Count, rendCount, taxCount };
+    return { ...stats, monthlyFinancials: clients.filter(c => c.services.some(s => s.key === "financials" && s.enabled)).length, finCount, prCount, stxCount, t9Count, rendCount };
   }, [clients, stats]);
   const groups = useMemo(() => getGroups(clients), [clients]);
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
@@ -156,7 +147,6 @@ export default function ClientsPage() {
         <StatCard label="Business" value={clientStats.business} color="var(--teal)" />
         <StatCard label="Personal" value={clientStats.personal} color="var(--blue)" />
         <StatCard label="Financials" value={clientStats.monthlyFinancials} color="var(--green)" />
-        <StatCard label="Behind this month" value={clientStats.behindThisMonth} color="var(--amber)" />
       </div>
 
       {/* ── Service metrics stat cards ── */}
@@ -166,7 +156,6 @@ export default function ClientsPage() {
         <StatCard label="Sales Tax" value={clientStats.stxCount} color="var(--amber)" />
         <StatCard label="1099s" value={clientStats.t9Count} color="#7a5436" />
         <StatCard label="Renditions" value={clientStats.rendCount} color="#3a5a44" />
-        <StatCard label="Tax Returns" value={clientStats.taxCount} color="#5a4a80" />
       </div>
 
       {/* ── Controls: Search + Filters + Actions ── */}

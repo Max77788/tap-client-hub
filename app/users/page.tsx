@@ -16,7 +16,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modalUser, setModalUser] = useState<User | null>(null);
+  const [modalUser, setModalUser] = useState<User | "new" | null>(null);
   const [editForm, setEditForm] = useState<Partial<User & { password?: string }>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -50,10 +50,10 @@ export default function UsersPage() {
     pending: users.filter(u => u.status !== "Active").length,
   }), [users]);
 
-  function openModal(user: User | null) {
+  function openModal(user: User | "new" | null) {
     setModalUser(user);
     setSaveError(null);
-    setEditForm(user ? {
+    setEditForm(user !== "new" ? {
       name: user.name, location: user.location, role: user.role,
       mgr: user.mgr, username: user.username, modules: [...user.modules],
       email: user.email,
@@ -67,7 +67,7 @@ export default function UsersPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      if (modalUser) {
+      if (modalUser !== "new") {
         // Update existing user
         const res = await fetch("/api/profiles", {
           method: "PATCH",
@@ -182,7 +182,7 @@ export default function UsersPage() {
 
       {/* ── Add button ── */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-        <button className="btn" onClick={() => openModal(null)} style={{
+        <button className="btn" onClick={() => openModal("new")} style={{
           all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
           padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
           display: "inline-flex", gap: 7, alignItems: "center",
@@ -245,16 +245,16 @@ export default function UsersPage() {
             maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow)",
           }} onClick={e => e.stopPropagation()}>
             <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600, padding: "20px 24px 4px", margin: 0 }}>
-              {modalUser ? "Edit user" : "Add a user"}
+              {modalUser === "new" ? "Add a user" : "Edit user"}
             </h2>
             <div className="msub" style={{ color: "var(--muted)", fontSize: 13, padding: "0 24px 14px", borderBottom: "1px solid var(--line)" }}>
-              {modalUser ? "Update their details and access." : "Provision a new login — the user signs in with their email and the password you set."}
+              {modalUser === "new" ? "Provision a new login — the user signs in with their email and the password you set." : "Update their details and access."}
             </div>
             <div className="mform" style={{ padding: "18px 24px" }}>
               <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Full name</label>
               <input className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
 
-              {!modalUser && (
+              {modalUser === "new" && (
                 <>
                   <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Email address</label>
                   <input className="ef" type="email" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="user@tapallc.com" />
@@ -305,7 +305,7 @@ export default function UsersPage() {
               )}
 
               {/* ── 2FA admin toggle ── */}
-              {modalUser && (
+              {modalUser !== "new" && (
                 <div className="twofa-admin" style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>Two-factor authentication</div>

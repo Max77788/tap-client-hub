@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Client } from "@/lib/types";
-import { SERVICE_META } from "@/lib/data";
+import { SERVICE_META, STAFF } from "@/lib/data";
 
 // ── Stage display for month tracking in the slideover ──
 const UNIFIED_STAGES = [
@@ -60,6 +60,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   useEffect(() => {
     setLocalSvcs(client.services);
     setEditing(false);
+    // Initialize per-service assignees for edit view
+    const assigneeMap: Record<string, string> = {};
+    client.services.forEach((s: any) => {
+      assigneeMap[s.key] = s.processor || s.assignedTo || "Unassigned";
+    });
+    setESvcAssignees(assigneeMap);
     // Load existing sales tax line items
     const stxSvc = client.services.find((s: any) => s.key === "sales_tax");
     setStxLineItems(stxSvc?.salesTaxLineItems || []);
@@ -78,6 +84,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eState, setEState] = useState(client.state);
   const [eZip, setEZip] = useState((client as any).zip || "");
   const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
+  const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
 
   // Close on Escape
   useEffect(() => {
@@ -399,10 +406,21 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   function saveEdit() {
     const nm = eName.trim();
     if (!nm) return;
-    // Merge line items into sales tax service
-    const updatedSvcs = localSvcs.map((s: any) =>
-      s.key === "sales_tax" ? { ...s, salesTaxLineItems: stxLineItems } : s
-    );
+    // Merge line items into sales tax service and per-service assignees
+    const updatedSvcs = localSvcs.map((s: any) => {
+      let updated = s;
+      if (s.key === "sales_tax") {
+        updated = { ...s, salesTaxLineItems: stxLineItems };
+      }
+      // Apply per-service assignee change
+      const newAssignee = eSvcAssignees[s.key];
+      if (newAssignee && newAssignee !== "Unassigned") {
+        updated = { ...updated, processor: newAssignee, assignedTo: newAssignee };
+      } else if (newAssignee === "Unassigned") {
+        updated = { ...updated, processor: "", assignedTo: "" };
+      }
+      return updated;
+    });
     onSave?.({
       ...c,
       name: nm, type: eType as "Business" | "Personal", group: eGroup,
@@ -483,6 +501,29 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <input className="ef" style={efStyle} value={eZip} onChange={e => setEZip(e.target.value)} />
             </div>
           </div>
+
+          {/* Per-service assignee editing */}
+          <div className="sect" style={{ ...sectStyle, marginTop: 24 }}>Per-service assignee</div>
+          {localSvcs.map((svc: any) => (
+            <div key={svc.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <span style={{
+                width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, background: svcBg(svc.key), flex: "0 0 auto",
+              }}>{svcIc(svc.key)}</span>
+              <label style={{ flex: "0 0 100px", fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>
+                {svcLabel(svc.key)}
+              </label>
+              <select
+                className="ef"
+                style={{ ...efStyle, flex: 1, padding: "7px 9px", fontSize: 13 }}
+                value={eSvcAssignees[svc.key] || "Unassigned"}
+                onChange={e => setESvcAssignees(prev => ({ ...prev, [svc.key]: e.target.value }))}
+              >
+                {STAFF.map(m => <option key={m.name}>{m.name}</option>)}
+                <option>Unassigned</option>
+              </select>
+            </div>
+          ))}
         </div>
 
         {/* Footer */}

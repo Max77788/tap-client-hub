@@ -41,16 +41,16 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [tax, setTax] = useState(false);
   const [finFreq, setFinFreq] = useState("Monthly");
   const [finMonth, setFinMonth] = useState("1");
-  const [fee, setFee] = useState("");
+
   const [prFreq, setPrFreq] = useState("Bi-Weekly");
   const [prPaydate, setPrPaydate] = useState("");
   const [prPin, setPrPin] = useState("");
+  const [prEftps, setPrEftps] = useState("");
   const [prProcessor, setPrProcessor] = useState("");
   const [prProcessorOther, setPrProcessorOther] = useState("");
   const [stxFreq, setStxFreq] = useState("Monthly");
   // Sales tax line items
   const [stxLineItems, setStxLineItems] = useState<any[]>([]);
-  const [addingStx, setAddingStx] = useState(false);
   const [newStxName, setNewStxName] = useState("");
   const [newStxRt, setNewStxRt] = useState("");
   const [newStxTaxId, setNewStxTaxId] = useState("");
@@ -94,7 +94,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       const finSvc = svcs.find(s => s.key === "financials");
       if (finSvc) { setFinFreq(finSvc.frequency || "Monthly"); setFinMonth(String(finSvc.financialsMonth || 1)); }
       const prSvc = svcs.find(s => s.key === "payroll");
-      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); }
+      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); }
       const t9Svc = svcs.find(s => s.key === "1099s");
       if (t9Svc) setT9Count(String(t9Svc.expectedAnnual || ""));
       // Restore sales tax line items
@@ -105,9 +105,9 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setEmail(""); setAddEmail(""); setPhone(""); setAddPhone("");
       setAddress(""); setCity(""); setSt("TX"); setZip("");
       setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
-      setFinFreq("Monthly"); setFinMonth("1"); setFee(""); setPrFreq("Bi-Weekly"); setPrPaydate(""); setPrPin(""); setPrProcessor(""); setPrProcessorOther("");
+      setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business");
-      setStxLineItems([]); setAddingStx(false); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+      setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
     }
@@ -144,6 +144,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     addSvc("payroll", pr, prFreq, prAssigned, {
       paydate: prPaydate || undefined,
       payrollPassword: prPin || undefined,
+      eftps: prEftps || undefined,
       processor: prProcessor === "Other" ? (prProcessorOther || "Other") : (prProcessor || undefined),
     });
     addSvc("sales_tax", stx, stxFreq, stxAssigned, {
@@ -263,10 +264,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                   <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
                 </select>
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ ...labelStyle, marginTop: 8 }}>Monthly fee ($)</label>
-                <input style={inputStyle} value={fee} onChange={e => setFee(e.target.value)} placeholder="750" />
-              </div>
             </div>
             {finFreq === "Yearly" && (
               <div style={{ marginTop: 8 }}>
@@ -299,9 +296,15 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 <input style={inputStyle} value={prPaydate} onChange={e => setPrPaydate(e.target.value)} placeholder="e.g. Friday" />
               </div>
             </div>
-            <div style={{ marginTop: 8 }}>
-              <label style={labelStyle}>PIN / EFTPS password</label>
-              <input style={inputStyle} type="password" value={prPin} onChange={e => setPrPin(e.target.value)} placeholder="EFT pin" />
+            <div className="two" style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Payroll PIN</label>
+                <input style={inputStyle} type="password" value={prPin} onChange={e => setPrPin(e.target.value)} placeholder="EFT pin" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>EPTPS Password</label>
+                <input style={inputStyle} type="password" value={prEftps} onChange={e => setPrEftps(e.target.value)} placeholder="EFTPS password" />
+              </div>
             </div>
             <div style={{ marginTop: 8 }}>
               <label style={labelStyle}>Processor</label>
@@ -339,72 +342,60 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               {STAFF.map(s => <option key={s}>{s}</option>)}
             </select>
 
-            {/* Sales tax line items */}
+            {/* Sales tax line items — always visible when Sales Tax is checked */}
             <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <label style={{ ...labelStyle, margin: 0, fontSize: 11 }}>Line items</label>
+              <label style={{ ...labelStyle, margin: 0, fontSize: 11, marginBottom: 8, display: "block" }}>Add line item</label>
+              <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
+                    <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT</label>
+                    <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                    <select style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
+                      <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
+                    <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
+                    <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
+                    <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
+                    <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
+                  </div>
+                </div>
                 <button
-                  onClick={() => setAddingStx(!addingStx)}
-                  style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12px" }}
+                  style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "7px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13 }}
+                  onClick={() => {
+                    if (!newStxName.trim()) return;
+                    setStxLineItems(prev => [...prev, {
+                      serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
+                      bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                      frequency: newStxFreq,
+                    }]);
+                    setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
+                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                  }}
                 >
-                  {addingStx ? "Cancel" : "+ Add line item"}
+                  + Add line item
                 </button>
               </div>
-
-              {addingStx && (
-                <div style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
-                      <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT</label>
-                      <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
-                      <select style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
-                        <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
-                      <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
-                      <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
-                      <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
-                      <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
-                    </div>
-                  </div>
-                  <button
-                    style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "7px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13 }}
-                    onClick={() => {
-                      if (!newStxName.trim()) return;
-                      setStxLineItems(prev => [...prev, {
-                        serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
-                        bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
-                        frequency: newStxFreq,
-                      }]);
-                      setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                      setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
-                      setAddingStx(false);
-                    }}
-                  >
-                    Add line item
-                  </button>
-                </div>
-              )}
 
               {stxLineItems.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

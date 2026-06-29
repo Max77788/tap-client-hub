@@ -377,10 +377,12 @@ export default function RootLayout({
                         window.location.href = url.toString();
                       }}
                     >
-                      {[0, 1, 2].map((offset) => {
-                        const y = new Date().getFullYear() - offset;
-                        return <option key={y} value={y}>{y}{offset === 0 ? " (current)" : ""}</option>;
-                      })}
+                      {(() => {
+                        const currentYear = new Date().getFullYear();
+                        return [currentYear, currentYear - 1].filter(y => y >= 2024).map((y, idx) => (
+                          <option key={y} value={y}>{y}{idx === 0 ? " (current)" : ""}</option>
+                        ));
+                      })()}
                     </select>
                   </div>
                 )}
