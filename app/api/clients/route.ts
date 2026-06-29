@@ -69,8 +69,17 @@ export async function GET(request: Request) {
     const allCsIds = (dbServices || []).map((cs: any) => cs.id);
     const periodByCsId: Record<string, Record<number, string>> = {};
     if (allCsIds.length > 0) {
-      const { data: periods } = await supabase.from("work_periods").select("client_service_id, stage, period").in("client_service_id", allCsIds);
-      for (const wp of periods || []) {
+      const BATCH_SIZE = 200;
+      let allPeriods: any[] = [];
+      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE) {
+        const batch = allCsIds.slice(i, i + BATCH_SIZE);
+        const { data: batchPeriods } = await supabase
+          .from("work_periods")
+          .select("client_service_id, stage, period")
+          .in("client_service_id", batch);
+        if (batchPeriods) allPeriods = allPeriods.concat(batchPeriods);
+      }
+      for (const wp of allPeriods) {
         const m = wp.period?.match(/^\d{4}-(\d{2})$/);
         if (!m) continue;
         const mi = parseInt(m[1]) - 1;
