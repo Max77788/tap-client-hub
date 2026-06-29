@@ -270,9 +270,14 @@ export default function WorklistTable({
     const key = `${clientId}:payroll`;
     setPrCounts((prev) => {
       const counts = [...(prev[key] ?? Array(12).fill(0))];
-      const delta = ev.shiftKey ? -1 : 1;
       const current = counts[monthIdx] || 0;
-      const next = ev.shiftKey ? Math.max(0, current - 1) : Math.min(maxRuns, current + 1);
+      // Regular click: if count > 0, decrement; if 0, increment (toggle)
+      // Shift-click: always decrement (same behavior for non-zero cells)
+      const next = ev.shiftKey
+        ? Math.max(0, current - 1)
+        : current > 0
+          ? Math.max(0, current - 1)
+          : Math.min(maxRuns, current + 1);
       counts[monthIdx] = next;
       // Persist
       if (svc?.csId) {
@@ -622,7 +627,7 @@ export default function WorklistTable({
       {/* ── Count line ── */}
       <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
         {variant === "payroll"
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add a run, shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
           : !isHistorical
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
           : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
@@ -834,7 +839,7 @@ export default function WorklistTable({
                                 border: "none",
                                 outline: "none",
                               }}
-                              title={`${MONTHS_SHORT[i]}: ${prCount}/${maxRuns} runs — click +1, shift-click -1, double-click to type`}
+                              title={`${MONTHS_SHORT[i]}: ${prCount}/${maxRuns} runs — click to toggle (+1 if empty, -1 if any), shift-click to remove, double-click to type`}
                             >
                               {prCount > 0 ? `${prCount}/${maxRuns}` : "·"}
                             </button>
@@ -902,8 +907,8 @@ export default function WorklistTable({
         </p>
       ) : variant === "payroll" ? (
         <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
-          Click a month cell to add one payroll run, shift-click to remove one.
-          The cadence (Weekly=&thinsp;5, Bi-Weekly=&thinsp;2, Monthly=&thinsp;1) sets the maximum
+          Click any month cell to toggle its run count -- click 0 to add one, click a nonzero cell to reduce it.
+          Shift-click always removes one. Cadence (Weekly=&thinsp;5, Bi-Weekly=&thinsp;2, Monthly=&thinsp;1) sets the maximum
           runs per month for each client. Double-click to type a specific number.
         </p>
       ) : (
