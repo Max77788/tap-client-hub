@@ -24,6 +24,7 @@ function LoginContent() {
     "tushar@tapallc.com": { password: "TapHub2024!", name: "Tushar Patil" },
     "lizette@tapallc.com": { password: "TapHub2024!", name: "Lizette" },
     "mmatronin@gmail.com": { password: "test", name: "Max Matronin" },
+    "ben@aifusioniqlabs.com": { password: "TapHub2024!", name: "Ben" },
   };
 
   async function handlePasswordSubmit(e: React.FormEvent) {
