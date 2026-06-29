@@ -502,9 +502,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             </div>
           </div>
 
-          {/* Per-service assignee editing */}
+          {/* Per-service assignee editing - only for enabled services */}
           <div className="sect" style={{ ...sectStyle, marginTop: 24 }}>Per-service assignee</div>
-          {localSvcs.map((svc: any) => (
+          {localSvcs.filter((svc: any) => svc.enabled).map((svc: any) => (
             <div key={svc.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
               <span style={{
                 width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
