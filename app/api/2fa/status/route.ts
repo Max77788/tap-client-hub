@@ -68,10 +68,12 @@ export async function GET(request: Request) {
     if (!profile) {
       const emailMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
       if (emailMatch) {
+        const email = decodeURIComponent(emailMatch[1]);
+        const nameFromEmail = email.split('@')[0];
         const { data } = await supabase
           .from("profiles")
           .select("email_2fa_enabled")
-          .eq("email", decodeURIComponent(emailMatch[1]))
+          .or(`full_name.ilike.%${nameFromEmail}%,full_name.eq.${nameFromEmail}`)
           .maybeSingle();
         profile = data;
       }

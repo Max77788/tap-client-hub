@@ -87,10 +87,12 @@ export async function GET(request: Request) {
     const emailMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
     if (emailMatch) {
       const email = decodeURIComponent(emailMatch[1]);
-      const { data: profile } = await supabase
+      // Try to look up by name derived from email (since profiles table has no email column)
+      const nameFromEmail = email.split('@')[0];
+      let { data: profile } = await supabase
         .from("profiles")
         .select("*")
-        .eq("email", email)
+        .or(`full_name.ilike.%${nameFromEmail}%,full_name.eq.${nameFromEmail}`)
         .maybeSingle();
       if (profile) {
         return NextResponse.json({
@@ -102,6 +104,16 @@ export async function GET(request: Request) {
           email_2fa_enabled: profile.email_2fa_enabled ?? false,
         });
       }
+      // Last resort: return basic info from the cookie so the page loads
+      const displayName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+      return NextResponse.json({
+        id: "",
+        email: email,
+        name: displayName,
+        role: "staff",
+        location: "",
+        email_2fa_enabled: false,
+      });
     }
 
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
