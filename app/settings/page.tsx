@@ -27,6 +27,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [isDemo, setIsDemo] = useState(false);
+
+  useEffect(() => {
+    setIsDemo(document.cookie.includes("tap_demo_user") && !document.cookie.includes("sb-"));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,7 +183,21 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      {isDemo && (
+        <section>
+          <div style={{
+            background: "var(--amber-soft)", border: "1px solid #ead9b6", borderRadius: 16, padding: 20,
+          }}>
+            <p style={{ fontWeight: 600, fontSize: 14, color: "#7a5210", margin: 0 }}>Demo account</p>
+            <p style={{ fontSize: 13, color: "#7a5210", marginTop: 6, lineHeight: 1.5 }}>
+              You&rsquo;re logged in with a demo account. Password changes and two-factor authentication are not available for demo accounts. Contact your administrator for a full user account.
+            </p>
+          </div>
+        </section>
+      )}
+
       {/* ── Change Password ── */}
+      {!isDemo && (
       <section>
         <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 20, fontWeight: 600, marginBottom: 4 }}>Password</h2>
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>Set a new password for your account.</p>
@@ -203,8 +222,10 @@ export default function SettingsPage() {
           >{pwSaving ? "Updating..." : "Update Password"}</button>
         </div>
       </section>
+      )}
 
       {/* ── Two-Factor Authentication ── */}
+      {!isDemo && (
       <section>
         <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 20, fontWeight: 600, marginBottom: 4 }}>Two-Factor Authentication</h2>
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>Add an extra layer of security to your account.</p>
@@ -270,6 +291,7 @@ export default function SettingsPage() {
           )}
         </div>
       </section>
+      )}
     </div>
   );
 }

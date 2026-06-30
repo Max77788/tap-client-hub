@@ -985,7 +985,7 @@ export default function WorklistTable({
                           style={{
                             width: 26, height: 26, borderRadius: 6,
                             border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
-                            background: !isActive ? "transparent" : style.bg,
+                            background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
                             color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto",
