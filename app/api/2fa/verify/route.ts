@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser, getSupabaseClient } from "@/lib/supabase/auth-user";
 import { verifyCode } from "@/lib/email-2fa";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await getAuthUser(req.headers.get("cookie") || "");
+  if (!auth) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  const { user, supabase } = auth;
 
   let body: { code?: string } = {};
   try { body = await req.json(); } catch {
@@ -16,12 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "6-digit code is required" }, { status: 400 });
   }
 
-  const valid = await verifyCode(user.id, body.code);
+  const valid = await verifyCode(supabase, user.id, body.code);
   if (!valid) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
   }
 
-  // Clear the code and mark 2FA as enabled
   const { error } = await supabase
     .from("profiles")
     .update({

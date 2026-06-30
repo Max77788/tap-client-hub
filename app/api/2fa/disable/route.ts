@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-user";
 import { generateAndStoreCode, sendCodeEmail, verifyCode } from "@/lib/email-2fa";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !user.email) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const auth = await getAuthUser(req.headers.get("cookie") || "");
+  if (!auth || !auth.user.email) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const { user, supabase } = auth;
 
   const { data: profile } = await supabase
-    .from("profiles").select("email_2fa_enabled").eq("id", user.id).maybeSingle();
+    .from("profiles")
+    .select("email_2fa_enabled")
+    .eq("id", user.id)
+    .maybeSingle();
 
   if (!profile?.email_2fa_enabled) {
     return NextResponse.json({ error: "2FA not enabled" }, { status: 400 });
@@ -19,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   // If code provided, verify and disable
   if (body.code) {
-    const valid = await verifyCode(user.id, body.code);
+    const valid = await verifyCode(supabase, user.id, body.code);
     if (!valid) {
       return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
     }
@@ -37,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
 
   // No code — send challenge email first
-  const result = await generateAndStoreCode(user.id);
+  const result = await generateAndStoreCode(supabase, user.id);
   if (!result.ok) {
     console.error("disable: failed to store code:", result.error);
     return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });
@@ -50,7 +56,6 @@ export async function POST(req: NextRequest) {
     email: user.email,
     message: sent
       ? `Verification code sent to ${user.email}`
-      : "Code generated (email not configured)",
-    awaiting_code: true,
+      : "Code generated (email not configured — set RESEND_API_KEY)",
   });
 }

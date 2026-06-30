@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-user";
 import { generateAndStoreCode, sendCodeEmail, verifyCode } from "@/lib/email-2fa";
 
 /**
@@ -9,12 +9,12 @@ import { generateAndStoreCode, sendCodeEmail, verifyCode } from "@/lib/email-2fa
  *   2. { code: string } — verifies the code
  */
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user || !user.email) {
+  const auth = await getAuthUser(req.headers.get("cookie") || "");
+  if (!auth || !auth.user.email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const { user, supabase } = auth;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "6-digit code is required" }, { status: 400 });
     }
 
-    const valid = await verifyCode(user.id, body.code);
+    const valid = await verifyCode(supabase, user.id, body.code);
     if (!valid) {
       return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
     }
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Mode 1: send code
-  const result = await generateAndStoreCode(user.id);
+  const result = await generateAndStoreCode(supabase, user.id);
   if (!result.ok) {
     console.error("challenge: failed to store code:", result.error);
     return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });

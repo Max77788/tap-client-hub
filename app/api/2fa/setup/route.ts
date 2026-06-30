@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth-user";
 import { generateAndStoreCode, sendCodeEmail } from "@/lib/email-2fa";
 
-export async function POST() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !user.email) {
+export async function POST(req: NextRequest) {
+  const auth = await getAuthUser(req.headers.get("cookie") || "");
+  if (!auth || !auth.user.email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const { user, supabase } = auth;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -19,7 +20,7 @@ export async function POST() {
     return NextResponse.json({ error: "2FA is already enabled" }, { status: 400 });
   }
 
-  const result = await generateAndStoreCode(user.id);
+  const result = await generateAndStoreCode(supabase, user.id);
   if (!result.ok) {
     console.error("setup: failed to store code:", result.error);
     return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });

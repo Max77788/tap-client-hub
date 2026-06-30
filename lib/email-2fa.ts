@@ -1,15 +1,21 @@
-import { createClient } from "@/lib/supabase/server";
+/**
+ * 2FA email code helpers.
+ * Functions accept a supabase client rather than creating their own.
+ */
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const RESEND_FROM = "TAP Hub <notifications@email.mom-ai-agency.site>";
 
 /**
  * Generate a 6-digit code and store it on the user's profile.
  */
-export async function generateAndStoreCode(userId: string): Promise<{ code: string; ok: boolean; error?: string }> {
+export async function generateAndStoreCode(
+  supabase: SupabaseClient<any, any, any>,
+  userId: string,
+): Promise<{ code: string; ok: boolean; error?: string }> {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
-  const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -93,10 +99,10 @@ export async function sendCodeEmail(
  * Verify a code against the stored one (within expiry).
  */
 export async function verifyCode(
+  supabase: SupabaseClient<any, any, any>,
   userId: string,
   code: string,
 ): Promise<boolean> {
-  const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
     .select("email_2fa_code, email_2fa_code_expires_at")
@@ -110,10 +116,9 @@ export async function verifyCode(
 
   if (new Date(profile.email_2fa_code_expires_at) < new Date()) {
     console.warn("verifyCode: code expired for user", userId);
-    return false; // expired
+    return false;
   }
 
-  // Trim both for safety
   const stored = String(profile.email_2fa_code).trim();
   const input = String(code).trim();
   const match = stored === input;
