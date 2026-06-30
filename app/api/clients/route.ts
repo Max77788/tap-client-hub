@@ -102,6 +102,7 @@ export async function GET(request: Request) {
           csId: cs.id, key, label: SERVICE_META[key]?.label,
           enabled: true, frequency: cs.frequency || "Monthly",
           processor: cs.processor || "", assignedTo: staffNames[cs.assigned_to || ""] || cs.assigned_to || "",
+          expectedAnnual: cs.expected_annual ? Number(cs.expected_annual) || 0 : 0,
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
@@ -111,7 +112,7 @@ export async function GET(request: Request) {
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, currentStage: "not_started", months: Array(12).fill("lock") });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
