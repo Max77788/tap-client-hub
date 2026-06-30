@@ -160,4 +160,7 @@ export interface VaultEntry {
   clientId?: string;
   isBank?: boolean;
   groupLabel?: string;
+  purpose?: string;
+  additionalInfo01?: string;
+  additionalInfo02?: string;
 }

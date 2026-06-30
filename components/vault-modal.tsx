@@ -20,6 +20,9 @@ function makeEmptyEntry(): Omit<VaultEntry, "id"> {
     notes: "",
     clientId: "",
     isBank: false,
+    purpose: "",
+    additionalInfo01: "",
+    additionalInfo02: "",
   };
 }
 
@@ -38,6 +41,9 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
         notes: vaultEntry.notes || "",
         clientId: vaultEntry.clientId || "",
         isBank: vaultEntry.isBank || false,
+        purpose: vaultEntry.purpose || "",
+        additionalInfo01: vaultEntry.additionalInfo01 || "",
+        additionalInfo02: vaultEntry.additionalInfo02 || "",
       });
     } else {
       setForm(makeEmptyEntry());
@@ -205,6 +211,39 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
                 className="field-input resize-none"
               />
             </Field>
+
+            {/* Purpose */}
+            <Field label="Purpose">
+              <input
+                type="text"
+                value={form.purpose}
+                onChange={(e) => update("purpose", e.target.value)}
+                placeholder="e.g. Payroll Reports, Sales Tax"
+                className="field-input"
+              />
+            </Field>
+
+            {/* Additional Info */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Info 1">
+                <input
+                  type="text"
+                  value={form.additionalInfo01}
+                  onChange={(e) => update("additionalInfo01", e.target.value)}
+                  placeholder="Security questions, PIN, etc."
+                  className="field-input"
+                />
+              </Field>
+              <Field label="Info 2">
+                <input
+                  type="text"
+                  value={form.additionalInfo02}
+                  onChange={(e) => update("additionalInfo02", e.target.value)}
+                  placeholder="Additional notes"
+                  className="field-input"
+                />
+              </Field>
+            </div>
 
             {/* isBank checkbox */}
             <label

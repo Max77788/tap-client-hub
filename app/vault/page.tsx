@@ -211,7 +211,7 @@ export default function VaultPage() {
           <div style={{ margin: "0 6px 8px" }}>
             <table>
               <thead>
-                <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Notes</th></tr>
+                <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Purpose</th><th>Notes / Info</th></tr>
               </thead>
               <tbody>
                 {entries.map(entry => {
@@ -230,6 +230,8 @@ export default function VaultPage() {
                               Open in TAP&nbsp;Bank ↗
                             </a>
                           </td>
+                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
+                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
                           <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
                           <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
                         </>
@@ -255,9 +257,13 @@ export default function VaultPage() {
                           </a>
                         ) : "—"}
                       </td>
+                      <td className="mono" style={{ fontSize: 11, color: "var(--muted)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        title={entry.purpose || ""}>
+                        {entry.purpose || "—"}
+                      </td>
                       <td className="mono" style={{ fontSize: 11, color: "var(--muted)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                        title={entry.notes || ""}>
-                        {entry.notes || "—"}
+                        title={[entry.notes || "", entry.additionalInfo01 || "", entry.additionalInfo02 || ""].filter(Boolean).join(" | ")}>
+                        {entry.additionalInfo01 || entry.additionalInfo02 || entry.notes || "—"}
                       </td>
                     </tr>
                   );

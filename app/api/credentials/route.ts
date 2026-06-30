@@ -32,6 +32,9 @@ export async function GET() {
     clientId: c.client_id || "",
     isBank: c.is_bank || false,
     groupLabel: c.group_label || "",
+    purpose: c.purpose || "",
+    additionalInfo01: c.additional_info_01 || "",
+    additionalInfo02: c.additional_info_02 || "",
   }));
 
   return NextResponse.json(entries);
@@ -66,6 +69,9 @@ export async function POST(request: NextRequest) {
       is_bank: body.isBank || false,
       link_url: body.url?.trim() || null,
       notes: body.notes?.trim() || null,
+      purpose: body.purpose?.trim() || null,
+      additional_info_01: body.additionalInfo01?.trim() || null,
+      additional_info_02: body.additionalInfo02?.trim() || null,
     })
     .select()
     .single();
@@ -85,6 +91,9 @@ export async function POST(request: NextRequest) {
     clientId: created.client_id || "",
     isBank: created.is_bank || false,
     groupLabel: created.group_label || "",
+    purpose: created.purpose || "",
+    additionalInfo01: created.additional_info_01 || "",
+    additionalInfo02: created.additional_info_02 || "",
   };
 
   return NextResponse.json(entry, { status: 201 });
@@ -123,6 +132,9 @@ export async function PUT(request: NextRequest) {
       is_bank: body.isBank || false,
       link_url: body.url?.trim() || null,
       notes: body.notes?.trim() || null,
+      purpose: body.purpose?.trim() || null,
+      additional_info_01: body.additionalInfo01?.trim() || null,
+      additional_info_02: body.additionalInfo02?.trim() || null,
     })
     .eq("id", id)
     .select()
@@ -146,6 +158,9 @@ export async function PUT(request: NextRequest) {
     clientId: updated.client_id || "",
     isBank: updated.is_bank || false,
     groupLabel: updated.group_label || "",
+    purpose: updated.purpose || "",
+    additionalInfo01: updated.additional_info_01 || "",
+    additionalInfo02: updated.additional_info_02 || "",
   };
 
   return NextResponse.json(entry);
