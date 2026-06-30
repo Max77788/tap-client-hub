@@ -145,7 +145,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 style={{
                   width: 30, height: 30, borderRadius: 8,
                   border: `1px solid ${delayed ? "var(--red)" : style.border}`,
-                  background: style.bg,
+                  background: stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
                   color: style.fg,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   margin: "0 auto", fontWeight: 700, fontSize: 14, userSelect: "none",
@@ -265,7 +265,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           {s.l}
                         </span>
                       ))}
-                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>N/A</span>
+                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
                     </div>
                     {monthCells(svc.key)}
                   </div>

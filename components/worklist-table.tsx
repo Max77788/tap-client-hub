@@ -678,7 +678,7 @@ export default function WorklistTable({
           </span>
         ))}
         {!isHistorical && <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>Delayed (auto)</span>}
-        <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>N/A</span>
+        <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
         <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
         <span style={{ marginLeft: "auto", fontStyle: "italic", opacity: 0.8, fontSize: 11, color: "var(--muted)" }}>
           {!isHistorical ? "click a cell to advance · red ring = past due, flagged automatically" : `${year} — read-only history`}
