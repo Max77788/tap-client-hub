@@ -109,6 +109,8 @@ export async function PATCH(request: Request) {
   if (body.client_id !== undefined) updates.client_id = body.client_id;
   if (body.task !== undefined) updates.task = body.task;
   if (body.seconds !== undefined) updates.seconds = body.seconds;
+  if (body.note !== undefined) updates.note = body.note;
+  if (body.started_at !== undefined) updates.started_at = body.started_at;
   if (body.edited !== undefined) updates.edited = body.edited;
   if (body.edited) {
     updates.edited_at = new Date().toISOString();

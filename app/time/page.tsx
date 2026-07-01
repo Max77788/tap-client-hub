@@ -236,6 +236,7 @@ export default function TimePage() {
         task: entry.serviceLabel,
         seconds: entry.duration,
         note: entry.note,
+        started_at: entry.date,
         edited: true,
       }),
     }).catch(() => {});
@@ -299,7 +300,6 @@ export default function TimePage() {
         .tw-go:disabled { opacity: 0.4; cursor: not-allowed; }
         .edit-inp { width: 42px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; text-align: center; }
         .edit-sel { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; max-width: 200px; }
-        .edit-note-inp { width: 160px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
         .running-row { background: var(--green-soft); }
         .running-row:hover { background: #d4ede0 !important; }
         .stop-btn {
@@ -359,10 +359,6 @@ export default function TimePage() {
         <button className="tw-go" onClick={startTimer} disabled={!selectedClient || !selectedPerson}>
           ▶ Start Tracking
         </button>
-        <div className="tw-notes-row">
-          <label style={{ marginTop: 4 }}>Notes</label>
-          <textarea value={timerNote} onChange={(e) => setTimerNote(e.target.value)} placeholder="Notes..." />
-        </div>
       </div>
       )}
 
@@ -377,7 +373,6 @@ export default function TimePage() {
           <div className="fld"><label>Minutes</label><input type="number" min={0} max={59} value={mMinutes} onChange={(e) => setMMinutes(e.target.value)} placeholder="0" style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }} /></div>
           <div className="fld"><label>Date</label><input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} style={{ width: 140, padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)" }} /></div>
         </div>
-        <div className="tw-notes-row"><label style={{ marginTop: 4 }}>Notes</label><textarea value={mNote} onChange={(e) => setMNote(e.target.value)} placeholder="What was done? Any details..." /></div>
         <button className="tw-go" onClick={submitManualEntry} disabled={!mWho || !mClient || (!mHours && !mMinutes)} style={{ alignSelf: "flex-end", marginTop: 4 }}>＋ Log Entry</button>
       </div>
       )}
@@ -420,7 +415,7 @@ export default function TimePage() {
         <table>
           <thead>
             <tr>
-              <th>Who</th><th>Client</th><th>Task</th><th style={{ whiteSpace: "nowrap" }}>Time</th><th>Notes</th><th></th>
+              <th>Who</th><th>Client</th><th>Task</th><th style={{ whiteSpace: "nowrap" }}>Time</th><th>Date</th><th>Notes</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -438,7 +433,8 @@ export default function TimePage() {
                         {fmtClock(elapsed)}
                         <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>running</span>
                       </td>
-                      <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "\u2014"}</td>
+                      <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                      <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
                       <td>
                         <button className="stop-btn" onClick={() => stopEntry(entry.id)}>■ Stop</button>
                       </td>
@@ -460,7 +456,8 @@ export default function TimePage() {
                         <input className="edit-inp" type="number" min={0} defaultValue={h} onChange={(e) => { const newH = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: newH * 3600 + m * 60, edited: true })); }} />h{" "}
                         <input className="edit-inp" type="number" min={0} max={59} defaultValue={m} onChange={(e) => { const newM = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: h * 3600 + newM * 60, edited: true })); }} />m
                       </td>
-                      <td><input className="edit-note-inp" type="text" value={entry.note} onChange={(e) => handleEdit(idx, "note", e.target.value)} placeholder="note..." /></td>
+                      <td><input className="edit-inp" type="date" defaultValue={entry.date.slice(0, 10)} onChange={(e) => handleEdit(idx, "date", e.target.value + "T12:00:00.000Z")} style={{ width: 130, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
+                      <td><textarea className="edit-note-ta" value={entry.note} onChange={(e) => handleEdit(idx, "note", e.target.value)} placeholder="Notes..." rows={2} style={{ width: 160, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13, resize: "vertical" }} /></td>
                       <td style={{ whiteSpace: "nowrap" }}><button className="reveal" onClick={() => saveEdit(idx)} style={{ marginRight: 10 }}>Save</button><button className="reveal" onClick={() => setEditIdx(null)}>Cancel</button></td>
                     </tr>
                   );
@@ -473,9 +470,9 @@ export default function TimePage() {
                     <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <span className="mono">{fmtDur(entry.duration)}{entry.edited && <span style={{ fontSize: 10, color: "var(--muted)", fontStyle: "italic", marginLeft: 6 }}>edited</span>}</span>
-                      <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12 }}>{entry.date.slice(0, 10) !== today ? new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span>
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "\u2014"}</td>
+                    <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                    <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <button className="reveal" onClick={() => setEditIdx(idx)} style={{ marginRight: 10 }}>edit</button>
                       <button className="reveal" onClick={() => deleteEntry(entry.id)} style={{ color: "var(--red)" }}>delete</button>
@@ -484,7 +481,7 @@ export default function TimePage() {
                 );
               })
             ) : (
-              <tr><td colSpan={6} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>No time logged yet — use Timer or Manual Entry above.</td></tr>
+              <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>No time logged yet — use Timer or Manual Entry above.</td></tr>
             )}
           </tbody>
         </table>
