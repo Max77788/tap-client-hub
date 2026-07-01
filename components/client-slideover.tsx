@@ -58,6 +58,33 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [newStxRouting, setNewStxRouting] = useState("");
   const [newStxAccount, setNewStxAccount] = useState("");
   const [newStxFreq, setNewStxFreq] = useState("Monthly");
+
+  // ── 1099s count state ──
+  const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
+  useEffect(() => {
+    const svc = client.services.find((s: any) => s.key === "1099s");
+    if (svc?.csId) {
+      const year = new Date().getFullYear();
+      fetch(`/api/period-counts?client_service_id=${svc.csId}&year=${year}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.counts && Array.isArray(data.counts)) {
+            const counts = Array(12).fill(0);
+            for (const c of data.counts) {
+              const parts = c.period?.split("-");
+              if (parts && parts.length >= 2) {
+                const monthIdx = parseInt(parts[1]) - 1;
+                if (monthIdx >= 0 && monthIdx < 12) {
+                  counts[monthIdx] = Math.max(0, c.processed || 0);
+                }
+              }
+            }
+            setT9Counts(counts);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [client]);
   useEffect(() => {
     setLocalSvcs(client.services);
     setEditing(false);
@@ -191,6 +218,60 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     return (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {MONTHS.map((mo, i) => {
+          // ── 1099s: count-based cells ──
+          if (svcKey === "1099s") {
+            const n = t9Counts[i] || 0;
+            return (
+              <div key={mo} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{mo}</div>
+                <div
+                  onClick={() => {
+                    const newCounts = [...t9Counts];
+                    newCounts[i] = (newCounts[i] || 0) + 1;
+                    setT9Counts(newCounts);
+                    const svc = localSvcs.find((s: any) => s.key === "1099s");
+                    if (svc?.csId) {
+                      const period = `${year}-${String(i + 1).padStart(2, "0")}`;
+                      fetch("/api/period-counts", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ client_service_id: svc.csId, period, processed: newCounts[i] }),
+                      }).catch(() => {});
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    const newCounts = [...t9Counts];
+                    newCounts[i] = Math.max(0, (newCounts[i] || 0) - 1);
+                    setT9Counts(newCounts);
+                    const svc = localSvcs.find((s: any) => s.key === "1099s");
+                    if (svc?.csId) {
+                      const period = `${year}-${String(i + 1).padStart(2, "0")}`;
+                      fetch("/api/period-counts", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ client_service_id: svc.csId, period, processed: newCounts[i] }),
+                      }).catch(() => {});
+                    }
+                  }}
+                  style={{
+                    width: 30, height: 30, borderRadius: 8,
+                    backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
+                    color: n > 0 ? "var(--green)" : "var(--muted)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    margin: "0 auto", fontWeight: 700, fontSize: 13, userSelect: "none",
+                    cursor: "pointer",
+                    border: n > 0 ? "1px solid var(--green)" : "1px solid transparent",
+                  }}
+                  title={`${mo}: ${n} processed — click +1, right-click -1`}
+                >
+                  {n || "·"}
+                </div>
+              </div>
+            );
+          }
+
+          // ── Default: status-based cells ──
           const stage = toStageKey(stages[i] || "");
           const style = STAGE_STYLES[stage] || STAGE_STYLES[""];
           const t = stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : stage === "dn" ? "✓" : stage === "na" ? "–" : "";
@@ -317,6 +398,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 {/* Month tracking right under the service card (when enabled) */}
                 {svc.enabled && monthCells(svc.key) && (
                   <div style={{ padding: "6px 13px 12px", borderTop: "1px dashed var(--line)" }}>
+                    {svc.key === "1099s" ? (
+                      <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
+                        <span style={{ fontStyle: "italic" }}>Click to add, right-click to remove — count of 1099s filed per month</span>
+                      </div>
+                    ) : (
                     <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
                       {UNIFIED_STAGES.map(s => (
                         <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -326,6 +412,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       ))}
                       <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
                     </div>
+                    )}
                     {monthCells(svc.key)}
                   </div>
                 )}
