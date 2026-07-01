@@ -33,11 +33,31 @@ function LoginContent() {
     setError(null);
     setLoading(true);
 
-    // Demo credentials - skip Supabase and 2FA entirely
+    // Demo credentials - check 2FA before auto-login
     const demo = DEMO_USERS[email.toLowerCase()];
     if (demo && password === demo.password) {
+      // Set temporary cookie so 2FA endpoints can identify this user
       document.cookie = `tap_demo_user=${encodeURIComponent(demo.name)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+
+      // Check if 2FA is enabled for this user
+      try {
+        const res = await fetch("/api/2fa/status");
+        const data = await res.json();
+        if (data.enabled) {
+          setStep("2fa");
+          setTwoFAMessage("Sending verification code...");
+          setLoading(false);
+          fetch("/api/2fa/challenge", { method: "POST" })
+            .then(r => r.json())
+            .then(d => setTwoFAMessage(d.message || "Check your email for the code"))
+            .catch(() => setTwoFAMessage("Enter the code from your email"));
+          return;
+        }
+      } catch {
+        // If 2FA check fails, proceed with login
+      }
+
       router.push(next);
       router.refresh();
       return;
@@ -213,7 +233,7 @@ function LoginContent() {
 
               <button
                 type="button"
-                onClick={() => { setStep("login"); setError(null); setTwoFACode(""); }}
+                onClick={() => { setStep("login"); setError(null); setTwoFACode(""); setTwoFAMessage(""); document.cookie = "tap_demo_user=; path=/; max-age=0"; document.cookie = "tap_demo_email=; path=/; max-age=0"; }}
                 className="w-full py-2 rounded-lg text-sm border border-[var(--line)] text-[var(--ink)]"
               >
                 Back to sign in
