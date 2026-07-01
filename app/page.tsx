@@ -23,7 +23,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
-  const { clients, setClients, updateClient, deleteClient: deleteFromState, addClient, loading, stats } = useClientsState(typeFilter);
+  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClientsState(typeFilter);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -281,6 +281,7 @@ export default function ClientsPage() {
           onClose={closeSlideover}
           onSave={handleSlideoverSave}
           onDelete={handleSlideoverDelete}
+          onStageChange={(clientId, serviceKey, monthIdx, stage) => updateServiceMonth(clientId, serviceKey as any, monthIdx, stage as any)}
         />
       )}
 

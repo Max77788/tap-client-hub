@@ -41,9 +41,10 @@ interface ClientSlideoverProps {
   onClose: () => void;
   onSave?: (client: Client) => void;
   onDelete?: (clientId: string) => void;
+  onStageChange?: (clientId: string, serviceKey: string, monthIdx: number, stage: string) => void;
 }
 
-export default function ClientSlideover({ client, open, onClose, onSave, onDelete }: ClientSlideoverProps) {
+export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange }: ClientSlideoverProps) {
   const [editing, setEditing] = useState(false);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
@@ -132,23 +133,93 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     return "";
   }
 
+  // ── Stage dropdown state ──
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!activeDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [activeDropdown]);
+
   // Month tracking for a service - show month-by-month cells
   function monthCells(svcKey: string) {
     const svc = localSvcs.find((s: any) => s.key === svcKey);
     if (!svc?.enabled) return null;
     const stages = svc.months || [];
     const now = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const year = currentYear; // always current year in slideover
+
+    // Map MonthStatus -> display stage key
+    function toStageKey(ms: string): string {
+      switch (ms) {
+        case "lock": return "";
+        case "in_progress": return "ip";
+        case "waiting": return "wc";
+        case "billed": return "pp";
+        case "done": return "dn";
+        case "na": return "na";
+        default: return ms;
+      }
+    }
+    // Map display stage key -> MonthStatus
+    function toMonthStatus(sk: string): string {
+      switch (sk) {
+        case "": return "lock";
+        case "ip": return "in_progress";
+        case "wc": return "waiting";
+        case "pp": return "billed";
+        case "dn": return "done";
+        case "na": return "na";
+        default: return sk;
+      }
+    }
+
+    const STAGE_CYCLE = ["", "ip", "wc", "pp", "dn", "na"];
+
+    function handleCellClick(svcKey: string, monthIdx: number) {
+      const key = `${client.id}:${svcKey}:${monthIdx}`;
+      setActiveDropdown(prev => (prev === key ? null : key));
+    }
+
+    function handleStageSelect(svcKey: string, monthIdx: number, newStage: string) {
+      const ms = toMonthStatus(newStage);
+      // Update local state
+      const updated = localSvcs.map((s: any) =>
+        s.key === svcKey
+          ? { ...s, months: s.months.map((m: string, i: number) => i === monthIdx ? ms : m) }
+          : s
+      );
+      setLocalSvcs(updated);
+      setActiveDropdown(null);
+      // Persist via work-periods API
+      if (onStageChange) {
+        onStageChange(client.id, svcKey, monthIdx, newStage);
+      }
+    }
+
     return (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {MONTHS.map((mo, i) => {
-          const stage = (stages[i] || "") as string;
+          const stage = toStageKey(stages[i] || "");
           const style = STAGE_STYLES[stage] || STAGE_STYLES[""];
           const t = stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : stage === "dn" ? "✓" : stage === "na" ? "–" : "";
           const delayed = stage !== "" && stage !== "dn" && stage !== "na" && i < now;
+          const dropKey = `${client.id}:${svcKey}:${i}`;
+          const isOpen = activeDropdown === dropKey;
           return (
-            <div key={mo} style={{ textAlign: "center" }}>
+            <div key={mo} style={{ textAlign: "center", position: "relative" }}>
               <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{mo}</div>
               <div
+                onClick={() => handleCellClick(svcKey, i)}
                 style={{
                   width: 30, height: 30, borderRadius: 8,
                   border: `1px solid ${delayed ? "var(--red)" : style.border}`,
@@ -156,12 +227,55 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   color: style.fg,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   margin: "0 auto", fontWeight: 700, fontSize: 14, userSelect: "none",
+                  cursor: "pointer",
                   boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
                 }}
-                title={`${mo} — ${delayed ? "DELAYED · " : ""}${style.label}`}
+                title={`${mo} — ${delayed ? "DELAYED · " : ""}${style.label} — click to change`}
               >
                 {t}
               </div>
+              {isOpen && (
+                <div
+                  ref={dropdownRef}
+                  style={{
+                    position: "absolute", zIndex: 50, top: "100%", left: "50%",
+                    transform: "translateX(-50%)", marginTop: 4,
+                    background: "#fff", border: "1px solid #d8d2c4",
+                    borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
+                    padding: "4px 0", minWidth: 160,
+                  }}
+                >
+                  {STAGE_CYCLE.map((s) => {
+                    const ss = STAGE_STYLES[s];
+                    const isCurrent = stage === s;
+                    return (
+                      <div
+                        key={s}
+                        onClick={(e) => { e.stopPropagation(); handleStageSelect(svcKey, i, s); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          padding: "7px 14px", cursor: "pointer", fontSize: 13,
+                          fontWeight: isCurrent ? 700 : 400,
+                          color: isCurrent ? "var(--ink)" : "var(--muted)",
+                          background: isCurrent ? "#f0f4f8" : "transparent",
+                          borderBottom: s !== "na" ? "1px solid #f0ede8" : "none",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f5f7fa"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isCurrent ? "#f0f4f8" : "transparent"; }}
+                      >
+                        <i style={{
+                          width: 12, height: 12, borderRadius: 4,
+                          display: "inline-block", flexShrink: 0,
+                          background: s === "na" ? "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)"
+                            : s === "" ? "#c2c8d4" : ss.fg,
+                        }} />
+                        <span>{s === "" ? "Not Started" : ss.label}</span>
+                        {isCurrent && <span style={{ marginLeft: "auto", color: "var(--teal)", fontSize: 14 }}>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
