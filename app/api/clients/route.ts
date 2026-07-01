@@ -133,6 +133,122 @@ export async function GET(request: Request) {
   }
 }
 
+// ── PUT /api/clients — update client services (e.g. service toggle on/off) ──
+export async function PUT(request: Request) {
+  try {
+    const supabase = await getSupabase();
+    const body = await request.json();
+    const { id: clientId, services } = body;
+
+    if (!clientId) {
+      return NextResponse.json({ error: "client id is required" }, { status: 400 });
+    }
+
+    // Reverse map: frontend key -> service code
+    const KEY_TO_CODE: Record<string, string> = {
+      financials: "FIN", payroll: "PR", sales_tax: "STX",
+      "1099s": "T9", renditions: "REND", tax_returns: "TAX",
+    };
+
+    // Build unique codes we need
+    const codes = [...new Set(services
+      .filter((s: any) => KEY_TO_CODE[s.key])
+      .map((s: any) => KEY_TO_CODE[s.key])
+    )];
+
+    // Get service IDs for codes
+    const { data: svcRows } = await supabase
+      .from("services")
+      .select("id, code")
+      .in("code", codes);
+
+    if (!svcRows) {
+      return NextResponse.json({ error: "Failed to fetch services" }, { status: 500 });
+    }
+
+    const svcCodeToId: Record<string, string> = {};
+    for (const sr of svcRows) svcCodeToId[sr.code] = sr.id;
+
+    // Get existing client_services rows for this client
+    const { data: existingRows } = await supabase
+      .from("client_services")
+      .select("id, client_id, service_id, active, frequency, assigned_to, processor")
+      .eq("client_id", clientId);
+
+    const existingByServiceId: Record<string, any> = {};
+    for (const row of existingRows || []) {
+      existingByServiceId[row.service_id] = row;
+    }
+
+    const results: { key: string; action: string }[] = [];
+
+    for (const svc of services) {
+      const code = KEY_TO_CODE[svc.key];
+      if (!code) continue;
+      const serviceId = svcCodeToId[code];
+      if (!serviceId) {
+        results.push({ key: svc.key, action: "skipped (no service row)" });
+        continue;
+      }
+
+      const existing = existingByServiceId[serviceId];
+      const wantsEnabled = svc.enabled === true;
+
+      if (wantsEnabled) {
+        if (existing) {
+          // Already exists — activate if inactive
+          if (!existing.active) {
+            await supabase
+              .from("client_services")
+              .update({
+                active: true,
+                frequency: svc.frequency || existing.frequency || "Monthly",
+                assigned_to: svc.assignedTo || existing.assigned_to || null,
+                processor: svc.processor || existing.processor || null,
+              })
+              .eq("id", existing.id);
+            results.push({ key: svc.key, action: "activated" });
+          } else {
+            results.push({ key: svc.key, action: "already_active" });
+          }
+        } else {
+          // No row — create one
+          const { error: insErr } = await supabase
+            .from("client_services")
+            .insert({
+              client_id: clientId,
+              service_id: serviceId,
+              active: true,
+              frequency: svc.frequency || "Monthly",
+              assigned_to: svc.assignedTo || null,
+              processor: svc.processor || null,
+            });
+          if (insErr) {
+            results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
+          } else {
+            results.push({ key: svc.key, action: "created" });
+          }
+        }
+      } else {
+        // Want disabled
+        if (existing && existing.active) {
+          await supabase
+            .from("client_services")
+            .update({ active: false })
+            .eq("id", existing.id);
+          results.push({ key: svc.key, action: "deactivated" });
+        } else {
+          results.push({ key: svc.key, action: "already_inactive" });
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, results });
+  } catch (e: any) {
+    return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
+  }
+}
+
 // ── PATCH /api/clients — update a client service field (e.g. assigned_to) ──
 export async function PATCH(request: Request) {
   try {
