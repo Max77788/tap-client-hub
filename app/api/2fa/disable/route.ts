@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth-user";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAndStoreCode, sendCodeEmail, verifyCode } from "@/lib/email-2fa";
 
 export async function POST(req: NextRequest) {
@@ -23,14 +24,17 @@ export async function POST(req: NextRequest) {
   let body: { code?: string } = {};
   try { body = await req.json(); } catch {}
 
+  // Use admin client (service_role key) for writes to bypass RLS
+  const adminSupabase = createAdminClient();
+
   // If code provided, verify and disable
   if (body.code) {
-    const valid = await verifyCode(supabase, user.id, body.code);
+    const valid = await verifyCode(adminSupabase, user.id, body.code);
     if (!valid) {
       return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
     }
 
-    await supabase
+    await adminSupabase
       .from("profiles")
       .update({
         email_2fa_enabled: false,
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
   }
 
   // No code — send challenge email first
-  const result = await generateAndStoreCode(supabase, user.id);
+  const result = await generateAndStoreCode(adminSupabase, user.id);
   if (!result.ok) {
     console.error("disable: failed to store code:", result.error);
     return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser, getSupabaseClient } from "@/lib/supabase/auth-user";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyCode } from "@/lib/email-2fa";
 
 export async function POST(req: NextRequest) {
@@ -17,12 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "6-digit code is required" }, { status: 400 });
   }
 
-  const valid = await verifyCode(supabase, user.id, body.code);
+  // Use admin client (service_role key) for verification to bypass RLS
+  const adminSupabase = createAdminClient();
+  const valid = await verifyCode(adminSupabase, user.id, body.code);
   if (!valid) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { error } = await adminSupabase
     .from("profiles")
     .update({
       email_2fa_enabled: true,

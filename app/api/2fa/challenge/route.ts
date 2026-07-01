@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth-user";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAndStoreCode, sendCodeEmail, verifyCode } from "@/lib/email-2fa";
 
 /**
@@ -35,22 +36,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "6-digit code is required" }, { status: 400 });
     }
 
-    const valid = await verifyCode(supabase, user.id, body.code);
+    // Use admin client (service_role key) to bypass RLS
+    const adminSupabase = createAdminClient();
+    const valid = await verifyCode(adminSupabase, user.id, body.code);
     if (!valid) {
       return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
     }
 
     // Clear the used code
-    await supabase
+    await adminSupabase
       .from("profiles")
       .update({ email_2fa_code: null, email_2fa_code_expires_at: null })
       .eq("id", user.id);
 
-    return NextResponse.json({ success: true });
+    // Fetch user's full name for cookie setting
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    return NextResponse.json({ success: true, name: profile?.full_name || user.email });
   }
 
   // Mode 1: send code
-  const result = await generateAndStoreCode(supabase, user.id);
+  const adminSupabase = createAdminClient();
+  const result = await generateAndStoreCode(adminSupabase, user.id);
   if (!result.ok) {
     console.error("challenge: failed to store code:", result.error);
     return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });

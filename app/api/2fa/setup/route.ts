@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth-user";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateAndStoreCode, sendCodeEmail } from "@/lib/email-2fa";
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "2FA is already enabled" }, { status: 400 });
   }
 
-  const result = await generateAndStoreCode(supabase, user.id);
+  // Use admin client (service_role key) for writes to bypass RLS
+  const adminSupabase = createAdminClient();
+  const result = await generateAndStoreCode(adminSupabase, user.id);
   if (!result.ok) {
     console.error("setup: failed to store code:", result.error);
     return NextResponse.json({ error: "Failed to generate code. Try again." }, { status: 500 });

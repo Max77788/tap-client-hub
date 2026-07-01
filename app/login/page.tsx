@@ -107,7 +107,7 @@ function LoginContent() {
         return;
       }
 
-      document.cookie = `tap_demo_user=${encodeURIComponent(email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `tap_demo_user=${encodeURIComponent(data.name || email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
 
       router.push(next);
