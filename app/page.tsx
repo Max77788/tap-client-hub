@@ -146,7 +146,6 @@ export default function ClientsPage() {
         <StatCard label="Total clients" value={clientStats.total} color="var(--ink)" />
         <StatCard label="Business" value={clientStats.business} color="var(--teal)" />
         <StatCard label="Personal" value={clientStats.personal} color="var(--blue)" />
-        <StatCard label="Financials" value={clientStats.monthlyFinancials} color="var(--green)" />
       </div>
 
       {/* ── Service metrics stat cards ── */}
