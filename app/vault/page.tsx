@@ -209,67 +209,137 @@ export default function VaultPage() {
             </span>
           </summary>
           <div style={{ margin: "0 6px 8px" }}>
-            <table>
-              <thead>
-                <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Purpose</th><th>Notes / Info</th></tr>
-              </thead>
-              <tbody>
-                {entries.map(entry => {
-                  const isBank = entry.isBank || entry.site === "TAP Bank";
-                  const pwKey = entry.id;
-                  const pwVisible = visiblePws.has(pwKey);
-                  return (
-                    <tr key={entry.id}>
-                      <td><b>{entry.site}</b></td>
-                      {isBank ? (
-                        <>
-                          <td className="mono" style={{ color: "var(--muted)" }}>— linked —</td>
-                          <td>
-                            <a className="reveal" href="https://example.com" target="_blank" rel="noopener noreferrer"
-                              style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
-                              Open in TAP&nbsp;Bank ↗
+            <div className="vault-table-wrap" style={{ overflowX: "auto" }}>
+              <table className="vault-table">
+                <thead>
+                  <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Purpose</th><th>Notes / Info</th></tr>
+                </thead>
+                <tbody>
+                  {entries.map(entry => {
+                    const isBank = entry.isBank || entry.site === "TAP Bank";
+                    const pwKey = entry.id;
+                    const pwVisible = visiblePws.has(pwKey);
+                    return (
+                      <tr key={entry.id}>
+                        <td className="vt-site"><b>{entry.site}</b></td>
+                        {isBank ? (
+                          <>
+                            <td className="vt-mono muted">— linked —</td>
+                            <td className="vt-action">
+                              <a className="reveal" href="https://example.com" target="_blank" rel="noopener noreferrer"
+                                style={{ color: "var(--teal)", fontWeight: 600, fontSize: "11.5px", whiteSpace: "nowrap" }}>
+                                Open in TAP&nbsp;Bank ↗
+                              </a>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="vt-mono">{entry.email || "—"}</td>
+                            <td className="vt-pw">
+                              <span className="vt-pw-val">{pwVisible ? (entry.password || "—") : "••••••••"}</span>
+                              <button className="vt-pw-toggle" onClick={() => {
+                                setVisiblePws(prev => { const next = new Set(prev); if (next.has(pwKey)) next.delete(pwKey); else next.add(pwKey); return next; });
+                              }}>
+                                {pwVisible ? "hide" : "show"}
+                              </button>
+                            </td>
+                          </>
+                        )}
+                        <td className="vt-mono">
+                          {entry.url ? (
+                            <a href={entry.url} target="_blank" rel="noopener noreferrer" className="reveal"
+                              style={{ color: "var(--teal)", fontWeight: 500, fontSize: "11.5px" }}>
+                              {entry.url.length > 30 ? entry.url.slice(0, 30) + "..." : entry.url} ↗
                             </a>
-                          </td>
-                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
-                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
-                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
-                          <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>—</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="mono">{entry.email || "—"}</td>
-                          <td className="mono">
-                            <span>{pwVisible ? (entry.password || "—") : "••••••••"}</span>
-                            {" "}
-                            <button className="reveal" onClick={() => {
-                              setVisiblePws(prev => { const next = new Set(prev); if (next.has(pwKey)) next.delete(pwKey); else next.add(pwKey); return next; });
-                            }} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
-                              {pwVisible ? "hide" : "show"}
-                            </button>
-                          </td>
-                        </>
-                      )}
-                      <td className="mono" style={{ fontSize: 11, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {entry.url ? (
-                          <a href={entry.url} target="_blank" rel="noopener noreferrer" className="reveal"
-                            style={{ color: "var(--teal)", fontWeight: 500, fontSize: "12px" }}>
-                            {entry.url.length > 30 ? entry.url.slice(0, 30) + "..." : entry.url} ↗
-                          </a>
-                        ) : "—"}
-                      </td>
-                      <td className="mono" style={{ fontSize: 11, color: "var(--muted)", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                        title={entry.purpose || ""}>
-                        {entry.purpose || "—"}
-                      </td>
-                      <td className="mono" style={{ fontSize: 11, color: "var(--muted)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                        title={[entry.notes || "", entry.additionalInfo01 || "", entry.additionalInfo02 || ""].filter(Boolean).join(" | ")}>
-                        {entry.additionalInfo01 || entry.additionalInfo02 || entry.notes || "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          ) : "—"}
+                        </td>
+                        <td className="vt-mono" title={entry.purpose || ""}>
+                          {entry.purpose || "—"}
+                        </td>
+                        <td className="vt-mono" style={{ maxWidth: 200 }}
+                          title={[entry.notes || "", entry.additionalInfo01 || "", entry.additionalInfo02 || ""].filter(Boolean).join(" | ")}>
+                          {[entry.additionalInfo01 || "", entry.additionalInfo02 || "", entry.notes || ""].find(Boolean) || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <style jsx>{`
+              .vault-table-wrap {
+                overflow-x: auto;
+              }
+              .vault-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+              }
+              .vault-table thead th {
+                text-align: left;
+                font-size: 10.5px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--muted);
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+                white-space: nowrap;
+              }
+              .vault-table tbody td {
+                padding: 10px 10px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: middle;
+              }
+              .vault-table tbody tr:last-child td {
+                border-bottom: none;
+              }
+              .vt-mono {
+                font-family: "SF Mono","Fira Code","Consolas",monospace;
+                font-size: 11.5px;
+                color: var(--ink);
+              }
+              .vt-mono.muted {
+                color: var(--muted);
+              }
+              .vt-site {
+                font-weight: 600;
+                white-space: nowrap;
+                min-width: 120px;
+              }
+              .vt-pw {
+                white-space: nowrap;
+              }
+              .vt-pw-val {
+                font-family: "SF Mono","Fira Code","Consolas",monospace;
+                font-size: 11.5px;
+              }
+              .vt-pw-toggle {
+                all: unset;
+                cursor: pointer;
+                color: var(--teal);
+                font-weight: 600;
+                font-size: 11px;
+                margin-left: 6px;
+              }
+              .vt-pw-toggle:hover {
+                opacity: 0.8;
+              }
+              .vt-action {
+                white-space: nowrap;
+              }
+              .reveal {
+                text-decoration: none;
+              }
+              .reveal:hover {
+                text-decoration: underline;
+              }
+              .vault-table tbody td {
+                max-width: 180px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+            `}</style>
           </div>
         </details>
       ))}
