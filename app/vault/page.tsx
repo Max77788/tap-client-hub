@@ -212,7 +212,7 @@ export default function VaultPage() {
             <div className="vault-table-wrap" style={{ overflowX: "auto" }}>
               <table className="vault-table">
                 <thead>
-                  <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Purpose</th><th>Notes / Info</th></tr>
+                  <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Purpose</th><th>Notes / Info</th><th style={{ textAlign: "right" }}>Actions</th></tr>
                 </thead>
                 <tbody>
                   {entries.map(entry => {
@@ -259,6 +259,15 @@ export default function VaultPage() {
                         <td className="vt-mono" style={{ maxWidth: 200 }}
                           title={[entry.notes || "", entry.additionalInfo01 || "", entry.additionalInfo02 || ""].filter(Boolean).join(" | ")}>
                           {[entry.notes, entry.additionalInfo01, entry.additionalInfo02].filter(Boolean).join(" | ") || "—"}
+                        </td>
+                        <td className="vt-action" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          <button onClick={() => handleEdit(entry)} style={{
+                            all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "11.5px",
+                            marginRight: 10,
+                          }}>Edit</button>
+                          <button onClick={() => handleDelete(entry)} style={{
+                            all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "11.5px",
+                          }}>Delete</button>
                         </td>
                       </tr>
                     );
