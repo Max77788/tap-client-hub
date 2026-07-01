@@ -179,6 +179,17 @@ export default function WorklistTable({
   // ── Search state ──
   const [search, setSearch] = useState("");
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
+
+  // ── Cadence filter options (dynamic per module) ──
+  const cadenceOptions = useMemo(() => {
+    if (variant === "payroll") {
+      return ["Weekly", "Bi-Weekly", "Monthly"];
+    }
+    if (serviceKey === "financials" || serviceKey === "sales_tax") {
+      return ["Monthly", "Quarterly", "Annually"];
+    }
+    return [];
+  }, [serviceKey, variant]);
   // ── Stage dropdown picker ──
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -195,6 +206,7 @@ export default function WorklistTable({
     return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
 
+  // ── Filter clients by search + cadence ──
   const filteredClients = useMemo(
     () => {
       let list = serviceClients;
@@ -203,19 +215,27 @@ export default function WorklistTable({
           c.name.toLowerCase().includes(search.toLowerCase()),
         );
       }
-      if (variant === "payroll" && cadenceFilter !== "All") {
-        list = list.filter((c) => {
-          const svc = c.services?.find((s: any) => s.key === "payroll");
-          const freq = svc?.frequency || "Monthly";
-          const cadence = freq === "Weekly" ? "Weekly"
-            : (freq === "Bi-Weekly" || freq === "Semi-Monthly") ? "Bi-Weekly"
-            : "Monthly";
-          return cadence === cadenceFilter;
-        });
+      if (cadenceFilter !== "All") {
+        if (variant === "payroll") {
+          list = list.filter((c) => {
+            const svc = c.services?.find((s: any) => s.key === "payroll");
+            const freq = svc?.frequency || "Monthly";
+            const cadence = freq === "Weekly" ? "Weekly"
+              : (freq === "Bi-Weekly" || freq === "Semi-Monthly") ? "Bi-Weekly"
+              : "Monthly";
+            return cadence === cadenceFilter;
+          });
+        } else {
+          // financials, sales_tax — filter by frequency directly
+          list = list.filter((c) => {
+            const svc = c.services?.find((s: any) => s.key === serviceKey);
+            return svc?.frequency === cadenceFilter;
+          });
+        }
       }
       return list;
     },
-    [serviceClients, search, cadenceFilter, variant],
+    [serviceClients, search, cadenceFilter, variant, serviceKey],
   );
 
   // ── Staff list for Assigned dropdown ──
@@ -314,6 +334,34 @@ export default function WorklistTable({
         }
         const key = `${client.id}:payroll`;
         setPrCounts((prev) => ({ ...prev, [key]: counts }));
+      } catch {}
+    });
+    Promise.all(promises).catch(() => {});
+  }, [variant, serviceClients, year]);
+
+  // Load t9 counts from period_counts API on mount
+  useEffect(() => {
+    if (variant !== "t9" || serviceClients.length === 0) return;
+    const yearStr = String(year);
+    const promises = serviceClients.map(async (client) => {
+      const svc = client.services?.find((s: any) => s.key === "1099s");
+      if (!svc?.csId) return;
+      try {
+        const res = await fetch(`/api/period-counts?client_service_id=${svc.csId}&year=${yearStr}`);
+        const data = await res.json();
+        if (!data.counts || !Array.isArray(data.counts)) return;
+        const counts = Array(12).fill(0);
+        for (const c of data.counts) {
+          const parts = c.period?.split("-");
+          if (parts && parts.length >= 2) {
+            const monthIdx = parseInt(parts[1]) - 1;
+            if (monthIdx >= 0 && monthIdx < 12) {
+              counts[monthIdx] = Math.max(0, c.processed || 0);
+            }
+          }
+        }
+        const key = `${client.id}:1099s`;
+        setT9Counts((prev) => ({ ...prev, [key]: counts }));
       } catch {}
     });
     Promise.all(promises).catch(() => {});
@@ -664,7 +712,6 @@ export default function WorklistTable({
       )}
 
       {/* ── Search + Cadence filter ── */}
-      {variant !== "t9" && (
       <div className="flex gap-2 items-center">
         <input
           type="search"
@@ -673,16 +720,16 @@ export default function WorklistTable({
           placeholder="Search clients..."
           className="flex-1 px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] placeholder:text-[var(--muted)]"
         />
-        {variant === "payroll" && (
+        {cadenceOptions.length > 0 && (
           <select
             value={cadenceFilter}
             onChange={(e) => setCadenceFilter(e.target.value)}
             className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] cursor-pointer"
           >
             <option value="All">All cadences</option>
-            <option value="Weekly">Weekly</option>
-            <option value="Bi-Weekly">Bi-Weekly</option>
-            <option value="Monthly">Monthly</option>
+            {cadenceOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
           </select>
         )}
         {search && filteredClients.length < serviceClients.length && (
@@ -691,7 +738,6 @@ export default function WorklistTable({
           </span>
         )}
       </div>
-      )}
 
       {/* ── Legend ── */}
       {variant !== "payroll" && (

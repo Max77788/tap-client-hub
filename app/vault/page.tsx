@@ -258,7 +258,7 @@ export default function VaultPage() {
                         </td>
                         <td className="vt-mono" style={{ maxWidth: 200 }}
                           title={[entry.notes || "", entry.additionalInfo01 || "", entry.additionalInfo02 || ""].filter(Boolean).join(" | ")}>
-                          {[entry.additionalInfo01 || "", entry.additionalInfo02 || "", entry.notes || ""].find(Boolean) || "—"}
+                          {[entry.notes, entry.additionalInfo01, entry.additionalInfo02].filter(Boolean).join(" | ") || "—"}
                         </td>
                       </tr>
                     );
