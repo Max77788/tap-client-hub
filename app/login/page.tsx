@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { PageSkeleton } from "@/components/loading-skeleton";
@@ -14,6 +14,12 @@ function LoginContent() {
   const [twoFACode, setTwoFACode] = useState("");
   const [twoFAMessage, setTwoFAMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Clear stale demo cookies on mount so login always starts fresh
+  useEffect(() => {
+    document.cookie = "tap_demo_user=; path=/; max-age=0";
+    document.cookie = "tap_demo_email=; path=/; max-age=0";
+  }, []);
 
   const router = useRouter();
   const searchParams = useSearchParams();
