@@ -188,6 +188,9 @@ export default function WorklistTable({
     if (serviceKey === "financials" || serviceKey === "sales_tax") {
       return ["Monthly", "Quarterly", "Annually"];
     }
+    if (variant === "t9") {
+      return ["Yearly"];
+    }
     return [];
   }, [serviceKey, variant]);
   // ── Stage dropdown picker ──
