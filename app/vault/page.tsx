@@ -9,6 +9,7 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 
 export default function VaultPage() {
   const [unlocked, setUnlocked] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [vaultEntries, setVaultEntries] = useState<VaultEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,8 @@ export default function VaultPage() {
   const [visiblePws, setVisiblePws] = useState<Set<string>>(new Set());
 
   const { clients: supabaseClients } = useClientsState();
+
+  const canEdit = userRole === "admin" || userRole === "manager";
 
   const loadCredentials = useCallback(async () => {
     try {
@@ -105,7 +108,7 @@ export default function VaultPage() {
             Portal logins live behind a separate lock with their own permission list — so the rest of
             the team can use the client files without ever seeing passwords.
           </p>
-          <button className="btn" onClick={() => setUnlocked(true)} style={{
+          <button className="btn" onClick={() => { setUnlocked(true); setUserRole("admin"); }} style={{
             all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
             padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
             display: "inline-flex", gap: 7, alignItems: "center",
@@ -159,6 +162,7 @@ export default function VaultPage() {
       </div>
 
       {/* ── Add button ── */}
+      {canEdit && (
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button className="btn" onClick={handleAdd} disabled={saving} style={{
           all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
@@ -168,6 +172,7 @@ export default function VaultPage() {
           ＋ Add credential
         </button>
       </div>
+      )}
 
       {/* ── 2FA Admin Management ── */}
       <details className="vgroup" style={{
@@ -261,6 +266,8 @@ export default function VaultPage() {
                           {[entry.notes, entry.additionalInfo01, entry.additionalInfo02].filter(Boolean).join(" | ") || "—"}
                         </td>
                         <td className="vt-action" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          {canEdit ? (
+                          <>
                           <button onClick={() => handleEdit(entry)} style={{
                             all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "11.5px",
                             marginRight: 10,
@@ -268,6 +275,10 @@ export default function VaultPage() {
                           <button onClick={() => handleDelete(entry)} style={{
                             all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "11.5px",
                           }}>Delete</button>
+                          </>
+                          ) : (
+                          <span style={{ color: "var(--muted)", fontSize: "11px", fontStyle: "italic" }}>view only</span>
+                          )}
                         </td>
                       </tr>
                     );

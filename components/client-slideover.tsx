@@ -113,6 +113,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eZip, setEZip] = useState((client as any).zip || "");
   const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
   const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
+  const [eFinMonth, setEFinMonth] = useState(() => {
+    const svc = client.services.find((s: any) => s.key === "financials");
+    return svc?.financialsMonth ?? 0;
+  });
 
   // Close on Escape
   useEffect(() => {
@@ -553,6 +557,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       if (s.key === "sales_tax") {
         updated = { ...s, salesTaxLineItems: stxLineItems };
       }
+      if (s.key === "financials") {
+        updated = { ...updated, financialsMonth: eFinMonth };
+      }
       // Apply per-service assignee change
       const newAssignee = eSvcAssignees[s.key];
       if (newAssignee && newAssignee !== "Unassigned") {
@@ -641,6 +648,22 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <label className="el" style={elStyle}>ZIP</label>
               <input className="ef" style={efStyle} value={eZip} onChange={e => setEZip(e.target.value)} />
             </div>
+          </div>
+
+          {/* Financial year start month */}
+          <div className="sect" style={{ ...sectStyle, marginTop: 24 }}>Financial year</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <label style={{ flex: "0 0 100px", fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>
+              Start month
+            </label>
+            <select
+              className="ef"
+              style={{ ...efStyle, flex: 1, padding: "7px 9px", fontSize: 13 }}
+              value={eFinMonth}
+              onChange={e => setEFinMonth(Number(e.target.value))}
+            >
+              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
           </div>
 
           {/* Per-service assignee editing - only for enabled services */}

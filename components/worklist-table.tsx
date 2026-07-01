@@ -248,7 +248,7 @@ export default function WorklistTable({
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setStaffList(data.map((p: any) => p.name).filter(Boolean));
+          setStaffList(data.map((p: any) => (p.name || "").split(" ")[0]).filter(Boolean));
         }
       })
       .catch(() => {});
@@ -764,11 +764,11 @@ export default function WorklistTable({
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>Client</th>
             {variant === "payroll" && (
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2">Processor</th>
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Processor</th>
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2">Cadence</th>
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Cadence</th>
             )}
             {variant === "t9" && (
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2">Expected</th>
@@ -902,7 +902,7 @@ export default function WorklistTable({
                     </td>
                     {/* Processor column (payroll only) */}
                   {variant === "payroll" && (
-                  <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
                     {processor}
                   </td>
                   )}
@@ -932,7 +932,7 @@ export default function WorklistTable({
 
                   {/* Cadence */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-                  <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">
+                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
                     {variant === "payroll"
                       ? prCadence
                       : svc.frequency}

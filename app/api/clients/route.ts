@@ -103,6 +103,7 @@ export async function GET(request: Request) {
           enabled: true, frequency: cs.frequency || "Monthly",
           processor: cs.processor || "", assignedTo: staffNames[cs.assigned_to || ""] || cs.assigned_to || "",
           expectedAnnual: cs.expected_annual ? Number(cs.expected_annual) || 0 : 0,
+          financialsMonth: cs.financials_month ?? 0,
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
@@ -205,10 +206,18 @@ export async function PUT(request: Request) {
                 frequency: svc.frequency || existing.frequency || "Monthly",
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
                 processor: svc.processor || existing.processor || null,
+                financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
           } else {
+            // Always update financials_month even if already active
+            await supabase
+              .from("client_services")
+              .update({
+                financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
+              })
+              .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
           }
         } else {
