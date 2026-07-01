@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 
@@ -179,6 +179,22 @@ export default function WorklistTable({
   // ── Search state ──
   const [search, setSearch] = useState("");
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
+  // ── Stage dropdown picker ──
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!activeDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [activeDropdown]);
+
   const filteredClients = useMemo(
     () => {
       let list = serviceClients;
@@ -379,18 +395,27 @@ export default function WorklistTable({
     setEditingPr(null);
   }, [editPrValue, serviceClients, year]);
 
-  // ── Cell click handler — directly cycles stage (no picker) ──
+  // ── Cell click handler — opens stage picker dropdown ──
   const handleCellClick = useCallback(
     (clientId: string, monthIdx: number) => {
+      if (readOnly || isHistorical) return;
+      const key = `${clientId}:${monthIdx}`;
+      setActiveDropdown((prev) => (prev === key ? null : key));
+    },
+    [readOnly, isHistorical],
+  );
+
+  // ── Select a stage from dropdown ──
+  const handleStageSelect = useCallback(
+    (clientId: string, monthIdx: number, stage: WorklistStage) => {
       if (readOnly || isHistorical) return;
       const key = `${clientId}:${serviceKey}`;
       const stages = [...(worklistState[key] ?? [])];
       if (!stages.length) return;
-      const current = (stages[monthIdx] || "") as WorklistStage;
-      const next = nextStage(current);
-      stages[monthIdx] = next;
+      stages[monthIdx] = stage;
       setWorklistState((prev) => ({ ...prev, [key]: stages }));
-      if (onStageChange) onStageChange(clientId, monthIdx, next);
+      if (onStageChange) onStageChange(clientId, monthIdx, stage);
+      setActiveDropdown(null);
     },
     [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
   );
@@ -978,7 +1003,7 @@ export default function WorklistTable({
                     const delayed = isPastDue && !isHistorical;
                     const lockHist = isHistorical && isActive;
                     return (
-                      <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
+                      <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
                         <div
                           onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
                           className="mcell"
@@ -996,6 +1021,49 @@ export default function WorklistTable({
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${STAGE_LABELS[stage]}${isHistorical ? ` (${year})` : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
+                        {activeDropdown === `${client.id}:${i}` && !cellReadOnly && (
+                          <div
+                            ref={dropdownRef}
+                            className="stage-picker"
+                            style={{
+                              position: "absolute", zIndex: 50, top: "100%", left: "50%",
+                              transform: "translateX(-50%)", marginTop: 4,
+                              background: "#fff", border: "1px solid #d8d2c4",
+                              borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
+                              padding: "4px 0", minWidth: 160,
+                            }}
+                          >
+                            {STAGE_CYCLE.map((s) => {
+                              const ss = STAGE_STYLES[s];
+                              const isCurrent = stage === s;
+                              return (
+                                <div
+                                  key={s}
+                                  onClick={(e) => { e.stopPropagation(); handleStageSelect(client.id, i, s); }}
+                                  style={{
+                                    display: "flex", alignItems: "center", gap: 8,
+                                    padding: "7px 14px", cursor: "pointer", fontSize: 13,
+                                    fontWeight: isCurrent ? 700 : 400,
+                                    color: isCurrent ? "var(--ink)" : "var(--muted)",
+                                    background: isCurrent ? "#f0f4f8" : "transparent",
+                                    borderBottom: s !== "na" ? "1px solid #f0ede8" : "none",
+                                  }}
+                                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f5f7fa"; }}
+                                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isCurrent ? "#f0f4f8" : "transparent"; }}
+                                >
+                                  <i style={{
+                                    width: 12, height: 12, borderRadius: 4,
+                                    display: "inline-block", flexShrink: 0,
+                                    background: s === "na" ? "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)"
+                                      : s === "" ? "#c2c8d4" : ss.fg,
+                                  }} />
+                                  <span>{s === "" ? "Not Started" : ss.label}</span>
+                                  {isCurrent && <span style={{ marginLeft: "auto", color: "var(--teal)", fontSize: 14 }}>✓</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
                     );
                   })}
