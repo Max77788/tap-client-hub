@@ -8,7 +8,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://phgogybfgovrlcdmifpv.supabase.co";
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoZ29neWJmZ292cmxjZG1pZnB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQyNjg5OTEsImV4cCI6MjA0OTg0NDk5MX0._jESMFCuNPFHSNH7F4scPOEjq4NZI3xj3mKJp3kYYP0";
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbG...YYP0";
 
 export function getSupabaseClient() {
   return createClient(URL, ANON_KEY, { db: { schema: "tap_hub_project" } });
@@ -16,6 +16,21 @@ export function getSupabaseClient() {
 
 export function getSupabaseClientDefault() {
   return createClient(URL, ANON_KEY);
+}
+
+/**
+ * Extract email from tap_demo_email cookie fallback.
+ * The profiles table has no email column, so we rely on this cookie
+ * set during login for demo users.
+ */
+function getEmailFromCookie(cookieHeader: string): string {
+  const match = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+  if (match) {
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {}
+  }
+  return "";
 }
 
 export async function getAuthUser(cookieHeader: string) {
@@ -44,12 +59,12 @@ export async function getAuthUser(cookieHeader: string) {
       const demoName = decodeURIComponent(nameMatch[1]);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, email")
+        .select("id")
         .eq("full_name", demoName)
         .maybeSingle();
       if (profile && profile.id) {
         return {
-          user: { id: profile.id, email: profile.email || "" } as any,
+          user: { id: profile.id, email: getEmailFromCookie(cookieHeader) } as any,
           supabase,
         };
       }
@@ -60,12 +75,12 @@ export async function getAuthUser(cookieHeader: string) {
         const reversed = `${last}, ${parts.join(" ")}`;
         const { data: revProfile } = await supabase
           .from("profiles")
-          .select("id, email")
+          .select("id")
           .eq("full_name", reversed)
           .maybeSingle();
         if (revProfile && revProfile.id) {
           return {
-            user: { id: revProfile.id, email: revProfile.email || "" } as any,
+            user: { id: revProfile.id, email: getEmailFromCookie(cookieHeader) } as any,
             supabase,
           };
         }
