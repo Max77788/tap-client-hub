@@ -140,6 +140,11 @@ textarea {
   font-size: 0.875rem;
   background: #fff;
   color: var(--ink);
+
+  /* Hide number input spinners for cell editing inputs */
+  &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  &::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  -moz-appearance: textfield;
   resize: vertical;
 }
 input:focus, select:focus, textarea:focus {

@@ -508,28 +508,6 @@ export default function WorklistTable({
   const [editingT9, setEditingT9] = useState<string | null>(null);
   const [editT9Value, setEditT9Value] = useState("");
 
-  // ── T9 bump handler ──
-  const t9Bump = useCallback((clientId: string, monthIdx: number, ev: React.MouseEvent) => {
-    if (isHistorical) return;
-    const key = `${clientId}:1099s`;
-    setT9Counts((prev) => {
-      const counts = [...(prev[key] ?? Array(12).fill(0))];
-      const delta = ev.shiftKey ? -1 : 1;
-      counts[monthIdx] = Math.max(0, (counts[monthIdx] || 0) + delta);
-      // Persist
-      const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
-      if (svc?.csId) {
-        const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
-        fetch("/api/period-counts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ client_service_id: svc.csId, period, processed: counts[monthIdx] }),
-        }).catch(() => {});
-      }
-      return { ...prev, [key]: counts };
-    });
-  }, [isHistorical, clients, year]);
-
   const t9StartEdit = useCallback((clientId: string, monthIdx: number, currentVal: number) => {
     if (isHistorical) return;
     setEditingT9(`${clientId}:${monthIdx}`);
@@ -893,13 +871,12 @@ export default function WorklistTable({
                           ) : (
                             <div
                               onClick={!isHistorical ? () => t9StartEdit(client.id, i, n) : undefined}
-                              onDoubleClick={!isHistorical ? (e) => { e.stopPropagation(); t9Bump(client.id, i, e); } : undefined}
                               className={`inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
                               style={{
                                 backgroundColor: n > 0 ? "var(--green-soft)" : "transparent",
                                 color: n > 0 ? "var(--green)" : "var(--muted)",
                               }}
-                              title={`${mo}: ${n} processed${!isHistorical ? " — click to type, double-click ±1" : ""}`}
+                              title={`${mo}: ${n} processed — click to edit`}
                             >{n || "·"}</div>
                           )}
                         </td>
