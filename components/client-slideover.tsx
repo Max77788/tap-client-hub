@@ -110,6 +110,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       s.key === key ? { ...s, enabled: !s.enabled, months: s.enabled ? Array(12).fill("lock") : s.months } : s
     );
     setLocalSvcs(updated);
+    // When enabling sales_tax with no line items, show the add form immediately
+    if (key === "sales_tax") {
+      const wasOff = !localSvcs.find(s => s.key === key)?.enabled;
+      if (wasOff && (!stxLineItems || stxLineItems.length === 0)) {
+        setAddingStx(true);
+      }
+    }
     // Persist immediately
     onSave?.({ ...client, services: updated });
   }
