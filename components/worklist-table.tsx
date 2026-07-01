@@ -136,7 +136,7 @@ export interface WorklistTableProps {
   variant?: "default" | "payroll" | "t9";
   readOnly?: boolean;
   loading?: boolean;
-  onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage) => void;
+  onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => void;
   onClientClick?: (clientId: string) => void;
 }
 
@@ -458,14 +458,14 @@ export default function WorklistTable({
 
   // ── Select a stage from dropdown ──
   const handleStageSelect = useCallback(
-    (clientId: string, monthIdx: number, stage: WorklistStage) => {
+    (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => {
       if (readOnly || isHistorical) return;
       const key = `${clientId}:${serviceKey}`;
       const stages = [...(worklistState[key] ?? [])];
       if (!stages.length) return;
       stages[monthIdx] = stage;
       setWorklistState((prev) => ({ ...prev, [key]: stages }));
-      if (onStageChange) onStageChange(clientId, monthIdx, stage);
+      if (onStageChange) onStageChange(clientId, monthIdx, stage, csId);
       setActiveDropdown(null);
     },
     [readOnly, isHistorical, serviceKey, worklistState, onStageChange],

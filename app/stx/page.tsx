@@ -19,15 +19,51 @@ export default function StxPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
 
+  // Flatten: each sales_tax service entry becomes its own row
+  // Clients with multiple sales_tax services get duplicated with unique composite IDs
+  const flatClients = useMemo(() => {
+    const result: any[] = [];
+    for (const client of clients) {
+      const stxServices = (client.services || []).filter(
+        (s: any) => s.key === "sales_tax" && s.enabled
+      );
+      if (stxServices.length === 0) continue;
+      for (const svc of stxServices) {
+        result.push({
+          ...client,
+          id: `${client.id}::${svc.csId || ""}`,
+          _originalClientId: client.id,
+          _csId: svc.csId,
+          services: [svc],
+        });
+      }
+    }
+    return result;
+  }, [clients]);
+
   const selectedClient = useMemo(
-    () => (selectedClientId ? clients.find((c: any) => c.id === selectedClientId) ?? null : null),
+    () => {
+      if (!selectedClientId) return null;
+      return clients.find((c: any) => c.id === selectedClientId) ?? null;
+    },
     [clients, selectedClientId],
   );
 
-  const handleClientClick = useCallback((clientId: string) => {
-    setSelectedClientId(clientId);
+  const handleClientClick = useCallback((flatId: string) => {
+    const origId = flatId.split("::")[0];
+    setSelectedClientId(origId);
     setSlideoverOpen(true);
   }, []);
+
+  const handleStageChange = useCallback(
+    (flatId: string, monthIdx: number, stage: any, csId?: string) => {
+      const parts = flatId.split("::");
+      const origId = parts[0];
+      const entryCsId = csId || parts[1] || undefined;
+      updateServiceMonth(origId, "sales_tax", monthIdx, stage, entryCsId);
+    },
+    [updateServiceMonth],
+  );
 
   const handleSlideoverSave = useCallback(async (updated: any) => {
     updateClient(updated.id, updated);
@@ -45,8 +81,8 @@ export default function StxPage() {
 
   return (
     <div className="space-y-4">
-      <WorklistTable serviceKey="sales_tax" clients={clients} year={year} loading={loading}
-        onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "sales_tax", monthIdx, stage)}
+      <WorklistTable serviceKey="sales_tax" clients={flatClients} year={year} loading={loading}
+        onStageChange={handleStageChange}
         onClientClick={handleClientClick} />
       {selectedClient && (
         <ClientSlideover

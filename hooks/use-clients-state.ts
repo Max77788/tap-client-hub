@@ -65,7 +65,7 @@ export function useClientsState(typeFilter: ClientType | "All" = "All") {
   };
 
   const updateServiceMonth = useCallback(
-    async (clientId: string, serviceKey: ServiceKey, monthIdx: number, wStage: WorklistStage) => {
+    async (clientId: string, serviceKey: ServiceKey, monthIdx: number, wStage: WorklistStage, csId?: string) => {
       const monthStatus = STAGE_TO_MONTH[wStage];
 
       // Optimistic local update
@@ -75,7 +75,11 @@ export function useClientsState(typeFilter: ClientType | "All" = "All") {
           return {
             ...c,
             services: c.services.map(s => {
-              if (s.key !== serviceKey) return s;
+              if (csId) {
+                if (s.csId !== csId) return s;
+              } else {
+                if (s.key !== serviceKey) return s;
+              }
               const months = [...s.months as any[]];
               months[monthIdx] = monthStatus;
               return { ...s, months };
@@ -88,7 +92,9 @@ export function useClientsState(typeFilter: ClientType | "All" = "All") {
       try {
         const client = clients.find(c => c.id === clientId);
         if (!client) return;
-        const svc = client.services.find(s => s.key === serviceKey);
+        const svc = csId
+          ? client.services.find(s => s.csId === csId)
+          : client.services.find(s => s.key === serviceKey);
         if (!svc?.csId) return;
 
         const now = new Date();
