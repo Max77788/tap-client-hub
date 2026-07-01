@@ -38,7 +38,7 @@ export async function getAuthUser(cookieHeader: string) {
   }
 
   // Strategy 2: tap_demo_user cookie
-  const nameMatch = cookieHeader.match(/(?:^|;\\s*)tap_demo_user=([^;]*)/);
+  const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
   if (nameMatch) {
     try {
       const demoName = decodeURIComponent(nameMatch[1]);
