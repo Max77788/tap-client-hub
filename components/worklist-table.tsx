@@ -1223,9 +1223,10 @@ export default function WorklistTable({
                     // ── Payroll variant: show next processing date ──
                     if (variant === "payroll" && isActive) {
                       const nextDate = getNextProcessingDate(prCadence, svc.payStartDate);
+                      const hasPRCmt = (svc.comments || []).some((c: any) => c.month === i);
 
                       return (
-                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
+                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
                           <div
                             className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums"
                             style={{
@@ -1236,6 +1237,14 @@ export default function WorklistTable({
                           >
                             {nextDate}
                           </div>
+                          {/* ── Comment marker dot ── */}
+                          {hasPRCmt && (
+                            <div style={{
+                              position: "absolute", top: 0, right: 0,
+                              width: 6, height: 6, borderRadius: "50%",
+                              background: "var(--blue)", zIndex: 2,
+                            }} />
+                          )}
                         </td>
                       );
                     }
@@ -1264,6 +1273,8 @@ export default function WorklistTable({
                       : stage === "na" ? "–" : "";
                     const delayed = isPastDue && !isHistorical;
                     const lockHist = isHistorical && isActive;
+                    // ── Comment marker: check if any comment exists for this month ──
+                    const hasCmt = (svc.comments || []).some((c: any) => c.month === i);
                     return (
                       <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
                         <div
@@ -1283,6 +1294,14 @@ export default function WorklistTable({
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
+                        {/* ── Comment marker dot ── */}
+                        {hasCmt && (
+                          <div style={{
+                            position: "absolute", top: 0, right: 0,
+                            width: 6, height: 6, borderRadius: "50%",
+                            background: "var(--blue)", zIndex: 2,
+                          }} />
+                        )}
                         {activeDropdown === `${client.id}:${i}` && !cellReadOnly && (
                           <div
                             ref={dropdownRef}
