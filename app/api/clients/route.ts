@@ -30,7 +30,6 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get("type")?.toLowerCase();
-    const serviceFilter = searchParams.get("service")?.toLowerCase();
     const limit = parseInt(searchParams.get("limit") || "1000");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -46,35 +45,6 @@ export async function GET(request: Request) {
     }
 
     let query = supabase.from("clients").select("*, contacts(*)").eq("status", "active");
-
-    // If service filter is specified, first get client IDs for that service
-    let serviceClientIds: string[] | null = null;
-    if (serviceFilter) {
-      const CODE_TO_SVC: Record<string, string> = {
-        FIN: "financials", PR: "payroll", STX: "sales_tax",
-        T9: "1099s", REND: "renditions", TAX: "tax_returns",
-      };
-      const serviceCodes = Object.keys(CODE_TO_SVC).filter(k => CODE_TO_SVC[k] === serviceFilter);
-      const { data: svcData } = await supabase
-        .from("services")
-        .select("id")
-        .in("code", serviceCodes);
-      if (svcData && svcData.length > 0) {
-        const serviceId = svcData[0].id;
-        const { data: csData } = await supabase
-          .from("client_services")
-          .select("client_id")
-          .eq("service_id", serviceId)
-          .eq("active", true);
-        if (csData && csData.length > 0) {
-          serviceClientIds = [...new Set(csData.map((r: any) => r.client_id))];
-          query = query.in("id", serviceClientIds);
-        } else {
-          // No clients have this service — return empty
-          return NextResponse.json({ clients: [], stats: { total: totalCount || 0, business: bizCount, personal: persCount } });
-        }
-      }
-    }
 
     if (typeFilter === "business" || typeFilter === "personal") {
       query = query.filter("type", "ilike", typeFilter);
