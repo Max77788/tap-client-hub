@@ -818,7 +818,7 @@ export default function WorklistTable({
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Cadence</th>
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 90, maxWidth: 100 }}>Cadence</th>
             )}
             {variant === "t9" && (
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
@@ -994,11 +994,11 @@ export default function WorklistTable({
 
                   {/* Cadence — inline editable dropdown */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
+                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
                     <select
                       value={frequencyOverrides[`${client.id}:${serviceKey}`] ?? (variant === "payroll" ? prCadence : svc.frequency || "Monthly")}
                       onChange={(e) => handleFrequencyChange(client, svc, e.target.value)}
-                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[65px] max-w-[78px]"
+                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[95px]"
                     >
                       {(cadenceOptions.length > 0 ? cadenceOptions : ["Monthly", "Quarterly", "Annually"]).map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
