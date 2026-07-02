@@ -766,7 +766,7 @@ export default function WorklistTable({
             {variant === "payroll" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Processor</th>
             )}
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Assigned</th>
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 100, maxWidth: 120 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Cadence</th>
             )}
@@ -817,7 +817,7 @@ export default function WorklistTable({
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 100, maxWidth: 120 }}>
                       <select
                         value={assignedOverrides[`${client.id}:1099s`] ?? (svc.assignedTo || svc.processor || "")}
                         onChange={(e) => {
@@ -829,7 +829,7 @@ export default function WorklistTable({
                             body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
                           }).catch(() => {});
                         }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[60px] max-w-[85px]"
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[110px]"
                       >
                         <option value="">Unassigned</option>
                         {staffList.map((s) => (
@@ -910,7 +910,7 @@ export default function WorklistTable({
                   )}
 
                   {/* Assigned — inline editable dropdown (all services) */}
-                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
+                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 100, maxWidth: 120 }}>
                     <select
                       value={assignedOverrides[`${client.id}:${serviceKey}`] ?? (svc.assignedTo || svc.processor || "")}
                       onChange={(e) => {
@@ -923,7 +923,7 @@ export default function WorklistTable({
                           body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
                         }).catch((e) => console.error("Failed to update assigned:", e));
                       }}
-                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[60px] max-w-[85px]"
+                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[110px]"
                     >
                       <option value="">Unassigned</option>
                       {staffList.map((s) => (
