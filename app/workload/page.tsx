@@ -79,7 +79,7 @@ export default function WorkloadPage() {
           <div className="sl" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Clients</div>
         </div>
         <div className="statcard" style={statcardStyle}>
-          <div className="sn" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1, color: "var(--amber)" }}>{busiest?.name.split(" ")[0] || "—"}</div>
+          <div className="sn" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1, color: "var(--amber)" }}>{busiest?.name || "—"}</div>
           <div className="sl" style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Busiest</div>
         </div>
         <div className="statcard" style={statcardStyle}>
@@ -99,8 +99,8 @@ export default function WorkloadPage() {
           <div>
             <b style={{ color: "#4a3208" }}>{busiest.name}</b> is carrying the heaviest load (~{busiest.totalTouchpoints} touchpoints/yr,
             {Math.round((busiest.totalTouchpoints / avgLoad - 1) * 100)}% above average), while <b style={{ color: "#4a3208" }}>{lightest.name}</b>
-            {" "}sits at ~{lightest.totalTouchpoints}. Moving a couple of recurring clients from {busiest.name.split(" ")[0]} to{" "}
-            {lightest.name.split(" ")[0]} would even the team out{unassigned ? `. You also have ${unassigned.clientCount} unassigned client${unassigned.clientCount !== 1 ? "s" : ""} with no owner.` : "."}
+            {" "}sits at ~{lightest.totalTouchpoints}. Moving a couple of recurring clients from {busiest.name.split(",")[0]} to{" "}
+            {lightest.name.split(",")[0]} would even the team out{unassigned ? `. You also have ${unassigned.clientCount} unassigned client${unassigned.clientCount !== 1 ? "s" : ""} with no owner.` : "."}
           </div>
         </div>
       )}
