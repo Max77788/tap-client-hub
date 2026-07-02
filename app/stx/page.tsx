@@ -21,6 +21,7 @@ export default function StxPage() {
 
   // Flatten: each sales_tax service entry becomes its own row
   // Clients with multiple sales_tax services get duplicated with unique composite IDs
+  // Sort by line item/service name so same-name items are adjacent
   const flatClients = useMemo(() => {
     const result: any[] = [];
     for (const client of clients) {
@@ -38,6 +39,14 @@ export default function StxPage() {
         });
       }
     }
+    // Sort by the service name / first line item name for clubbed grouping
+    result.sort((a, b) => {
+      const svcA = a.services?.[0];
+      const svcB = b.services?.[0];
+      const nameA = svcA?.salesTaxLineItems?.[0]?.serviceName || svcA?.name || a.name;
+      const nameB = svcB?.salesTaxLineItems?.[0]?.serviceName || svcB?.name || b.name;
+      return nameA.localeCompare(nameB);
+    });
     return result;
   }, [clients]);
 

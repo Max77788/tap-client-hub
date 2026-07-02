@@ -874,7 +874,7 @@ export default function WorklistTable({
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
-             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>Client</th>
+             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>Client / Line Item</th>
             {variant === "payroll" && (
             <>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Bi-wk Code</th>
@@ -970,7 +970,7 @@ export default function WorklistTable({
                 const left = Math.max(0, exp - done);
                 return (
                   <tr key={client.id} className="transition-colors" style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td className="px-1.5 py-1" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>
+                    <td className="px-1.5 py-1" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
@@ -1052,8 +1052,8 @@ export default function WorklistTable({
                   className="transition-colors"
                   style={{ borderBottom: "1px solid var(--line)" }}
                 >
-                  {/* Client name (clickable) */}
-                  <td className="px-1.5 py-1" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>
+                  {/* Client / Line Item name (clickable) */}
+                  <td className="px-1.5 py-1" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
                         title={`Open ${displayName} details`}
