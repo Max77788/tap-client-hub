@@ -138,6 +138,7 @@ export interface WorklistTableProps {
   loading?: boolean;
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => void;
   onClientClick?: (clientId: string) => void;
+  onPayrollMissingRuns?: (count: number) => void;
 }
 
 // ── Build initial worklist state from clients ──
@@ -161,6 +162,7 @@ export default function WorklistTable({
   loading = false,
   onStageChange,
   onClientClick,
+  onPayrollMissingRuns,
 }: WorklistTableProps) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -662,6 +664,13 @@ export default function WorklistTable({
     return { dueThisMonth, inProgress, waiting, prepared, done, behind, notStarted, currentMonthName, yDue, yDone };
   }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical, prCounts, t9Counts]);
 
+  // ── Pipe payroll missing runs up to parent ──
+  useEffect(() => {
+    if (variant === "payroll" && onPayrollMissingRuns) {
+      onPayrollMissingRuns(Math.max(0, stats.totalMax - stats.totalRuns));
+    }
+  }, [variant, onPayrollMissingRuns, stats.totalMax, stats.totalRuns]);
+
   // ── Stage legend ──
   const legendItems: { stage: WorklistStage; dot: string }[] = [
     { stage: "", dot: "·" },
@@ -700,7 +709,7 @@ export default function WorklistTable({
           <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
           <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
         </div>
-      ) : variant === "payroll" ? (
+      ) : variant === "payroll" && !onPayrollMissingRuns ? (
         <div className="stats" style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <StatCard label="Total missing runs" value={Math.max(0, stats.totalMax - stats.totalRuns)} color="var(--red)" />
         </div>

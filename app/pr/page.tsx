@@ -18,6 +18,7 @@ export default function PrPage() {
   const { clients, loading, updateServiceMonth, updateClient } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
+  const [payrollMissingRuns, setPayrollMissingRuns] = useState(0);
 
   const selectedClient = useMemo(
     () => (selectedClientId ? clients.find((c: any) => c.id === selectedClientId) ?? null : null),
@@ -78,11 +79,13 @@ export default function PrPage() {
         <StatCard label="Bi-Weekly / Semi-Mo" value={payrollMetrics.biWeekly} color="var(--amber)" />
         <StatCard label="Monthly" value={payrollMetrics.monthly} color="var(--teal)" />
         <StatCard label="Unique Processors" value={payrollMetrics.processorCount} color="var(--green)" />
+        <StatCard label="Total missing runs" value={payrollMissingRuns} color="var(--red)" />
       </div>
 
       <WorklistTable serviceKey="payroll" variant="payroll" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "payroll", monthIdx, stage)}
-        onClientClick={handleClientClick} />
+        onClientClick={handleClientClick}
+        onPayrollMissingRuns={setPayrollMissingRuns} />
       {selectedClient && (
         <ClientSlideover
           client={selectedClient}
