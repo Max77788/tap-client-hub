@@ -63,6 +63,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prPaydate, setPrPaydate] = useState("");
   const [prPin, setPrPin] = useState("");
   const [prEftps, setPrEftps] = useState("");
+  const [showPrPin, setShowPrPin] = useState(false);
+  const [showPrEftps, setShowPrEftps] = useState(false);
 
   // ── 1099s count state ──
   const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
@@ -456,31 +458,57 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       </div>
                       <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll PIN</label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
-                          type="password" value={prPin}
-                          onChange={e => {
-                            setPrPin(e.target.value);
-                            const updated = localSvcs.map((s: any) =>
-                              s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s
-                            );
-                            setLocalSvcs(updated);
-                          }}
-                          placeholder="EFT pin"
-                        />
+                        <div style={{ position: "relative" }}>
+                          <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
+                            type={showPrPin ? "text" : "password"} value={prPin}
+                            onChange={e => {
+                              setPrPin(e.target.value);
+                              const updated = localSvcs.map((s: any) =>
+                                s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s
+                              );
+                              setLocalSvcs(updated);
+                            }}
+                            placeholder="EFT pin"
+                          />
+                          <button
+                            type="button" tabIndex={-1}
+                            onClick={() => setShowPrPin(!showPrPin)}
+                            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}
+                          >
+                            {showPrPin ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>EFTPS Password</label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
-                          type="password" value={prEftps}
-                          onChange={e => {
-                            setPrEftps(e.target.value);
-                            const updated = localSvcs.map((s: any) =>
-                              s.key === "payroll" ? { ...s, eftps: e.target.value } : s
-                            );
-                            setLocalSvcs(updated);
-                          }}
-                          placeholder="EFTPS password"
-                        />
+                        <div style={{ position: "relative" }}>
+                          <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
+                            type={showPrEftps ? "text" : "password"} value={prEftps}
+                            onChange={e => {
+                              setPrEftps(e.target.value);
+                              const updated = localSvcs.map((s: any) =>
+                                s.key === "payroll" ? { ...s, eftps: e.target.value } : s
+                              );
+                              setLocalSvcs(updated);
+                            }}
+                            placeholder="EFTPS password"
+                          />
+                          <button
+                            type="button" tabIndex={-1}
+                            onClick={() => setShowPrEftps(!showPrEftps)}
+                            style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}
+                          >
+                            {showPrEftps ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -645,6 +673,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       if (s.key === "financials") {
         updated = { ...updated, financialsMonth: eFinMonth };
       }
+      if (s.key === "payroll") {
+        updated = { ...updated, paydate: prPaydate, payrollPassword: prPin, eftps: prEftps };
+      }
       // Apply per-service assignee change
       const newAssignee = eSvcAssignees[s.key];
       if (newAssignee && newAssignee !== "Unassigned") {
@@ -773,6 +804,78 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </select>
             </div>
           ))}
+
+        {/* Payroll credentials in edit mode */}
+        {localSvcs.some((s: any) => s.key === "payroll" && s.enabled) && (
+          <>
+            <div className="sect" style={{ ...sectStyle, marginTop: 24 }}>Payroll credentials</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ flex: "1 0 120px", minWidth: 120 }}>
+                <label className="el" style={elStyle}>Pay date / day</label>
+                <input className="ef" style={efStyle}
+                  value={prPaydate}
+                  onChange={e => {
+                    setPrPaydate(e.target.value);
+                    setLocalSvcs(prev => prev.map((s: any) =>
+                      s.key === "payroll" ? { ...s, paydate: e.target.value } : s
+                    ));
+                  }}
+                  placeholder="e.g. Friday"
+                />
+              </div>
+              <div style={{ flex: "1 0 120px", minWidth: 120 }}>
+                <label className="el" style={elStyle}>Payroll PIN</label>
+                <div style={{ position: "relative" }}>
+                  <input className="ef" style={{ ...efStyle, paddingRight: 30 }}
+                    type={showPrPin ? "text" : "password"} value={prPin}
+                    onChange={e => {
+                      setPrPin(e.target.value);
+                      setLocalSvcs(prev => prev.map((s: any) =>
+                        s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s
+                      ));
+                    }}
+                    placeholder="EFT pin"
+                  />
+                  <button type="button" tabIndex={-1}
+                    onClick={() => setShowPrPin(!showPrPin)}
+                    style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}
+                  >
+                    {showPrPin ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div style={{ flex: "1 0 120px", minWidth: 120 }}>
+                <label className="el" style={elStyle}>EFTPS Password</label>
+                <div style={{ position: "relative" }}>
+                  <input className="ef" style={{ ...efStyle, paddingRight: 30 }}
+                    type={showPrEftps ? "text" : "password"} value={prEftps}
+                    onChange={e => {
+                      setPrEftps(e.target.value);
+                      setLocalSvcs(prev => prev.map((s: any) =>
+                        s.key === "payroll" ? { ...s, eftps: e.target.value } : s
+                      ));
+                    }}
+                    placeholder="EFTPS password"
+                  />
+                  <button type="button" tabIndex={-1}
+                    onClick={() => setShowPrEftps(!showPrEftps)}
+                    style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}
+                  >
+                    {showPrEftps ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
         </div>
 
         {/* Footer */}
