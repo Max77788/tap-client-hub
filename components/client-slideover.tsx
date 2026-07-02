@@ -424,17 +424,25 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 {/* Sales Tax — line items under the sales_tax card */}
                 {svc.key === "sales_tax" && svc.enabled && (
                   <div style={{ padding: "6px 13px 12px", borderTop: "1px dashed var(--line)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>Line items</div>
-                      <button
-                        onClick={() => setAddingStx(!addingStx)}
-                        className="reveal"
-                        style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12px" }}
-                      >
-                        {addingStx ? "Cancel" : "＋ Add"}
-                      </button>
-                    </div>
+                    {/* "+ Add new line" button always visible when Sales Tax is on */}
+                    <button
+                      onClick={() => setAddingStx(!addingStx)}
+                      style={{
+                        all: "unset", cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "8px 12px", marginBottom: 8,
+                        border: "1px dashed var(--line)", borderRadius: 8,
+                        fontSize: 12, fontWeight: 600, color: "var(--teal)",
+                        width: "100%", boxSizing: "border-box",
+                        transition: ".12s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--teal)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
+                    >
+                      <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Add new line
+                    </button>
 
+                    {/* Add new line item form */}
                     {addingStx && (
                       <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
@@ -471,27 +479,38 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                           </div>
                         </div>
-                        <button
-                          className="reveal"
-                          style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12 }}
-                          onClick={() => {
-                            if (!newStxName.trim()) return;
-                            setStxLineItems(prev => [...prev, {
-                              serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
-                              bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
-                              frequency: newStxFreq,
-                            }]);
-                            setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                            setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
-                            setAddingStx(false);
-                          }}
-                        >
-                          Add line item
-                        </button>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <button
+                            className="reveal"
+                            style={{ all: "unset", cursor: "pointer", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12, color: "var(--muted)" }}
+                            onClick={() => setAddingStx(false)}
+                          >Cancel</button>
+                          <button
+                            className="reveal"
+                            style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12 }}
+                            onClick={() => {
+                              if (!newStxName.trim()) return;
+                              setStxLineItems(prev => [...prev, {
+                                serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
+                                bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                                frequency: newStxFreq,
+                              }]);
+                              setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
+                              setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                              setAddingStx(false);
+                            }}
+                          >Add line item</button>
+                        </div>
                       </div>
                     )}
 
+                    {/* Line items list */}
                     {stxLineItems.length > 0 && (
+                      <>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>Line items</div>
+                      </div>
+
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {stxLineItems.map((item: any, i: number) => (
                           <div key={i} style={{
@@ -517,6 +536,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           </div>
                         ))}
                       </div>
+                      </>
                     )}
                   </div>
                 )}
