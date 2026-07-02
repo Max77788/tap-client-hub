@@ -259,17 +259,47 @@ export default function WorklistTable({
   const handleAssignedChange = useCallback(
     (client: any, svc: any, value: string) => {
       if (!svc?.csId) return;
-      const key = `${client.id}:payroll`;
-      // Optimistic local update
+      const key = `${client.id}:${svc.key || serviceKey}`;
       setAssignedOverrides((prev) => ({ ...prev, [key]: value }));
-      // Persist via PATCH /api/clients
       fetch("/api/clients", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csId: svc.csId, assignedTo: value }),
       }).catch((e) => console.error("Failed to update assigned:", e));
     },
-    [],
+    [serviceKey],
+  );
+
+  // ── Handle Processor change (inline dropdown) ──
+  const [processorOverrides, setProcessorOverrides] = useState<Record<string, string>>({});
+  const handleProcessorChange = useCallback(
+    (client: any, svc: any, value: string) => {
+      if (!svc?.csId) return;
+      const key = `${client.id}:${svc.key || serviceKey}`;
+      setProcessorOverrides((prev) => ({ ...prev, [key]: value }));
+      fetch("/api/clients", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csId: svc.csId, processor: value }),
+      }).catch((e) => console.error("Failed to update processor:", e));
+    },
+    [serviceKey],
+  );
+
+  // ── Handle Frequency / Cadence change (inline dropdown) ──
+  const [frequencyOverrides, setFrequencyOverrides] = useState<Record<string, string>>({});
+  const handleFrequencyChange = useCallback(
+    (client: any, svc: any, value: string) => {
+      if (!svc?.csId) return;
+      const key = `${client.id}:${svc.key || serviceKey}`;
+      setFrequencyOverrides((prev) => ({ ...prev, [key]: value }));
+      fetch("/api/clients", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csId: svc.csId, frequency: value }),
+      }).catch((e) => console.error("Failed to update frequency:", e));
+    },
+    [serviceKey],
   );
 
   // ── Initialize worklist state from client data ──
@@ -639,12 +669,11 @@ export default function WorklistTable({
   ];
 
   // ── Count of columns before month columns (for colspan) ──
-  const baseCols = 2; // Client + Assigned
+  const baseCols = 3; // Client + Processor + Assigned
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
-  const payrollCols = variant === "payroll" ? 1 : 0;
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
-  const colCount = baseCols + extraCols + payrollCols + t9PreCols + 12 + t9PostCols;
+  const colCount = baseCols + extraCols + t9PreCols + 12 + t9PostCols;
 
   if (loading) {
     return (
@@ -763,9 +792,7 @@ export default function WorklistTable({
         <thead>
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>Client</th>
-            {variant === "payroll" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Processor</th>
-            )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Cadence</th>
@@ -816,6 +843,18 @@ export default function WorklistTable({
                     <td className="px-1.5 py-1" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
+                    </td>
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
+                      <select
+                        value={processorOverrides[`${client.id}:1099s`] ?? (svc.processor || "")}
+                        onChange={(e) => handleProcessorChange(client, svc, e.target.value)}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[85px]"
+                      >
+                        <option value="">—</option>
+                        {staffList.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
                       <select
@@ -902,12 +941,19 @@ export default function WorklistTable({
                         title={`Open ${client.name} details`}
                       >{client.name}</button>
                     </td>
-                    {/* Processor column (payroll only) */}
-                  {variant === "payroll" && (
+                    {/* Processor — inline editable dropdown (all services) */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
-                    {processor}
+                    <select
+                      value={processorOverrides[`${client.id}:${serviceKey}`] ?? (svc.processor || "")}
+                      onChange={(e) => handleProcessorChange(client, svc, e.target.value)}
+                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[85px]"
+                    >
+                      <option value="">—</option>
+                      {staffList.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                   </td>
-                  )}
 
                   {/* Assigned — inline editable dropdown (all services) */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
@@ -932,12 +978,18 @@ export default function WorklistTable({
                     </select>
                   </td>
 
-                  {/* Cadence */}
+                  {/* Cadence — inline editable dropdown */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
-                    {variant === "payroll"
-                      ? prCadence
-                      : svc.frequency}
+                    <select
+                      value={frequencyOverrides[`${client.id}:${serviceKey}`] ?? (variant === "payroll" ? prCadence : svc.frequency || "Monthly")}
+                      onChange={(e) => handleFrequencyChange(client, svc, e.target.value)}
+                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[65px] max-w-[78px]"
+                    >
+                      {(cadenceOptions.length > 0 ? cadenceOptions : ["Monthly", "Quarterly", "Annually"]).map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </td>
                   )}
 

@@ -198,6 +198,8 @@ export async function PATCH(request: Request) {
     if (role !== undefined) updateData.role = role;
     if (location !== undefined) updateData.location = location;
     if (modules !== undefined) updateData.modules = modules;
+    if (body.active !== undefined) updateData.active = body.active;
+    if (body.invite_status !== undefined) updateData.invite_status = body.invite_status;
 
     // Resolve reporting_manager name → UUID if needed
     if (reporting_manager !== undefined) {

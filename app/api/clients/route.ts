@@ -265,45 +265,60 @@ export async function PUT(request: Request) {
   }
 }
 
-// ── PATCH /api/clients — update a client service field (e.g. assigned_to) ──
+// ── PATCH /api/clients — update a client service field (assigned_to, processor, frequency) ──
 export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo } = body;
+    const { csId, assignedTo, processor, frequency } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
     }
 
-    // If assignedTo is a display name, resolve it to profile UUID
-    let assignedToId: string | null = null;
-    if (assignedTo && assignedTo !== "Unassigned" && assignedTo !== "") {
-      // Check if it's already a UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(assignedTo)) {
-        assignedToId = assignedTo;
-      } else {
-        // Look up UUID from display name
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("full_name", assignedTo)
-          .maybeSingle();
-        assignedToId = profile?.id || null;
+    const updates: Record<string, any> = {};
+
+    // If assignedTo is provided, resolve display name to profile UUID
+    if (assignedTo !== undefined) {
+      let assignedToId: string | null = null;
+      if (assignedTo && assignedTo !== "Unassigned" && assignedTo !== "") {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(assignedTo)) {
+          assignedToId = assignedTo;
+        } else {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("full_name", assignedTo)
+            .maybeSingle();
+          assignedToId = profile?.id || null;
+        }
       }
+      updates.assigned_to = assignedToId;
+    }
+
+    if (processor !== undefined) {
+      updates.processor = processor || null;
+    }
+
+    if (frequency !== undefined) {
+      updates.frequency = frequency || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
     const { error } = await supabase
       .from("client_services")
-      .update({ assigned_to: assignedToId })
+      .update(updates)
       .eq("id", csId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, assignedTo });
+    return NextResponse.json({ success: true, ...updates });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }

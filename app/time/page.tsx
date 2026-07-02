@@ -255,6 +255,19 @@ export default function TimePage() {
     });
   }, [entries, today, viewingAs]);
 
+  // ── All entries grouped by date (for the full entries table) ──
+  const groupedEntries = useMemo(() => {
+    const groups: Record<string, TimeEntry[]> = {};
+    const sorted = [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    for (const entry of sorted) {
+      const d = entry.date.slice(0, 10);
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(entry);
+    }
+    // Sort groups chronologically (newest first)
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [entries]);
+
   const totalToday = displayEntries.reduce((s, e) => s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
 
   const byWho: Record<string, number> = {};
@@ -405,7 +418,7 @@ export default function TimePage() {
 
       {/* ── Entries table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div className="count">Today&rsquo;s entries</div>
+        <div className="count">All entries</div>
         <select value={viewingAs ?? ""} onChange={(e) => setViewingAs(e.target.value || null)} style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 8, font: "inherit", fontSize: 12, background: "var(--card)", color: "var(--ink)" }}>
           <option value="">All staff</option>
           {whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
@@ -419,69 +432,97 @@ export default function TimePage() {
             </tr>
           </thead>
           <tbody>
-            {displayEntries.length > 0 ? (
-              displayEntries.map((entry, idx) => {
-                if (entry.isRunning) {
-                  const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
-                  return (
-                    <tr key={entry.id} className="running-row">
-                      <td style={{ fontWeight: 500 }}>{entry.personName}</td>
-                      <td className="lname">{shortName(entry.clientName)}</td>
-                      <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
-                      <td className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span className="pulse-dot" />
-                        {fmtClock(elapsed)}
-                        <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>running</span>
-                      </td>
-                      <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
-                      <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
-                      <td>
-                        <button className="stop-btn" onClick={() => stopEntry(entry.id)}>■ Stop</button>
-                      </td>
-                    </tr>
-                  );
-                }
+            {groupedEntries.length > 0 ? (
+              groupedEntries.flatMap(([dateStr, dateEntries]) => {
+                // Skip group header if it's today (running entries shown at top)
+                const isToday = dateStr === today;
+                const rows: React.ReactElement[] = [];
 
-                const isEditing = editIdx === idx;
-                const h = Math.floor(entry.duration / 3600);
-                const m = Math.floor((entry.duration % 3600) / 60);
-
-                if (isEditing) {
-                  return (
-                    <tr key={entry.id}>
-                      <td><select className="edit-sel" defaultValue={entry.personName} onChange={(e) => handleEdit(idx, "personName", e.target.value)}>{whoOpts.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}</select></td>
-                      <td><select className="edit-sel" defaultValue={entry.clientName} onChange={(e) => handleEdit(idx, "clientName", e.target.value)} style={{ maxWidth: 220 }}>{sorted.map((c) => (<option key={c.id} value={c.name}>{c.name}</option>))}</select></td>
-                      <td><select className="edit-sel" defaultValue={entry.serviceLabel} onChange={(e) => handleEdit(idx, "serviceLabel", e.target.value)}>{taskKeys.map((k) => (<option key={k} value={TASK_LABEL[k]}>{TASK_LABEL[k]}</option>))}</select></td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <input className="edit-inp" type="number" min={0} defaultValue={h} onChange={(e) => { const newH = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: newH * 3600 + m * 60, edited: true })); }} />h{" "}
-                        <input className="edit-inp" type="number" min={0} max={59} defaultValue={m} onChange={(e) => { const newM = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: h * 3600 + newM * 60, edited: true })); }} />m
-                      </td>
-                      <td><input className="edit-inp" type="date" defaultValue={entry.date.slice(0, 10)} onChange={(e) => handleEdit(idx, "date", e.target.value + "T12:00:00.000Z")} style={{ width: 130, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
-                      <td><textarea className="edit-note-ta" value={entry.note} onChange={(e) => handleEdit(idx, "note", e.target.value)} placeholder="Notes..." rows={2} style={{ width: 160, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13, resize: "vertical" }} /></td>
-                      <td style={{ whiteSpace: "nowrap" }}><button className="reveal" onClick={() => saveEdit(idx)} style={{ marginRight: 10 }}>Save</button><button className="reveal" onClick={() => setEditIdx(null)}>Cancel</button></td>
-                    </tr>
-                  );
-                }
-
-                return (
-                  <tr key={entry.id}>
-                    <td style={{ fontWeight: 500, color: "var(--ink)" }}>{entry.personName}</td>
-                    <td className="lname">{shortName(entry.clientName)}</td>
-                    <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <span className="mono">{fmtDur(entry.duration)}{entry.edited && <span style={{ fontSize: 10, color: "var(--muted)", fontStyle: "italic", marginLeft: 6 }}>edited</span>}</span>
-                    </td>
-                    <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
-                    <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <button className="reveal" onClick={() => setEditIdx(idx)} style={{ marginRight: 10 }}>edit</button>
-                      <button className="reveal" onClick={() => deleteEntry(entry.id)} style={{ color: "var(--red)" }}>delete</button>
+                // Date group header
+                rows.push(
+                  <tr key={`hdr-${dateStr}`}>
+                    <td colSpan={7} style={{
+                      background: "var(--card)",
+                      fontWeight: 600, fontSize: 12, color: "var(--muted)",
+                      padding: "10px 12px 4px",
+                      borderBottom: "none",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}>
+                      {isToday
+                        ? `Today — ${new Date(dateStr).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`
+                        : new Date(dateStr).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                     </td>
                   </tr>
                 );
+
+                for (const entry of dateEntries) {
+                  if (entry.isRunning) {
+                    const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
+                    rows.push(
+                      <tr key={entry.id} className="running-row">
+                        <td style={{ fontWeight: 500 }}>{entry.personName}</td>
+                        <td className="lname">{shortName(entry.clientName)}</td>
+                        <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
+                        <td className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span className="pulse-dot" />
+                          {fmtClock(elapsed)}
+                          <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>running</span>
+                        </td>
+                        <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                        <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
+                        <td>
+                          <button className="stop-btn" onClick={() => stopEntry(entry.id)}>■ Stop</button>
+                        </td>
+                      </tr>
+                    );
+                    continue;
+                  }
+
+                  const isEditing = editIdx === entries.indexOf(entry);
+                  const h = Math.floor(entry.duration / 3600);
+                  const m = Math.floor((entry.duration % 3600) / 60);
+
+                  if (isEditing) {
+                    rows.push(
+                      <tr key={entry.id}>
+                        <td><select className="edit-sel" defaultValue={entry.personName} onChange={(e) => handleEdit(entries.indexOf(entry), "personName", e.target.value)}>{whoOpts.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}</select></td>
+                        <td><select className="edit-sel" defaultValue={entry.clientName} onChange={(e) => handleEdit(entries.indexOf(entry), "clientName", e.target.value)} style={{ maxWidth: 220 }}>{sorted.map((c) => (<option key={c.id} value={c.name}>{c.name}</option>))}</select></td>
+                        <td><select className="edit-sel" defaultValue={entry.serviceLabel} onChange={(e) => handleEdit(entries.indexOf(entry), "serviceLabel", e.target.value)}>{taskKeys.map((k) => (<option key={k} value={TASK_LABEL[k]}>{TASK_LABEL[k]}</option>))}</select></td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <input className="edit-inp" type="number" min={0} defaultValue={h} onChange={(e) => { const newH = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== entries.indexOf(entry) ? ev : { ...ev, duration: newH * 3600 + m * 60, edited: true })); }} />h{" "}
+                          <input className="edit-inp" type="number" min={0} max={59} defaultValue={m} onChange={(e) => { const newM = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== entries.indexOf(entry) ? ev : { ...ev, duration: h * 3600 + newM * 60, edited: true })); }} />m
+                        </td>
+                        <td><input className="edit-inp" type="date" defaultValue={entry.date.slice(0, 10)} onChange={(e) => handleEdit(entries.indexOf(entry), "date", e.target.value + "T12:00:00.000Z")} style={{ width: 130, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
+                        <td><textarea className="edit-note-ta" value={entry.note} onChange={(e) => handleEdit(entries.indexOf(entry), "note", e.target.value)} placeholder="Notes..." rows={2} style={{ width: 160, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13, resize: "vertical" }} /></td>
+                        <td style={{ whiteSpace: "nowrap" }}><button className="reveal" onClick={() => saveEdit(entries.indexOf(entry))} style={{ marginRight: 10 }}>Save</button><button className="reveal" onClick={() => setEditIdx(null)}>Cancel</button></td>
+                      </tr>
+                    );
+                    continue;
+                  }
+
+                  rows.push(
+                    <tr key={entry.id}>
+                      <td style={{ fontWeight: 500, color: "var(--ink)" }}>{entry.personName}</td>
+                      <td className="lname">{shortName(entry.clientName)}</td>
+                      <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <span className="mono">{fmtDur(entry.duration)}{entry.edited && <span style={{ fontSize: 10, color: "var(--muted)", fontStyle: "italic", marginLeft: 6 }}>edited</span>}</span>
+                      </td>
+                      <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                      <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <button className="reveal" onClick={() => setEditIdx(entries.indexOf(entry))} style={{ marginRight: 10 }}>edit</button>
+                        <button className="reveal" onClick={() => deleteEntry(entry.id)} style={{ color: "var(--red)" }}>delete</button>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return rows;
               })
             ) : (
-              <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>No time logged yet — use Timer or Manual Entry above.</td></tr>
+              <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>No time entries yet — use Timer or Manual Entry above.</td></tr>
             )}
           </tbody>
         </table>
