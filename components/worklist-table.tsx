@@ -889,9 +889,6 @@ export default function WorklistTable({
             </>
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
-            {serviceKey === "sales_tax" && (
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 160, maxWidth: 220 }}>Line Items</th>
-            )}
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 90, maxWidth: 100 }}>Cadence</th>
             )}
@@ -931,8 +928,28 @@ export default function WorklistTable({
               </td>
             </tr>
           ) : (
-            filteredClients.map((client) => {
-              const svc = client.services.find((s) => s.key === serviceKey)!;
+            // ── For Sales Tax: expand line items into separate rows ──
+            (serviceKey === "sales_tax" && filteredClients.length > 0
+              ? filteredClients.flatMap((client: any) => {
+                  const svc = client.services?.find((s: any) => s.key === "sales_tax");
+                  const items = svc?.salesTaxLineItems;
+                  if (items?.length > 0) {
+                    return items.map((item: any, idx: number) => ({
+                      ...client,
+                      _stxItem: item,
+                      _stxIdx: idx,
+                      _stxName: item.serviceName,
+                    }));
+                  }
+                  return [{ ...client, _stxItem: null, _stxIdx: -1, _stxName: client.name }];
+                })
+              : filteredClients
+            ).map((client: any) => {
+              const svc = client.services.find((s: any) => s.key === serviceKey)!;
+              const isStxItem = serviceKey === "sales_tax" && client._stxItem;
+              const stxItem = client._stxItem;
+              const stxIdx = client._stxIdx;
+              const displayName = isStxItem ? client._stxName : client.name;
               const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
               const key = `${client.id}:${serviceKey}`;
               const stages = worklistState[key] ?? Array(12).fill("");
@@ -1039,8 +1056,8 @@ export default function WorklistTable({
                   <td className="px-1.5 py-1" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
-                        title={`Open ${client.name} details`}
-                      >{client.name}</button>
+                        title={`Open ${displayName} details`}
+                      >{displayName}</button>
                     </td>
 
                   {/* Payroll-specific columns: Bi-weekly Code, PayDay, Pay Start Date */}
@@ -1157,16 +1174,29 @@ export default function WorklistTable({
                   {/* Assigned — inline editable dropdown (all services) */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
                     <select
-                      value={assignedOverrides[`${client.id}:${serviceKey}`] ?? (svc.assignedTo || svc.processor || "")}
+                      value={assignedOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "") : (svc.assignedTo || svc.processor || ""))}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const key = `${client.id}:${serviceKey}`;
+                        const key = `${client.id}:${serviceKey}:${stxIdx}`;
                         setAssignedOverrides((prev) => ({ ...prev, [key]: val }));
-                        fetch("/api/clients", {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
-                        }).catch((e) => console.error("Failed to update assigned:", e));
+                        if (isStxItem && stxIdx >= 0) {
+                          // Update line item's assignedTo in the JSONB
+                          const updated = [...(svc.salesTaxLineItems || [])];
+                          if (updated[stxIdx]) {
+                            updated[stxIdx] = { ...updated[stxIdx], assignedTo: val };
+                            fetch("/api/clients", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: updated }),
+                            }).catch(() => {});
+                          }
+                        } else {
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
+                          }).catch((e) => console.error("Failed to update assigned:", e));
+                        }
                       }}
                       className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[100px] max-w-[140px]"
                     >
@@ -1177,34 +1207,29 @@ export default function WorklistTable({
                     </select>
                   </td>
 
-                  {/* Sales Tax: Line Items column */}
-                  {serviceKey === "sales_tax" && (
-                  <td className="px-1 py-1 text-[11px] text-[var(--muted)]" style={{ width: 160, maxWidth: 220 }}>
-                    {svc.salesTaxLineItems?.length > 0 ? (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-                        {svc.salesTaxLineItems.map((item: any, idx: number) => (
-                          <span key={idx} style={{
-                            display: "inline-flex", alignItems: "center", gap: 3,
-                            background: "var(--amber-soft)", borderRadius: 5,
-                            padding: "2px 7px", fontSize: 10, fontWeight: 600,
-                            border: "1px solid #e8d3a6", whiteSpace: "nowrap",
-                          }}>
-                            {item.serviceName}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span style={{ color: "var(--muted)", fontStyle: "italic" }}>—</span>
-                    )}
-                  </td>
-                  )}
-
                   {/* Cadence — inline editable dropdown */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
                     <select
-                      value={frequencyOverrides[`${client.id}:${serviceKey}`] ?? (variant === "payroll" ? prCadence : svc.frequency || "Monthly")}
-                      onChange={(e) => handleFrequencyChange(client, svc, e.target.value)}
+                      value={frequencyOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.frequency || svc.frequency || "Monthly") : (variant === "payroll" ? prCadence : svc.frequency || "Monthly"))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const key = `${client.id}:${serviceKey}:${stxIdx}`;
+                        setFrequencyOverrides((prev) => ({ ...prev, [key]: val }));
+                        if (isStxItem && stxIdx >= 0) {
+                          const updated = [...(svc.salesTaxLineItems || [])];
+                          if (updated[stxIdx]) {
+                            updated[stxIdx] = { ...updated[stxIdx], frequency: val };
+                            fetch("/api/clients", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: updated }),
+                            }).catch(() => {});
+                          }
+                        } else {
+                          handleFrequencyChange(client, svc, val);
+                        }
+                      }}
                       className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[95px]"
                     >
                       {(cadenceOptions.length > 0 ? cadenceOptions : ["Monthly", "Quarterly", "Annually"]).map((opt) => (
