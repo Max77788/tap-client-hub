@@ -75,7 +75,7 @@ export default function UsersPage() {
           body: JSON.stringify({
             id: modalUser.id,
             full_name: editForm.name,
-            role: (editForm.role || "Staff").toLowerCase().replace(/ /g, "_"),
+            role: (editForm.role === "Owner / Admin" ? "admin" : (editForm.role || "Staff").toLowerCase().replace(/ /g, "_")),
             location: editForm.location,
             reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
             modules: editForm.modules || [],
@@ -97,7 +97,7 @@ export default function UsersPage() {
             full_name: editForm.name,
             email: editForm.email,
             password: editForm.password,
-            role: (editForm.role || "Staff").toLowerCase().replace(/ /g, "_"),
+            role: (editForm.role === "Owner / Admin" ? "admin" : (editForm.role || "Staff").toLowerCase().replace(/ /g, "_")),
             location: editForm.location,
             reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
             modules: editForm.modules || [],
