@@ -31,6 +31,8 @@ export async function GET() {
   const { data: profiles } = await supabase
     .from("profiles")
     .select("*")
+    .eq("active", true)
+    .neq("invite_status", "disabled")
     .order("full_name");
 
   if (!dbClients) {
