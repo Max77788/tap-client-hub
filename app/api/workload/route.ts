@@ -70,12 +70,14 @@ export async function GET() {
     }
   >();
   const counted = new Set<string>();
+  const NON_PERSON_PROCESSORS = new Set(["adp", "qbo", "quickbooks desktop", "quickbooks desktop 24"]);
 
   for (const c of dbClients) {
     const clientServices = servicesByClient[c.id] || [];
     for (const cs of clientServices) {
       const freq = FREQ_TOUCHPOINTS[String(cs.frequency || "").toLowerCase()] || 0;
-      const proc = String(cs.processor || "");
+      const proc = String(cs.processor || "").trim();
+      if (!proc || NON_PERSON_PROCESSORS.has(proc.toLowerCase())) continue;
       let staffName = proc;
       for (const [sName, sInfo] of staffMap) {
         if (sInfo.initials === proc || sName === proc || sName.split(" ")[0] === proc) {
