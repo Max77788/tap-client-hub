@@ -11,6 +11,7 @@ interface StaffSummary {
   clientCount: number;
   totalTouchpoints: number;
   services: Record<string, number>;
+  serviceClients: Record<string, string[]>;
   monthCounts: number[];
   clients: string[];
 }
@@ -20,6 +21,7 @@ export default function WorkloadPage() {
   const [error, setError] = useState<string | null>(null);
   const [staffLoads, setStaffLoads] = useState<StaffSummary[]>([]);
   const [totalClients, setTotalClients] = useState(0);
+  const [expandedService, setExpandedService] = useState<{ name: string; svcKey: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,14 +178,36 @@ export default function WorkloadPage() {
                     {Object.entries(SVCMETA).map(([k, v]) => {
                       const cnt = s.services[k];
                       if (!cnt) return null;
+                      const isExpanded = expandedService?.name === s.name && expandedService?.svcKey === k;
                       return (
-                        <span key={k} className="schip" style={{
-                          fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20,
-                          background: "#f0f2f5",
-                          color: v.col, border: `1px solid ${v.col}40`,
-                        }}>
-                          {v.ic} {v.l} <b style={{ fontWeight: 700 }}>{cnt}</b>
-                        </span>
+                        <div key={k} style={{ position: "relative" }}>
+                          <span
+                            className="schip"
+                            onClick={() => setExpandedService(isExpanded ? null : { name: s.name, svcKey: k })}
+                            style={{
+                              fontSize: "11.5px", fontWeight: 500, padding: "3px 9px", borderRadius: 20,
+                              background: isExpanded ? v.col : "#f0f2f5",
+                              color: isExpanded ? "#fff" : v.col,
+                              border: `1px solid ${v.col}40`,
+                              cursor: "pointer", transition: ".12s", display: "inline-block",
+                          }}>
+                            {v.ic} {v.l} <b style={{ fontWeight: 700 }}>{cnt}</b>
+                          </span>
+                          {isExpanded && s.serviceClients?.[k] && (
+                            <div style={{
+                              position: "absolute", top: "100%", left: 0, zIndex: 10,
+                              background: "#fff", border: "1px solid #e0dcd0", borderRadius: 10,
+                              boxShadow: "0 4px 16px rgba(0,0,0,.1)", padding: "8px 0",
+                              minWidth: 220, maxHeight: 240, overflowY: "auto", marginTop: 4,
+                            }}>
+                              {s.serviceClients[k].map((cl: string) => (
+                                <div key={cl} style={{ padding: "4px 12px", fontSize: 12, whiteSpace: "nowrap" }}>
+                                  {cl}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                     {Object.values(s.services).reduce((a, b) => a + b, 0) === 0 && (

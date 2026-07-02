@@ -39,8 +39,9 @@ export async function GET() {
     return NextResponse.json({ staffLoads: [], totalClients: 0, staffCount: 0 });
   }
 
-  // Build staff map
+  // Build staff name lookup maps
   const staffMap = new Map<string, { name: string; initials: string }>();
+  const uuidToName = new Map<string, string>();
   for (const p of profiles || []) {
     const name = String(p.full_name || "Unknown");
     const initials = name
@@ -49,6 +50,7 @@ export async function GET() {
       .join("")
       .toUpperCase() || "??";
     staffMap.set(name, { name, initials });
+    if (p.id) uuidToName.set(p.id, name);
   }
 
   // Group services by client
@@ -65,6 +67,7 @@ export async function GET() {
       totalTouchpoints: number;
       clientCount: number;
       services: Record<string, number>;
+      serviceClients: Record<string, string[]>;
       monthCounts: number[];
       clients: string[];
     }
@@ -77,20 +80,33 @@ export async function GET() {
     for (const cs of clientServices) {
       const freq = FREQ_TOUCHPOINTS[String(cs.frequency || "").toLowerCase()] || 0;
       const proc = String(cs.processor || "").trim();
-      if (!proc || NON_PERSON_PROCESSORS.has(proc.toLowerCase())) continue;
-      let staffName = proc;
-      for (const [sName, sInfo] of staffMap) {
-        if (sInfo.initials === proc || sName === proc || sName.split(" ")[0] === proc) {
-          staffName = sName;
-          break;
+
+      // Determine who this service is assigned to
+      let staffName = "";
+
+      // First try processor field (used by payroll, financials, etc.)
+      if (proc && !NON_PERSON_PROCESSORS.has(proc.toLowerCase())) {
+        staffName = proc;
+        for (const [sName, sInfo] of staffMap) {
+          if (sInfo.initials === proc || sName === proc || sName.split(" ")[0] === proc) {
+            staffName = sName;
+            break;
+          }
         }
       }
+
+      // Fallback to assigned_to UUID (used by sales tax, etc.)
+      if (!staffName && cs.assigned_to) {
+        staffName = uuidToName.get(cs.assigned_to) || "";
+      }
+
       if (!staffName) continue;
 
       const load = loads.get(staffName) || {
         totalTouchpoints: 0,
         clientCount: 0,
         services: {} as Record<string, number>,
+        serviceClients: {} as Record<string, string[]>,
         monthCounts: Array(12).fill(0),
         clients: [] as string[],
       };
@@ -98,6 +114,12 @@ export async function GET() {
       const key = CODE_TO_KEY[cs.service?.code || ""] || "financials";
       load.services[key] = (load.services[key] || 0) + freq;
       load.totalTouchpoints += freq;
+
+      // Track which clients belong to each service for this staff member
+      if (!load.serviceClients[key]) load.serviceClients[key] = [];
+      if (!load.serviceClients[key].includes(c.name || "")) {
+        load.serviceClients[key].push(c.name || "");
+      }
 
       // Distribute touchpoints across months based on frequency
       if (freq > 0) {
@@ -122,7 +144,7 @@ export async function GET() {
 
   for (const [name] of staffMap) {
     if (!loads.has(name)) {
-      loads.set(name, { totalTouchpoints: 0, clientCount: 0, services: {}, monthCounts: Array(12).fill(0), clients: [] });
+      loads.set(name, { totalTouchpoints: 0, clientCount: 0, services: {}, serviceClients: {}, monthCounts: Array(12).fill(0), clients: [] });
     }
   }
 
