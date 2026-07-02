@@ -16,6 +16,7 @@ export async function GET() {
   // Try running SQL via the management endpoint
   // Supabase allows raw SQL via the REST API with service_role key
   const sql = `
+    -- Credentials table columns
     ALTER TABLE IF EXISTS credentials
       ADD COLUMN IF NOT EXISTS login TEXT,
       ADD COLUMN IF NOT EXISTS password TEXT,
@@ -28,6 +29,15 @@ export async function GET() {
       ADD COLUMN IF NOT EXISTS portal_url TEXT,
       ADD COLUMN IF NOT EXISTS service_type TEXT,
       ADD COLUMN IF NOT EXISTS ip_restrictions TEXT;
+
+    -- Client services 7/2 redesign columns
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS biweekly_code TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS pay_start_date TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS filing_state TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS filing_month TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS filing_type TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS pay_emails TEXT[] DEFAULT NULL;
   `;
 
   // Use PostgREST with raw SQL (requires pgjwt claim in service_role)
