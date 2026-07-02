@@ -114,6 +114,7 @@ export async function GET(request: Request) {
           paydate: cs.paydate || "",
           payrollPassword: cs.payroll_password || "",
           eftps: cs.eftps || "",
+          salesTaxLineItems: Array.isArray(cs.sales_tax_line_items) ? cs.sales_tax_line_items : [],
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -220,11 +221,12 @@ export async function PUT(request: Request) {
                 paydate: svc.paydate ?? existing.paydate ?? null,
                 payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
                 eftps: svc.eftps ?? existing.eftps ?? null,
+                sales_tax_line_items: svc.salesTaxLineItems || null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
           } else {
-            // Always update financials + payroll fields even if already active
+            // Always update financials + payroll + sales tax fields even if already active
             await supabase
               .from("client_services")
               .update({
@@ -232,6 +234,7 @@ export async function PUT(request: Request) {
                 paydate: svc.paydate ?? existing.paydate ?? null,
                 payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
                 eftps: svc.eftps ?? existing.eftps ?? null,
+                sales_tax_line_items: svc.salesTaxLineItems || null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
@@ -250,6 +253,7 @@ export async function PUT(request: Request) {
               paydate: svc.paydate || null,
               payroll_password: svc.payrollPassword || null,
               eftps: svc.eftps || null,
+              sales_tax_line_items: svc.salesTaxLineItems || null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
@@ -282,7 +286,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps } = body;
+    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -327,6 +331,10 @@ export async function PATCH(request: Request) {
 
     if (eftps !== undefined) {
       updates.eftps = eftps || null;
+    }
+
+    if (salesTaxLineItems !== undefined) {
+      updates.sales_tax_line_items = salesTaxLineItems;
     }
 
     if (Object.keys(updates).length === 0) {
