@@ -214,15 +214,21 @@ export async function PUT(request: Request) {
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
                 processor: svc.processor || existing.processor || null,
                 financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
+                paydate: svc.paydate ?? existing.paydate ?? null,
+                payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
+                eftps: svc.eftps ?? existing.eftps ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
           } else {
-            // Always update financials_month even if already active
+            // Always update financials + payroll fields even if already active
             await supabase
               .from("client_services")
               .update({
                 financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
+                paydate: svc.paydate ?? existing.paydate ?? null,
+                payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
+                eftps: svc.eftps ?? existing.eftps ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
@@ -238,6 +244,9 @@ export async function PUT(request: Request) {
               frequency: svc.frequency || "Monthly",
               assigned_to: svc.assignedTo || null,
               processor: svc.processor || null,
+              paydate: svc.paydate || null,
+              payroll_password: svc.payrollPassword || null,
+              eftps: svc.eftps || null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });

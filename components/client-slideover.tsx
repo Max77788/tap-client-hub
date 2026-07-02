@@ -59,6 +59,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [newStxAccount, setNewStxAccount] = useState("");
   const [newStxFreq, setNewStxFreq] = useState("Monthly");
 
+  // Payroll details state (pay date, PIN, EFTPS)
+  const [prPaydate, setPrPaydate] = useState("");
+  const [prPin, setPrPin] = useState("");
+  const [prEftps, setPrEftps] = useState("");
+
   // ── 1099s count state ──
   const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
   useEffect(() => {
@@ -98,6 +103,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const stxSvc = client.services.find((s: any) => s.key === "sales_tax");
     const items = stxSvc?.salesTaxLineItems || [];
     setStxLineItems(items);
+    // Initialize payroll fields
+    const prSvc = client.services.find((s: any) => s.key === "payroll");
+    setPrPaydate(prSvc?.paydate || "");
+    setPrPin(prSvc?.payrollPassword || "");
+    setPrEftps(prSvc?.eftps || "");
     // Auto-open the add form when sales tax is enabled with no line items
     if (stxSvc?.enabled && items.length === 0 && !editing) {
       setAddingStx(true);
@@ -423,6 +433,56 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                     )}
                     {monthCells(svc.key)}
+                  </div>
+                )}
+
+                {/* Payroll — pay date, PIN, EFTPS under the payroll card */}
+                {svc.key === "payroll" && svc.enabled && (
+                  <div style={{ padding: "6px 13px 12px", borderTop: "1px dashed var(--line)" }}>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                      <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Pay date / day</label>
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                          value={prPaydate}
+                          onChange={e => {
+                            setPrPaydate(e.target.value);
+                            const updated = localSvcs.map((s: any) =>
+                              s.key === "payroll" ? { ...s, paydate: e.target.value } : s
+                            );
+                            setLocalSvcs(updated);
+                          }}
+                          placeholder="e.g. Friday"
+                        />
+                      </div>
+                      <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll PIN</label>
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                          type="password" value={prPin}
+                          onChange={e => {
+                            setPrPin(e.target.value);
+                            const updated = localSvcs.map((s: any) =>
+                              s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s
+                            );
+                            setLocalSvcs(updated);
+                          }}
+                          placeholder="EFT pin"
+                        />
+                      </div>
+                      <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>EFTPS Password</label>
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                          type="password" value={prEftps}
+                          onChange={e => {
+                            setPrEftps(e.target.value);
+                            const updated = localSvcs.map((s: any) =>
+                              s.key === "payroll" ? { ...s, eftps: e.target.value } : s
+                            );
+                            setLocalSvcs(updated);
+                          }}
+                          placeholder="EFTPS password"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
