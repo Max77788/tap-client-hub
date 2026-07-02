@@ -111,6 +111,9 @@ export async function GET(request: Request) {
           processor: cs.processor || "", assignedTo: staffNames[cs.assigned_to || ""] || cs.assigned_to || "",
           expectedAnnual: cs.expected_annual ? Number(cs.expected_annual) || 0 : 0,
           financialsMonth: cs.financials_month ?? 0,
+          paydate: cs.paydate || "",
+          payrollPassword: cs.payroll_password || "",
+          eftps: cs.eftps || "",
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
@@ -120,7 +123,7 @@ export async function GET(request: Request) {
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", currentStage: "not_started", months: Array(12).fill("lock") });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -279,7 +282,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency } = body;
+    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -312,6 +315,18 @@ export async function PATCH(request: Request) {
 
     if (frequency !== undefined) {
       updates.frequency = frequency || null;
+    }
+
+    if (paydate !== undefined) {
+      updates.paydate = paydate || null;
+    }
+
+    if (payrollPassword !== undefined) {
+      updates.payroll_password = payrollPassword || null;
+    }
+
+    if (eftps !== undefined) {
+      updates.eftps = eftps || null;
     }
 
     if (Object.keys(updates).length === 0) {
