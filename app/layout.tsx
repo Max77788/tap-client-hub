@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { ClientsProvider } from "@/hooks/use-clients-context";
 import "./globals.css";
 
 interface NavItem {
@@ -407,34 +408,39 @@ export default function RootLayout({
 
           {/* Page content */}
           <main className={`flex-1 ${isAuthPage ? "" : "px-8 py-[18px]"}`}>
-            {/* ── Tip banner ── */}
-            {!isAuthPage && (
-              <div
-                className="hidden sm:flex gap-3 items-start mx-0 mb-0 rounded-[14px] border px-4 py-[13px]"
-                style={{
-                  backgroundColor: "var(--teal-soft)",
-                  borderColor: "#cdd6ec",
-                  color: "var(--teal-ink)",
-                  margin: "0px 0px 14px 0px",
-                }}
-              >
-                <span>👋</span>
-                <div style={{ fontSize: "13.5px", lineHeight: 1.5 }}>
-                  <b>Try this:</b> open any client → flip <b>Payroll</b> or <b>Sales&nbsp;Tax</b> on, then check that
-                  service in the left menu. The client moves there automatically — nobody re-types anything.
+            {!isAuthPage ? (
+              <ClientsProvider>
+                <div className="tip-container" style={{ margin: "0px 0px 14px 0px" }}>
+                  {/* ── Tip banner ── */}
+                  <div
+                    className="hidden sm:flex gap-3 items-start rounded-[14px] border px-4 py-[13px]"
+                    style={{
+                      backgroundColor: "var(--teal-soft)",
+                      borderColor: "#cdd6ec",
+                      color: "var(--teal-ink)",
+                    }}
+                  >
+                    <span>👋</span>
+                    <div style={{ fontSize: "13.5px", lineHeight: 1.5 }}>
+                      <b>Try this:</b> open any client → flip <b>Payroll</b> or <b>Sales&nbsp;Tax</b> on, then check that
+                      service in the left menu. The client moves there automatically — nobody re-types anything.
+                    </div>
+                    <button
+                      className="ml-auto cursor-pointer border-none bg-none text-lg opacity-60 hover:opacity-100"
+                      style={{ color: "var(--teal-ink)", lineHeight: 1, fontSize: 18 }}
+                      onClick={(e) => {
+                        (e.currentTarget.parentElement!.parentElement as HTMLElement).style.display = "none";
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="ml-auto cursor-pointer border-none bg-none text-lg opacity-60 hover:opacity-100"
-                  style={{ color: "var(--teal-ink)", lineHeight: 1, fontSize: 18 }}
-                  onClick={(e) => {
-                    e.currentTarget.parentElement!.style.display = "none";
-                  }}
-                >
-                  ×
-                </button>
-              </div>
+                {children}
+              </ClientsProvider>
+            ) : (
+              children
             )}
-            {children}
           </main>
         </div>
       </body>

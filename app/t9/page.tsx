@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useClientsState } from "@/hooks/use-clients-state";
+import { useClients } from "@/hooks/use-clients-context";
 import WorklistTable from "@/components/worklist-table";
 import ClientSlideover from "@/components/client-slideover";
 
@@ -15,7 +15,7 @@ export default function T9Page() {
     }
     return currentYear;
   });
-  const { clients, loading, updateServiceMonth, updateClient } = useClientsState();
+  const { clients, loading, updateServiceMonth, updateClient } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
 

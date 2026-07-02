@@ -9,7 +9,7 @@ import {
   getStaffOptions,
   deleteVaultEntriesByClient,
 } from "@/lib/data";
-import { useClientsState } from "@/hooks/use-clients-state";
+import { useClients } from "@/hooks/use-clients-context";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 import { PageSkeleton } from "@/components/loading-skeleton";
@@ -23,7 +23,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
-  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClientsState(typeFilter);
+  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);

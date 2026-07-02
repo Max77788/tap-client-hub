@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { SERVICE_META } from "@/lib/data";
-import { useClientsState } from "@/hooks/use-clients-state";
+import { useClients } from "@/hooks/use-clients-context";
 import type { ServiceKey } from "@/lib/types";
 import { PageSkeleton } from "@/components/loading-skeleton";
 
@@ -73,7 +73,7 @@ export default function TimePage() {
   const [, setTick] = useState(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { clients, loading: clientsLoading } = useClientsState();
+  const { clients, loading: clientsLoading } = useClients();
 
   // Tick every second so running entries' elapsed time updates
   useEffect(() => {

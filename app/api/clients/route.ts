@@ -17,7 +17,7 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
   T9: "1099s", REND: "renditions", TAX: "tax_returns",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30; // Revalidate every 30 seconds — faster than re-fetching on every navigation
 
 export async function GET(request: Request) {
   try {
@@ -30,33 +30,70 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get("type")?.toLowerCase();
+    const serviceFilter = searchParams.get("service")?.toLowerCase();
     const limit = parseInt(searchParams.get("limit") || "1000");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    const [totalCount, bizCount, persCount] = (await Promise.all([
-      supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "active"),
-      supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "active").ilike("type", "business"),
-      supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "active").ilike("type", "personal"),
-    ])).map(r => r.count ?? 0);
+    // ── Single count query instead of 3 separate ones ──
+    let countQuery = supabase.from("clients").select("type", { count: "exact", head: true }).eq("status", "active");
+    const { data: typeCounts, count: totalCount } = await countQuery;
+    // Get counts from a lightweight query
+    const { data: typeData } = await supabase.from("clients").select("type").eq("status", "active");
+    let bizCount = 0, persCount = 0;
+    for (const r of typeData || []) {
+      if (r.type?.toLowerCase() === "business") bizCount++;
+      else if (r.type?.toLowerCase() === "personal") persCount++;
+    }
 
     let query = supabase.from("clients").select("*, contacts(*)").eq("status", "active");
+
+    // If service filter is specified, first get client IDs for that service
+    let serviceClientIds: string[] | null = null;
+    if (serviceFilter) {
+      const CODE_TO_SVC: Record<string, string> = {
+        FIN: "financials", PR: "payroll", STX: "sales_tax",
+        T9: "1099s", REND: "renditions", TAX: "tax_returns",
+      };
+      const serviceCodes = Object.keys(CODE_TO_SVC).filter(k => CODE_TO_SVC[k] === serviceFilter);
+      const { data: svcData } = await supabase
+        .from("services")
+        .select("id")
+        .in("code", serviceCodes);
+      if (svcData && svcData.length > 0) {
+        const serviceId = svcData[0].id;
+        const { data: csData } = await supabase
+          .from("client_services")
+          .select("client_id")
+          .eq("service_id", serviceId)
+          .eq("active", true);
+        if (csData && csData.length > 0) {
+          serviceClientIds = [...new Set(csData.map((r: any) => r.client_id))];
+          query = query.in("id", serviceClientIds);
+        } else {
+          // No clients have this service — return empty
+          return NextResponse.json({ clients: [], stats: { total: totalCount || 0, business: bizCount, personal: persCount } });
+        }
+      }
+    }
+
     if (typeFilter === "business" || typeFilter === "personal") {
       query = query.filter("type", "ilike", typeFilter);
     }
     const { data: dbClients } = await query.order("name").range(offset, offset + limit - 1);
-    if (!dbClients) return NextResponse.json({ clients: [], stats: { total: totalCount, business: bizCount, personal: persCount } });
+    if (!dbClients || dbClients.length === 0) return NextResponse.json({ clients: [], stats: { total: totalCount || 0, business: bizCount, personal: persCount } });
 
     const ids = dbClients.map((c: any) => c.id);
     // Batch IN queries — PostgREST chokes on too many values (Bad Request)
-    const BATCH_SIZE = 200;
+    const BATCH_SIZE = 500;
     let dbServices: any[] = [];
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
       const batch = ids.slice(i, i + BATCH_SIZE);
-      const { data: batchData } = await supabase
+      let svcQuery = supabase
         .from("client_services")
         .select("*, service:services(*)")
         .eq("active", true)
         .in("client_id", batch);
+      const { data: batchData } = await svcQuery;
       if (batchData) dbServices = dbServices.concat(batchData);
     }
 
@@ -69,10 +106,10 @@ export async function GET(request: Request) {
     const allCsIds = (dbServices || []).map((cs: any) => cs.id);
     const periodByCsId: Record<string, Record<number, string>> = {};
     if (allCsIds.length > 0) {
-      const BATCH_SIZE = 200;
+      const BATCH_SIZE_WP = 500;
       let allPeriods: any[] = [];
-      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE) {
-        const batch = allCsIds.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE_WP) {
+        const batch = allCsIds.slice(i, i + BATCH_SIZE_WP);
         const { data: batchPeriods } = await supabase
           .from("work_periods")
           .select("client_service_id, stage, period")

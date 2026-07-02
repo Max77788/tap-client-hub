@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import type { VaultEntry } from "@/lib/types";
-import { useClientsState } from "@/hooks/use-clients-state";
+import { useClients } from "@/hooks/use-clients-context";
 import VaultModal from "@/components/vault-modal";
 import User2faList from "@/components/user-2fa-list";
 import { PageSkeleton } from "@/components/loading-skeleton";
@@ -19,7 +19,7 @@ export default function VaultPage() {
   const [saving, setSaving] = useState(false);
   const [visiblePws, setVisiblePws] = useState<Set<string>>(new Set());
 
-  const { clients: supabaseClients } = useClientsState();
+  const { clients: supabaseClients } = useClients();
 
   const canEdit = userRole === "admin" || userRole === "manager";
 
