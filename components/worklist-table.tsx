@@ -19,6 +19,7 @@ const STAGE_LABELS: Record<WorklistStage, string> = {
 const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 
 // ── Stage colors (matching demo v7 mcell classes exactly) ──
+const PAYROLL_PROCESSOR_OPTIONS = ["ADP", "QBO", "Quickbooks Desktop", "Quickbooks Desktop 24"];
 // prog=blue, wait=amber, prep=teal, done=green, na=red, lock=not due
 const STAGE_STYLES: Record<
   WorklistStage,
@@ -682,11 +683,12 @@ export default function WorklistTable({
   ];
 
   // ── Count of columns before month columns (for colspan) ──
-  const baseCols = 3; // Client + Processor + Assigned
+  const baseCols = 2; // Client + Assigned
+  const payrollCols = variant === "payroll" ? 1 : 0; // Processor
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
-  const colCount = baseCols + extraCols + t9PreCols + 12 + t9PostCols;
+  const colCount = baseCols + payrollCols + extraCols + t9PreCols + 12 + t9PostCols;
 
   if (loading) {
     return (
@@ -804,8 +806,10 @@ export default function WorklistTable({
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>Client</th>
+             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>Client</th>
+            {variant === "payroll" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Processor</th>
+            )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Cadence</th>
@@ -856,18 +860,6 @@ export default function WorklistTable({
                     <td className="px-1.5 py-1" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
-                    </td>
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
-                      <select
-                        value={processorOverrides[`${client.id}:1099s`] ?? (svc.processor || "")}
-                        onChange={(e) => handleProcessorChange(client, svc, e.target.value)}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[85px]"
-                      >
-                        <option value="">—</option>
-                        {staffList.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
                     </td>
                     <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
                       <select
@@ -954,19 +946,22 @@ export default function WorklistTable({
                         title={`Open ${client.name} details`}
                       >{client.name}</button>
                     </td>
-                    {/* Processor — inline editable dropdown (all services) */}
+
+                  {/* Processor — inline editable dropdown (payroll only) */}
+                  {variant === "payroll" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
                     <select
                       value={processorOverrides[`${client.id}:${serviceKey}`] ?? (svc.processor || "")}
                       onChange={(e) => handleProcessorChange(client, svc, e.target.value)}
-                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[85px]"
+                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[90px]"
                     >
                       <option value="">—</option>
-                      {staffList.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                      {PAYROLL_PROCESSOR_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   </td>
+                  )}
 
                   {/* Assigned — inline editable dropdown (all services) */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
