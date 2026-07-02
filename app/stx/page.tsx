@@ -88,6 +88,7 @@ export default function StxPage() {
         <ClientSlideover
           client={selectedClient}
           open={slideoverOpen}
+          moduleKey="sales_tax"
           onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
           onSave={handleSlideoverSave}
         />

@@ -52,6 +52,7 @@ export default function FinPage() {
         <ClientSlideover
           client={selectedClient}
           open={slideoverOpen}
+          moduleKey="financials"
           onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
           onSave={handleSlideoverSave}
         />

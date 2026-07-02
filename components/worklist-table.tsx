@@ -4,6 +4,8 @@ import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
 // ── Worklist stage types ──
 export type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
 
@@ -16,10 +18,30 @@ const STAGE_LABELS: Record<WorklistStage, string> = {
   na: "N/A",
 };
 
+// Variant-aware stage label — tax_returns uses "Filed" instead of "Done"
+function getStageLabel(stage: WorklistStage, variant?: string): string {
+  if (variant === "tax_returns" && stage === "dn") return "Filed";
+  return STAGE_LABELS[stage];
+}
+
 const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 
 // ── Stage colors (matching demo v7 mcell classes exactly) ──
 const PAYROLL_PROCESSOR_OPTIONS = ["ADP", "QBO", "Quickbooks Desktop", "Quickbooks Desktop 24"];
+
+const BIWEEKLY_CODES = ["", "1 - ODD", "2 - EVEN"];
+const PAYDAY_OPTIONS = [
+  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+  "EOM", "15th & EOM", "5th/20th", "16th/EOM",
+];
+const FILING_TYPES = ["C-corp", "S-Corp", "LLC", "Non-profit", "Solo"];
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
+  "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+  "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+  "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
+];
 // prog=blue, wait=amber, prep=teal, done=green, na=red, lock=not due
 const STAGE_STYLES: Record<
   WorklistStage,
@@ -100,6 +122,41 @@ function getMaxRunsPerMonth(cadence: PayrollCadence): number {
   }
 }
 
+// ── Payroll: calculate next processing date from cadence + payStartDate ──
+function getNextProcessingDate(cadence: PayrollCadence, payStartDate?: string): string {
+  if (!payStartDate) return "·";
+  const now = new Date();
+  const [sm, sd] = payStartDate.split("/").map(Number);
+  if (isNaN(sm) || isNaN(sd) || sm < 1 || sm > 12 || sd < 1 || sd > 31) return payStartDate;
+
+  if (cadence === "Monthly") {
+    // Next month starting from the day-of-month in payStartDate
+    let m = now.getMonth() + 1; // 0-indexed → 1-indexed
+    let y = now.getFullYear();
+    if (now.getDate() >= sd) m++; // already past this month's date
+    if (m > 11) { m = 0; y++; }
+    return `${m + 1}/${sd}`;
+  }
+
+  if (cadence === "Weekly") {
+    // Next occurrence of the day-of-week matching payStartDate's day-of-week interpretation
+    // We'll treat sd as a day-of-week indicator or just find next week
+    const dayOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][now.getDay()];
+    // For simplicity, show "Next week" or compute precisely
+    const next = new Date(now);
+    next.setDate(now.getDate() + (7 - now.getDay())); // next Monday
+    return `${next.getMonth() + 1}/${next.getDate()}`;
+  }
+
+  // Bi-Weekly: find next date based on start date
+  const startDate = new Date(now.getFullYear(), sm - 1, sd);
+  let next = new Date(startDate);
+  while (next <= now) {
+    next.setDate(next.getDate() + 14);
+  }
+  return `${next.getMonth() + 1}/${next.getDate()}`;
+}
+
 // ── 1099 expected counts — use real client_services.expected_annual
 export function getT9ExpectedCount(clientId: string, svc?: any): number {
   if (svc?.expectedAnnual && svc.expectedAnnual > 0) return svc.expectedAnnual;
@@ -134,7 +191,7 @@ export interface WorklistTableProps {
   serviceKey: ServiceKey;
   clients: any[];
   year: number;
-  variant?: "default" | "payroll" | "t9";
+  variant?: "default" | "payroll" | "t9" | "tax_returns";
   readOnly?: boolean;
   loading?: boolean;
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => void;
@@ -690,11 +747,12 @@ export default function WorklistTable({
 
   // ── Count of columns before month columns (for colspan) ──
   const baseCols = 2; // Client + Assigned
-  const payrollCols = variant === "payroll" ? 1 : 0; // Processor
+  const payrollCols = variant === "payroll" ? 3 : 0; // Bi-weekly Code, PayDay, Pay Start Date
+  const taxReturnCols = variant === "tax_returns" ? 2 : 0; // Filing State, Filing Type
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
-  const colCount = baseCols + payrollCols + extraCols + t9PreCols + 12 + t9PostCols;
+  const colCount = baseCols + payrollCols + taxReturnCols + extraCols + t9PreCols + 12 + t9PostCols;
 
   if (loading) {
     return (
@@ -729,7 +787,7 @@ export default function WorklistTable({
             <StatCard label="In progress" value={stats.inProgress} color="var(--blue)" />
             <StatCard label="Waiting on client" value={stats.waiting} color="var(--amber)" />
             <StatCard label="Prepared" value={stats.prepared} color="var(--teal)" />
-            <StatCard label="Done" value={stats.done} color="var(--green)" />
+            <StatCard label={variant === "tax_returns" ? "Filed" : "Done"} value={stats.done} color="var(--green)" />
             <StatCard label="Not started" value={stats.notStarted || 0} color="var(--red)" />
           </>
         ) : (
@@ -739,6 +797,8 @@ export default function WorklistTable({
             <StatCard label="Not completed" value={Math.max(0, stats.yDue - stats.yDone)} color="var(--amber)" />
           </>
         )}
+        {/* ── Comment month markers ── */}
+        <CommentMarkers clients={serviceClients} serviceKey={serviceKey} currentMonth={currentMonth} />
       </div>
       )}
 
@@ -771,7 +831,7 @@ export default function WorklistTable({
       </div>
 
       {/* ── Legend ── */}
-      {variant !== "payroll" && (
+      {variant !== "payroll" && variant !== "tax_returns" && (
       <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ margin: "14px 0 2px" }}>
         {STAGE_CYCLE.filter(s => s !== "").map(s => (
           <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
@@ -792,6 +852,8 @@ export default function WorklistTable({
       <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
         {variant === "payroll"
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
+          : variant === "tax_returns"
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
           : !isHistorical
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
           : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
@@ -814,7 +876,17 @@ export default function WorklistTable({
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 120, minWidth: 90, maxWidth: 140 }}>Client</th>
             {variant === "payroll" && (
-            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Processor</th>
+            <>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Bi-wk Code</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>PayDay</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Pay Start</th>
+            </>
+            )}
+            {variant === "tax_returns" && (
+            <>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Filing St</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Filing Type</th>
+            </>
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
@@ -823,9 +895,24 @@ export default function WorklistTable({
             {variant === "t9" && (
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
             )}
-            {MONTHS_SHORT.map((m) => (
-              <th key={m} className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2" style={{ width: variant === "t9" ? 44 : 30 }}>{m}</th>
-            ))}
+            {MONTHS_SHORT.map((m, mi) => {
+              // For tax_returns, check if any client has this month as filingMonth
+              const isFileMonth = variant === "tax_returns" && serviceClients.some((c) => {
+                const s = c.services?.find((s: any) => s.key === serviceKey);
+                const fm = s?.filingMonth || "";
+                return MONTH_NAMES.indexOf(fm) === mi;
+              });
+              return (
+                <th key={m}
+                  className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2"
+                  style={{
+                    width: variant === "t9" ? 44 : 30,
+                    backgroundColor: isFileMonth ? "var(--teal-soft)" : undefined,
+                    borderBottom: isFileMonth ? "2px solid var(--teal)" : undefined,
+                  }}
+                >{m}</th>
+              );
+            })}
             {variant === "t9" && (
             <>
               <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2" style={{ width: 60, minWidth: 60 }}>Left</th>
@@ -953,20 +1040,115 @@ export default function WorklistTable({
                       >{client.name}</button>
                     </td>
 
-                  {/* Processor — inline editable dropdown (payroll only) */}
+                  {/* Payroll-specific columns: Bi-weekly Code, PayDay, Pay Start Date */}
                   {variant === "payroll" && (
-                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
-                    <select
-                      value={processorOverrides[`${client.id}:${serviceKey}`] ?? (svc.processor || "")}
-                      onChange={(e) => handleProcessorChange(client, svc, e.target.value)}
-                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[90px]"
-                    >
-                      <option value="">—</option>
-                      {PAYROLL_PROCESSOR_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </td>
+                  <>
+                    {/* Bi-weekly Code */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
+                      <select
+                        value={svc.biweeklyCode || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, biweeklyCode: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[90px]"
+                      >
+                        {BIWEEKLY_CODES.map((opt) => (
+                          <option key={opt} value={opt}>{opt || "—"}</option>
+                        ))}
+                      </select>
+                    </td>
+                    {/* PayDay */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
+                      <select
+                        value={svc.paydate || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, paydate: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[95px]"
+                      >
+                        <option value="">—</option>
+                        {PAYDAY_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </td>
+                    {/* Pay Start Date */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
+                      <input
+                        type="text"
+                        defaultValue={svc.payStartDate || ""}
+                        placeholder="mm/dd"
+                        onBlur={(e) => {
+                          const val = e.target.value.trim();
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, payStartDate: val || null }),
+                          }).catch(() => {});
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] w-full min-w-[55px] max-w-[75px]"
+                      />
+                    </td>
+                  </>
+                  )}
+
+                  {/* Tax Return columns: Filing State, Filing Type */}
+                  {variant === "tax_returns" && (
+                  <>
+                    {/* Filing State */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
+                      <select
+                        value={svc.filingState || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, filingState: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[55px] max-w-[75px]"
+                      >
+                        <option value="">—</option>
+                        {US_STATES.map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </td>
+                    {/* Filing Type */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
+                      <select
+                        value={svc.filingType || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, filingType: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[95px]"
+                      >
+                        <option value="">—</option>
+                        {FILING_TYPES.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </>
                   )}
 
                   {/* Assigned — inline editable dropdown (all services) */}
@@ -1013,62 +1195,22 @@ export default function WorklistTable({
                     const isCurrentMonth = i === currentMonth && !isHistorical;
                     const cellReadOnly = readOnly || isHistorical;
 
-                    // ── Payroll variant: count-based cells ──
+                    // ── Payroll variant: show next processing date ──
                     if (variant === "payroll" && isActive) {
-                      const prCount = prCountsArr[i] || 0;
-                      const isEditing = editingPr === `${client.id}:${i}`;
-                      const pct = maxRuns > 0 ? prCount / maxRuns : 0;
+                      const nextDate = getNextProcessingDate(prCadence, svc.payStartDate);
 
                       return (
                         <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`}>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min="0"
-                              max={maxRuns}
-                              value={editPrValue}
-                              onChange={(e) => setEditPrValue(e.target.value)}
-                              onBlur={() => prCommitEdit(client.id, i)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") prCommitEdit(client.id, i);
-                                if (e.key === "Escape") setEditingPr(null);
-                              }}
-                              autoFocus
-                              className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums text-center"
-                              style={{
-                                backgroundColor: "#fff",
-                                border: "2px solid var(--teal)",
-                                color: "var(--ink)",
-                                outline: "none",
-                              }}
-                            />
-                          ) : (
-                            <button
-                              onClick={cellReadOnly ? undefined : (e) => prBump(client.id, i, e)}
-                              onDoubleClick={cellReadOnly ? undefined : () => prStartEdit(client.id, i, prCount)}
-                              disabled={cellReadOnly}
-                              className={`inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums transition-colors ${
-                                cellReadOnly ? "" : "hover:scale-110 hover:shadow-sm active:scale-95"
-                              }`}
-                              style={{
-                                backgroundColor: prCount > 0
-                                  ? pct >= 1 ? "var(--green-soft)"
-                                    : pct >= 0.5 ? "var(--amber-soft)"
-                                    : "var(--blue-soft)"
-                                  : "transparent",
-                                color: prCount > 0
-                                  ? pct >= 1 ? "var(--green)"
-                                    : pct >= 0.5 ? "var(--amber)"
-                                    : "var(--blue)"
-                                  : "var(--muted)",
-                                border: "none",
-                                outline: "none",
-                              }}
-                              title={`${MONTHS_SHORT[i]}: ${prCount}/${maxRuns} runs — click to toggle (+1 if empty, -1 if any), shift-click to remove, double-click to type`}
-                            >
-                              {prCount > 0 ? `${prCount}/${maxRuns}` : "·"}
-                            </button>
-                          )}
+                          <div
+                            className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums"
+                            style={{
+                              color: nextDate !== "·" ? "var(--ink)" : "var(--muted)",
+                              backgroundColor: nextDate !== "·" ? "var(--blue-soft)" : "transparent",
+                            }}
+                            title={`${MONTHS_SHORT[i]} — next processing: ${nextDate}`}
+                          >
+                            {nextDate}
+                          </div>
                         </td>
                       );
                     }
@@ -1076,6 +1218,11 @@ export default function WorklistTable({
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
                     const style = STAGE_STYLES[stage];
+
+                    // ── Tax returns: filingMonth highlight ──
+                    const clientFilingMonth = variant === "tax_returns" ? (svc.filingMonth || "") : "";
+                    const filingMonthIdx = clientFilingMonth ? MONTH_NAMES.indexOf(clientFilingMonth) : -1;
+                    const isFilingMonth = filingMonthIdx === i;
                     const isPastDue =
                       isActive &&
                       i < currentMonth &&
@@ -1099,17 +1246,17 @@ export default function WorklistTable({
                           className="mcell"
                           style={{
                             width: 26, height: 26, borderRadius: 6,
-                            border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
-                            background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
-                            color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
+                            border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : isFilingMonth ? "var(--teal)" : style.border}`,
+                            background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : (isFilingMonth ? "var(--teal-soft)" : style.bg),
+                            color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : (isFilingMonth ? "var(--teal-ink)" : style.fg),
                             display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto",
                             fontWeight: 600, fontSize: 11, userSelect: "none",
                             cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
-                            boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
+                            boxShadow: delayed ? "0 0 0 2px var(--red)" : isFilingMonth ? "0 0 0 2px var(--teal)" : "none",
                             opacity: !isActive && !lockHist ? 0 : 1,
                           } as React.CSSProperties}
-                          title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${STAGE_LABELS[stage]}${isHistorical ? ` (${year})` : ""}`}
+                          title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
                         {activeDropdown === `${client.id}:${i}` && !cellReadOnly && (
                           <div
@@ -1147,7 +1294,7 @@ export default function WorklistTable({
                                     background: s === "na" ? "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)"
                                       : s === "" ? "#c2c8d4" : ss.fg,
                                   }} />
-                                  <span>{s === "" ? "Not Started" : ss.label}</span>
+                                  <span>{s === "" ? "Not Started" : getStageLabel(s, variant)}</span>
                                   {isCurrent && <span style={{ marginLeft: "auto", color: "var(--teal)", fontSize: 14 }}>✓</span>}
                                 </div>
                               );
@@ -1188,6 +1335,12 @@ export default function WorklistTable({
           Click any month cell to toggle its run count -- click 0 to add one, click a nonzero cell to reduce it.
           Shift-click always removes one. Cadence (Weekly=&thinsp;5, Bi-Weekly=&thinsp;2, Monthly=&thinsp;1) sets the maximum
           runs per month for each client. Double-click to type a specific number.
+        </p>
+      ) : variant === "tax_returns" ? (
+        <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
+          Every service uses one workflow: In progress → Waiting on Client → Prepared → Filed.
+          &ldquo;Waiting on client&rdquo; signals you&rsquo;re blocked; anything past due flags red
+          automatically. Filing month is highlighted with a teal ring and background.
         </p>
       ) : (
       <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
@@ -1239,6 +1392,69 @@ function CellWrapper({
     >
       {children}
     </button>
+  );
+}
+
+// ══════════════════════════════════════════════
+// ── Comment Month Markers ──
+// ══════════════════════════════════════════════
+function CommentMarkers({
+  clients,
+  serviceKey,
+  currentMonth,
+}: {
+  clients: any[];
+  serviceKey: string;
+  currentMonth: number;
+}) {
+  // Collect all months that have at least one comment in the current year
+  const monthsWithComments = useMemo(() => {
+    const set = new Set<number>();
+    for (const client of clients) {
+      const svc = client.services?.find((s: any) => s.key === serviceKey);
+      if (svc?.comments && Array.isArray(svc.comments)) {
+        for (const c of svc.comments) {
+          if (c.month !== undefined && c.month >= 0 && c.month < 12) {
+            set.add(c.month);
+          }
+        }
+      }
+    }
+    return set;
+  }, [clients, serviceKey]);
+
+  if (monthsWithComments.size === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 3,
+        padding: "0 0 2px 0",
+        minWidth: 180,
+      }}
+      title="Months with comments"
+    >
+      {Array.from({ length: 12 }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: "50%",
+            backgroundColor: monthsWithComments.has(i)
+              ? i === currentMonth ? "var(--teal)" : "var(--blue)"
+              : "transparent",
+            border: monthsWithComments.has(i)
+              ? "1px solid transparent"
+              : "1px solid var(--line)",
+            display: "inline-block",
+            flexShrink: 0,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 

@@ -52,6 +52,7 @@ export default function TaxPage() {
         <ClientSlideover
           client={selectedClient}
           open={slideoverOpen}
+          moduleKey="tax_returns"
           onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
           onSave={handleSlideoverSave}
         />

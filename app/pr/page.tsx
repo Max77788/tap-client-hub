@@ -90,6 +90,7 @@ export default function PrPage() {
         <ClientSlideover
           client={selectedClient}
           open={slideoverOpen}
+          moduleKey="payroll"
           onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
           onSave={handleSlideoverSave}
         />
