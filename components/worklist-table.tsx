@@ -83,7 +83,7 @@ function getActiveMonths(
     }
     case "Annually":
     case "Yearly":
-      return new Set([startMonth ?? 3]); // default April
+      return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); // All months — yearly services can have work done in any month
     default:
       return new Set();
   }
