@@ -889,6 +889,9 @@ export default function WorklistTable({
             </>
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
+            {serviceKey === "sales_tax" && (
+            <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 160, maxWidth: 220 }}>Line Items</th>
+            )}
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 90, maxWidth: 100 }}>Cadence</th>
             )}
@@ -1173,6 +1176,28 @@ export default function WorklistTable({
                       ))}
                     </select>
                   </td>
+
+                  {/* Sales Tax: Line Items column */}
+                  {serviceKey === "sales_tax" && (
+                  <td className="px-1 py-1 text-[11px] text-[var(--muted)]" style={{ width: 160, maxWidth: 220 }}>
+                    {svc.salesTaxLineItems?.length > 0 ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                        {svc.salesTaxLineItems.map((item: any, idx: number) => (
+                          <span key={idx} style={{
+                            display: "inline-flex", alignItems: "center", gap: 3,
+                            background: "var(--amber-soft)", borderRadius: 5,
+                            padding: "2px 7px", fontSize: 10, fontWeight: 600,
+                            border: "1px solid #e8d3a6", whiteSpace: "nowrap",
+                          }}>
+                            {item.serviceName}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ color: "var(--muted)", fontStyle: "italic" }}>—</span>
+                    )}
+                  </td>
+                  )}
 
                   {/* Cadence — inline editable dropdown */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
