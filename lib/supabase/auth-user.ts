@@ -24,7 +24,7 @@ export function getSupabaseClientDefault() {
  * set during login for demo users.
  */
 function getEmailFromCookie(cookieHeader: string): string {
-  const match = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+  const match = cookieHeader.match(/(?:^|;\\s*)tap_demo_email=([^;]*)/);
   if (match) {
     try {
       return decodeURIComponent(match[1]);
@@ -53,7 +53,7 @@ export async function getAuthUser(cookieHeader: string) {
   }
 
   // Strategy 2: tap_demo_user cookie
-  const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
+  const nameMatch = cookieHeader.match(/(?:^|;\\s*)tap_demo_user=([^;]*)/);
   if (nameMatch) {
     try {
       const demoName = decodeURIComponent(nameMatch[1]);
@@ -84,6 +84,26 @@ export async function getAuthUser(cookieHeader: string) {
             supabase,
           };
         }
+      }
+    } catch {}
+  }
+
+  // Strategy 3: tap_demo_email cookie (fallback for mismatched name formats)
+  const emailMatch = cookieHeader.match(/(?:^|;\\s*)tap_demo_email=([^;]*)/);
+  if (emailMatch) {
+    try {
+      const email = decodeURIComponent(emailMatch[1]);
+      const nameFromEmail = email.split("@")[0];
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`full_name.ilike.%${nameFromEmail}%,full_name.eq.${nameFromEmail}`)
+        .maybeSingle();
+      if (data && data.id) {
+        return {
+          user: { id: data.id, email } as any,
+          supabase,
+        };
       }
     } catch {}
   }

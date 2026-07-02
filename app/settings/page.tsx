@@ -190,7 +190,7 @@ export default function SettingsPage() {
           }}>
             <p style={{ fontWeight: 600, fontSize: 14, color: "#7a5210", margin: 0 }}>Demo account</p>
             <p style={{ fontSize: 13, color: "#7a5210", marginTop: 6, lineHeight: 1.5 }}>
-              You&rsquo;re logged in with a demo account. Password changes and two-factor authentication are not available for demo accounts. Contact your administrator for a full user account.
+              You&rsquo;re logged in with a demo account. Password changes are not available for demo accounts. Contact your administrator for a full user account to change your password.
             </p>
           </div>
         </section>
@@ -225,7 +225,6 @@ export default function SettingsPage() {
       )}
 
       {/* ── Two-Factor Authentication ── */}
-      {!isDemo && (
       <section>
         <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 20, fontWeight: 600, marginBottom: 4 }}>Two-Factor Authentication</h2>
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 16 }}>Add an extra layer of security to your account.</p>
@@ -291,7 +290,6 @@ export default function SettingsPage() {
           )}
         </div>
       </section>
-      )}
     </div>
   );
 }
