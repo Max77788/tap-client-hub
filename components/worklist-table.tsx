@@ -244,6 +244,12 @@ export default function WorklistTable({
     [serviceClients, search, cadenceFilter, variant, serviceKey],
   );
 
+  // Short name from "Last, First" format → "First"
+  const toShortName = (name: string) => {
+    if (!name.includes(",")) return name;
+    return name.split(",")[1].trim();
+  };
+
   // ── Staff list for dropdowns — only active members, full names, no duplicates ──
   const [staffList, setStaffList] = useState<string[]>([]);
   useEffect(() => {
@@ -877,7 +883,7 @@ export default function WorklistTable({
                       >
                         <option value="">Unassigned</option>
                         {staffList.map((s) => (
-                          <option key={s} value={s}>{s}</option>
+                          <option key={s} value={s}>{toShortName(s)}</option>
                         ))}
                       </select>
                     </td>
@@ -981,7 +987,7 @@ export default function WorklistTable({
                     >
                       <option value="">Unassigned</option>
                       {staffList.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                        <option key={s} value={s}>{toShortName(s)}</option>
                       ))}
                     </select>
                   </td>
