@@ -23,6 +23,14 @@ export interface ServiceConfig {
   currentStage?: string;
 }
 
+export interface CommentEntry {
+  id: string;
+  month: number; // 0-11
+  text: string;
+  author: string;
+  createdAt: string; // ISO timestamp
+}
+
 export interface SalesTaxLineItem {
   serviceName: string;
   rt: string;
@@ -62,6 +70,14 @@ export interface ClientService {
   payrollPassword?: string;
   paydate?: string;
   currentStage?: string;
+  // 7/2 redesign fields
+  biweeklyCode?: string; // "1 - ODD" | "2 - EVEN"
+  payStartDate?: string; // mm/dd
+  filingState?: string;
+  filingMonth?: string;
+  filingType?: string; // "C-corp" | "S-Corp" | "LLC" | "Non-profit" | "Solo"
+  payEmails?: string[];
+  comments?: CommentEntry[];
 }
 
 export interface Client {

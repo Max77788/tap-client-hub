@@ -114,6 +114,13 @@ export async function GET(request: Request) {
           paydate: cs.paydate || "",
           payrollPassword: cs.payroll_password || "",
           eftps: cs.eftps || "",
+          biweeklyCode: cs.biweekly_code || "",
+          payStartDate: cs.pay_start_date || "",
+          filingState: cs.filing_state || "",
+          filingMonth: cs.filing_month || "",
+          filingType: cs.filing_type || "",
+          payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
+          comments: Array.isArray(cs.comments) ? cs.comments : [],
           salesTaxLineItems: Array.isArray(cs.sales_tax_line_items) ? cs.sales_tax_line_items : [],
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
@@ -124,7 +131,7 @@ export async function GET(request: Request) {
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -221,12 +228,19 @@ export async function PUT(request: Request) {
                 paydate: svc.paydate ?? existing.paydate ?? null,
                 payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
                 eftps: svc.eftps ?? existing.eftps ?? null,
+                biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
+                pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
+                filing_state: svc.filingState ?? existing.filing_state ?? null,
+                filing_month: svc.filingMonth ?? existing.filing_month ?? null,
+                filing_type: svc.filingType ?? existing.filing_type ?? null,
+                pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
+                comments: svc.comments ?? existing.comments ?? null,
                 sales_tax_line_items: svc.salesTaxLineItems || null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
           } else {
-            // Always update financials + payroll + sales tax fields even if already active
+            // Always update fields even if already active
             await supabase
               .from("client_services")
               .update({
@@ -234,6 +248,13 @@ export async function PUT(request: Request) {
                 paydate: svc.paydate ?? existing.paydate ?? null,
                 payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
                 eftps: svc.eftps ?? existing.eftps ?? null,
+                biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
+                pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
+                filing_state: svc.filingState ?? existing.filing_state ?? null,
+                filing_month: svc.filingMonth ?? existing.filing_month ?? null,
+                filing_type: svc.filingType ?? existing.filing_type ?? null,
+                pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
+                comments: svc.comments ?? existing.comments ?? null,
                 sales_tax_line_items: svc.salesTaxLineItems || null,
               })
               .eq("id", existing.id);
@@ -253,6 +274,13 @@ export async function PUT(request: Request) {
               paydate: svc.paydate || null,
               payroll_password: svc.payrollPassword || null,
               eftps: svc.eftps || null,
+              biweekly_code: svc.biweeklyCode || null,
+              pay_start_date: svc.payStartDate || null,
+              filing_state: svc.filingState || null,
+              filing_month: svc.filingMonth || null,
+              filing_type: svc.filingType || null,
+              pay_emails: svc.payEmails || null,
+              comments: svc.comments || null,
               sales_tax_line_items: svc.salesTaxLineItems || null,
             });
           if (insErr) {
@@ -286,7 +314,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems } = body;
+    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems, biweeklyCode, payStartDate, filingState, filingMonth, filingType, payEmails, comments } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -331,6 +359,34 @@ export async function PATCH(request: Request) {
 
     if (eftps !== undefined) {
       updates.eftps = eftps || null;
+    }
+
+    if (biweeklyCode !== undefined) {
+      updates.biweekly_code = biweeklyCode || null;
+    }
+
+    if (payStartDate !== undefined) {
+      updates.pay_start_date = payStartDate || null;
+    }
+
+    if (filingState !== undefined) {
+      updates.filing_state = filingState || null;
+    }
+
+    if (filingMonth !== undefined) {
+      updates.filing_month = filingMonth || null;
+    }
+
+    if (filingType !== undefined) {
+      updates.filing_type = filingType || null;
+    }
+
+    if (payEmails !== undefined) {
+      updates.pay_emails = payEmails;
+    }
+
+    if (comments !== undefined) {
+      updates.comments = comments;
     }
 
     if (salesTaxLineItems !== undefined) {
