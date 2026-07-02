@@ -713,7 +713,7 @@ export default function WorklistTable({
         <div className="stats" style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <StatCard label="Total missing runs" value={Math.max(0, stats.totalMax - stats.totalRuns)} color="var(--red)" />
         </div>
-      ) : (
+      ) : variant === "payroll" ? null : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
         {!isHistorical ? (
           <>
