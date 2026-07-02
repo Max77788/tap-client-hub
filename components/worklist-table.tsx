@@ -771,14 +771,14 @@ export default function WorklistTable({
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Cadence</th>
             )}
             {variant === "t9" && (
-            <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2">Expected</th>
+            <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
             )}
             {MONTHS_SHORT.map((m) => (
-              <th key={m} className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2" style={{ width: 30 }}>{m}</th>
+              <th key={m} className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2" style={{ width: variant === "t9" ? 44 : 30 }}>{m}</th>
             ))}
             {variant === "t9" && (
             <>
-              <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2">Left</th>
+              <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2" style={{ width: 60, minWidth: 60 }}>Left</th>
             </>
             )}
           </tr>
@@ -840,14 +840,14 @@ export default function WorklistTable({
                     {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                     <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
                     )}
-                    <td className="px-1.5 py-1 text-center text-[11px] font-semibold text-[var(--ink)] tabular-nums">{exp || "—"}</td>
+                    <td className="px-1.5 py-1 text-center text-[11px] font-semibold text-[var(--ink)] tabular-nums" style={{ width: 60, minWidth: 60 }}>{exp || "—"}</td>
                     {MONTHS_SHORT.map((mo, i) => {
                       const n = +counts[i] || 0;
                       const isCM = i === currentMonth && !isHistorical;
                       const cellEditKey = `${client.id}:${i}`;
                       const isEditing = editingT9 === cellEditKey;
                       return (
-                        <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`}>
+                        <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`} style={{ width: 44, minWidth: 44, maxWidth: 44 }}>
                           {isEditing ? (
                             <input
                               type="number"
@@ -882,7 +882,9 @@ export default function WorklistTable({
                         </td>
                       );
                     })}
-                    <td className={`px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums ${left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}`}>{done}/{exp}</td>
+                    <td className="px-1.5 py-1 text-center text-[11px] font-semibold tabular-nums" style={{ width: 60, minWidth: 60 }}>
+                      <span className={left > 0 ? "text-[var(--amber)]" : "text-[var(--green)]"}>{done}/{exp}</span>
+                    </td>
                   </tr>
                 );
               }

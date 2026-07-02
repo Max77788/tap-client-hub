@@ -7,6 +7,7 @@ type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
 
 interface ClientsContextValue {
   clients: Client[];
+  setClients: React.Dispatch<React.SetStateAction<Client[]>>;
   loading: boolean;
   error: string | null;
   stats: { total: number; business: number; personal: number };
@@ -159,7 +160,7 @@ export function ClientsProvider({ children }: { children: ReactNode }) {
 
   return (
     <ClientsContext.Provider value={{
-      clients, loading, error, stats,
+      clients, setClients, loading, error, stats,
       refresh, updateClient, updateServiceMonth,
       deleteClient, addClient,
     }}>
