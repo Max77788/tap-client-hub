@@ -241,14 +241,18 @@ export default function WorklistTable({
     [serviceClients, search, cadenceFilter, variant, serviceKey],
   );
 
-  // ── Staff list for Assigned dropdown ──
+  // ── Staff list for dropdowns — only active members, full names, no duplicates ──
   const [staffList, setStaffList] = useState<string[]>([]);
   useEffect(() => {
     fetch("/api/profiles")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setStaffList(data.map((p: any) => (p.name || "").split(" ")[0]).filter(Boolean));
+          const names = data
+            .filter((p: any) => p.status === "Active")
+            .map((p: any) => (p.name || "").trim())
+            .filter(Boolean);
+          setStaffList([...new Set(names)]);
         }
       })
       .catch(() => {});

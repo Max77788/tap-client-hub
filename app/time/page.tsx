@@ -90,7 +90,10 @@ export default function TimePage() {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {
-          setStaff(data.map((u: any) => ({ id: u.id, name: u.name, role: u.role })));
+          setStaff(data
+            .filter((u: any) => u.status === "Active")
+            .map((u: any) => ({ id: u.id, name: u.name, role: u.role }))
+          );
         }
       } catch {} finally {
         if (!cancelled) setLoading(false);
