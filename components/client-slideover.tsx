@@ -96,7 +96,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setESvcAssignees(assigneeMap);
     // Load existing sales tax line items
     const stxSvc = client.services.find((s: any) => s.key === "sales_tax");
-    setStxLineItems(stxSvc?.salesTaxLineItems || []);
+    const items = stxSvc?.salesTaxLineItems || [];
+    setStxLineItems(items);
+    // Auto-open the add form when sales tax is enabled with no line items
+    if (stxSvc?.enabled && items.length === 0 && !editing) {
+      setAddingStx(true);
+    }
   }, [client]);
 
   // ── Edit view state (declared here to obey Rules of Hooks — never conditional) ──
