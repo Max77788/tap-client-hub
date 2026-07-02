@@ -72,7 +72,7 @@ export default function PrPage() {
   return (
     <div className="space-y-4">
       {/* Payroll-specific metrics bar */}
-      <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+      <div className="stats" style={{ display: "flex", gap: 8, marginTop: 4 }}>
         <StatCard label="Clients on Payroll" value={payrollMetrics.total} color="var(--ink)" />
         <StatCard label="Weekly" value={payrollMetrics.weekly} color="var(--blue)" />
         <StatCard label="Bi-Weekly / Semi-Mo" value={payrollMetrics.biWeekly} color="var(--amber)" />

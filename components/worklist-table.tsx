@@ -697,7 +697,7 @@ export default function WorklistTable({
           <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
         </div>
       ) : variant === "payroll" ? (
-        <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+        <div className="stats" style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <StatCard label="Total missing runs" value={Math.max(0, stats.totalMax - stats.totalRuns)} color="var(--red)" />
         </div>
       ) : (
