@@ -116,6 +116,11 @@ export async function GET(request: Request) {
           eftps: cs.eftps || "",
           biweeklyCode: cs.biweekly_code || "",
           payStartDate: cs.pay_start_date || "",
+          payPeriodFrequency: cs.pay_period_frequency || "",
+          reportingMethod: cs.reporting_method || "",
+          payrollCategory: cs.payroll_category || "",
+          qbLicense: cs.qb_license || "",
+          reportingNotes: cs.reporting_notes || "",
           filingState: cs.filing_state || "",
           filingMonth: cs.filing_month || "",
           filingType: cs.filing_type || "",
@@ -131,7 +136,7 @@ export async function GET(request: Request) {
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -215,7 +220,7 @@ export async function PUT(request: Request) {
 
       if (wantsEnabled) {
         if (existing) {
-          // Already exists — activate if inactive
+              // Already exists — activate if inactive
           if (!existing.active) {
             await supabase
               .from("client_services")
@@ -230,6 +235,11 @@ export async function PUT(request: Request) {
                 eftps: svc.eftps ?? existing.eftps ?? null,
                 biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
                 pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
+                pay_period_frequency: svc.payPeriodFrequency ?? existing.pay_period_frequency ?? null,
+                reporting_method: svc.reportingMethod ?? existing.reporting_method ?? null,
+                payroll_category: svc.payrollCategory ?? existing.payroll_category ?? null,
+                qb_license: svc.qbLicense ?? existing.qb_license ?? null,
+                reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 filing_month: svc.filingMonth ?? existing.filing_month ?? null,
                 filing_type: svc.filingType ?? existing.filing_type ?? null,
@@ -250,6 +260,11 @@ export async function PUT(request: Request) {
                 eftps: svc.eftps ?? existing.eftps ?? null,
                 biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
                 pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
+                pay_period_frequency: svc.payPeriodFrequency ?? existing.pay_period_frequency ?? null,
+                reporting_method: svc.reportingMethod ?? existing.reporting_method ?? null,
+                payroll_category: svc.payrollCategory ?? existing.payroll_category ?? null,
+                qb_license: svc.qbLicense ?? existing.qb_license ?? null,
+                reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 filing_month: svc.filingMonth ?? existing.filing_month ?? null,
                 filing_type: svc.filingType ?? existing.filing_type ?? null,
@@ -276,6 +291,11 @@ export async function PUT(request: Request) {
               eftps: svc.eftps || null,
               biweekly_code: svc.biweeklyCode || null,
               pay_start_date: svc.payStartDate || null,
+              pay_period_frequency: svc.payPeriodFrequency || null,
+              reporting_method: svc.reportingMethod || null,
+              payroll_category: svc.payrollCategory || null,
+              qb_license: svc.qbLicense || null,
+              reporting_notes: svc.reportingNotes || null,
               filing_state: svc.filingState || null,
               filing_month: svc.filingMonth || null,
               filing_type: svc.filingType || null,
@@ -314,7 +334,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems, biweeklyCode, payStartDate, filingState, filingMonth, filingType, payEmails, comments } = body;
+    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems, biweeklyCode, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, filingState, filingMonth, filingType, payEmails, comments } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -367,6 +387,26 @@ export async function PATCH(request: Request) {
 
     if (payStartDate !== undefined) {
       updates.pay_start_date = payStartDate || null;
+    }
+
+    if (payPeriodFrequency !== undefined) {
+      updates.pay_period_frequency = payPeriodFrequency || null;
+    }
+
+    if (reportingMethod !== undefined) {
+      updates.reporting_method = reportingMethod || null;
+    }
+
+    if (payrollCategory !== undefined) {
+      updates.payroll_category = payrollCategory || null;
+    }
+
+    if (qbLicense !== undefined) {
+      updates.qb_license = qbLicense || null;
+    }
+
+    if (reportingNotes !== undefined) {
+      updates.reporting_notes = reportingNotes || null;
     }
 
     if (filingState !== undefined) {

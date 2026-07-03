@@ -30,6 +30,9 @@ const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 const PAYROLL_PROCESSOR_OPTIONS = ["ADP", "QBO", "Quickbooks Desktop", "Quickbooks Desktop 24"];
 
 const BIWEEKLY_CODES = ["", "1 - ODD", "2 - EVEN"];
+const PAY_PERIOD_FREQ = ["", "Monthly", "Semi-Monthly", "Bi-Weekly", "Quarterly"];
+const REPORTING_METHODS = ["", "PR Reports only", "Email Paystub to Client", "Log into Client"];
+const PAYROLL_CATEGORIES = ["", "Monthly", "Salary", "SAME", "Right Network", "Tushar"];
 const PAYDAY_OPTIONS = [
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
   "EOM", "15th & EOM", "5th/20th", "16th/EOM",
@@ -747,7 +750,7 @@ export default function WorklistTable({
 
   // ── Count of columns before month columns (for colspan) ──
   const baseCols = 2; // Client + Assigned
-  const payrollCols = variant === "payroll" ? 3 : 0; // Bi-weekly Code, PayDay, Pay Start Date
+  const payrollCols = variant === "payroll" ? 6 : 0; // Bi-weekly Code, PayDay, Pay Start, Pay Period Freq, Reporting Method, Payroll Category
   const taxReturnCols = variant === "tax_returns" ? 2 : 0; // Filing State, Filing Type
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
@@ -882,6 +885,9 @@ export default function WorklistTable({
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Bi-wk Code</th>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>PayDay</th>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Pay Start</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 75 }}>Period Fr</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Rep. Method</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 80 }}>PR Cat</th>
             </>
             )}
             {variant === "tax_returns" && (
@@ -1159,6 +1165,63 @@ export default function WorklistTable({
                         }}
                         className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] w-full min-w-[55px] max-w-[75px]"
                       />
+                    </td>
+                    {/* Pay Period Frequency */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 75 }}>
+                      <select
+                        value={svc.payPeriodFrequency || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, payPeriodFrequency: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[60px] max-w-[75px]"
+                      >
+                        {PAY_PERIOD_FREQ.map((opt) => (
+                          <option key={opt} value={opt}>{opt || "—"}</option>
+                        ))}
+                      </select>
+                    </td>
+                    {/* Reporting Method */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
+                      <select
+                        value={svc.reportingMethod || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, reportingMethod: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[95px]"
+                      >
+                        {REPORTING_METHODS.map((opt) => (
+                          <option key={opt} value={opt}>{opt || "—"}</option>
+                        ))}
+                      </select>
+                    </td>
+                    {/* Payroll Category */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 80 }}>
+                      <select
+                        value={svc.payrollCategory || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          fetch("/api/clients", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ csId: svc.csId, payrollCategory: val }),
+                          }).catch(() => {});
+                        }}
+                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[60px] max-w-[75px]"
+                      >
+                        {PAYROLL_CATEGORIES.map((opt) => (
+                          <option key={opt} value={opt}>{opt || "—"}</option>
+                        ))}
+                      </select>
                     </td>
                   </>
                   )}

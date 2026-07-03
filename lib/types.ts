@@ -71,8 +71,13 @@ export interface ClientService {
   paydate?: string;
   currentStage?: string;
   // 7/2 redesign fields
-  biweeklyCode?: string; // "1 - ODD" | "2 - EVEN"
+  biweeklyCode?: string; // "1 - ODD" | "2 - EVEN" | group codes
   payStartDate?: string; // mm/dd
+  payPeriodFrequency?: string; // Monthly | Semi-Monthly | Bi-Weekly | Quarterly
+  reportingMethod?: string; // PR Reports only | Email Paystub to Client | Log into Client
+  payrollCategory?: string; // Monthly | Salary | SAME | Right Network | Tushar
+  qbLicense?: string; // QuickBooks license number
+  reportingNotes?: string; // Extended notes about payroll filing/reporting
   filingState?: string;
   filingMonth?: string;
   filingType?: string; // "C Corp." | "S Corp." | "Partnership" | "SMLLC" | "Trust" | "Non Profit" | "Retirem Plan"
