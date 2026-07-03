@@ -9,24 +9,46 @@ interface User {
   email_2fa_enabled?: boolean;
 }
 
+interface CurrentUser {
+  id: string; name: string; role: string;
+}
+
 const MODULES_LIST = ["Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions", "Timesheet", "Vault", "Workload", "Users & Access"];
 const ROLE_OPTIONS = ["Owner / Admin", "Manager", "Staff", "Offshore"];
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ownerLoading, setOwnerLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalUser, setModalUser] = useState<User | "new" | null>(null);
   const [editForm, setEditForm] = useState<Partial<User & { password?: string }>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Password change state
-  const [passwordUser, setPasswordUser] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  // Delete confirm
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
+  // ── Load current user (for owner check) ──
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setCurrentUser(data);
+        }
+      } catch { /* ignore */ } finally {
+        if (!cancelled) setOwnerLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Load all users ──
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -39,9 +61,11 @@ export default function UsersPage() {
         if (!cancelled) { setError(err.message); setLoading(false); }
       }
     }
-    load();
+    if (!ownerLoading) load();
     return () => { cancelled = true; };
-  }, []);
+  }, [ownerLoading]);
+
+  const isOwner = currentUser?.role === "owner" || currentUser?.role === "admin";
 
   const stats = useMemo(() => ({
     total: users.length,
@@ -53,14 +77,19 @@ export default function UsersPage() {
   function openModal(user: User | "new" | null) {
     setModalUser(user);
     setSaveError(null);
-    setEditForm(user !== "new" ? {
-      name: user.name, location: user.location, role: user.role,
-      mgr: user.mgr, username: user.username, modules: [...user.modules],
-      email: user.email,
-    } : {
-      name: "", location: "", role: "Staff", mgr: "—", username: "",
-      email: "", password: "", modules: [],
-    });
+    setDeleteConfirm(null);
+    if (user === "new") {
+      setEditForm({
+        name: "", location: "", role: "Staff", mgr: "—", username: "",
+        email: "", password: "", modules: [],
+      });
+    } else if (user) {
+      setEditForm({
+        name: user.name, location: user.location, role: user.role,
+        mgr: user.mgr, username: user.username, modules: [...user.modules],
+        email: user.email,
+      });
+    }
   }
 
   async function handleSave() {
@@ -68,12 +97,11 @@ export default function UsersPage() {
     setSaveError(null);
     try {
       if (modalUser !== "new") {
-        // Update existing user
         const res = await fetch("/api/profiles", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: modalUser.id,
+            id: modalUser!.id,
             full_name: editForm.name,
             role: (editForm.role === "Owner / Admin" ? "admin" : (editForm.role || "Staff").toLowerCase().replace(/ /g, "_")),
             location: editForm.location,
@@ -86,7 +114,6 @@ export default function UsersPage() {
           throw new Error(data.error || "Failed to update");
         }
       } else {
-        // Create new user
         if (!editForm.email || !editForm.password || !editForm.name) {
           throw new Error("Name, email, and password are required");
         }
@@ -109,7 +136,6 @@ export default function UsersPage() {
         }
       }
       setModalUser(null);
-      // Refresh list
       const res = await fetch("/api/profiles");
       if (res.ok) setUsers(await res.json());
     } catch (err: any) {
@@ -119,36 +145,64 @@ export default function UsersPage() {
     }
   }
 
-  async function handleChangePassword() {
-    if (!passwordUser || !newPassword.trim()) return;
-    setPasswordSaving(true);
-    setPasswordError(null);
-    setPasswordSuccess(null);
+  async function handleDelete(userId: string) {
+    setDeleting(true);
     try {
-      const res = await fetch(`/api/profiles/${passwordUser.id}/password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: newPassword.trim() }),
-      });
+      const res = await fetch(`/api/profiles/${userId}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to change password");
+        throw new Error(data.error || "Failed to delete user");
       }
-      setPasswordSuccess("Password updated successfully.");
-      setNewPassword("");
-      setTimeout(() => { setPasswordUser(null); setPasswordSuccess(null); }, 1500);
+      setModalUser(null);
+      setDeleteConfirm(null);
+      const reloadRes = await fetch("/api/profiles");
+      if (reloadRes.ok) setUsers(await reloadRes.json());
     } catch (err: any) {
-      setPasswordError(err.message);
+      setSaveError(err.message);
     } finally {
-      setPasswordSaving(false);
+      setDeleting(false);
     }
   }
 
+  // ── Loading / Not-owner states ──
+  if (ownerLoading) return <PageSkeleton rows={6} />;
+  if (!isOwner) {
+    return (
+      <div className="panel" style={{
+        background: "var(--card)", border: "1px solid var(--line)",
+        borderRadius: 16, overflow: "hidden",
+      }}>
+        <div className="empty" style={{
+          padding: 60, textAlign: "center", color: "var(--muted)", fontSize: 15,
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Owner access only</div>
+          <div style={{ fontSize: 13 }}>Only an Owner or Admin can manage users and access.</div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) return <PageSkeleton rows={6} />;
-  if (error) return <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" }}><div className="empty" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Failed to load users. <button onClick={() => window.location.reload()} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600 }}>Retry</button></div></div>;
+  if (error) return (
+    <div className="panel" style={{
+      background: "var(--card)", border: "1px solid var(--line)",
+      borderRadius: 16, overflow: "hidden",
+    }}>
+      <div className="empty" style={{
+        padding: 40, textAlign: "center", color: "var(--muted)",
+      }}>
+        Failed to load users.{' '}
+        <button onClick={() => window.location.reload()} style={{
+          all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600,
+        }}>Retry</button>
+      </div>
+    </div>
+  );
 
   return (
     <div>
+
       {/* ── Info banner ── */}
       <div className="vault-note" style={{
         background: "var(--amber-soft)", border: "1px solid #ead9b6", color: "#7a5210",
@@ -168,15 +222,24 @@ export default function UsersPage() {
           [stats.offshore, "Offshore", "var(--teal)"],
           [stats.pending, "Pending invites", "var(--amber)"],
         ].map(([v, l, c]) => (
-          <div key={l as string} className="statcard" style={{ flex: 1, minWidth: 120, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 13, padding: "13px 16px", boxShadow: "0 1px 2px rgba(33,31,26,0.04)" }}>
-            <div style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 26, lineHeight: 1, color: c as string }}>{v as number}</div>
+          <div key={l as string} className="statcard" style={{
+            flex: 1, minWidth: 120, background: "var(--card)",
+            border: "1px solid var(--line)", borderRadius: 13,
+            padding: "13px 16px", boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+          }}>
+            <div style={{
+              fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600,
+              fontSize: 26, lineHeight: 1, color: c as string,
+            }}>{v as number}</div>
             <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{l as string}</div>
           </div>
         ))}
       </div>
 
       {/* ── Count line ── */}
-      <div className="count" style={{ color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px" }}>
+      <div className="count" style={{
+        color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px",
+      }}>
         Click a user to edit their access · use ＋ Add user to provision a new login
       </div>
 
@@ -192,45 +255,66 @@ export default function UsersPage() {
       </div>
 
       {/* ── Users table ── */}
-      <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", overflowX: "auto" }}>
+      <div className="panel" style={{
+        background: "var(--card)", border: "1px solid var(--line)",
+        borderRadius: 16, overflow: "hidden", overflowX: "auto",
+      }}>
         <table>
           <thead>
-            <tr><th>Name</th><th>Location</th><th>Role</th><th>Reports to</th><th>Modules</th><th>Username</th><th>2FA</th><th>Status</th><th></th></tr>
+            <tr>
+              <th>Name</th>
+              <th>Location</th>
+              <th>Role</th>
+              <th>Reports to</th>
+              <th>Modules</th>
+              <th>Username</th>
+              <th>Status</th>
+            </tr>
           </thead>
           <tbody>
-            {users.map(u => {
-              return (
-                <tr key={u.id} onClick={() => openModal(u)} style={{ cursor: "pointer" }}>
-                  <td className="lname">{u.name}</td>
-                  <td>{u.location}</td>
-                  <td><span className="urole" style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "var(--blue-soft)", color: "var(--blue)" }}>{u.role}</span></td>
-                  <td>{u.mgr}</td>
-                  <td>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                      {u.modules.slice(0, 4).map(m => (
-                        <span key={m} className="uchip" style={{ display: "inline-block", background: "var(--teal-soft)", color: "var(--teal-ink)", fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, margin: "2px 3px 0 0" }}>{m}</span>
-                      ))}
-                      {u.modules.length > 4 && <span className="uchip" style={{ display: "inline-block", background: "var(--teal-soft)", color: "var(--teal-ink)", fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, margin: "2px 3px 0 0" }}>+{u.modules.length - 4}</span>}
-                    </div>
-                  </td>
-                  <td className="mono">{u.username}</td>
-                  <td>
-                    <span style={{
-                      fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap",
-                      background: u.email_2fa_enabled ? "var(--green-soft)" : "var(--line)",
-                      color: u.email_2fa_enabled ? "var(--green)" : "var(--muted)",
-                    }}>
-                      {u.email_2fa_enabled ? "✅ On" : "○ Off"}
-                    </span>
-                  </td>
-                  <td><span className={`ustat`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: u.status === "Active" ? "var(--green-soft)" : "var(--amber-soft)", color: u.status === "Active" ? "var(--green)" : "var(--amber)" }}>{u.status}</span></td>
-                  <td>
-                    <span onClick={e => { e.stopPropagation(); setPasswordUser(u); setNewPassword(""); setPasswordError(null); setPasswordSuccess(null); }} style={{ cursor: "pointer", fontSize: 12, color: "var(--teal)", fontWeight: 600, whiteSpace: "nowrap" }}>🔑 Change password</span>
-                  </td>
-                </tr>
-              );
-            })}
-            {users.length === 0 && <tr><td colSpan={9} className="empty">No users found</td></tr>}
+            {users.map(u => (
+              <tr key={u.id} onClick={() => openModal(u)} style={{ cursor: "pointer" }}>
+                <td className="lname">{u.name}</td>
+                <td>{u.location}</td>
+                <td>
+                  <span className="urole" style={{
+                    fontSize: 11, fontWeight: 700, padding: "3px 9px",
+                    borderRadius: 999, background: "var(--blue-soft)", color: "var(--blue)",
+                  }}>{u.role}</span>
+                </td>
+                <td>{u.mgr}</td>
+                <td>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                    {u.modules.slice(0, 4).map(m => (
+                      <span key={m} className="uchip" style={{
+                        display: "inline-block", background: "var(--teal-soft)",
+                        color: "var(--teal-ink)", fontSize: 11, fontWeight: 600,
+                        padding: "2px 8px", borderRadius: 999, margin: "2px 3px 0 0",
+                      }}>{m}</span>
+                    ))}
+                    {u.modules.length > 4 && (
+                      <span className="uchip" style={{
+                        display: "inline-block", background: "var(--teal-soft)",
+                        color: "var(--teal-ink)", fontSize: 11, fontWeight: 600,
+                        padding: "2px 8px", borderRadius: 999, margin: "2px 3px 0 0",
+                      }}>+{u.modules.length - 4}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="mono">{u.username}</td>
+                <td>
+                  <span className="ustat" style={{
+                    fontSize: 11, fontWeight: 700, padding: "3px 9px",
+                    borderRadius: 999, whiteSpace: "nowrap",
+                    background: u.status === "Active" ? "var(--green-soft)" : "var(--amber-soft)",
+                    color: u.status === "Active" ? "var(--green)" : "var(--amber)",
+                  }}>{u.status}</span>
+                </td>
+              </tr>
+            ))}
+            {users.length === 0 && (
+              <tr><td colSpan={7} className="empty">No users found</td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -244,153 +328,241 @@ export default function UsersPage() {
             zIndex: 61, background: "var(--paper)", borderRadius: 18, width: 520,
             maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow)",
           }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600, padding: "20px 24px 4px", margin: 0 }}>
+            <h2 style={{
+              fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600,
+              padding: "20px 24px 4px", margin: 0,
+            }}>
               {modalUser === "new" ? "Add a user" : "Edit user"}
             </h2>
-            <div className="msub" style={{ color: "var(--muted)", fontSize: 13, padding: "0 24px 14px", borderBottom: "1px solid var(--line)" }}>
-              {modalUser === "new" ? "Provision a new login — the user signs in with their email and the password you set." : "Update their details and access."}
+            <div className="msub" style={{
+              color: "var(--muted)", fontSize: 13, padding: "0 24px 14px",
+              borderBottom: "1px solid var(--line)",
+            }}>
+              {modalUser === "new"
+                ? "Provision a new login — the user signs in with their email and the password you set."
+                : "Update their details and access. Their username and email are set on creation."
+              }
             </div>
             <div className="mform" style={{ padding: "18px 24px" }}>
-              <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Full name</label>
-              <input className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+              {/* Full name */}
+              <label className="el" style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                textTransform: "uppercase", color: "var(--muted)",
+                margin: "12px 0 4px", display: "block",
+              }}>Full name</label>
+              <input className="ef" style={{
+                width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+              }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
 
+              {/* Email + Password (new user only) */}
               {modalUser === "new" && (
                 <>
-                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Email address</label>
-                  <input className="ef" type="email" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="user@tapallc.com" />
+                  <label className="el" style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                    textTransform: "uppercase", color: "var(--muted)",
+                    margin: "12px 0 4px", display: "block",
+                  }}>Email address</label>
+                  <input className="ef" type="email" style={{
+                    width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                    borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+                  }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} placeholder="user@tapallc.com" />
 
-                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Initial password</label>
-                  <input className="ef" type="password" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.password || ""} onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))} placeholder="Min 6 characters" />
+                  <label className="el" style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                    textTransform: "uppercase", color: "var(--muted)",
+                    margin: "12px 0 4px", display: "block",
+                  }}>Initial password</label>
+                  <input className="ef" type="password" style={{
+                    width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                    borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+                  }} value={editForm.password || ""} onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))} placeholder="Min 6 characters" />
                 </>
               )}
 
-              <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Location</label>
-              <input className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.location || ""} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Houston, TX or Pune, India" />
+              {/* Location */}
+              <label className="el" style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                textTransform: "uppercase", color: "var(--muted)",
+                margin: "12px 0 4px", display: "block",
+              }}>Location</label>
+              <input className="ef" style={{
+                width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+              }} value={editForm.location || ""} onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Houston, TX or Pune, India" />
 
+              {/* Role + Reports to */}
               <div className="two-ef" style={{ display: "flex", gap: 10 }}>
                 <div style={{ flex: 1 }}>
-                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Role</label>
-                  <select className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.role || ""} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
+                  <label className="el" style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                    textTransform: "uppercase", color: "var(--muted)",
+                    margin: "12px 0 4px", display: "block",
+                  }}>Role</label>
+                  <select className="ef" style={{
+                    width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                    borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+                  }} value={editForm.role || ""} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
                     {ROLE_OPTIONS.map(r => <option key={r}>{r}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Reports to</label>
-                  <select className="ef" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.mgr || ""} onChange={e => setEditForm(p => ({ ...p, mgr: e.target.value }))}>
+                  <label className="el" style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                    textTransform: "uppercase", color: "var(--muted)",
+                    margin: "12px 0 4px", display: "block",
+                  }}>Reports to</label>
+                  <select className="ef" style={{
+                    width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                    borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+                  }} value={editForm.mgr || ""} onChange={e => setEditForm(p => ({ ...p, mgr: e.target.value }))}>
                     <option>—</option>
                     {users.filter(x => /Manager|Owner/.test(x.role)).map(x => <option key={x.id}>{x.name}</option>)}
                   </select>
                 </div>
               </div>
 
-              <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Modules they can access</label>
-              <div className="modgrid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 7, marginTop: 6 }}>
+              {/* Username (readonly for edit, shown for both) */}
+              <label className="el" style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                textTransform: "uppercase", color: "var(--muted)",
+                margin: "12px 0 4px", display: "block",
+              }}>Username</label>
+              {modalUser === "new" ? (
+                <input className="ef" style={{
+                  width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
+                  borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
+                }} value={editForm.username || ""} onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))} placeholder="Auto-generated from email" />
+              ) : (
+                <div style={{
+                  padding: "9px 11px", border: "1px solid var(--line)",
+                  borderRadius: 9, fontSize: 14, background: "var(--card)",
+                  color: "var(--muted)", marginBottom: 4,
+                }}>
+                  {editForm.username || "—"} <span style={{ fontSize: 11, color: "var(--muted)" }}>(set on creation)</span>
+                </div>
+              )}
+
+              {/* Modules checkboxes */}
+              <label className="el" style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
+                textTransform: "uppercase", color: "var(--muted)",
+                margin: "16px 0 4px", display: "block",
+              }}>Modules they can access</label>
+              <div className="modgrid" style={{
+                display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 7, marginTop: 6,
+              }}>
                 {MODULES_LIST.map(m => (
-                  <label key={m} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink)" }}>
-                    <input type="checkbox" checked={(editForm.modules || []).includes(m)} onChange={e => {
-                      setEditForm(p => ({
-                        ...p,
-                        modules: e.target.checked ? [...(p.modules || []), m] : (p.modules || []).filter(x => x !== m),
-                      }));
-                    }} style={{ width: "auto" }} />
+                  <label key={m} style={{
+                    display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink)",
+                  }}>
+                    <input type="checkbox" checked={(editForm.modules || []).includes(m)}
+                      onChange={e => {
+                        setEditForm(p => ({
+                          ...p,
+                          modules: e.target.checked
+                            ? [...(p.modules || []), m]
+                            : (p.modules || []).filter(x => x !== m),
+                        }));
+                      }}
+                      style={{ width: "auto" }} />
                     {m}
                   </label>
                 ))}
               </div>
 
+              {/* Note about setup link (edit mode) */}
+              {modalUser !== "new" && (
+                <div style={{
+                  background: "var(--blue-soft)", color: "var(--blue)",
+                  padding: "10px 13px", borderRadius: 9, fontSize: 12, marginTop: 16,
+                  lineHeight: 1.5,
+                }}>
+                  🔗 <b>Setup link.</b> The user logs in via <strong>portal.tapallc.com</strong>. Their one-time setup link was emailed at account creation. If they need a new one, reset their password — the system sends a fresh setup email automatically.
+                </div>
+              )}
+
               {saveError && (
-                <div style={{ background: "var(--red-soft)", color: "var(--red)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
+                <div style={{
+                  background: "var(--red-soft)", color: "var(--red)",
+                  padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600,
+                }}>
                   {saveError}
                 </div>
               )}
 
-              {/* ── 2FA admin toggle ── */}
-              {modalUser !== "new" && (
-                <div className="twofa-admin" style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>Two-factor authentication</div>
-                    <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>
-                      {modalUser.email_2fa_enabled
-                        ? "Email 2FA is active for this user."
-                        : "Not enabled. Toggle to activate via admin override."}
-                    </div>
+              {/* Delete confirmation */}
+              {deleteConfirm && (
+                <div style={{
+                  background: "var(--red-soft)", color: "var(--red)",
+                  padding: "14px", borderRadius: 9, fontSize: 13, marginTop: 14,
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                    ⚠️ Delete this user?
                   </div>
-                  <button
-                    className="btn"
-                    onClick={async () => {
-                      const res = await fetch("/api/2fa/admin-toggle", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          target_user_id: modalUser.id,
-                          enabled: !modalUser.email_2fa_enabled,
-                        }),
-                      });
-                      if (res.ok) {
-                        const data = await res.json();
-                        setUsers(prev => prev.map(u =>
-                          u.id === modalUser.id ? { ...u, email_2fa_enabled: data.enabled } : u
-                        ));
-                        setModalUser({ ...modalUser, email_2fa_enabled: data.enabled });
-                      } else {
-                        const data = await res.json();
-                        alert(data.error || "Failed to toggle 2FA");
-                      }
-                    }}
-                    style={{
-                      all: "unset", cursor: "pointer",
-                      background: modalUser.email_2fa_enabled ? "var(--red-soft)" : "var(--green-soft)",
-                      color: modalUser.email_2fa_enabled ? "var(--red)" : "var(--green)",
-                      padding: "7px 14px", borderRadius: 9, fontWeight: 600, fontSize: 12,
-                      display: "inline-flex", gap: 6, alignItems: "center", whiteSpace: "nowrap",
-                    }}
-                  >
-                    {modalUser.email_2fa_enabled ? "🔴 Disable 2FA" : "🟢 Enable 2FA"}
-                  </button>
+                  <div style={{ marginBottom: 10, lineHeight: 1.5, color: "var(--ink)" }}>
+                    This permanently removes <strong>{deleteConfirm}</strong> and all their access. This cannot be undone.
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn" onClick={() => setDeleteConfirm(null)}
+                      disabled={deleting}
+                      style={{
+                        all: "unset", cursor: "pointer", background: "var(--card)",
+                        color: "var(--ink)", border: "1px solid var(--line)",
+                        padding: "7px 14px", borderRadius: 9, fontWeight: 600, fontSize: 12,
+                      }}>
+                      Cancel
+                    </button>
+                    <button className="btn" onClick={() => handleDelete((modalUser as User).id)}
+                      disabled={deleting}
+                      style={{
+                        all: "unset", cursor: "pointer", background: "var(--red)",
+                        color: "#fff", padding: "7px 14px", borderRadius: 9, fontWeight: 600, fontSize: 12,
+                      }}>
+                      {deleting ? "Deleting..." : "Yes, delete"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px", justifyContent: "flex-end" }}>
-              <button className="btn alt" onClick={() => setModalUser(null)} disabled={saving} style={{ all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)", border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Cancel</button>
-              <button className="btn" onClick={handleSave} disabled={saving} style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>{saving ? "Saving..." : "Save changes"}</button>
-            </div>
-          </div>
-        </>
-      )}
 
-      {/* ── Password change modal ── */}
-      {passwordUser !== null && (
-        <>
-          <div className="mscrim show" onClick={() => { setPasswordUser(null); setPasswordSuccess(null); }} />
-          <div className="modal" style={{
-            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-            zIndex: 61, background: "var(--paper)", borderRadius: 18, width: 400,
-            maxWidth: "90vw", boxShadow: "var(--shadow)",
-          }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600, padding: "20px 24px 4px", margin: 0 }}>
-              Change password
-            </h2>
-            <div className="msub" style={{ color: "var(--muted)", fontSize: 13, padding: "0 24px 14px", borderBottom: "1px solid var(--line)" }}>
-              Set a new password for <strong>{passwordUser.name}</strong> ({passwordUser.username || passwordUser.email}).
-            </div>
-            <div className="mform" style={{ padding: "18px 24px" }}>
-              <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>New password</label>
-              <input className="ef" type="password" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 6 characters" autoFocus />
+            {/* Footer buttons */}
+            <div style={{
+              display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px",
+              justifyContent: "space-between",
+            }}>
+              {/* Left: Delete button (edit mode only) */}
+              {modalUser !== "new" && !deleteConfirm && (
+                <button className="btn alt" onClick={() => setDeleteConfirm((modalUser as User).name)}
+                  style={{
+                    all: "unset", cursor: "pointer", background: "transparent",
+                    color: "var(--red)", padding: "10px 16px", borderRadius: 11,
+                    fontWeight: 600, fontSize: "13.5px", marginRight: "auto",
+                  }}>
+                  🗑 Delete user
+                </button>
+              )}
+              {/* Spacer when no delete button */}
+              {modalUser !== "new" && !deleteConfirm && <div style={{ flex: 1 }} />}
 
-              {passwordError && (
-                <div style={{ background: "var(--red-soft)", color: "var(--red)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
-                  {passwordError}
-                </div>
-              )}
-              {passwordSuccess && (
-                <div style={{ background: "var(--green-soft)", color: "var(--green)", padding: "10px 13px", borderRadius: 9, fontSize: 13, marginTop: 14, fontWeight: 600 }}>
-                  {passwordSuccess}
-                </div>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px", justifyContent: "flex-end" }}>
-              <button className="btn alt" onClick={() => { setPasswordUser(null); setPasswordSuccess(null); }} disabled={passwordSaving} style={{ all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)", border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>Cancel</button>
-              <button className="btn" onClick={handleChangePassword} disabled={passwordSaving || !newPassword.trim()} style={{ all: "unset", cursor: "pointer", background: !newPassword.trim() ? "var(--line)" : "var(--ink)", color: "#fff", padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px" }}>{passwordSaving ? "Updating..." : "Update password"}</button>
+              {/* Right: Cancel + Save */}
+              <button className="btn alt" onClick={() => setModalUser(null)} disabled={saving}
+                style={{
+                  all: "unset", cursor: "pointer", background: "var(--card)",
+                  color: "var(--ink)", border: "1px solid var(--line)",
+                  padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+                }}>
+                Cancel
+              </button>
+              <button className="btn" onClick={handleSave} disabled={saving || !!deleteConfirm}
+                style={{
+                  all: "unset", cursor: "pointer",
+                  background: saving || deleteConfirm ? "var(--line)" : "var(--ink)",
+                  color: "#fff", padding: "10px 16px", borderRadius: 11,
+                  fontWeight: 600, fontSize: "13.5px",
+                }}>
+                {saving ? "Saving..." : "Save changes"}
+              </button>
             </div>
           </div>
         </>

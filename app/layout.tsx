@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { ClientsProvider } from "@/hooks/use-clients-context";
 import "./globals.css";
 
@@ -51,11 +51,13 @@ function MobileSidebar({
   pathname,
   open,
   onClose,
+  counts,
 }: {
   visibleNav: NavItem[];
   pathname: string;
   open: boolean;
   onClose: () => void;
+  counts: Record<string, number>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -97,40 +99,27 @@ function MobileSidebar({
             ✕
           </button>
         </div>
-        <nav className="flex-1 px-3 space-y-[3px] overflow-y-auto" style={{ marginTop: 6 }}>
+        <nav className="nav flex-1 px-3 space-y-[3px] overflow-y-auto" style={{ marginTop: 6 }}>
           {visibleNav.map((item, i) => {
             if (item.label === "---") {
-              return <div key={`sep-m-${i}`} className="mx-1.5 my-3 border-t" style={{ borderColor: "rgba(255,255,255,0.14)" }} />;
+              return <div key={`sep-m-${i}`} className="sep" />;
             }
             const isActive = pathname === item.href;
+            const ct = counts[item.label];
             return (
-              <a
+              <button
                 key={item.label}
-                href={item.href}
-                onClick={onClose}
-                className="flex items-center gap-[11px] px-3 py-[10px] rounded-[10px] font-medium transition-colors"
-                style={{
-                  color: isActive ? "var(--teal-ink)" : "#c4cee8",
-                  backgroundColor: isActive ? "#fff" : "transparent",
-                  fontWeight: isActive ? 600 : 500,
-                  fontSize: 14,
-                }}
+                onClick={() => { window.location.href = item.href; onClose(); }}
+                className={isActive ? "on" : ""}
               >
                 {item.icon && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      width: 18,
-                      justifyContent: "center",
-                      fontSize: 15,
-                      opacity: 0.9,
-                    }}
-                  >
-                    {item.icon}
-                  </span>
+                  <span className="ic">{item.icon}</span>
                 )}
                 <span>{item.label}</span>
-              </a>
+                {ct !== undefined && (
+                  <span className="ct">{ct}</span>
+                )}
+              </button>
             );
           })}
         </nav>
@@ -171,6 +160,44 @@ export default function RootLayout({
   const [role, setRole] = useState("admin");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [clientsData, setClientsData] = useState<any[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+
+  // Fetch clients for sidebar count badges
+  useEffect(() => {
+    let cancelled = false;
+    async function loadClients() {
+      try {
+        const res = await fetch("/api/clients");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.clients) {
+          setClientsData(data.clients);
+        }
+      } catch {} finally {
+        if (!cancelled) setClientsLoading(false);
+      }
+    }
+    loadClients();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Compute per-module counts from real client data
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {
+      Clients: 0, Financials: 0, Payroll: 0, "Sales Tax": 0,
+      "1099s": 0, "Tax Returns": 0, Renditions: 0,
+    };
+    c.Clients = clientsData.length;
+    for (const client of clientsData) {
+      for (const svc of client.services || []) {
+        if (!svc.enabled) continue;
+        const label = svc.label as string;
+        if (label && c[label] !== undefined) c[label]++;
+      }
+    }
+    return c;
+  }, [clientsData]);
 
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
 
@@ -245,47 +272,29 @@ export default function RootLayout({
             </div>
 
             {/* Nav */}
-            <nav className="flex flex-col gap-[3px] flex-1" style={{ marginTop: 28 }}>
+            <nav className="nav flex flex-col gap-[3px] flex-1" style={{ marginTop: 28 }}>
               {visibleNav.map((item, i) => {
                 if (item.label === "---") {
-                  return <div key={`sep-${i}`} className="mx-1.5 my-3 border-t" style={{ borderColor: "rgba(255,255,255,0.14)" }} />;
+                  return <div key={`sep-${i}`} className="sep" />;
                 }
                 const isActive = pathname === item.href;
+                const ct = counts[item.label];
                 return (
-                  <a
+                  <button
                     key={item.label}
-                    href={item.href}
-                    className="flex items-center gap-[11px] px-3 py-[10px] rounded-[10px] font-medium transition-colors"
-                    style={{
-                      color: isActive ? "var(--teal-ink)" : "#c4cee8",
-                      backgroundColor: isActive ? "#fff" : "transparent",
-                      fontWeight: isActive ? 600 : 500,
-                      fontSize: 14,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
-                    }}
+                    onClick={() => window.location.href = item.href}
+                    className={isActive ? "on" : ""}
                   >
                     {item.icon && (
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          width: 18,
-                          justifyContent: "center",
-                          fontSize: 15,
-                          opacity: 0.9,
-                        }}
-                      >
-                        {item.icon}
-                      </span>
+                      <span className="ic">{item.icon}</span>
                     )}
                     <span>{item.label}</span>
-              </a>
-            );
-          })}
+                    {ct !== undefined && (
+                      <span className="ct">{ct}</span>
+                    )}
+                  </button>
+                );
+              })}
         </nav>
 
         {/* Logout */}
@@ -324,7 +333,7 @@ export default function RootLayout({
 
         {/* ── Mobile sidebar drawer ── */}
         {!isAuthPage && (
-          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} counts={counts} />
         )}
 
         {/* ── Main content ── */}
@@ -400,6 +409,7 @@ export default function RootLayout({
                   <option value="admin">Admin</option>
                   <option value="manager">Manager</option>
                   <option value="staff">Staff</option>
+                  <option value="india">India (Offshore)</option>
                 </select>
               </div>
             </div>
@@ -411,6 +421,12 @@ export default function RootLayout({
             {!isAuthPage ? (
               <ClientsProvider>
                 <div className="tip-container" style={{ margin: "0px 0px 14px 0px" }}>
+                  {role === "india" && (
+                    <div className="doorbar">
+                      <span className="lk">🔐</span>
+                      <span><b>Secure Web Door</b> — You are viewing as India (Offshore). All data is encrypted in transit and at rest. Do not share credentials.</span>
+                    </div>
+                  )}
                   {/* ── Tip banner ── */}
                   <div
                     className="hidden sm:flex gap-3 items-start rounded-[14px] border px-4 py-[13px]"

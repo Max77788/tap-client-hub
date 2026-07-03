@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Client, ServiceKey, CommentEntry } from "@/lib/types";
+import type { Client, ServiceKey, CommentEntry, SalesTaxLineItem } from "@/lib/types";
 import { SERVICE_META, STAFF } from "@/lib/data";
+
+// ── Utility: mask sensitive numbers (show last 4) ──
+function maskNum(val: string | undefined | null): string {
+  if (!val) return "—";
+  const s = val.replace(/\s/g, "");
+  if (s.length <= 4) return `***${s.slice(-4)}`;
+  return `***${s.slice(-4)}`;
+}
 
 // ── Constants ──
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -474,7 +482,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     title={`${mo}: ${n} processed — click +1, right-click -1`}
                   >
                     {n || "·"}
-                    {cmt && <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--blue)" }} />}
+                    {cmt && <div className="cdot" />}
                   </div>
                   {/* Comment icon */}
                   <button
@@ -515,7 +523,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   title={`${mo} — ${delayed ? "DELAYED · " : ""}${stageLabel} — click to cycle`}
                 >
                   {t}
-                  {cmt && <div style={{ position: "absolute", top: -2, right: -2, width: 7, height: 7, borderRadius: "50%", background: "var(--blue)" }} />}
+                  {cmt && <div className="cdot" />}
                 </div>
                 {/* Comment icon */}
                 <button
@@ -851,11 +859,390 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }
 
   // ══════════════════════════════════════════════════════════════
-  // MODULE-SPECIFIC VIEW (compact, always-editable master data)
+  // MODULE-SPECIFIC VIEW (from worklist — shows detail for one module)
   // ══════════════════════════════════════════════════════════════
   if (moduleKey) {
     const targetSvc = localSvcs.find((s: any) => s.key === moduleKey);
     if (!targetSvc) return null;
+
+    function handleAddNoteForModule() {
+      if (!notesText.trim()) return;
+      const comment: CommentEntry = {
+        id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        month: notesMonth,
+        text: notesText.trim(),
+        author: currentUser || "You",
+        createdAt: new Date().toISOString(),
+      };
+      const updated = localSvcs.map((s: any) => {
+        if (s.key === moduleKey) {
+          const existing = s.comments || [];
+          return { ...s, comments: [...existing, comment] };
+        }
+        return s;
+      });
+      setLocalSvcs(updated);
+      setNotesText("");
+      onSave?.({ ...client, services: updated });
+    }
+
+    // ── Sales tax line item section ──
+    function SalesTaxLineItemsSection() {
+      const [editingStxIdx, setEditingStxIdx] = useState(-1);
+      const [editStxName, setEditStxName] = useState("");
+      const [editStxFreq, setEditStxFreq] = useState("Monthly");
+      const [editStxRt, setEditStxRt] = useState("");
+      const [editStxTaxId, setEditStxTaxId] = useState("");
+      const [editStxBank, setEditStxBank] = useState("");
+      const [editStxRouting, setEditStxRouting] = useState("");
+      const [editStxAccount, setEditStxAccount] = useState("");
+      const [stxNoteText, setStxNoteText] = useState<Record<number, string>>({});
+      const [stxNoteMonth, setStxNoteMonth] = useState<Record<number, number>>({});
+
+      function startEdit(i: number) {
+        const item = stxLineItems[i];
+        setEditingStxIdx(i);
+        setEditStxName(item.serviceName || "");
+        setEditStxFreq(item.frequency || "Monthly");
+        setEditStxRt(item.rt || "");
+        setEditStxTaxId(item.taxId || "");
+        setEditStxBank(item.bankName || "");
+        setEditStxRouting(item.bankRouting || "");
+        setEditStxAccount(item.bankAccount || "");
+      }
+
+      function saveEditItem() {
+        if (editingStxIdx < 0 || !editStxName.trim()) return;
+        const upd = [...stxLineItems];
+        upd[editingStxIdx] = {
+          ...upd[editingStxIdx],
+          serviceName: editStxName.trim(), rt: editStxRt.trim(), taxId: editStxTaxId.trim(),
+          bankName: editStxBank.trim(), bankRouting: editStxRouting.trim(), bankAccount: editStxAccount.trim(),
+          frequency: editStxFreq,
+        };
+        setStxLineItems(upd);
+        setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+        onSave?.({
+          ...client,
+          services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
+        } as Client);
+        setEditingStxIdx(-1);
+      }
+
+      function removeItem(i: number) {
+        const upd = stxLineItems.filter((_: any, j: number) => j !== i);
+        setStxLineItems(upd);
+        setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+        onSave?.({
+          ...client,
+          services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
+        } as Client);
+      }
+
+      function addStxNote(itemIdx: number) {
+        const text = stxNoteText[itemIdx]?.trim();
+        if (!text) return;
+        const month = stxNoteMonth[itemIdx] ?? new Date().getMonth();
+        const comment: CommentEntry & { _lineItemKey?: string } = {
+          id: `stx-cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          month,
+          text,
+          author: currentUser || "You",
+          createdAt: new Date().toISOString(),
+          _lineItemKey: `stx-item-${itemIdx}`,
+        };
+        const updated = localSvcs.map((s: any) => {
+          if (s.key === "sales_tax") {
+            const existing = s.comments || [];
+            return { ...s, comments: [...existing, comment] };
+          }
+          return s;
+        });
+        setLocalSvcs(updated);
+        setStxNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
+        onSave?.({ ...client, services: updated } as Client);
+      }
+
+      function getStxComments(itemIdx: number): CommentEntry[] {
+        const key = `stx-item-${itemIdx}`;
+        const svc = localSvcs.find((s: any) => s.key === "sales_tax");
+        return (svc?.comments || []).filter((cm: any) => cm._lineItemKey === key);
+      }
+
+      function stxHasComment(itemIdx: number, monthIdx: number): boolean {
+        return getStxComments(itemIdx).filter((cm: CommentEntry) => cm.month === monthIdx).length > 0;
+      }
+
+      // Per-line-item month stage
+      function stxMonthStage(itemIdx: number, monthIdx: number): string {
+        // Return the stage of the parent sales_tax service for that month
+        return (targetSvc?.months || [])[monthIdx] || "lock";
+      }
+
+      function handleStxStageClick(itemIdx: number, monthIdx: number) {
+        // Same stage cycling as the parent month tracker
+        const svc = localSvcs.find((s: any) => s.key === "sales_tax");
+        const currentStage = (svc?.months || [])[monthIdx] || "lock";
+        const STAGE_CYCLE = ["lock", "in_progress", "waiting", "billed", "done", "na"];
+        const idx = STAGE_CYCLE.indexOf(currentStage);
+        const nextStage = STAGE_CYCLE[(idx + 1) % STAGE_CYCLE.length];
+        const updated = localSvcs.map((s: any) =>
+          s.key === "sales_tax"
+            ? { ...s, months: s.months.map((m: string, i: number) => i === monthIdx ? nextStage : m) }
+            : s
+        );
+        setLocalSvcs(updated);
+        onSave?.({ ...client, services: updated } as Client);
+      }
+
+      const stxStageStyles: Record<string, { bg: string; fg: string; border: string }> = {
+        lock: { bg: "transparent", fg: "#c2c8d4", border: "transparent" },
+        in_progress: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2" },
+        waiting: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6" },
+        billed: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec" },
+        done: { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6" },
+        na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf" },
+      };
+
+      function stxStageSymbol(st: string): string {
+        switch (st) {
+          case "lock": return "·";
+          case "in_progress": return "•";
+          case "waiting": return "⏳";
+          case "billed": return "✓";
+          case "done": return "✓";
+          case "na": return "–";
+          default: return "·";
+        }
+      }
+
+      return (
+        <div style={{ marginBottom: 12 }}>
+          <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
+            Sales Tax Line Items
+          </div>
+
+          <button
+            onClick={() => setAddingStx(!addingStx)}
+            className="reveal"
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "8px 12px", marginBottom: 8,
+              border: "1px dashed var(--line)", borderRadius: 8,
+              fontSize: 12, fontWeight: 600, color: "var(--teal)",
+              width: "100%", boxSizing: "border-box",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--teal)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
+          >
+            <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Add line item
+          </button>
+
+          {addingStx && (
+            <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
+                    <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="reveal" style={{ all: "unset", cursor: "pointer", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12, color: "var(--muted)" }}
+                  onClick={() => setAddingStx(false)}>Cancel</button>
+                <button className="reveal" style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12 }}
+                  onClick={() => {
+                    if (!newStxName.trim()) return;
+                    const upd = [...stxLineItems, {
+                      serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
+                      bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                      frequency: newStxFreq,
+                    }];
+                    setStxLineItems(upd);
+                    setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+                    onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                    setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
+                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                    setAddingStx(false);
+                  }}
+                >Add line item</button>
+              </div>
+            </div>
+          )}
+
+          {stxLineItems.map((item: any, i: number) => (
+            <div key={i} className="stxitem">
+              {editingStxIdx === i ? (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxName} onChange={e => setEditStxName(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                      <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxFreq} onChange={e => setEditStxFreq(e.target.value)}>
+                        <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxRt} onChange={e => setEditStxRt(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxTaxId} onChange={e => setEditStxTaxId(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxBank} onChange={e => setEditStxBank(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxRouting} onChange={e => setEditStxRouting(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxAccount} onChange={e => setEditStxAccount(e.target.value)} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <button className="reveal" style={{ color: "var(--muted)" }} onClick={() => setEditingStxIdx(-1)}>Cancel</button>
+                    <button className="reveal" style={{ background: "var(--teal)", color: "#fff", padding: "6px 12px", borderRadius: 8 }} onClick={saveEditItem}>Save</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="stxih">
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{item.serviceName}</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="reveal" onClick={() => startEdit(i)} style={{ fontSize: 11 }}>Edit</button>
+                      <button className="reveal" onClick={() => removeItem(i)} style={{ color: "var(--red)", fontSize: 11 }}>Remove</button>
+                    </div>
+                  </div>
+
+                  <div className="stxfields">
+                    <div>
+                      <span className="fk">Frequency</span>
+                      <span className="fv">
+                        <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: "var(--amber-soft)", color: "#8a560f", padding: "2px 8px", borderRadius: 6 }}>
+                          {item.frequency || "Monthly"}
+                        </span>
+                      </span>
+                    </div>
+                    <div>
+                      <span className="fk">RT #</span>
+                      <span className="fv mono">{item.rt || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="fk">Tax ID</span>
+                      <span className="fv mono">{item.taxId || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="fk">Bank</span>
+                      <span className="fv">{item.bankName || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="fk">Routing</span>
+                      <span className="fv mono">{maskNum(item.bankRouting)}</span>
+                    </div>
+                    <div>
+                      <span className="fk">Account</span>
+                      <span className="fv mono">{maskNum(item.bankAccount)}</span>
+                    </div>
+                  </div>
+
+                  {/* Per-line-item month tracker */}
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginBottom: 6 }}>Month tracker</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {MONTHS.map((mo, mi) => {
+                        const st = stxMonthStage(i, mi);
+                        const ss = stxStageStyles[st] || stxStageStyles.lock;
+                        const hasCmt = stxHasComment(i, mi);
+                        return (
+                          <div key={mi} style={{ textAlign: "center", position: "relative" }}>
+                            <div style={{ fontSize: 9, color: "var(--muted)", marginBottom: 1 }}>{mo}</div>
+                            <div
+                              onClick={() => handleStxStageClick(i, mi)}
+                              style={{
+                                width: 24, height: 24, borderRadius: 6,
+                                border: `1px solid ${ss.border}`,
+                                background: ss.bg,
+                                color: ss.fg,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 12, fontWeight: 700, cursor: "pointer", userSelect: "none",
+                                position: "relative",
+                              }}
+                            >
+                              {stxStageSymbol(st)}
+                              {hasCmt && <div className="cdot" />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Per-line-item notes */}
+                  <div style={{ marginTop: 8 }}>
+                    <div className="notemo">Notes</div>
+                    {getStxComments(i).filter((cm: CommentEntry & { _lineItemKey?: string }) => cm._lineItemKey === `stx-item-${i}`).map((cm: any) => (
+                      <div key={cm.id} className="note">
+                        <div className="ntxt">{cm.text}</div>
+                        <div className="nmeta">{cm.author} · {MONTHS[cm.month] || `Month ${cm.month + 1}`}</div>
+                        <button
+                          onClick={() => deleteComment("sales_tax", cm.id)}
+                          style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}
+                        >× Delete</button>
+                      </div>
+                    ))}
+                    <div className="noteadd">
+                      <select value={stxNoteMonth[i] ?? new Date().getMonth()} onChange={e => setStxNoteMonth((prev: any) => ({ ...prev, [i]: Number(e.target.value) }))}
+                        style={{ padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}>
+                        {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m}</option>)}
+                      </select>
+                      <input value={stxNoteText[i] || ""} onChange={e => setStxNoteText((prev: any) => ({ ...prev, [i]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addStxNote(i); } }}
+                        placeholder="Note..." style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)", outline: "none" }} />
+                      <button onClick={() => addStxNote(i)}
+                        style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}>Add</button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     return (
       <>
@@ -868,11 +1255,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-              <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{svcLabel(moduleKey)} details</div>
+              <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
               <button className="ox" onClick={onClose} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
             <div className="sub" style={{ color: "var(--muted)", fontSize: 13, marginTop: 5 }}>
-              <span className="mono" style={{ color: "#9a9484" }}>{c.cid || `CID-${c.id}`}</span> — {c.name} <span className="badge b-biz" style={{
+              <span className="mono" style={{ color: "#9a9484" }}>{c.cid || `CID-${c.id}`}</span>
+              <span className="badge b-biz" style={{
                 fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: 20,
                 textTransform: "uppercase", letterSpacing: "0.05em",
                 backgroundColor: typeBadge.bg, color: typeBadge.fg, marginLeft: 6,
@@ -882,72 +1270,116 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Body */}
           <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
-            {/* Always-editable master data */}
-            <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 10px" }}>
-              Master data
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 12px", marginBottom: 16 }}>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Name</label>
-                <input className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                  value={eName} onChange={e => setEName(e.target.value)} />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Type / Group</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <select className="ef" style={{ flex: 1, padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                    value={eType} onChange={e => setEType(e.target.value as any)}>
-                    <option>Business</option><option>Personal</option>
-                  </select>
-                  <input className="ef" style={{ flex: 1, padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                    value={eGroup} onChange={e => setEGroup(e.target.value)} placeholder="Group" />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Email</label>
-                <input className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                  value={eEmail} onChange={e => setEEmail(e.target.value)} />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Phone</label>
-                <input className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                  value={ePhone} onChange={e => setEPhone(e.target.value)} />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Address</label>
-                <input className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                  value={eAddress} onChange={e => setEAddress(e.target.value)} />
-              </div>
+            {/* Module tag badge */}
+            <span className="modtag">{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
+
+            {/* Module name and assignee */}
+            <div className="mdhead">
+              <div style={{ fontWeight: 700, fontSize: 17 }}>{svcLabel(moduleKey)}</div>
+              <div className="sub2">{targetSvc.processor || targetSvc.assignedTo || "Unassigned"}</div>
             </div>
 
-            {/* Auto-save master data on blur */}
-            <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 12, fontStyle: "italic" }}>
-              Master data saves automatically on change.
+            {/* Per-service assignee selector */}
+            <div style={{ marginBottom: 12 }}>
+              <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
+                Assignee
+              </div>
+              <select className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
+                value={eSvcAssignees[moduleKey] || "Unassigned"}
+                onChange={e => {
+                  setESvcAssignees((prev: any) => ({ ...prev, [moduleKey]: e.target.value }));
+                  setLocalSvcs((prev: any) => prev.map((s: any) =>
+                    s.key === moduleKey ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s
+                  ));
+                }}
+              >
+                {STAFF.map((m: any) => <option key={m.name}>{m.name}</option>)}
+                <option>Unassigned</option>
+              </select>
             </div>
 
-            {/* Single service card */}
-            <SingleServiceCard svc={targetSvc} />
+            {/* Month tracker for this service */}
+            <div style={{ marginBottom: 12 }}>
+              <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
+                Month tracker
+              </div>
+              {targetSvc.enabled ? (
+                <>
+                  {monthCells(moduleKey)}
+                  {moduleKey === "1099s" ? (
+                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
+                      <span style={{ fontStyle: "italic" }}>Click to add, right-click to remove</span>
+                    </div>
+                  ) : (
+                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
+                      {UNIFIED_STAGES.map(s => (
+                        <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
+                          {moduleKey === "tax_returns" && s.k === "dn" ? "Filed" : s.l}
+                        </span>
+                      ))}
+                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
+                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--blue)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)" }}></i>Has comments</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>This module is not enabled for this client.</div>
+              )}
+            </div>
 
-            {/* Per-service assignee for this module */}
-            {targetSvc.enabled && (
-              <div style={{ marginTop: 12 }}>
-                <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
-                  Service assignee
-                </div>
-                <select className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                  value={eSvcAssignees[moduleKey] || "Unassigned"}
-                  onChange={e => {
-                    setESvcAssignees(prev => ({ ...prev, [moduleKey]: e.target.value }));
-                    setLocalSvcs(prev => prev.map((s: any) =>
-                      s.key === moduleKey ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s
-                    ));
-                  }}
-                >
-                  {STAFF.map(m => <option key={m.name}>{m.name}</option>)}
-                  <option>Unassigned</option>
+            {/* Sales Tax: line items section */}
+            {moduleKey === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
+
+            {/* Notes section for this service */}
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+              <div className="notemo">Notes for {svcLabel(moduleKey)}</div>
+              <div className="noteadd">
+                <select value={notesMonth} onChange={e => setNotesMonth(Number(e.target.value))}
+                  style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
+                  {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
                 </select>
+                <input value={notesText} onChange={e => setNotesText(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNoteForModule(); } }}
+                  placeholder="Add a note..." style={{ flex: 1, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }} />
+                <button onClick={handleAddNoteForModule}
+                  style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
+                  Add
+                </button>
               </div>
-            )}
+              <div style={{ marginTop: 10 }}>
+                {(() => {
+                  const filtered = getServiceComments(moduleKey, notesMonth);
+                  return filtered.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {filtered.map((cm: CommentEntry) => (
+                        <div key={cm.id} className="note">
+                          <div className="ntxt">{cm.text}</div>
+                          <div className="nmeta">{cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                          <button onClick={() => deleteComment(moduleKey, cm.id)}
+                            style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
+                            × Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>No notes yet.</div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Full client record link */}
+            <div style={{ marginTop: 20 }}>
+              <button className="reveal" onClick={() => {
+                // Navigate to full client view by re-rendering without moduleKey
+                // This would be handled by the parent page — for now, just close
+                onClose();
+              }} style={{ fontWeight: 600, fontSize: 13 }}>
+                Full client record →
+              </button>
+            </div>
           </div>
 
           {/* Footer */}
@@ -1043,52 +1475,40 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           <div style={{ marginTop: 28, borderTop: "1px solid var(--line)", padding: "14px 0 4px" }}>
             <div className="sect" style={sectStyle}>Notes for this client</div>
             <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 12, fontStyle: "italic" }}>
-              Anyone on this account can leave a month note; a 📋 marker then shows on the worklist.
+              Anyone on this account can leave a month note; a blue dot then shows on the worklist.
             </div>
 
-            {/* Month selector + add note */}
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 12 }}>
-              <div style={{ flex: "0 0 110px" }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Month</label>
-                <select value={notesMonth} onChange={e => setNotesMonth(Number(e.target.value))}
-                  style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
-                  {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Note</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input value={notesText} onChange={e => setNotesText(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNote(); } }}
-                    placeholder="Add a note for the selected month"
-                    style={{ flex: 1, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }}
-                  />
-                  <button onClick={handleAddNote}
-                    style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
-                    Add
-                  </button>
-                </div>
-              </div>
+            {/* Month selector + add note — noteadd style */}
+            <div className="noteadd" style={{ marginTop: 0 }}>
+              <select value={notesMonth} onChange={e => setNotesMonth(Number(e.target.value))}
+                style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
+                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+              <input value={notesText} onChange={e => setNotesText(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNote(); } }}
+                placeholder="Add a note for the selected month"
+                style={{ flex: 1, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }}
+              />
+              <button onClick={handleAddNote}
+                style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
+                Add
+              </button>
             </div>
 
-            {/* Existing notes for this month */}
-            <div>
+            {/* Existing notes for this month — note style */}
+            <div style={{ marginTop: 10 }}>
               {(() => {
                 const filtered = getAllServiceComments().filter((cm: CommentEntry) => cm.month === notesMonth);
                 return filtered.length > 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {filtered.map(cm => (
-                      <div key={cm.id} style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "9px 11px", position: "relative" }}>
-                        <div style={{ fontSize: 10.5, color: "var(--muted)", marginBottom: 4 }}>
-                          <b style={{ fontWeight: 600, color: "var(--ink)" }}>{cm.author}</b>
-                          <span style={{ marginLeft: 4 }}>· {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                        <div style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.45 }}>{cm.text}</div>
+                      <div key={cm.id} className="note">
+                        <div className="ntxt">{cm.text}</div>
+                        <div className="nmeta">{cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                         <button onClick={() => deleteNote(cm.id)}
-                          style={{ all: "unset", cursor: "pointer", position: "absolute", top: 6, right: 8, color: "var(--red)", fontSize: 13, lineHeight: 1, opacity: 0.5, transition: "opacity 0.15s" }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-                          onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}
-                          title="Delete note">×</button>
+                          style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
+                          × Delete
+                        </button>
                       </div>
                     ))}
                   </div>

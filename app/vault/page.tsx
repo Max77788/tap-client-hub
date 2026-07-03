@@ -125,7 +125,7 @@ export default function VaultPage() {
     return (
       <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden" }}>
         <div className="empty" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
-          Failed to load credentials.{" "}
+          Failed to load credentials.{' '}
           <button onClick={() => loadCredentials()} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600 }}>
             Retry
           </button>
@@ -136,43 +136,41 @@ export default function VaultPage() {
 
   return (
     <div className="space-y-4">
-      {/* ── Vault note ── */}
+      {/* ── Vault note banner ── */}
       <div className="vault-note" style={{
         background: "var(--amber-soft)", border: "1px solid #ead9b6", color: "#7a5210",
         borderRadius: 13, padding: "13px 16px", fontSize: 13, display: "flex", gap: 10,
       }}>
-        <span>🏦</span>
+        <span style={{ fontSize: 18, lineHeight: "20px" }}>🏦</span>
         <div>
-          <b>Grouped by client.</b> One entity can hold several logins — expand a client to see them all.
-          {" "}<b>Bank logins aren&apos;t stored here</b>: they link out to <b>TAP Bank</b>, your separate in-office secure system.
+          <b>Grouped by client.</b> One entity can hold several logins — expand a client to see them all.{' '}
+          <b>Bank logins aren&apos;t stored here</b>: they link out to <b>TAP Bank</b>, your separate in-office secure system.
         </div>
       </div>
 
-      {/* ── Count line ── */}
-      <div className="count" style={{ color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px" }}>
-        {totalEntries} login{totalEntries !== 1 ? "s" : ""} across {entityCount} entit{entityCount !== 1 ? "ies" : "y"}
-      </div>
+      {/* ── Toolbar: count + search + add ── */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+        <div className="count" style={{ color: "var(--muted)", fontSize: 13, marginRight: "auto" }}>
+          {totalEntries} login{totalEntries !== 1 ? "s" : ""} across {entityCount} entit{entityCount !== 1 ? "ies" : "y"}
+        </div>
 
-      {/* ── Search ── */}
-      <div className="search" style={{ flex: 1, minWidth: 220, position: "relative" }}>
-        <span style={{ position: "absolute", left: 13, top: 11, opacity: 0.45 }}>🔍</span>
-        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search by client, site, or email..."
-          style={{ width: "100%", padding: "11px 14px 11px 38px", border: "1px solid var(--line)", borderRadius: 11, background: "var(--card)", font: "inherit", fontSize: 14 }} />
-      </div>
+        <div className="search" style={{ flex: 1, minWidth: 200, position: "relative" }}>
+          <span style={{ position: "absolute", left: 13, top: 11, opacity: 0.45 }}>🔍</span>
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by client, site, or email..."
+            style={{ width: "100%", padding: "11px 14px 11px 38px", border: "1px solid var(--line)", borderRadius: 11, background: "var(--card)", font: "inherit", fontSize: 14 }} />
+        </div>
 
-      {/* ── Add button ── */}
-      {canEdit && (
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button className="btn" onClick={handleAdd} disabled={saving} style={{
-          all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
-          padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
-          display: "inline-flex", gap: 7, alignItems: "center",
-        }}>
-          ＋ Add credential
-        </button>
+        {canEdit && (
+          <button className="btn" onClick={handleAdd} disabled={saving} style={{
+            all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+            padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+            display: "inline-flex", gap: 7, alignItems: "center", whiteSpace: "nowrap",
+          }}>
+            ＋ Add credential
+          </button>
+        )}
       </div>
-      )}
 
       {/* ── 2FA Admin Management ── */}
       <details className="vgroup" style={{
@@ -217,7 +215,12 @@ export default function VaultPage() {
             <div className="vault-table-wrap" style={{ overflowX: "auto" }}>
               <table className="vault-table">
                 <thead>
-                  <tr><th>Portal</th><th>Username</th><th>Password</th><th>Link</th><th>Purpose</th><th>Notes / Info</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+                  <tr>
+                    <th className="col-portal">Portal</th>
+                    <th className="col-user">Username</th>
+                    <th className="col-pw">Password</th>
+                    <th className="col-actions" style={{ textAlign: "right", width: 1 }} />
+                  </tr>
                 </thead>
                 <tbody>
                   {entries.map(entry => {
@@ -226,20 +229,41 @@ export default function VaultPage() {
                     const pwVisible = visiblePws.has(pwKey);
                     return (
                       <tr key={entry.id}>
-                        <td className="vt-site"><b>{entry.site}</b></td>
+                        <td className="vt-site">
+                          <b>{entry.site}</b>
+                          <div className="vt-meta">
+                            {entry.purpose && <span className="vt-purpose">{entry.purpose}</span>}
+                            {entry.url && (
+                              <a href={entry.url} target="_blank" rel="noopener noreferrer"
+                                className="vt-url">
+                                Open site ↗
+                              </a>
+                            )}
+                          </div>
+                        </td>
                         {isBank ? (
                           <>
-                            <td className="vt-mono muted">— linked —</td>
+                            <td className="vt-mono vt-muted">— linked —</td>
                             <td className="vt-action">
-                              <a className="reveal" href="https://example.com" target="_blank" rel="noopener noreferrer"
-                                style={{ color: "var(--teal)", fontWeight: 600, fontSize: "11.5px", whiteSpace: "nowrap" }}>
+                              <a href="https://example.com" target="_blank" rel="noopener noreferrer"
+                                className="reveal" style={{
+                                  color: "var(--teal)", fontWeight: 600, fontSize: "11.5px",
+                                  whiteSpace: "nowrap", textDecoration: "none",
+                                }}>
                                 Open in TAP&nbsp;Bank ↗
                               </a>
                             </td>
                           </>
                         ) : (
                           <>
-                            <td className="vt-mono">{entry.email || "—"}</td>
+                            <td className="vt-user">
+                              {entry.email ? (
+                                <span className="vt-email">{entry.email}</span>
+                              ) : (
+                                <span className="vt-muted">—</span>
+                              )}
+                              {entry.notes && <div className="vt-notes" title={entry.notes}>{entry.notes}</div>}
+                            </td>
                             <td className="vt-pw">
                               <span className="vt-pw-val">{pwVisible ? (entry.password || "—") : "••••••••"}</span>
                               <button className="vt-pw-toggle" onClick={() => {
@@ -250,34 +274,18 @@ export default function VaultPage() {
                             </td>
                           </>
                         )}
-                        <td className="vt-mono">
-                          {entry.url ? (
-                            <a href={entry.url} target="_blank" rel="noopener noreferrer" className="reveal"
-                              style={{ color: "var(--teal)", fontWeight: 500, fontSize: "11.5px" }}>
-                              {entry.url.length > 30 ? entry.url.slice(0, 30) + "..." : entry.url} ↗
-                            </a>
-                          ) : "—"}
-                        </td>
-                        <td className="vt-mono" title={entry.purpose || ""}>
-                          {entry.purpose || "—"}
-                        </td>
-                        <td className="vt-mono" style={{ maxWidth: 200 }}
-                          title={[entry.notes || "", entry.additionalInfo01 || "", entry.additionalInfo02 || ""].filter(Boolean).join(" | ")}>
-                          {[entry.notes, entry.additionalInfo01, entry.additionalInfo02].filter(Boolean).join(" | ") || "—"}
-                        </td>
                         <td className="vt-action" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                           {canEdit ? (
-                          <>
-                          <button onClick={() => handleEdit(entry)} style={{
-                            all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "11.5px",
-                            marginRight: 10,
-                          }}>Edit</button>
-                          <button onClick={() => handleDelete(entry)} style={{
-                            all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "11.5px",
-                          }}>Delete</button>
-                          </>
+                            <>
+                              <button onClick={() => handleEdit(entry)} className="vt-edit-btn">
+                                Edit
+                              </button>
+                              <button onClick={() => handleDelete(entry)} className="vt-del-btn">
+                                Delete
+                              </button>
+                            </>
                           ) : (
-                          <span style={{ color: "var(--muted)", fontSize: "11px", fontStyle: "italic" }}>view only</span>
+                            <span style={{ color: "var(--muted)", fontSize: "11px", fontStyle: "italic" }}>view only</span>
                           )}
                         </td>
                       </tr>
@@ -297,35 +305,79 @@ export default function VaultPage() {
               }
               .vault-table thead th {
                 text-align: left;
-                font-size: 10.5px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
+                font-weight: 600;
                 color: var(--muted);
-                padding: 8px 10px;
+                font-size: 10px;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                padding: 11px 12px;
+                background: #faf7f0;
                 border-bottom: 1px solid var(--line);
-                white-space: nowrap;
               }
               .vault-table tbody td {
-                padding: 10px 10px;
-                border-bottom: 1px solid var(--line);
+                padding: 10px 12px;
+                border-bottom: 1px solid #efeade;
                 vertical-align: middle;
               }
               .vault-table tbody tr:last-child td {
                 border-bottom: none;
+              }
+              .vault-table tbody tr:hover {
+                background: #fcfaf4;
               }
               .vt-mono {
                 font-family: "SF Mono","Fira Code","Consolas",monospace;
                 font-size: 11.5px;
                 color: var(--ink);
               }
-              .vt-mono.muted {
+              .vt-muted {
                 color: var(--muted);
               }
               .vt-site {
                 font-weight: 600;
                 white-space: nowrap;
                 min-width: 120px;
+                vertical-align: middle;
+              }
+              .vt-meta {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                margin-top: 2px;
+              }
+              .vt-purpose {
+                font-size: 10.5px;
+                font-weight: 500;
+                color: var(--muted);
+                white-space: nowrap;
+              }
+              .vt-url {
+                font-size: 10.5px;
+                font-weight: 500;
+                color: var(--teal);
+                text-decoration: none;
+                white-space: nowrap;
+              }
+              .vt-url:hover {
+                text-decoration: underline;
+              }
+              .vt-user {
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              .vt-email {
+                font-family: "SF Mono","Fira Code","Consolas",monospace;
+                font-size: 11.5px;
+              }
+              .vt-notes {
+                font-size: 10.5px;
+                color: var(--muted);
+                margin-top: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 200px;
               }
               .vt-pw {
                 white-space: nowrap;
@@ -340,25 +392,30 @@ export default function VaultPage() {
                 color: var(--teal);
                 font-weight: 600;
                 font-size: 11px;
-                margin-left: 6px;
+                margin-left: 8px;
               }
               .vt-pw-toggle:hover {
                 opacity: 0.8;
               }
-              .vt-action {
-                white-space: nowrap;
+              .vt-edit-btn, .vt-del-btn {
+                all: unset;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 11.5px;
+                margin-left: 10px;
               }
-              .reveal {
-                text-decoration: none;
+              .vt-edit-btn {
+                color: var(--teal);
               }
-              .reveal:hover {
-                text-decoration: underline;
+              .vt-del-btn {
+                color: var(--red);
               }
-              .vault-table tbody td {
-                max-width: 180px;
-                overflow: hidden;
-                text-overflow: ellipsis;
+              .vt-edit-btn:hover, .vt-del-btn:hover {
+                opacity: 0.8;
               }
+              .col-portal { min-width: 140px; }
+              .col-user { min-width: 160px; }
+              .col-pw { min-width: 120px; }
             `}</style>
           </div>
         </details>

@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { SERVICE_META } from "@/lib/data";
 import { useClients } from "@/hooks/use-clients-context";
-import type { ServiceKey } from "@/lib/types";
 import { PageSkeleton } from "@/components/loading-skeleton";
 
 interface TimeEntry {
@@ -12,23 +10,27 @@ interface TimeEntry {
   clientId: string;
   personName: string;
   personId: string;
-  serviceKey: string;
-  serviceLabel: string;
-  duration: number;       // 0 = still running, >0 = stopped
-  date: string;           // started_at from DB
+  task: string;          // short key: fin, pr, stx, t9, rend, admin
+  taskLabel: string;
+  duration: number;      // 0 = still running, >0 = stopped
+  date: string;          // started_at from DB
   note: string;
   edited?: boolean;
-  isRunning?: boolean;    // derived: duration === 0
+  isRunning?: boolean;
 }
 
 interface StaffMember { id: string; name: string; role: string; }
 
 const TASK_LABEL: Record<string, string> = {
-  ...Object.fromEntries(
-    (Object.keys(SERVICE_META) as ServiceKey[]).map((k) => [k, (SERVICE_META as any)[k]?.label || k]),
-  ),
-  admin: "Admin / Other",
+  fin: "Financials",
+  pr: "Payroll",
+  stx: "Sales Tax",
+  t9: "1099s",
+  rend: "Renditions",
+  admin: "Admin/Other",
 };
+
+const TASK_KEYS = Object.keys(TASK_LABEL);
 
 function shortName(n: string) {
   return n.length > 26 ? n.slice(0, 24) + "\u2026" : n;
@@ -50,17 +52,9 @@ export default function TimePage() {
   const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedService, setSelectedService] = useState("fin");
-  const [timerNote, setTimerNote] = useState("");
-
-  // Manual entry form
-  const [mode, setMode] = useState<"timer" | "manual">("timer");
-  const [mWho, setMWho] = useState("");
-  const [mClient, setMClient] = useState("");
-  const [mTask, setMTask] = useState("fin");
-  const [mHours, setMHours] = useState("");
-  const [mMinutes, setMMinutes] = useState("");
-  const [mNote, setMNote] = useState("");
-  const [mDate, setMDate] = useState(new Date().toISOString().slice(0, 10));
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerStart, setTimerStart] = useState<number | null>(null);
+  const [timerElapsed, setTimerElapsed] = useState(0);
 
   // Table state
   const [entries, setEntries] = useState<TimeEntry[]>([]);
@@ -69,17 +63,24 @@ export default function TimePage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Live clock tick for running entries
-  const [, setTick] = useState(0);
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { clients, loading: clientsLoading } = useClients();
 
-  // Tick every second so running entries' elapsed time updates
+  // ── Live second counter for both timer and running entries ──
+  const [, setTick] = useState(0);
   useEffect(() => {
-    tickRef.current = setInterval(() => setTick(t => t + 1), 1000);
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+    intervalRef.current = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
+
+  // Recalc timer elapsed every tick when running
+  useEffect(() => {
+    if (timerRunning && timerStart) {
+      setTimerElapsed(Math.floor((Date.now() - timerStart) / 1000));
+    }
+  }, [timerRunning, timerStart]);
 
   // Load staff
   useEffect(() => {
@@ -90,17 +91,21 @@ export default function TimePage() {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {
-          setStaff(data
-            .filter((u: any) => u.status === "Active")
-            .map((u: any) => ({ id: u.id, name: u.name, role: u.role }))
+          setStaff(
+            data
+              .filter((u: any) => u.status === "Active")
+              .map((u: any) => ({ id: u.id, name: u.name, role: u.role }))
           );
         }
-      } catch {} finally {
+      } catch {
+      } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load entries from API
@@ -110,46 +115,96 @@ export default function TimePage() {
       if (!res.ok) return;
       const data = await res.json();
       if (data.entries) {
-        setEntries(data.entries.map((e: any) => ({
-          id: e.id,
-          clientName: e.clientName || "", clientId: e.clientId || "",
-          personName: e.personName || "", personId: e.personId || "",
-          serviceKey: "", serviceLabel: e.serviceLabel || "",
-          duration: e.duration || 0, date: e.date || "",
-          note: e.note || "", edited: e.edited || false,
-          isRunning: (e.duration || 0) === 0,
-        })));
+        setEntries(
+          data.entries.map((e: any) => ({
+            id: e.id,
+            clientName: e.clientName || "",
+            clientId: e.clientId || "",
+            personName: e.personName || "",
+            personId: e.personId || "",
+            task: "",
+            taskLabel: e.serviceLabel || "",
+            duration: e.duration || 0,
+            date: e.date || "",
+            note: e.note || "",
+            edited: e.edited || false,
+            isRunning: (e.duration || 0) === 0,
+          }))
+        );
       }
     } catch {}
   }, []);
 
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   function uid() {
-    try { return crypto.randomUUID(); } catch { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return (
+        Date.now().toString(36) +
+        Math.random().toString(36).slice(2, 10)
+      );
+    }
   }
 
-  // ── Start: POST entry immediately to DB ──
-  const startTimer = useCallback(async () => {
+  // Resolve task key from a label (reverse lookup)
+  function taskKeyFromLabel(label: string): string {
+    for (const [k, v] of Object.entries(TASK_LABEL)) {
+      if (v === label) return k;
+    }
+    return "admin";
+  }
+
+  // Resolve task label from any value (key or label)
+  function toTaskLabel(v: string): string {
+    if (TASK_LABEL[v]) return TASK_LABEL[v];
+    return v || "Admin/Other";
+  }
+
+  // ── Start Timer ──
+  const startTimer = useCallback(() => {
     if (!selectedClient || !selectedPerson) return;
+    setTimerRunning(true);
+    setTimerStart(Date.now());
+    setTimerElapsed(0);
+  }, [selectedClient, selectedPerson]);
+
+  // ── Stop Timer: saves entry to DB ──
+  const stopTimer = useCallback(async () => {
+    if (!timerStart || !selectedClient || !selectedPerson) return;
+    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+    if (elapsed < 1) {
+      setTimerRunning(false);
+      setTimerStart(null);
+      setTimerElapsed(0);
+      return;
+    }
+
     const client = clients.find((c) => c.id === selectedClient);
     const person = staff.find((s) => s.id === selectedPerson);
     if (!client || !person) return;
 
-    const svc = (SERVICE_META as any)[selectedService];
     const entryId = uid();
     const now = new Date().toISOString();
 
     // Optimistic local add
     const entry: TimeEntry = {
       id: entryId,
-      clientName: client.name, clientId: client.id,
-      personName: person.name, personId: person.id,
-      serviceKey: selectedService, serviceLabel: svc?.label || TASK_LABEL[selectedService] || "-",
-      duration: 0, date: now, note: timerNote, isRunning: true,
+      clientName: client.name,
+      clientId: client.id,
+      personName: person.name,
+      personId: person.id,
+      task: selectedService,
+      taskLabel: TASK_LABEL[selectedService] || "Admin/Other",
+      duration: elapsed,
+      date: now,
+      note: "",
+      isRunning: false,
     };
     setEntries((prev) => [entry, ...prev]);
-    setTimerNote("");
 
     // Persist
     fetch("/api/time-entries", {
@@ -157,71 +212,34 @@ export default function TimePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: entryId,
-        who: person.id, client_id: client.id,
-        task: svc?.label || TASK_LABEL[selectedService] || "",
-        seconds: 0, started_at: now, note: timerNote,
+        who: person.id,
+        client_id: client.id,
+        task: TASK_LABEL[selectedService] || "Admin/Other",
+        seconds: elapsed,
+        started_at: now,
+        note: "",
       }),
-    }).catch((e) => console.error("Start save failed:", e));
-  }, [selectedClient, selectedPerson, selectedService, timerNote, clients, staff]);
+    }).catch((e) => console.error("Save failed:", e));
 
-  // ── Stop: PATCH the entry with final seconds ──
-  const stopEntry = useCallback(async (entryId: string) => {
-    const entry = entries.find((e) => e.id === entryId);
-    if (!entry || !entry.isRunning) return;
-
-    const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
-
-    // Optimistic update
-    setEntries((prev) => prev.map((e) =>
-      e.id === entryId ? { ...e, duration: elapsed, isRunning: false } : e
-    ));
-
-    fetch(`/api/time-entries?id=${encodeURIComponent(entryId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seconds: elapsed }),
-    }).catch((e) => console.error("Stop save failed:", e));
-  }, [entries]);
-
-  // ── Manual entry submit ──
-  function submitManualEntry() {
-    const person = staff.find((s) => s.id === mWho);
-    const client = clients.find((c) => c.id === mClient);
-    const hours = parseInt(mHours) || 0;
-    const minutes = parseInt(mMinutes) || 0;
-    const duration = hours * 3600 + minutes * 60;
-    if (!person || !client || duration <= 0) return;
-
-    const svc = (SERVICE_META as any)[mTask];
-    const entry: TimeEntry = {
-      id: uid(),
-      clientName: client.name, clientId: client.id,
-      personName: person.name, personId: person.id,
-      serviceKey: mTask, serviceLabel: svc?.label || TASK_LABEL[mTask] || "-",
-      duration, date: `${mDate}T12:00:00.000Z`, note: mNote, isRunning: false,
-    };
-    setEntries((prev) => [entry, ...prev]);
-    setMHours(""); setMMinutes(""); setMNote("");
-    setMDate(new Date().toISOString().slice(0, 10));
-
-    fetch("/api/time-entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        who: person.id, client_id: client.id,
-        task: svc?.label || TASK_LABEL[mTask] || "", seconds: duration,
-        started_at: `${mDate}T12:00:00.000Z`, note: mNote,
-      }),
-    }).catch(() => {});
-  }
+    // Reset timer
+    setTimerRunning(false);
+    setTimerStart(null);
+    setTimerElapsed(0);
+  }, [timerStart, selectedClient, selectedPerson, selectedService, clients, staff]);
 
   async function deleteEntry(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
-    fetch(`/api/time-entries?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+    fetch(`/api/time-entries?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => {});
   }
 
   function handleEdit(idx: number, field: string, value: string) {
-    setEntries((prev) => prev.map((e, i) => i !== idx ? e : { ...e, [field]: value, edited: true }));
+    setEntries((prev) =>
+      prev.map((e, i) =>
+        i !== idx ? e : { ...e, [field]: value, edited: true }
+      )
+    );
   }
 
   function saveEdit(origIdx: number) {
@@ -236,7 +254,7 @@ export default function TimePage() {
       body: JSON.stringify({
         who: person?.id || entry.personId,
         client_id: client?.id || entry.clientId,
-        task: entry.serviceLabel,
+        task: entry.taskLabel,
         seconds: entry.duration,
         note: entry.note,
         started_at: entry.date,
@@ -250,7 +268,6 @@ export default function TimePage() {
   const displayEntries = useMemo(() => {
     let list = entries.filter((e) => e.date.slice(0, 10) === today);
     if (viewingAs) list = list.filter((e) => e.personId === viewingAs);
-    // Sort: running first, then by date desc
     return [...list].sort((a, b) => {
       if (a.isRunning && !b.isRunning) return -1;
       if (!a.isRunning && b.isRunning) return 1;
@@ -258,280 +275,498 @@ export default function TimePage() {
     });
   }, [entries, today, viewingAs]);
 
-  // ── All entries grouped by date (for the full entries table) ──
-  const groupedEntries = useMemo(() => {
-    const groups: Record<string, TimeEntry[]> = {};
-    const sorted = [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    for (const entry of sorted) {
-      const d = entry.date.slice(0, 10);
-      if (!groups[d]) groups[d] = [];
-      groups[d].push(entry);
-    }
-    // Sort groups chronologically (newest first)
-    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [entries]);
-
-  const totalToday = displayEntries.reduce((s, e) => s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
+  const totalToday = displayEntries.reduce(
+    (s, e) =>
+      s +
+      (e.isRunning
+        ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000)
+        : e.duration),
+    0
+  );
 
   const byWho: Record<string, number> = {};
   displayEntries.forEach((e) => {
-    const elapsed = e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration;
+    const elapsed = e.isRunning
+      ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000)
+      : e.duration;
     byWho[e.personName] = (byWho[e.personName] || 0) + elapsed;
   });
   const whoCards = Object.keys(byWho).sort((a, b) => byWho[b] - byWho[a]);
 
-  const sorted = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
-  const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
-  const taskKeys = Object.keys(TASK_LABEL);
+  const sorted = useMemo(
+    () => [...clients].sort((a, b) => a.name.localeCompare(b.name)),
+    [clients]
+  );
+  const whoOpts = useMemo(
+    () => staff.filter((s) => s.name !== "Unassigned"),
+    [staff]
+  );
 
   if (loading || clientsLoading) return <PageSkeleton rows={6} />;
 
   return (
     <div className="space-y-5">
-      <style jsx>{`
-        .tw-timer {
-          display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
-          background: var(--card); border: 1px solid var(--line);
-          border-radius: 16px; padding: 18px 20px;
-        }
-        .tw-timer .fld { display: flex; flex-direction: column; gap: 6px; }
-        .tw-timer label {
-          font-size: 11px; font-weight: 700; letter-spacing: .05em;
-          text-transform: uppercase; color: var(--muted);
-        }
-        .tw-timer select, .tw-timer textarea, .tw-timer input {
-          padding: 9px 11px; border: 1px solid var(--line);
-          border-radius: 9px; font: inherit; font-size: 14px;
-          background: var(--card); color: var(--ink);
-          cursor: pointer; outline: none; resize: vertical;
-        }
-        .tw-timer select { min-width: 140px; }
-        .tw-timer textarea { width: 100%; min-height: 52px; cursor: text; }
-        .tw-timer .tw-notes-row { width: 100%; flex-basis: 100%; }
-        .tw-go {
-          all: unset; cursor: pointer; background: var(--green);
-          color: #fff; padding: 13px 24px; border-radius: 12px;
-          font-weight: 700; font-size: 15px; white-space: nowrap;
-        }
-        .tw-go:disabled { opacity: 0.4; cursor: not-allowed; }
-        .edit-inp { width: 42px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; text-align: center; }
-        .edit-sel { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; max-width: 200px; }
-        .running-row { background: var(--green-soft); }
-        .running-row:hover { background: #d4ede0 !important; }
-        .stop-btn {
-          all: unset; cursor: pointer; background: var(--red); color: #fff;
-          padding: 5px 12px; border-radius: 7px; font-weight: 600; font-size: 12px;
-        }
-        .stop-btn:hover { opacity: 0.85; }
-        @keyframes twpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: twpulse 1.1s infinite; display: inline-block; }
-      `}</style>
-
-      {/* ── Mode toggle ── */}
-      <div style={{ display: "flex", gap: 0, marginBottom: 0 }}>
-        <button onClick={() => setMode("timer")} style={{
-          all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
-          fontWeight: 600, fontSize: 14,
-          background: mode === "timer" ? "var(--card)" : "transparent",
-          color: mode === "timer" ? "var(--ink)" : "var(--muted)",
-          border: mode === "timer" ? "1px solid var(--line)" : "1px solid transparent",
-          borderBottom: mode === "timer" ? "1px solid var(--card)" : "1px solid transparent",
-          marginBottom: -1, position: "relative", zIndex: mode === "timer" ? 1 : 0,
-        }}>⏱ Timer</button>
-        <button onClick={() => setMode("manual")} style={{
-          all: "unset", cursor: "pointer", padding: "10px 20px", borderRadius: "11px 11px 0 0",
-          fontWeight: 600, fontSize: 14,
-          background: mode === "manual" ? "var(--card)" : "transparent",
-          color: mode === "manual" ? "var(--ink)" : "var(--muted)",
-          border: mode === "manual" ? "1px solid var(--line)" : "1px solid transparent",
-          borderBottom: mode === "manual" ? "1px solid var(--card)" : "1px solid transparent",
-          marginBottom: -1, position: "relative", zIndex: mode === "manual" ? 1 : 0,
-        }}>✎ Manual Entry</button>
-      </div>
-
-      {/* ── Timer mode ── */}
-      {mode === "timer" && (
-      <div className="tw-timer" style={{ borderTopLeftRadius: 0 }}>
+      {/* ── Timer Section ── */}
+      <div className="tw-timer">
         <div className="fld">
           <label>Who</label>
-          <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)}>
+          <select
+            value={selectedPerson}
+            onChange={(e) => setSelectedPerson(e.target.value)}
+            disabled={timerRunning}
+          >
             <option value="">— choose —</option>
-            {whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+            {whoOpts.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
         <div className="fld">
           <label>Client</label>
-          <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)}>
+          <select
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+            disabled={timerRunning}
+          >
             <option value="">— choose client —</option>
-            {sorted.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            {sorted.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
         </div>
         <div className="fld">
           <label>Task</label>
-          <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
-            {taskKeys.map((k) => (<option key={k} value={k}>{TASK_LABEL[k]}</option>))}
+          <select
+            value={selectedService}
+            onChange={(e) => setSelectedService(e.target.value)}
+            disabled={timerRunning}
+          >
+            {TASK_KEYS.map((k) => (
+              <option key={k} value={k}>
+                {TASK_LABEL[k]}
+              </option>
+            ))}
           </select>
         </div>
-        <button className="tw-go" onClick={startTimer} disabled={!selectedClient || !selectedPerson}>
-          ▶ Start Tracking
+
+        {/* Live clock display */}
+        <div className={"tw-clock" + (timerRunning ? " run" : "")}>
+          {fmtClock(timerRunning ? timerElapsed : 0)}
+        </div>
+
+        <button
+          className={"tw-go" + (timerRunning ? " stop" : "")}
+          onClick={timerRunning ? stopTimer : startTimer}
+          disabled={!selectedClient || !selectedPerson}
+        >
+          {timerRunning ? "■ Stop" : "▶ Start"}
         </button>
       </div>
-      )}
 
-      {/* ── Manual entry mode ── */}
-      {mode === "manual" && (
-      <div className="tw-timer" style={{ borderTopLeftRadius: 0, flexDirection: "column" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-          <div className="fld"><label>Who</label><select value={mWho} onChange={(e) => setMWho(e.target.value)}><option value="">— choose —</option>{whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}</select></div>
-          <div className="fld"><label>Client</label><select value={mClient} onChange={(e) => setMClient(e.target.value)}><option value="">— choose client —</option>{sorted.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
-          <div className="fld"><label>Task</label><select value={mTask} onChange={(e) => setMTask(e.target.value)}>{taskKeys.map((k) => (<option key={k} value={k}>{TASK_LABEL[k]}</option>))}</select></div>
-          <div className="fld"><label>Hours</label><input type="number" min={0} value={mHours} onChange={(e) => setMHours(e.target.value)} placeholder="0" style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }} /></div>
-          <div className="fld"><label>Minutes</label><input type="number" min={0} max={59} value={mMinutes} onChange={(e) => setMMinutes(e.target.value)} placeholder="0" style={{ width: 60, padding: "9px 8px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)", textAlign: "center" }} /></div>
-          <div className="fld"><label>Date</label><input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} style={{ width: 140, padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "var(--card)" }} /></div>
+      {/* ── Per-person stat cards ── */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div className="statcard" style={{ background: "var(--green-soft)", borderColor: "var(--green)" }}>
+          <div className="sn" style={{ color: "var(--green)" }}>
+            {fmtDur(totalToday)}
+          </div>
+          <div className="sl">Total Today</div>
         </div>
-        <button className="tw-go" onClick={submitManualEntry} disabled={!mWho || !mClient || (!mHours && !mMinutes)} style={{ alignSelf: "flex-end", marginTop: 4 }}>＋ Log Entry</button>
+        {whoCards.map((name) => (
+          <div className="statcard" key={name}>
+            <div className="sn">{fmtDur(byWho[name])}</div>
+            <div className="sl">{name}</div>
+          </div>
+        ))}
       </div>
-      )}
-
-      {/* ── Today's summary table ── */}
-      <div className="panel" style={{ overflowX: "auto" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Staff</th>
-              <th style={{ whiteSpace: "nowrap" }}>Time logged</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ background: "var(--green-soft)" }}>
-              <td style={{ fontWeight: 600 }}>Logged today</td>
-              <td className="mono" style={{ fontWeight: 700 }}>{fmtDur(totalToday)}</td>
-            </tr>
-            {whoCards.map((name) => (
-              <tr key={name}>
-                <td>{name}</td>
-                <td className="mono">{fmtDur(byWho[name])}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <hr style={{ border: "none", borderTop: "1px solid var(--line)", margin: "20px 0" }} />
 
       {/* ── Entries table ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div className="count">All entries</div>
-        <select value={viewingAs ?? ""} onChange={(e) => setViewingAs(e.target.value || null)} style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 8, font: "inherit", fontSize: 12, background: "var(--card)", color: "var(--ink)" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: 4,
+        }}
+      >
+        <div className="count">Entries</div>
+        <select
+          value={viewingAs ?? ""}
+          onChange={(e) => setViewingAs(e.target.value || null)}
+          className="pick"
+        >
           <option value="">All staff</option>
-          {whoOpts.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+          {whoOpts.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
         </select>
       </div>
+
       <div className="panel" style={{ overflowX: "auto" }}>
         <table>
           <thead>
             <tr>
-              <th>Who</th><th>Client</th><th>Task</th><th style={{ whiteSpace: "nowrap" }}>Time</th><th>Date</th><th>Notes</th><th></th>
+              <th>Who</th>
+              <th>Client</th>
+              <th>Task</th>
+              <th style={{ whiteSpace: "nowrap" }}>Time</th>
+              <th>When</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {groupedEntries.length > 0 ? (
-              groupedEntries.flatMap(([dateStr, dateEntries]) => {
-                // Skip group header if it's today (running entries shown at top)
-                const isToday = dateStr === today;
-                const rows: React.ReactElement[] = [];
+            {entries.length > 0 ? (
+              (() => {
+                // Show today's entries (running first), then earlier entries
+                const todayEntries = entries
+                  .filter((e) => e.date.slice(0, 10) === today && (!viewingAs || e.personId === viewingAs))
+                  .sort((a, b) => {
+                    if (a.isRunning && !b.isRunning) return -1;
+                    if (!a.isRunning && b.isRunning) return 1;
+                    return new Date(b.date).getTime() - new Date(a.date).getTime();
+                  });
 
-                // Date group header
-                rows.push(
-                  <tr key={`hdr-${dateStr}`}>
-                    <td colSpan={7} style={{
-                      background: "var(--card)",
-                      fontWeight: 600, fontSize: 12, color: "var(--muted)",
-                      padding: "10px 12px 4px",
-                      borderBottom: "none",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}>
-                      {isToday
-                        ? `Today — ${new Date(dateStr).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`
-                        : new Date(dateStr).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                    </td>
-                  </tr>
+                const earlierEntries = viewingAs
+                  ? entries.filter(
+                      (e) =>
+                        e.date.slice(0, 10) !== today &&
+                        e.personId === viewingAs
+                    )
+                  : entries.filter((e) => e.date.slice(0, 10) !== today);
+
+                // Sort earlier entries by date descending
+                const sortedEarlier = [...earlierEntries].sort(
+                  (a, b) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
                 );
 
-                for (const entry of dateEntries) {
-                  if (entry.isRunning) {
-                    const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
-                    rows.push(
-                      <tr key={entry.id} className="running-row">
-                        <td style={{ fontWeight: 500 }}>{entry.personName}</td>
-                        <td className="lname">{shortName(entry.clientName)}</td>
-                        <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
-                        <td className="mono" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span className="pulse-dot" />
-                          {fmtClock(elapsed)}
-                          <span style={{ color: "var(--green)", fontWeight: 600, fontSize: 12, marginLeft: 4 }}>running</span>
-                        </td>
-                        <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
-                        <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
-                        <td>
-                          <button className="stop-btn" onClick={() => stopEntry(entry.id)}>■ Stop</button>
-                        </td>
-                      </tr>
-                    );
-                    continue;
-                  }
+                const allDisplay = [...todayEntries, ...sortedEarlier];
 
-                  const isEditing = editIdx === entries.indexOf(entry);
+                return allDisplay.map((entry) => {
+                  const idx = entries.indexOf(entry);
+                  const isEditing = editIdx === idx;
                   const h = Math.floor(entry.duration / 3600);
                   const m = Math.floor((entry.duration % 3600) / 60);
 
-                  if (isEditing) {
-                    rows.push(
-                      <tr key={entry.id}>
-                        <td><select className="edit-sel" defaultValue={entry.personName} onChange={(e) => handleEdit(entries.indexOf(entry), "personName", e.target.value)}>{whoOpts.map((s) => (<option key={s.id} value={s.name}>{s.name}</option>))}</select></td>
-                        <td><select className="edit-sel" defaultValue={entry.clientName} onChange={(e) => handleEdit(entries.indexOf(entry), "clientName", e.target.value)} style={{ maxWidth: 220 }}>{sorted.map((c) => (<option key={c.id} value={c.name}>{c.name}</option>))}</select></td>
-                        <td><select className="edit-sel" defaultValue={entry.serviceLabel} onChange={(e) => handleEdit(entries.indexOf(entry), "serviceLabel", e.target.value)}>{taskKeys.map((k) => (<option key={k} value={TASK_LABEL[k]}>{TASK_LABEL[k]}</option>))}</select></td>
-                        <td style={{ whiteSpace: "nowrap" }}>
-                          <input className="edit-inp" type="number" min={0} defaultValue={h} onChange={(e) => { const newH = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== entries.indexOf(entry) ? ev : { ...ev, duration: newH * 3600 + m * 60, edited: true })); }} />h{" "}
-                          <input className="edit-inp" type="number" min={0} max={59} defaultValue={m} onChange={(e) => { const newM = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== entries.indexOf(entry) ? ev : { ...ev, duration: h * 3600 + newM * 60, edited: true })); }} />m
+                  // Running entry
+                  if (entry.isRunning) {
+                    const elapsed = Math.floor(
+                      (Date.now() - new Date(entry.date).getTime()) / 1000
+                    );
+                    return (
+                      <tr key={entry.id} className="running-row">
+                        <td style={{ fontWeight: 500 }}>
+                          {entry.personName}
                         </td>
-                        <td><input className="edit-inp" type="date" defaultValue={entry.date.slice(0, 10)} onChange={(e) => handleEdit(entries.indexOf(entry), "date", e.target.value + "T12:00:00.000Z")} style={{ width: 130, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
-                        <td><textarea className="edit-note-ta" value={entry.note} onChange={(e) => handleEdit(entries.indexOf(entry), "note", e.target.value)} placeholder="Notes..." rows={2} style={{ width: 160, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13, resize: "vertical" }} /></td>
-                        <td style={{ whiteSpace: "nowrap" }}><button className="reveal" onClick={() => saveEdit(entries.indexOf(entry))} style={{ marginRight: 10 }}>Save</button><button className="reveal" onClick={() => setEditIdx(null)}>Cancel</button></td>
+                        <td className="lname">
+                          {shortName(entry.clientName)}
+                        </td>
+                        <td style={{ color: "var(--muted)" }}>
+                          {entry.taskLabel || "—"}
+                        </td>
+                        <td className="mono" style={{ whiteSpace: "nowrap" }}>
+                          <span className="tw-live">
+                            <i />
+                            {fmtClock(elapsed)}
+                          </span>
+                        </td>
+                        <td
+                          style={{
+                            color: "var(--muted)",
+                            fontSize: 12,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {new Date(entry.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </td>
+                        <td>
+                          <button
+                            className="stop-btn"
+                            onClick={() => {
+                              // Stop: patch with final duration
+                              const elapsed2 = Math.floor(
+                                (Date.now() -
+                                  new Date(entry.date).getTime()) /
+                                  1000
+                              );
+                              setEntries((prev) =>
+                                prev.map((e) =>
+                                  e.id === entry.id
+                                    ? {
+                                        ...e,
+                                        duration: elapsed2,
+                                        isRunning: false,
+                                      }
+                                    : e
+                                )
+                              );
+                              fetch(
+                                `/api/time-entries?id=${encodeURIComponent(entry.id)}`,
+                                {
+                                  method: "PATCH",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    seconds: elapsed2,
+                                  }),
+                                }
+                              ).catch(() => {});
+                            }}
+                          >
+                            ■ Stop
+                          </button>
+                        </td>
                       </tr>
                     );
-                    continue;
                   }
 
-                  rows.push(
+                  // Inline editing
+                  if (isEditing) {
+                    return (
+                      <tr key={entry.id}>
+                        <td>
+                          <select
+                            className="edit-sel"
+                            value={entry.personName}
+                            onChange={(e) =>
+                              handleEdit(idx, "personName", e.target.value)
+                            }
+                          >
+                            {whoOpts.map((s) => (
+                              <option key={s.id} value={s.name}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className="edit-sel"
+                            value={entry.clientName}
+                            onChange={(e) =>
+                              handleEdit(idx, "clientName", e.target.value)
+                            }
+                            style={{ maxWidth: 220 }}
+                          >
+                            {sorted.map((c) => (
+                              <option key={c.id} value={c.name}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            className="edit-sel"
+                            value={
+                              entry.task
+                                ? TASK_LABEL[entry.task]
+                                : entry.taskLabel
+                            }
+                            onChange={(e) => {
+                              // Find the key for the selected label
+                              const key = taskKeyFromLabel(e.target.value);
+                              setEntries((prev) =>
+                                prev.map((ev, i) =>
+                                  i !== idx
+                                    ? ev
+                                    : {
+                                        ...ev,
+                                        task: key,
+                                        taskLabel: TASK_LABEL[key],
+                                        edited: true,
+                                      }
+                                )
+                              );
+                            }}
+                          >
+                            {TASK_KEYS.map((k) => (
+                              <option key={k} value={TASK_LABEL[k]}>
+                                {TASK_LABEL[k]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <input
+                            className="edit-inp"
+                            type="number"
+                            min={0}
+                            value={h}
+                            onChange={(e) => {
+                              const newH = parseInt(e.target.value) || 0;
+                              setEntries((prev) =>
+                                prev.map((ev, i) =>
+                                  i !== idx
+                                    ? ev
+                                    : {
+                                        ...ev,
+                                        duration: newH * 3600 + m * 60,
+                                        edited: true,
+                                      }
+                                )
+                              );
+                            }}
+                          />
+                          h{" "}
+                          <input
+                            className="edit-inp"
+                            type="number"
+                            min={0}
+                            max={59}
+                            value={m}
+                            onChange={(e) => {
+                              const newM = parseInt(e.target.value) || 0;
+                              setEntries((prev) =>
+                                prev.map((ev, i) =>
+                                  i !== idx
+                                    ? ev
+                                    : {
+                                        ...ev,
+                                        duration: h * 3600 + newM * 60,
+                                        edited: true,
+                                      }
+                                )
+                              );
+                            }}
+                          />
+                          m
+                        </td>
+                        <td>
+                          <input
+                            className="edit-inp"
+                            type="date"
+                            value={entry.date.slice(0, 10)}
+                            onChange={(e) =>
+                              handleEdit(
+                                idx,
+                                "date",
+                                e.target.value + "T12:00:00.000Z"
+                              )
+                            }
+                            style={{
+                              width: 130,
+                              padding: "4px 6px",
+                              border: "1px solid var(--line)",
+                              borderRadius: 6,
+                              font: "inherit",
+                              fontSize: 13,
+                            }}
+                          />
+                        </td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <button
+                            className="reveal"
+                            onClick={() => saveEdit(idx)}
+                            style={{ marginRight: 10 }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="reveal"
+                            onClick={() => setEditIdx(null)}
+                          >
+                            Cancel
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  // Normal entry row
+                  return (
                     <tr key={entry.id}>
-                      <td style={{ fontWeight: 500, color: "var(--ink)" }}>{entry.personName}</td>
-                      <td className="lname">{shortName(entry.clientName)}</td>
-                      <td style={{ color: "var(--muted)" }}>{entry.serviceLabel}</td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <span className="mono">{fmtDur(entry.duration)}{entry.edited && <span style={{ fontSize: 10, color: "var(--muted)", fontStyle: "italic", marginLeft: 6 }}>edited</span>}</span>
+                      <td style={{ fontWeight: 500, color: "var(--ink)" }}>
+                        {entry.personName}
                       </td>
-                      <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>{new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
-                      <td style={{ color: "var(--muted)", fontSize: 13, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.note || "—"}</td>
+                      <td className="lname">
+                        {shortName(entry.clientName)}
+                      </td>
+                      <td style={{ color: "var(--muted)" }}>
+                        {entry.taskLabel ||
+                          toTaskLabel(entry.task) ||
+                          "—"}
+                      </td>
+                      <td
+                        className="mono"
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        {fmtDur(entry.duration)}
+                        {entry.edited && (
+                          <span className="edited">edited</span>
+                        )}
+                      </td>
+                      <td
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 12,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {new Date(entry.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </td>
                       <td style={{ whiteSpace: "nowrap" }}>
-                        <button className="reveal" onClick={() => setEditIdx(entries.indexOf(entry))} style={{ marginRight: 10 }}>edit</button>
-                        <button className="reveal" onClick={() => deleteEntry(entry.id)} style={{ color: "var(--red)" }}>delete</button>
+                        <button
+                          className="reveal"
+                          onClick={() => setEditIdx(idx)}
+                          style={{ marginRight: 10 }}
+                        >
+                          edit
+                        </button>
+                        <button
+                          className="reveal"
+                          onClick={() => deleteEntry(entry.id)}
+                          style={{ color: "var(--red)" }}
+                        >
+                          delete
+                        </button>
                       </td>
                     </tr>
                   );
-                }
-
-                return rows;
-              })
+                });
+              })()
             ) : (
-              <tr><td colSpan={7} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>No time entries yet — use Timer or Manual Entry above.</td></tr>
+              <tr>
+                <td
+                  colSpan={6}
+                  style={{
+                    color: "var(--muted)",
+                    textAlign: "center",
+                    padding: "24px",
+                  }}
+                >
+                  No time entries yet — pick a person, client, and task, then
+                  click Start.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <p className="fineprint">Lean &amp; live: pick a client, hit Start, a row appears in the table with a live clock. Stop it anytime — the full duration is saved. Start multiple timers simultaneously. <b>Entries are editable</b> — anyone can fix their own time without asking an admin.</p>
+      <p className="fineprint">
+        Pick a person, client, and task, then hit Start — a row appears in the
+        table with a live clock. Stop to save. Entries stay editable — click{" "}
+        <b>edit</b> to change who, client, task, or time.
+      </p>
     </div>
   );
 }

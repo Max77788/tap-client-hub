@@ -976,9 +976,9 @@ export default function WorklistTable({
               // ── Group header row (sales tax only) ──
               if (client._isGroupHeader) {
                 return (
-                  <tr key={`group-${client._groupOrigId}-${_mapIdx}`} style={{ borderBottom: "none" }}>
-                    <td colSpan={colCount} style={{ padding: "8px 4px 2px", fontSize: 10, color: "var(--muted)" }}>
-                      · {client._groupCount} registration{client._groupCount !== 1 ? "s" : ""}
+                  <tr className="stxband">
+                    <td colSpan={colCount}>
+                      <b>{client._groupOrigId ? (filteredClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId)?.name || '') : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} registration{client._groupCount !== 1 ? "s" : ""}</span>
                     </td>
                   </tr>
                 );
@@ -1300,12 +1300,9 @@ export default function WorklistTable({
                           >
                             {nextDate}
                           </div>
-                          {/* ── Comment marker 📋 ── */}
+                          {/* ── Comment marker blue dot ── */}
                           {hasPRCmt && (
-                            <div style={{
-                              position: "absolute", top: -4, right: -4,
-                              fontSize: 10, lineHeight: 1, zIndex: 2,
-                            }}>📋</div>
+                            <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
                           )}
                         </td>
                       );
@@ -1356,12 +1353,9 @@ export default function WorklistTable({
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
-                        {/* ── Comment marker 📋 ── */}
+                        {/* ── Comment marker blue dot ── */}
                         {hasCmt && (
-                          <div style={{
-                            position: "absolute", top: -4, right: -4,
-                            fontSize: 10, lineHeight: 1, zIndex: 2,
-                          }}>📋</div>
+                          <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
                         )}
                         {activeDropdown === `${client.id}:${i}` && !cellReadOnly && (
                           <div
@@ -1552,7 +1546,7 @@ function CommentMarkers({
             transition: "opacity 0.15s",
           }}
         >
-          📋
+          <span className="cdot" style={{ position: "relative", display: "inline-block", width: 7, height: 7, top: 0, right: 0 }} />
         </span>
       ))}
     </div>

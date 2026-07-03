@@ -7,6 +7,7 @@ import {
   filterClients,
   getGroups,
   getStaffOptions,
+  getStats,
   deleteVaultEntriesByClient,
 } from "@/lib/data";
 import { useClients } from "@/hooks/use-clients-context";
@@ -19,7 +20,7 @@ type DisplayItem =
   | { kind: "single"; client: Client };
 
 export default function ClientsPage() {
-  // ── State from Supabase API (backend filters by type) ──
+  // ── State from Supabase API ──
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
@@ -28,15 +29,9 @@ export default function ClientsPage() {
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Compute type-specific stats and service metrics from loaded clients
-  const clientStats = useMemo(() => {
-    const finCount = clients.filter(c => c.services.some(s => s.key === "financials" && s.enabled)).length;
-    const prCount = clients.filter(c => c.services.some(s => s.key === "payroll" && s.enabled)).length;
-    const stxCount = clients.filter(c => c.services.some(s => s.key === "sales_tax" && s.enabled)).length;
-    const t9Count = clients.filter(c => c.services.some(s => s.key === "1099s" && s.enabled)).length;
-    const rendCount = clients.filter(c => c.services.some(s => s.key === "renditions" && s.enabled)).length;
-    return { ...stats, monthlyFinancials: clients.filter(c => c.services.some(s => s.key === "financials" && s.enabled)).length, finCount, prCount, stxCount, t9Count, rendCount };
-  }, [clients, stats]);
+  // Compute stats from full client data (includes monthlyFinancials & behindThisMonth)
+  const computedStats = useMemo(() => getStats(clients), [clients]);
+
   const groups = useMemo(() => getGroups(clients), [clients]);
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
 
@@ -51,7 +46,6 @@ export default function ClientsPage() {
     const singles: Client[] = [];
     for (const c of filteredClients) {
       const g = (c.group || "").trim();
-      // Treat "Unassigned" (case-insensitive) as no group — always show as individual card
       if (g && g.toLowerCase() !== "unassigned") {
         if (!grouped.has(g)) grouped.set(g, []);
         grouped.get(g)!.push(c);
@@ -63,10 +57,8 @@ export default function ClientsPage() {
     for (const [name, members] of grouped) {
       items.push({ kind: "group", name, clients: members });
     }
-    // Single clients sorted by name, then group cards
     singles.sort((a, b) => a.name.localeCompare(b.name));
     for (const c of singles) items.push({ kind: "single", client: c });
-    // Group cards sorted by name
     const groupItems = items.filter((i): i is { kind: "group"; name: string; clients: Client[] } => i.kind === "group");
     const singleItems = items.filter((i): i is { kind: "single"; client: Client } => i.kind === "single");
     groupItems.sort((a, b) => a.name.localeCompare(b.name));
@@ -77,6 +69,31 @@ export default function ClientsPage() {
     () => (selectedClientId ? clients.find(c => c.id === selectedClientId) ?? null : null),
     [clients, selectedClientId],
   );
+
+  // ── CSV Export ──
+  const exportCSV = useCallback(() => {
+    const headers = ["Name", "CID", "Type", "Group", "City", "State", "Assigned Staff", "Services", "Email", "Phone"];
+    const rows = clients.map(c => [
+      `"${c.name.replace(/"/g, '""')}"`,
+      c.cid,
+      c.type,
+      `"${(c.group || "").replace(/"/g, '""')}"`,
+      c.city,
+      c.state,
+      c.assignedStaff || "",
+      `"${c.services.filter(s => s.enabled).map(s => s.label || s.key).join(", ")}"`,
+      (c.emails?.[0] || ""),
+      (c.phones?.[0] || ""),
+    ].join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tap-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [clients]);
 
   // ── Handlers ──
   function openSlideover(id: string) {
@@ -94,9 +111,7 @@ export default function ClientsPage() {
   }
 
   const handleSlideoverSave = useCallback(async (updated: Client) => {
-    // Optimistic local update
     updateClient(updated.id, updated);
-    // Persist to API
     try {
       const res = await fetch("/api/clients", {
         method: "PUT",
@@ -115,8 +130,6 @@ export default function ClientsPage() {
   const handleSlideoverDelete = useCallback((clientId: string) => {
     deleteFromState(clientId);
     setSelectedClientId(null);
-    // Cascade: timesheet entries removed via DB CASCADE on client delete
-    // Cascade: remove vault entries for this client
     try {
       deleteVaultEntriesByClient(clientId);
     } catch {}
@@ -132,165 +145,156 @@ export default function ClientsPage() {
     addClient(newClient);
   }, [addClient]);
 
-
-
   return (
     <div className="space-y-6">
-      {/* ── Loading state ── */}
       {loading ? (
         <PageSkeleton rows={6} />
       ) : (
         <>
-          {/* ── Stat cards row ── */}
-      <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-        <StatCard label="Total clients" value={clientStats.total} color="var(--ink)" />
-        <StatCard label="Business" value={clientStats.business} color="var(--teal)" />
-        <StatCard label="Personal" value={clientStats.personal} color="var(--blue)" />
-      </div>
-
-      {/* ── Service metrics stat cards ── */}
-      <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
-        <StatCard label="Financials" value={clientStats.finCount} color="var(--green)" />
-        <StatCard label="Payroll" value={clientStats.prCount} color="var(--blue)" />
-        <StatCard label="Sales Tax" value={clientStats.stxCount} color="var(--amber)" />
-        <StatCard label="1099s" value={clientStats.t9Count} color="#7a5436" />
-        <StatCard label="Renditions" value={clientStats.rendCount} color="#3a5a44" />
-      </div>
-
-      {/* ── Controls: Search + Filters + Actions ── */}
-      <div className="controls" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "16px 0 4px" }}>
-        {/* Search with magnifying glass */}
-        <div className="search" style={{ flex: 1, minWidth: 220, position: "relative" }}>
-          <span className="mag" style={{ position: "absolute", left: 13, top: 11, opacity: 0.45 }}>🔍</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search client or group…"
-            style={{
-              width: "100%", padding: "11px 14px 11px 38px",
-              border: "1px solid var(--line)", borderRadius: 11,
-              background: "var(--card)", font: "inherit", fontSize: 14,
-            }}
-          />
-        </div>
-
-        {/* Type filter tabs */}
-        <div className="seg" style={{ display: "flex", background: "var(--card)", border: "1px solid var(--line)", borderRadius: 11, padding: 3 }}>
-          {(["All", "Business", "Personal"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              style={{
-                all: "unset", cursor: "pointer", padding: "7px 13px", borderRadius: 8,
-                fontSize: 13, fontWeight: typeFilter === t ? 600 : 500,
-                background: typeFilter === t ? "var(--teal)" : "transparent",
-                color: typeFilter === t ? "#fff" : "var(--muted)",
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {/* Staff filter dropdown */}
-        <select
-          value={staffFilter}
-          onChange={(e) => setStaffFilter(e.target.value)}
-          className="pick"
-          style={{
-            padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 11,
-            background: "var(--card)", font: "inherit", fontSize: "13.5px", color: "var(--ink)",
-          }}
-        >
-          <option value="">All staff</option>
-          {staffOptions.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-
-        {/* Action buttons */}
-        <button onClick={openAddModal} className="btn" style={{
-          all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
-          padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
-          display: "inline-flex", gap: 7, alignItems: "center",
-        }}>
-          ＋ Add client
-        </button>
-      </div>
-
-      {/* ── Count line ── */}
-      <div className="count" style={{ color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px" }}>
-        {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} shown
-      </div>
-
-      {/* ── Client cards grid ── */}
-      {displayItems.length > 0 ? (
-        <div className="grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
-          {displayItems.map((item) =>
-            item.kind === "group" ? (
-              <GroupCard
-                key={item.name}
-                groupName={item.name}
-                clients={item.clients}
-                onClientClick={(id) => openSlideover(id)}
-              />
-            ) : (
-              <ClientCard
-                key={item.client.id}
-                client={item.client}
-                onClick={() => openSlideover(item.client.id)}
-              />
-            )
-          )}
-        </div>
-      ) : (
-        /* ── Empty state ── */
-        <div
-          className="flex flex-col items-center justify-center py-20 px-6 rounded-xl text-center"
-          style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}
-        >
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--teal-soft)" }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="1.5">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+          {/* ── Stats row: Total · Business · Personal · Monthly Financials · Behind this month ── */}
+          <div className="flex flex-wrap gap-[10px] mt-4">
+            <StatCard label="Total clients" value={computedStats.total} color="var(--ink)" />
+            <StatCard label="Business" value={computedStats.business} color="var(--teal)" />
+            <StatCard label="Personal" value={computedStats.personal} color="var(--blue)" />
+            <StatCard label="Monthly Financials" value={computedStats.monthlyFinancials} color="var(--green)" />
+            <StatCard label="Behind this month" value={computedStats.behindThisMonth} color="var(--amber)" />
           </div>
-          <h3 className="text-base font-semibold text-[var(--ink)] mb-1">No clients found</h3>
-          <p className="text-sm text-[var(--muted)] max-w-xs">
-            {search
-              ? `No results for "${search}". Try a different search term.`
-              : "No clients match the current filters. Try adjusting your filters."}
-          </p>
-          {(search || typeFilter !== "All" || staffFilter) && (
-            <button
-              onClick={() => { setSearch(""); setTypeFilter("All"); setStaffFilter(""); }}
-              className="mt-4 text-sm font-medium text-[var(--teal)] hover:underline"
+
+          {/* ── Controls: Search + Filters + Actions ── */}
+          <div className="flex flex-wrap gap-[10px] items-center mt-4 mb-1">
+            {/* Search with magnifier icon */}
+            <div className="search">
+              <span className="mag">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </span>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search client or group…"
+              />
+            </div>
+
+            {/* Type filter segmented toggle */}
+            <div className="seg">
+              {(["All", "Business", "Personal"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={typeFilter === t ? "on" : ""}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+
+            {/* Staff dropdown */}
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="pick"
             >
-              Clear all filters
+              <option value="">All staff</option>
+              {staffOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+
+            {/* Actions */}
+            <button onClick={openAddModal} className="btn" style={{
+              all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+              padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+              display: "inline-flex", gap: 7, alignItems: "center",
+            }}>
+              ＋ Add client
             </button>
+
+            <button onClick={exportCSV} title="Export to Excel (CSV)" style={{
+              all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
+              padding: "10px 14px", borderRadius: 11, fontWeight: 500, fontSize: "13px",
+              border: "1px solid var(--line)", display: "inline-flex", gap: 6, alignItems: "center",
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </button>
+          </div>
+
+          {/* ── Count line ── */}
+          <div className="count" style={{ color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px" }}>
+            {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} shown
+          </div>
+
+          {/* ── Client cards grid ── */}
+          {displayItems.length > 0 ? (
+            <div className="grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
+              {displayItems.map((item) =>
+                item.kind === "group" ? (
+                  <GroupCard
+                    key={item.name}
+                    groupName={item.name}
+                    clients={item.clients}
+                    onClientClick={(id) => openSlideover(id)}
+                  />
+                ) : (
+                  <ClientCard
+                    key={item.client.id}
+                    client={item.client}
+                    onClick={() => openSlideover(item.client.id)}
+                  />
+                )
+              )}
+            </div>
+          ) : (
+            /* ── Empty state ── */
+            <div className="flex flex-col items-center justify-center py-20 px-6 rounded-xl text-center"
+              style={{ backgroundColor: "var(--card)", boxShadow: "var(--shadow)" }}>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "var(--teal-soft)" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+              <h3 className="text-base font-semibold text-[var(--ink)] mb-1">No clients found</h3>
+              <p className="text-sm text-[var(--muted)] max-w-xs">
+                {search
+                  ? `No results for "${search}". Try a different search term.`
+                  : "No clients match the current filters. Try adjusting your filters."}
+              </p>
+              {(search || typeFilter !== "All" || staffFilter) && (
+                <button
+                  onClick={() => { setSearch(""); setTypeFilter("All"); setStaffFilter(""); }}
+                  className="mt-4 text-sm font-medium text-[var(--teal)] hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {/* ── Slide-over detail panel ── */}
-      {selectedClient && (
-        <ClientSlideover
-          client={selectedClient}
-          open={slideoverOpen}
-          onClose={closeSlideover}
-          onSave={handleSlideoverSave}
-          onDelete={handleSlideoverDelete}
-          onStageChange={(clientId, serviceKey, monthIdx, stage) => updateServiceMonth(clientId, serviceKey as any, monthIdx, stage as any)}
-        />
-      )}
+          {/* ── Slide-over detail panel ── */}
+          {selectedClient && (
+            <ClientSlideover
+              client={selectedClient}
+              open={slideoverOpen}
+              onClose={closeSlideover}
+              onSave={handleSlideoverSave}
+              onDelete={handleSlideoverDelete}
+              onStageChange={(clientId, serviceKey, monthIdx, stage) => updateServiceMonth(clientId, serviceKey as any, monthIdx, stage as any)}
+            />
+          )}
 
-      {/* ── Add Client modal ── */}
-      <ClientModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={handleModalSave}
-      />
+          {/* ── Add Client modal ── */}
+          <ClientModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onSave={handleModalSave}
+          />
         </>
       )}
     </div>
@@ -299,7 +303,7 @@ export default function ClientsPage() {
 
 // ══════════════════════════════════════════════
 // ── Stat Card ──
-// ── Stat Card (demo v7 exact) ──
+// ══════════════════════════════════════════════
 function StatCard({
   label,
   value,
@@ -310,27 +314,11 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <div
-      className="statcard"
-      style={{
-        flex: 1, minWidth: 120,
-        backgroundColor: "var(--card)",
-        border: "1px solid var(--line)",
-        borderRadius: 13,
-        padding: "13px 16px",
-        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
-      }}
-    >
-      <div className="sn" style={{
-        fontFamily: '"Fraunces",Georgia,serif',
-        fontWeight: 600, fontSize: 26, lineHeight: 1,
-        color: color || "var(--ink)",
-      }}>
+    <div className="statcard">
+      <div className="sn" style={{ color: color || "var(--ink)" }}>
         {value}
       </div>
-      <div className="sl" style={{
-        fontSize: 12, color: "var(--muted)", marginTop: 4,
-      }}>
+      <div className="sl">
         {label}
       </div>
     </div>
@@ -350,7 +338,6 @@ function GroupCard({
   onClientClick: (id: string) => void;
 }) {
   const [popupOpen, setPopupOpen] = useState(false);
-  // Collect unique locations and services across all group members
   const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
   const allServices = new Set<string>();
   clients.forEach((c) => c.services.filter((s) => s.enabled && s.key).forEach((s) => allServices.add(s.key!)));
@@ -379,7 +366,6 @@ function GroupCard({
         }}
         onClick={() => setPopupOpen(true)}
       >
-        {/* Top row: Group name + count badge */}
         <div className="flex items-start justify-between gap-2 mb-[3px]">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <h3 className="text-[16.5px] font-semibold text-[var(--ink)] leading-tight truncate"
@@ -387,19 +373,12 @@ function GroupCard({
               {groupName}
             </h3>
           </div>
-          <span
-            className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
-            style={{
-              backgroundColor: "var(--teal-soft)",
-              color: "var(--teal)",
-              letterSpacing: "0.02em",
-            }}
-          >
+          <span className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px]"
+            style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)", letterSpacing: "0.02em" }}>
             {clients.length} entities
           </span>
         </div>
 
-        {/* Locations */}
         <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-2">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -408,18 +387,15 @@ function GroupCard({
           <span>{locations.slice(0, 3).join(" · ")}{locations.length > 3 ? ` +${locations.length - 3} more` : ""}</span>
         </div>
 
-        {/* Service pills */}
         <div className="flex flex-wrap gap-1.5">
           {[...allServices].slice(0, 5).map((key) => {
             const meta = SERVICE_META[key as ServiceKey];
             if (!meta) return null;
             return (
-              <span
-                key={key}
+              <span key={key}
                 className="inline-flex text-[10.5px] font-bold px-2 py-[3px] rounded-[20px]"
                 style={{ backgroundColor: meta.pillBg, color: meta.pillColor, letterSpacing: "0.02em" }}
-                title={meta.label}
-              >
+                title={meta.label}>
                 {meta.label}
               </span>
             );
@@ -432,25 +408,18 @@ function GroupCard({
           )}
         </div>
 
-        {/* View entities hint */}
         <div className="mt-2 text-[10px] text-[var(--muted)]" style={{ letterSpacing: "0.02em" }}>
           Click to view {clients.length} entities →
         </div>
       </div>
 
-      {/* ── Group popup modal (centered) ── */}
       {popupOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
-          onClick={() => setPopupOpen(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
+          onClick={() => setPopupOpen(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
             style={{ animation: "fadeIn 0.12s ease-out" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
+            onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--line)] shrink-0">
               <h2 className="text-lg font-semibold text-[var(--ink)] truncate"
                 style={{ fontFamily: '"Fraunces", Georgia, serif' }}>
@@ -460,34 +429,22 @@ function GroupCard({
                 style={{ backgroundColor: "var(--teal-soft)", color: "var(--teal)" }}>
                 {clients.length} entities
               </span>
-              <button
-                onClick={() => setPopupOpen(false)}
+              <button onClick={() => setPopupOpen(false)}
                 className="shrink-0 ml-3 p-1 rounded-lg hover:bg-[var(--teal-soft)] transition-colors"
-                style={{ lineHeight: 1, fontSize: 18, color: "var(--muted)" }}
-              >
+                style={{ lineHeight: 1, fontSize: 18, color: "var(--muted)" }}>
                 ✕
               </button>
             </div>
-
-            {/* Client list */}
             <div className="overflow-y-auto p-3 space-y-2 flex-1">
               {clients.map((c) => (
-                <div
-                  key={c.id}
+                <div key={c.id}
                   onClick={() => { setPopupOpen(false); onClientClick(c.id); }}
-                  className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]"
-                >
+                  className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]">
                   <div className="min-w-0 flex-1 pr-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
                     <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
                   </div>
-                  <span
-                    className="shrink-0 inline-flex text-[10.5px] font-bold px-[9px] py-[3px] rounded-[20px] uppercase tracking-[0.05em]"
-                    style={{
-                      backgroundColor: c.type === "Business" ? "var(--ink)" : "#dfe7e6",
-                      color: c.type === "Business" ? "#fff" : "var(--teal-ink)",
-                    }}
-                  >
+                  <span className={`badge ${c.type === "Business" ? "b-biz" : "b-per"}`}>
                     {c.type === "Business" ? "BIZ" : "PERS"}
                   </span>
                 </div>
@@ -508,9 +465,8 @@ function GroupCard({
 }
 
 // ══════════════════════════════════════════════
-// ── Client Card (demo v7 exact) ──
+// ── Client Card ──
 // ══════════════════════════════════════════════
-
 function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
   const enabledServices = client.services.filter((s) => s.enabled && s.key);
 
@@ -524,43 +480,46 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
     return [...set];
   }, [client]);
 
+  const pillClass = (key: string): string => {
+    const map: Record<string, string> = {
+      financials: "p-fin",
+      payroll: "p-pr",
+      sales_tax: "p-stx",
+      tax_returns: "p-tax",
+      "1099s": "p-9",
+      renditions: "p-rn",
+    };
+    return map[key] || "";
+  };
+
+  const pillLabel = (key: string): string => {
+    const map: Record<string, string> = {
+      financials: "FINANCIALS",
+      payroll: "PAYROLL",
+      sales_tax: "SALES TAX",
+      tax_returns: "TAX RTN",
+      "1099s": "1099",
+      renditions: "RENDITION",
+    };
+    return map[key] || key;
+  };
+
   return (
-    <div
-      onClick={onClick}
-      className="ccard group cursor-pointer"
-      style={{
-        backgroundColor: "var(--card)",
-        border: "1px solid var(--line)",
-        borderRadius: 14,
-        padding: "15px 16px",
-        boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
-        transition: ".14s",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = "var(--shadow)";
-        e.currentTarget.style.borderColor = "#cfc7b5";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "";
-        e.currentTarget.style.boxShadow = "0 1px 2px rgba(33,31,26,0.04)";
-        e.currentTarget.style.borderColor = "var(--line)";
-      }}
-    >
+    <div onClick={onClick} className="ccard" style={{
+      backgroundColor: "var(--card)",
+      border: "1px solid var(--line)",
+      borderRadius: 14,
+      padding: "15px 16px",
+      boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
+      transition: ".14s",
+      cursor: "pointer",
+    }}>
       {/* Name + Type badge */}
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: "16.5px", lineHeight: 1.2 }}>
           {client.name}
         </div>
-        <span
-          className="badge"
-          style={{
-            fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: 20,
-            textTransform: "uppercase", letterSpacing: "0.05em",
-            backgroundColor: client.type === "Business" ? "var(--ink)" : "#dfe7e6",
-            color: client.type === "Business" ? "#fff" : "var(--teal-ink)",
-          }}
-        >
+        <span className={`badge ${client.type === "Business" ? "b-biz" : "b-per"}`}>
           {client.type === "Business" ? "BIZ" : "PERS"}
         </span>
       </div>
@@ -575,16 +534,12 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
       <div className="pills" style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 10 }}>
         {enabledServices.map((svc) => {
           const key = svc.key!;
-          const meta = SERVICE_META[key as ServiceKey];
-          if (!meta) return null;
-          const pillClass = key === "financials" ? "p-fin" : key === "payroll" ? "p-pr" : key === "sales_tax" ? "p-stx" : key === "tax_returns" ? "p-tax" : key === "1099s" ? "p-9" : key === "renditions" ? "p-rn" : "";
-          const labels: Record<string, string> = { financials: "FINANCIALS", payroll: "PAYROLL", sales_tax: "SALES TAX", tax_returns: "TAX RTN", "1099s": "1099", renditions: "RENDITION" };
+          const pc = pillClass(key);
           return (
-            <span key={key} className={`pill ${pillClass}`} style={{
+            <span key={key} className={`pill ${pc}`} style={{
               fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.02em", padding: "3px 8px", borderRadius: 20,
-              backgroundColor: meta.pillBg, color: meta.pillColor,
             }}>
-              {labels[key] || meta.label}
+              {pillLabel(key)}
             </span>
           );
         })}
