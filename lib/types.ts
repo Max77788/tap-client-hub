@@ -75,7 +75,7 @@ export interface ClientService {
   payStartDate?: string; // mm/dd
   filingState?: string;
   filingMonth?: string;
-  filingType?: string; // "C-corp" | "S-Corp" | "LLC" | "Non-profit" | "Solo"
+  filingType?: string; // "C Corp." | "S Corp." | "Partnership" | "SMLLC" | "Trust" | "Non Profit" | "Retirem Plan"
   payEmails?: string[];
   comments?: CommentEntry[];
 }
