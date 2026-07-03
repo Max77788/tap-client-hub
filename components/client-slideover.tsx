@@ -1038,70 +1038,66 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Services */}
             <div className="sect" style={sectStyle}>Services — flip on/off, no formulas</div>
             {localSvcs.map((svc: any) => <SingleServiceCard key={svc.key} svc={svc} />)}
-          </div>
 
-          {/* ── Notes for this client (client-level comments) ── */}
-          <div style={{ marginTop: 24, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
-            <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 4 }}>
-              Notes for this client
-            </div>
-            <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10, fontStyle: "italic" }}>
+          {/* ── Notes for this client ── */}
+          <div style={{ marginTop: 28, borderTop: "1px solid var(--line)", padding: "14px 0 4px" }}>
+            <div className="sect" style={sectStyle}>Notes for this client</div>
+            <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 12, fontStyle: "italic" }}>
               Anyone on this account can leave a month note; a 📋 marker then shows on the worklist.
             </div>
 
             {/* Month selector + add note */}
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 10 }}>
-              <div style={{ flex: "0 0 120px" }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Month</label>
-                <select
-                  value={notesMonth}
-                  onChange={e => setNotesMonth(Number(e.target.value))}
-                  style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)" }}
-                >
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 12 }}>
+              <div style={{ flex: "0 0 110px" }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Month</label>
+                <select value={notesMonth} onChange={e => setNotesMonth(Number(e.target.value))}
+                  style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
                   {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
                 </select>
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Note</label>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>Note</label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <input
-                    value={notesText}
-                    onChange={e => setNotesText(e.target.value)}
+                  <input value={notesText} onChange={e => setNotesText(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNote(); } }}
                     placeholder="Add a note for the selected month"
-                    style={{ flex: 1, padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)" }}
+                    style={{ flex: 1, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }}
                   />
-                  <button
-                    onClick={handleAddNote}
-                    style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "7px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}
-                  >Add</button>
+                  <button onClick={handleAddNote}
+                    style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
+                    Add
+                  </button>
                 </div>
               </div>
             </div>
 
             {/* Existing notes for this month */}
-            {(() => {
-              const filtered = getAllServiceComments().filter((cm: CommentEntry) => cm.month === notesMonth);
-              return filtered.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
-                  {filtered.map((cm: CommentEntry) => (
-                    <div key={cm.id} style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", position: "relative" }}>
-                      <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
-                        <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
+            <div>
+              {(() => {
+                const filtered = getAllServiceComments().filter((cm: CommentEntry) => cm.month === notesMonth);
+                return filtered.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {filtered.map(cm => (
+                      <div key={cm.id} style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "9px 11px", position: "relative" }}>
+                        <div style={{ fontSize: 10.5, color: "var(--muted)", marginBottom: 4 }}>
+                          <b style={{ fontWeight: 600, color: "var(--ink)" }}>{cm.author}</b>
+                          <span style={{ marginLeft: 4 }}>· {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.45 }}>{cm.text}</div>
+                        <button onClick={() => deleteNote(cm.id)}
+                          style={{ all: "unset", cursor: "pointer", position: "absolute", top: 6, right: 8, color: "var(--red)", fontSize: 13, lineHeight: 1, opacity: 0.5, transition: "opacity 0.15s" }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                          onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}
+                          title="Delete note">×</button>
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
-                      <button
-                        onClick={() => deleteNote(cm.id)}
-                        style={{ all: "unset", cursor: "pointer", position: "absolute", top: 5, right: 7, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
-                        title="Delete note"
-                      >×</button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", marginBottom: 4 }}>No notes yet.</div>
-              );
-            })()}
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>No notes yet.</div>
+                );
+              })()}
+            </div>
+          </div>
           </div>
 
           {/* Footer */}
