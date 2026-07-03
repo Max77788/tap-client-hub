@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ClientsProvider } from "@/hooks/use-clients-context";
 import "./globals.css";
 
@@ -51,13 +51,11 @@ function MobileSidebar({
   pathname,
   open,
   onClose,
-  counts,
 }: {
   visibleNav: NavItem[];
   pathname: string;
   open: boolean;
   onClose: () => void;
-  counts: Record<string, number>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -105,7 +103,6 @@ function MobileSidebar({
               return <div key={`sep-m-${i}`} className="sep" />;
             }
             const isActive = pathname === item.href;
-            const ct = counts[item.label];
             return (
               <button
                 key={item.label}
@@ -116,9 +113,6 @@ function MobileSidebar({
                   <span className="ic">{item.icon}</span>
                 )}
                 <span>{item.label}</span>
-                {ct !== undefined && (
-                  <span className="ct">{ct}</span>
-                )}
               </button>
             );
           })}
@@ -160,44 +154,6 @@ export default function RootLayout({
   const [role, setRole] = useState("admin");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
-  const [clientsData, setClientsData] = useState<any[]>([]);
-  const [clientsLoading, setClientsLoading] = useState(true);
-
-  // Fetch clients for sidebar count badges
-  useEffect(() => {
-    let cancelled = false;
-    async function loadClients() {
-      try {
-        const res = await fetch("/api/clients");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.clients) {
-          setClientsData(data.clients);
-        }
-      } catch {} finally {
-        if (!cancelled) setClientsLoading(false);
-      }
-    }
-    loadClients();
-    return () => { cancelled = true; };
-  }, []);
-
-  // Compute per-module counts from real client data
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {
-      Clients: 0, Financials: 0, Payroll: 0, "Sales Tax": 0,
-      "1099s": 0, "Tax Returns": 0, Renditions: 0,
-    };
-    c.Clients = clientsData.length;
-    for (const client of clientsData) {
-      for (const svc of client.services || []) {
-        if (!svc.enabled) continue;
-        const label = svc.label as string;
-        if (label && c[label] !== undefined) c[label]++;
-      }
-    }
-    return c;
-  }, [clientsData]);
 
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
 
@@ -278,7 +234,6 @@ export default function RootLayout({
                   return <div key={`sep-${i}`} className="sep" />;
                 }
                 const isActive = pathname === item.href;
-                const ct = counts[item.label];
                 return (
                   <button
                     key={item.label}
@@ -289,9 +244,6 @@ export default function RootLayout({
                       <span className="ic">{item.icon}</span>
                     )}
                     <span>{item.label}</span>
-                    {ct !== undefined && (
-                      <span className="ct">{ct}</span>
-                    )}
                   </button>
                 );
               })}
@@ -333,7 +285,7 @@ export default function RootLayout({
 
         {/* ── Mobile sidebar drawer ── */}
         {!isAuthPage && (
-          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} counts={counts} />
+          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         )}
 
         {/* ── Main content ── */}
