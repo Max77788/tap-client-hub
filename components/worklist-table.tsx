@@ -1262,13 +1262,12 @@ export default function WorklistTable({
                           >
                             {nextDate}
                           </div>
-                          {/* ── Comment marker dot ── */}
+                          {/* ── Comment marker 📋 ── */}
                           {hasPRCmt && (
                             <div style={{
-                              position: "absolute", top: 0, right: 0,
-                              width: 6, height: 6, borderRadius: "50%",
-                              background: "var(--blue)", zIndex: 2,
-                            }} />
+                              position: "absolute", top: -4, right: -4,
+                              fontSize: 10, lineHeight: 1, zIndex: 2,
+                            }}>📋</div>
                           )}
                         </td>
                       );
@@ -1319,13 +1318,12 @@ export default function WorklistTable({
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
-                        {/* ── Comment marker dot ── */}
+                        {/* ── Comment marker 📋 ── */}
                         {hasCmt && (
                           <div style={{
-                            position: "absolute", top: 0, right: 0,
-                            width: 6, height: 6, borderRadius: "50%",
-                            background: "var(--blue)", zIndex: 2,
-                          }} />
+                            position: "absolute", top: -4, right: -4,
+                            fontSize: 10, lineHeight: 1, zIndex: 2,
+                          }}>📋</div>
                         )}
                         {activeDropdown === `${client.id}:${i}` && !cellReadOnly && (
                           <div
@@ -1499,7 +1497,7 @@ function CommentMarkers({
       style={{
         display: "flex",
         alignItems: "flex-end",
-        gap: 3,
+        gap: 2,
         padding: "0 0 2px 0",
         minWidth: 180,
       }}
@@ -1509,19 +1507,15 @@ function CommentMarkers({
         <span
           key={i}
           style={{
-            width: 12,
-            height: 12,
-            borderRadius: "50%",
-            backgroundColor: monthsWithComments.has(i)
-              ? i === currentMonth ? "var(--teal)" : "var(--blue)"
-              : "transparent",
-            border: monthsWithComments.has(i)
-              ? "1px solid transparent"
-              : "1px solid var(--line)",
-            display: "inline-block",
-            flexShrink: 0,
+            fontSize: 13,
+            lineHeight: 1,
+            opacity: monthsWithComments.has(i) ? 1 : 0.12,
+            filter: monthsWithComments.has(i) ? "none" : "grayscale(1)",
+            transition: "opacity 0.15s",
           }}
-        />
+        >
+          📋
+        </span>
       ))}
     </div>
   );
