@@ -850,7 +850,9 @@ export default function WorklistTable({
 
       {/* ── Count line ── */}
       <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
-        {variant === "payroll"
+        {serviceKey === "sales_tax"
+          ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
+          : variant === "payroll"
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
           : variant === "tax_returns"
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
@@ -928,23 +930,59 @@ export default function WorklistTable({
               </td>
             </tr>
           ) : (
-            // ── For Sales Tax: expand line items into separate rows ──
-            (serviceKey === "sales_tax" && filteredClients.length > 0
-              ? filteredClients.flatMap((client: any) => {
-                  const svc = client.services?.find((s: any) => s.key === "sales_tax");
-                  const items = svc?.salesTaxLineItems;
-                  if (items?.length > 0) {
-                    return items.map((item: any, idx: number) => ({
-                      ...client,
-                      _stxItem: item,
-                      _stxIdx: idx,
-                      _stxName: item.serviceName,
-                    }));
+            (serviceKey === "sales_tax"
+              ? // ── Sales Tax: expand line items, group by client, add group header rows ──
+                (() => {
+                  // First: expand by line items
+                  const expanded: any[] = [];
+                  for (const client of filteredClients) {
+                    const svc = client.services?.find((s: any) => s.key === "sales_tax");
+                    const items = svc?.salesTaxLineItems;
+                    if (items?.length > 0) {
+                      items.forEach((item: any, idx: number) => {
+                        expanded.push({
+                          ...client,
+                          _stxItem: item,
+                          _stxIdx: idx,
+                          _stxName: item.serviceName,
+                        });
+                      });
+                    } else {
+                      expanded.push({ ...client, _stxItem: null, _stxIdx: -1, _stxName: client.name });
+                    }
                   }
-                  return [{ ...client, _stxItem: null, _stxIdx: -1, _stxName: client.name }];
-                })
+                  // Count registrations per original client
+                  const regCounts = new Map<string, number>();
+                  for (const client of filteredClients) {
+                    const origId = client._originalClientId || client.id;
+                    regCounts.set(origId, (regCounts.get(origId) || 0) + 1);
+                  }
+                  // Build final array with group headers inserted
+                  const rows: any[] = [];
+                  let prevOrigId: string | null = null;
+                  for (const row of expanded) {
+                    const origId = row._originalClientId || row.id;
+                    if (origId !== prevOrigId) {
+                      const count = regCounts.get(origId) || 0;
+                      rows.push({ _isGroupHeader: true, _groupOrigId: origId, _groupCount: count });
+                      prevOrigId = origId;
+                    }
+                    rows.push(row);
+                  }
+                  return rows;
+                })()
               : filteredClients
-            ).map((client: any) => {
+            ).map((client: any, _mapIdx: number) => {
+              // ── Group header row (sales tax only) ──
+              if (client._isGroupHeader) {
+                return (
+                  <tr key={`group-${client._groupOrigId}-${_mapIdx}`} style={{ borderBottom: "none" }}>
+                    <td colSpan={colCount} style={{ padding: "8px 4px 2px", fontSize: 10, color: "var(--muted)" }}>
+                      · {client._groupCount} registration{client._groupCount !== 1 ? "s" : ""}
+                    </td>
+                  </tr>
+                );
+              }
               const svc = client.services.find((s: any) => s.key === serviceKey)!;
               const isStxItem = serviceKey === "sales_tax" && client._stxItem;
               const stxItem = client._stxItem;

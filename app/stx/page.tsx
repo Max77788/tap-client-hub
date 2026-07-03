@@ -39,12 +39,14 @@ export default function StxPage() {
         });
       }
     }
-    // Sort by the service name / first line item name for clubbed grouping
+    // Sort by client name first (groups same-client entries), then by line item name
     result.sort((a, b) => {
+      const clientCmp = a.name.localeCompare(b.name);
+      if (clientCmp !== 0) return clientCmp;
       const svcA = a.services?.[0];
       const svcB = b.services?.[0];
-      const nameA = svcA?.salesTaxLineItems?.[0]?.serviceName || svcA?.name || a.name;
-      const nameB = svcB?.salesTaxLineItems?.[0]?.serviceName || svcB?.name || b.name;
+      const nameA = svcA?.salesTaxLineItems?.[0]?.serviceName || "";
+      const nameB = svcB?.salesTaxLineItems?.[0]?.serviceName || "";
       return nameA.localeCompare(nameB);
     });
     return result;
