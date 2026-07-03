@@ -1415,6 +1415,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Sales Tax: line items section */}
             {moduleKey === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
 
+            {/* Service notes from DB */}
+            {targetSvc.svcNotes && (
+              <div style={{ marginTop: 16, padding: "10px 12px", background: "var(--amber-soft)", borderRadius: 10, fontSize: 12, lineHeight: 1.5, color: "var(--ink)" }}>
+                <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 4 }}>Service Notes (DB)</div>
+                {targetSvc.svcNotes}
+              </div>
+            )}
+
             {/* Notes section for this service */}
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
               <div className="notemo">Notes for {svcLabel(moduleKey)}</div>
@@ -1541,6 +1549,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Address</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.address || "—"}</span></div>
             <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Location</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.city}, {c.state}</span></div>
             <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Type</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.type}</span></div>
+            {c.ein && <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>EIN</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{c.ein}</span></div>}
+
+            {/* Client notes */}
+            {c.notes && (
+              <div style={{ marginTop: 16, padding: "10px 12px", background: "var(--amber-soft)", borderRadius: 10, fontSize: 12, lineHeight: 1.5, color: "var(--ink)" }}>
+                <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 4 }}>Notes</div>
+                {c.notes}
+              </div>
+            )}
 
             {/* Who's assigned per service */}
             <div className="sect" style={sectStyle}>Who&apos;s assigned — per service</div>

@@ -101,6 +101,13 @@ export async function GET(request: Request) {
     const staffNames: Record<string, string> = {};
     for (const s of staffRows || []) staffNames[s.id] = s.full_name;
 
+    // Fetch EINs from client_tax_ids
+    const { data: taxRows } = await supabase.from("client_tax_ids").select("client_id, ein");
+    const einMap: Record<string, string> = {};
+    for (const t of taxRows || []) {
+      if (t.ein) einMap[t.client_id] = String(t.ein).replace(/\.0$/, "");
+    }
+
     const clients = dbClients.map((db: any) => {
       const svcs = svcByClient[db.id] || [];
       const services = svcs.map((cs: any) => {
@@ -132,11 +139,12 @@ export async function GET(request: Request) {
             const s = periodByCsId[cs.id]?.[i];
             return !s ? "lock" : s === "done" ? "done" : s === "na" ? "na" : s === "in_progress" ? "in_progress" : s === "waiting_client" ? "waiting" : s === "prepared" ? "billed" : "lock";
           }),
+          svcNotes: cs.notes || "",
         };
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -147,6 +155,8 @@ export async function GET(request: Request) {
         phones: (db.contacts || []).map((c: any) => c.phone).filter(Boolean),
         address: db.address || "",
         assignedStaff: staffNames[svcs[0]?.assigned_to || ""] || svcs[0]?.assigned_to || "Unassigned",
+        notes: db.notes || "",
+        ein: einMap[db.id] || "",
         services,
       };
     });

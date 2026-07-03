@@ -53,6 +53,7 @@ export interface ClientService {
   key?: ServiceKey;
   label?: string;
   processor?: string;
+  software?: string;
   expectedAnnual?: number;
   months?: any[];
   salesTaxNotes?: string;
@@ -83,6 +84,7 @@ export interface ClientService {
   filingType?: string; // "C Corp." | "S Corp." | "Partnership" | "SMLLC" | "Trust" | "Non Profit" | "Retirem Plan"
   payEmails?: string[];
   comments?: CommentEntry[];
+  svcNotes?: string;
 }
 
 export interface Client {
@@ -101,6 +103,8 @@ export interface Client {
   phones: string[];
   services: ClientService[];
   assignedStaff?: string;
+  ein?: string;
+  notes?: string;
 }
 
 export interface Profile {
