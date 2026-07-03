@@ -67,6 +67,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [activeCommentMonth, setActiveCommentMonth] = useState<number>(-1);
   const [commentText, setCommentText] = useState("");
 
+  // ── Client-level notes state ──
+  const [notesMonth, setNotesMonth] = useState(new Date().getMonth());
+  const [notesText, setNotesText] = useState("");
+
   // ── Sales tax line items state ──
   const [stxLineItems, setStxLineItems] = useState<any[]>([]);
   const [addingStx, setAddingStx] = useState(false);
@@ -227,6 +231,51 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       }
       return s;
     });
+    setLocalSvcs(updated);
+    onSave?.({ ...client, services: updated });
+  }
+
+  // ── Client-level notes helpers ──
+  function getAllServiceComments(): CommentEntry[] {
+    const all: CommentEntry[] = [];
+    for (const svc of localSvcs) {
+      if (svc.comments && Array.isArray(svc.comments)) {
+        for (const cm of svc.comments) {
+          all.push({ ...cm, _svcKey: svc.key });
+        }
+      }
+    }
+    return all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  function handleAddNote() {
+    if (!notesText.trim()) return;
+    const firstEnabledSvc = localSvcs.find((s: any) => s.enabled);
+    if (!firstEnabledSvc) return;
+    const comment: CommentEntry = {
+      id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      month: notesMonth,
+      text: notesText.trim(),
+      author: currentUser || "You",
+      createdAt: new Date().toISOString(),
+    };
+    const updated = localSvcs.map((s: any) => {
+      if (s.key === firstEnabledSvc.key) {
+        const existing = s.comments || [];
+        return { ...s, comments: [...existing, comment] };
+      }
+      return s;
+    });
+    setLocalSvcs(updated);
+    setNotesText("");
+    onSave?.({ ...client, services: updated });
+  }
+
+  function deleteNote(commentId: string) {
+    const updated = localSvcs.map((s: any) => ({
+      ...s,
+      comments: (s.comments || []).filter((cm: CommentEntry) => cm.id !== commentId),
+    }));
     setLocalSvcs(updated);
     onSave?.({ ...client, services: updated });
   }
@@ -989,6 +1038,70 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Services */}
             <div className="sect" style={sectStyle}>Services — flip on/off, no formulas</div>
             {localSvcs.map((svc: any) => <SingleServiceCard key={svc.key} svc={svc} />)}
+          </div>
+
+          {/* ── Notes for this client (client-level comments) ── */}
+          <div style={{ marginTop: 24, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+            <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 4 }}>
+              Notes for this client
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 10, fontStyle: "italic" }}>
+              Anyone on this account can leave a month note; a 📋 marker then shows on the worklist.
+            </div>
+
+            {/* Month selector + add note */}
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 10 }}>
+              <div style={{ flex: "0 0 120px" }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Month</label>
+                <select
+                  value={notesMonth}
+                  onChange={e => setNotesMonth(Number(e.target.value))}
+                  style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)" }}
+                >
+                  {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Note</label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    value={notesText}
+                    onChange={e => setNotesText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNote(); } }}
+                    placeholder="Add a note for the selected month"
+                    style={{ flex: 1, padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)" }}
+                  />
+                  <button
+                    onClick={handleAddNote}
+                    style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "7px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}
+                  >Add</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Existing notes for this month */}
+            {(() => {
+              const filtered = getAllServiceComments().filter((cm: CommentEntry) => cm.month === notesMonth);
+              return filtered.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
+                  {filtered.map((cm: CommentEntry) => (
+                    <div key={cm.id} style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", position: "relative" }}>
+                      <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
+                        <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
+                      <button
+                        onClick={() => deleteNote(cm.id)}
+                        style={{ all: "unset", cursor: "pointer", position: "absolute", top: 5, right: 7, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
+                        title="Delete note"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", marginBottom: 4 }}>No notes yet.</div>
+              );
+            })()}
           </div>
 
           {/* Footer */}
