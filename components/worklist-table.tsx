@@ -116,11 +116,12 @@ function getActiveMonths(
 }
 
 // ── Payroll: max runs per month by cadence ──
-type PayrollCadence = "Weekly" | "Bi-Weekly" | "Monthly";
+type PayrollCadence = "Weekly" | "Bi-Weekly" | "Semi-Monthly" | "Monthly";
 function getMaxRunsPerMonth(cadence: PayrollCadence): number {
   switch (cadence) {
     case "Weekly":   return 5;
     case "Bi-Weekly": return 2;
+    case "Semi-Monthly": return 2;
     case "Monthly":  return 1;
   }
 }
@@ -246,7 +247,7 @@ export default function WorklistTable({
   // ── Cadence filter options (dynamic per module) ──
   const cadenceOptions = useMemo(() => {
     if (variant === "payroll") {
-      return ["Weekly", "Bi-Weekly", "Monthly"];
+      return ["Weekly", "Bi-Weekly", "Semi-Monthly", "Monthly"];
     }
     if (serviceKey === "financials" || serviceKey === "sales_tax") {
       return ["Monthly", "Quarterly", "Annually"];
@@ -287,7 +288,8 @@ export default function WorklistTable({
             const svc = c.services?.find((s: any) => s.key === "payroll");
             const freq = svc?.frequency || "Monthly";
             const cadence = freq === "Weekly" ? "Weekly"
-              : (freq === "Bi-Weekly" || freq === "Semi-Monthly") ? "Bi-Weekly"
+              : freq === "Bi-Weekly" ? "Bi-Weekly"
+              : freq === "Semi-Monthly" ? "Semi-Monthly"
               : "Monthly";
             return cadence === cadenceFilter;
           });
@@ -478,7 +480,8 @@ export default function WorklistTable({
     const svc = client.services?.find((s: any) => s.key === "payroll");
     const freq = svc?.frequency || "Monthly";
     if (freq === "Weekly") return "Weekly";
-    if (freq === "Bi-Weekly" || freq === "Semi-Monthly") return "Bi-Weekly";
+    if (freq === "Bi-Weekly") return "Bi-Weekly";
+    if (freq === "Semi-Monthly") return "Semi-Monthly";
     return "Monthly";
   }
 
