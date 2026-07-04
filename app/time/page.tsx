@@ -297,6 +297,7 @@ export default function TimePage() {
     byWho[e.personName] = (byWho[e.personName] || 0) + elapsed;
   });
   const whoCards = Object.keys(byWho).sort((a, b) => byWho[b] - byWho[a]);
+  const [showStaffList, setShowStaffList] = useState(false);
 
   const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
 
@@ -408,19 +409,37 @@ export default function TimePage() {
         </div>
       )}
 
-      {/* ── Stat cards ── */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+      {/* ── Stats: Total Today + collapsible staff breakdown ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div className="statcard" style={{ background: "var(--green-soft)", borderColor: "var(--green)" }}>
           <div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalToday)}</div>
           <div className="sl">Total Today</div>
         </div>
-        {whoCards.map((name) => (
-          <div className="statcard" key={name}>
-            <div className="sn">{fmtDur(byWho[name])}</div>
-            <div className="sl">{name}</div>
-          </div>
-        ))}
+        {whoCards.length > 0 && (
+          <button onClick={() => setShowStaffList((p) => !p)}
+            style={{
+              all: "unset", cursor: "pointer", fontSize: 13, fontWeight: 600,
+              color: "var(--muted)", padding: "4px 8px", borderRadius: 6,
+              whiteSpace: "nowrap",
+            }}>
+            {showStaffList ? "\u25bc" : "\u25b6"} {whoCards.length} staff
+          </button>
+        )}
       </div>
+      {showStaffList && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: -4 }}>
+          {whoCards.map((name) => (
+            <div key={name} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "6px 12px", border: "1px solid var(--line)", borderRadius: 7,
+              fontSize: 14,
+            }}>
+              <span style={{ fontWeight: 500 }}>{name}</span>
+              <span className="mono" style={{ color: "var(--muted)", fontSize: 13 }}>{fmtDur(byWho[name])}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
