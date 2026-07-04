@@ -1420,6 +1420,88 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               )}
             </div>
 
+            {/* Payroll: credentials section */}
+            {moduleKey === "payroll" && targetSvc.enabled && (
+              <>
+                <div className="sect" style={sectStyle}>Payroll Details</div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
+                  <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                    value={prPeriodFreq} onChange={e => { setPrPeriodFreq(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value } : s)); }}>
+                    <option value="">—</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Semi-Monthly">Semi-Monthly</option>
+                    <option value="Bi-Weekly A">Bi-Weekly A</option>
+                    <option value="Bi-Weekly B">Bi-Weekly B</option>
+                    <option value="Quarterly">Quarterly</option>
+                  </select>
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
+                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                    value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }} placeholder="—" />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span>
+                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                    value={targetSvc?.biweeklyCode || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, biweeklyCode: e.target.value } : s))} placeholder="—" />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
+                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                    value={targetSvc?.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))} placeholder="—" />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span>
+                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                    type={showPrEftps ? "text" : "password"} value={prEftps ? maskNum(prEftps) : ""}
+                    onChange={e => { setPrEftps(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s)); }} placeholder="—" />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>PIN</span>
+                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                    type={showPrPin ? "text" : "password"} value={prPin ? maskNum(prPin) : ""}
+                    onChange={e => { setPrPin(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s)); }} placeholder="—" />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Payroll email</span>
+                  <div style={{ flex: 1, textAlign: "right" }}>
+                    <span style={{ fontWeight: 500 }}>{(prEmails || []).filter(Boolean).join(", ") || "—"}</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Tax return details */}
+            {moduleKey === "tax_returns" && targetSvc.enabled && (
+              <>
+                <div className="sect" style={sectStyle}>Tax Return Details</div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Filing Type</span>
+                  <select value={filingType} onChange={e => { setFilingType(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s)); }}
+                    style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
+                    {FILING_TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Filing State</span>
+                  <select value={filingState} onChange={e => { setFilingState(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingState: e.target.value } : s)); }}
+                    style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
+                    <option value="">—</option>
+                    {US_STATES.map(st => <option key={st}>{st}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
+                  <select value={filingMonth} onChange={e => { setFilingMonth(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingMonth: e.target.value } : s)); }}
+                    style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
+                    <option value="">—</option>
+                    {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+
             {/* Sales Tax: line items section */}
             {moduleKey === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
 
@@ -1556,40 +1638,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Body */}
           <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
-            {/* ── Services ── */}
-            <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
-              Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them</span>
-            </div>
-            {localSvcs.map((svc: any) => (
-              <div key={svc.key} className="svc" style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "10px 13px",
-                background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12,
-                marginBottom: 8,
-              }}>
-                <div className="si" style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: svcBg(svc.key) }}>
-                  {svcIc(svc.key)}
-                </div>
-                <div className="st" style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
-                </div>
-                <div
-                  className={`sw ${svc.enabled ? "on" : ""}`}
-                  onClick={() => toggleSvc(svc.key)}
-                  style={{
-                    width: 46, height: 27, borderRadius: 20,
-                    background: svc.enabled ? "var(--teal)" : "#d8d2c4",
-                    position: "relative", cursor: "pointer", transition: ".16s", flex: "0 0 auto",
-                  }}
-                >
-                  <div style={{
-                    position: "absolute", top: 3, left: svc.enabled ? 22 : 3, width: 21, height: 21,
-                    borderRadius: "50%", background: "#fff", transition: ".16s",
-                    boxShadow: "0 1px 3px rgba(0,0,0,.25)",
-                  }} />
-                </div>
-              </div>
-            ))}
-            <div style={{ height: 20 }} />
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
@@ -1639,41 +1687,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </select>
             </div>
 
-            {/* Cadence */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
-              <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
-                value={prPeriodFreq} onChange={e => { setPrPeriodFreq(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value } : s)); }} disabled={!editing}>
-                <option value="">—</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Semi-Monthly">Semi-Monthly</option>
-                <option value="Bi-Weekly A">Bi-Weekly A</option>
-                <option value="Bi-Weekly B">Bi-Weekly B</option>
-                <option value="Quarterly">Quarterly</option>
-              </select>
-            </div>
-
-            {/* Pay Day */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
-              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }} disabled={!editing} placeholder="—" />
-            </div>
-
-            {/* QBO (Bi-Weekly Code) */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span>
-              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={prSvc?.biweeklyCode || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, biweeklyCode: e.target.value } : s))} disabled={!editing} placeholder="—" />
-            </div>
-
-            {/* Processor */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
-              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={prSvc?.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))} disabled={!editing} placeholder="—" />
-            </div>
-
             {/* EIN */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
@@ -1681,96 +1694,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} disabled={!editing} placeholder="—" />
             </div>
 
-            {/* EFTPS Password */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span>
-              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                type={editing || showPrEftps ? "text" : "password"} value={editing ? prEftps : (prEftps ? maskNum(prEftps) : "")}
-                onChange={e => { setPrEftps(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s)); }}
-                disabled={!editing} placeholder="—" />
-            </div>
-
-            {/* PIN */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>PIN</span>
-              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                type={editing || showPrPin ? "text" : "password"} value={editing ? prPin : (prPin ? maskNum(prPin) : "")}
-                onChange={e => { setPrPin(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s)); }}
-                disabled={!editing} placeholder="—" />
-            </div>
-
-            {/* Payroll emails */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>Payroll email</span>
-              <div style={{ flex: 1, textAlign: "right" }}>
-                {editing ? (
-                  <>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3, justifyContent: "flex-end", marginBottom: 3 }}>
-                      {prEmails.map((em, i) => (
-                        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", borderRadius: 5, padding: "1px 6px", fontSize: 11, fontWeight: 500 }}>
-                          {em}
-                          <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); }}
-                            style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, lineHeight: 1 }}>×</button>
-                        </span>
-                      ))}
-                    </div>
-                    <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", textAlign: "right", outline: "none" }}
-                      value={newPrEmail} onChange={e => setNewPrEmail(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter" && newPrEmail.trim()) { e.preventDefault(); const upd = [...prEmails, newPrEmail.trim()]; setPrEmails(upd); setNewPrEmail(""); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); } }}
-                      placeholder="Type + Enter to add" />
-                  </>
-                ) : (
-                  <span style={{ fontWeight: 500 }}>{(prEmails || []).filter(Boolean).join(", ") || "—"}</span>
-                )}
-              </div>
-            </div>
-
-          {/* ── Notes for payroll ── */}
-          <div style={{ marginTop: 28, borderTop: "1px solid var(--line)", padding: "14px 0 4px" }}>
-            <div className="sect" style={sectStyle}>Notes for payroll</div>
-
-            <div className="noteadd" style={{ marginTop: 0, flexWrap: "wrap", gap: 8 }}>
-              <select value={notesMonth} onChange={e => setNotesMonth(Number(e.target.value))}
-                style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
-                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
-              <select value={noteType} onChange={e => setNoteType(e.target.value)}
-                style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
-                {NOTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <input value={notesText} onChange={e => setNotesText(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNote(); } }}
-                placeholder="Add a note for the selected month"
-                style={{ flex: 1, minWidth: 180, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }}
-              />
-              <button onClick={handleAddNote}
-                style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
-                Add
-              </button>
-            </div>
-
-            <div style={{ marginTop: 10 }}>
-              {(() => {
-                const filtered = getAllServiceComments().filter((cm: CommentEntry) => cm.month === notesMonth);
-                return filtered.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {filtered.map(cm => (
-                      <div key={cm.id} className="note">
-                        <div className="ntxt">{cm.text}</div>
-                        <div className="nmeta">{cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                        <button onClick={() => deleteNote(cm.id)}
-                          style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
-                          × Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>No notes yet.</div>
-                );
-              })()}
-            </div>
-          </div>
           </div>
 
           {/* Footer */}
