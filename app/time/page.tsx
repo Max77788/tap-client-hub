@@ -328,29 +328,29 @@ export default function TimePage() {
         <div className="tw-timer">
           <div className="fld">
             <label>Who</label>
-            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} disabled={timerRunning}>
+            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)}>
               <option value="">— choose —</option>
               {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div className="fld">
             <label>Client</label>
-            <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)} disabled={timerRunning}>
+            <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)}>
               <option value="">— choose client —</option>
               {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="fld">
             <label>Task</label>
-            <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)} disabled={timerRunning}>
+            <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
               {TASK_KEYS.map((k) => <option key={k} value={k}>{TASK_LABEL[k]}</option>)}
             </select>
           </div>
 
-          <button className={"tw-go" + (timerRunning ? " stop" : "")}
-            onClick={timerRunning ? () => stopTimer() : startTimer}
+          <button className="tw-go"
+            onClick={startTimer}
             disabled={!selectedClient || !selectedPerson}>
-            {timerRunning ? "\u25a0 Stop" : "\u25b6 Start"}
+            ▶ Start
           </button>
         </div>
       )}
