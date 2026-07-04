@@ -951,7 +951,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ══════════════════════════════════════════════════════════════
   // MODULE-SPECIFIC VIEW (from worklist — shows detail for one module)
   // ══════════════════════════════════════════════════════════════
-  if (moduleKey && !showFullRecord) {
+  if (false) {
     const targetSvc = localSvcs.find((s: any) => s.key === moduleKey);
     if (!targetSvc) return null;
 
@@ -1507,9 +1507,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }
 
   // ══════════════════════════════════════════════════════════════
-  // SIMPLIFIED DETAIL VIEW (shows fields with edit toggle)
+  // UNIVERSAL DETAIL VIEW (shows fields with edit toggle)
   // ══════════════════════════════════════════════════════════════
-  if (!moduleKey || showFullRecord) {
+  if (true) {
     const prSvc = localSvcs.find((s: any) => s.key === "payroll");
 
     function handleSave() {
@@ -1569,132 +1569,126 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               )}
             </div>
 
-            {prSvc?.enabled ? (
-              <>
-                {/* Email */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Email</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={eEmail} onChange={e => setEEmail(e.target.value)} disabled={!editing} placeholder="—" />
-                </div>
-                {/* Additional email */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Additional email</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={eAddEmail} onChange={e => setEAddEmail(e.target.value)} disabled={!editing} placeholder="—" />
-                </div>
-                {/* Phone */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Phone</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={ePhone} onChange={e => setEPhone(e.target.value)} disabled={!editing} placeholder="—" />
-                </div>
-                {/* Additional phone */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={eAddPhone} onChange={e => setEAddPhone(e.target.value)} disabled={!editing} placeholder="—" />
-                </div>
+            {/* Email */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Email</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eEmail} onChange={e => setEEmail(e.target.value)} disabled={!editing} placeholder="—" />
+            </div>
+            {/* Additional email */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Additional email</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eAddEmail} onChange={e => setEAddEmail(e.target.value)} disabled={!editing} placeholder="—" />
+            </div>
+            {/* Phone */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Phone</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={ePhone} onChange={e => setEPhone(e.target.value)} disabled={!editing} placeholder="—" />
+            </div>
+            {/* Additional phone */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eAddPhone} onChange={e => setEAddPhone(e.target.value)} disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* Assigned */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Assigned</span>
-                  <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
-                    value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s)); }} disabled={!editing}>
-                    {STAFF.map((m: any) => <option key={m.name}>{m.name}</option>)}
-                    <option>Unassigned</option>
-                  </select>
-                </div>
+            {/* Assigned */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Assigned</span>
+              <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
+                value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s)); }} disabled={!editing}>
+                {STAFF.map((m: any) => <option key={m.name}>{m.name}</option>)}
+                <option>Unassigned</option>
+              </select>
+            </div>
 
-                {/* Cadence */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
-                  <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
-                    value={prPeriodFreq} onChange={e => { setPrPeriodFreq(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value } : s)); }} disabled={!editing}>
-                    <option value="">—</option>
-                    <option value="Monthly">Monthly</option>
-                    <option value="Semi-Monthly">Semi-Monthly</option>
-                    <option value="Bi-Weekly A">Bi-Weekly A</option>
-                    <option value="Bi-Weekly B">Bi-Weekly B</option>
-                    <option value="Quarterly">Quarterly</option>
-                  </select>
-                </div>
+            {/* Cadence */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
+              <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
+                value={prPeriodFreq} onChange={e => { setPrPeriodFreq(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value } : s)); }} disabled={!editing}>
+                <option value="">—</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Semi-Monthly">Semi-Monthly</option>
+                <option value="Bi-Weekly A">Bi-Weekly A</option>
+                <option value="Bi-Weekly B">Bi-Weekly B</option>
+                <option value="Quarterly">Quarterly</option>
+              </select>
+            </div>
 
-                {/* Pay Day */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }} disabled={!editing} placeholder="—" />
-                </div>
+            {/* Pay Day */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }} disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* QBO (Bi-Weekly Code) */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={prSvc.biweeklyCode || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, biweeklyCode: e.target.value } : s))} disabled={!editing} placeholder="—" />
-                </div>
+            {/* QBO (Bi-Weekly Code) */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={prSvc?.biweeklyCode || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, biweeklyCode: e.target.value } : s))} disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* Processor */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={prSvc.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))} disabled={!editing} placeholder="—" />
-                </div>
+            {/* Processor */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={prSvc?.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))} disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* EIN */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                    value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} disabled={!editing} placeholder="—" />
-                </div>
+            {/* EIN */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* EFTPS Password */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                    type={editing || showPrEftps ? "text" : "password"} value={editing ? prEftps : (prEftps ? maskNum(prEftps) : "")}
-                    onChange={e => { setPrEftps(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s)); }}
-                    disabled={!editing} placeholder="—" />
-                </div>
+            {/* EFTPS Password */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                type={editing || showPrEftps ? "text" : "password"} value={editing ? prEftps : (prEftps ? maskNum(prEftps) : "")}
+                onChange={e => { setPrEftps(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s)); }}
+                disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* PIN */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>PIN</span>
-                  <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                    type={editing || showPrPin ? "text" : "password"} value={editing ? prPin : (prPin ? maskNum(prPin) : "")}
-                    onChange={e => { setPrPin(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s)); }}
-                    disabled={!editing} placeholder="—" />
-                </div>
+            {/* PIN */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>PIN</span>
+              <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                type={editing || showPrPin ? "text" : "password"} value={editing ? prPin : (prPin ? maskNum(prPin) : "")}
+                onChange={e => { setPrPin(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s)); }}
+                disabled={!editing} placeholder="—" />
+            </div>
 
-                {/* Payroll emails */}
-                <div className="field" style={fieldStyle}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Payroll email</span>
-                  <div style={{ flex: 1, textAlign: "right" }}>
-                    {editing ? (
-                      <>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 3, justifyContent: "flex-end", marginBottom: 3 }}>
-                          {prEmails.map((em, i) => (
-                            <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", borderRadius: 5, padding: "1px 6px", fontSize: 11, fontWeight: 500 }}>
-                              {em}
-                              <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); }}
-                                style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, lineHeight: 1 }}>×</button>
-                            </span>
-                          ))}
-                        </div>
-                        <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", textAlign: "right", outline: "none" }}
-                          value={newPrEmail} onChange={e => setNewPrEmail(e.target.value)}
-                          onKeyDown={e => { if (e.key === "Enter" && newPrEmail.trim()) { e.preventDefault(); const upd = [...prEmails, newPrEmail.trim()]; setPrEmails(upd); setNewPrEmail(""); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); } }}
-                          placeholder="Type + Enter to add" />
-                      </>
-                    ) : (
-                      <span style={{ fontWeight: 500 }}>{(prEmails || []).filter(Boolean).join(", ") || "—"}</span>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>Payroll is not enabled for this client.</div>
-            )}
+            {/* Payroll emails */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Payroll email</span>
+              <div style={{ flex: 1, textAlign: "right" }}>
+                {editing ? (
+                  <>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3, justifyContent: "flex-end", marginBottom: 3 }}>
+                      {prEmails.map((em, i) => (
+                        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", borderRadius: 5, padding: "1px 6px", fontSize: 11, fontWeight: 500 }}>
+                          {em}
+                          <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); }}
+                            style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, lineHeight: 1 }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", textAlign: "right", outline: "none" }}
+                      value={newPrEmail} onChange={e => setNewPrEmail(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && newPrEmail.trim()) { e.preventDefault(); const upd = [...prEmails, newPrEmail.trim()]; setPrEmails(upd); setNewPrEmail(""); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); } }}
+                      placeholder="Type + Enter to add" />
+                  </>
+                ) : (
+                  <span style={{ fontWeight: 500 }}>{(prEmails || []).filter(Boolean).join(", ") || "—"}</span>
+                )}
+              </div>
+            </div>
 
           {/* ── Notes for payroll ── */}
           <div style={{ marginTop: 28, borderTop: "1px solid var(--line)", padding: "14px 0 4px" }}>
