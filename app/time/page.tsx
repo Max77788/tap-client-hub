@@ -479,7 +479,7 @@ export default function TimePage() {
                         </td>
                         <td>
                           <button className="stop-btn" onClick={() => stopTimer(entry.id)}>
-                            \u25a0 Stop
+                            {"\u25a0 Stop"}
                           </button>
                         </td>
                       </tr>
