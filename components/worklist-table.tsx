@@ -750,7 +750,7 @@ export default function WorklistTable({
 
   // ── Count of columns before month columns (for colspan) ──
   const baseCols = 2; // Client + Assigned
-  const payrollCols = variant === "payroll" ? 6 : 0; // Bi-weekly Code, PayDay, Pay Start, Pay Period Freq, Reporting Method, Payroll Category
+  const payrollCols = variant === "payroll" ? 2 : 0; // PayDay, QBO
   const taxReturnCols = variant === "tax_returns" ? 2 : 0; // Filing State, Filing Type
   const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
@@ -856,7 +856,7 @@ export default function WorklistTable({
         {serviceKey === "sales_tax"
           ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
           : variant === "payroll"
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · read-only view`
           : variant === "tax_returns"
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
           : !isHistorical
@@ -882,12 +882,8 @@ export default function WorklistTable({
              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>Client / Line Item</th>
             {variant === "payroll" && (
             <>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 90 }}>Bi-wk Code</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>PayDay</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Pay Start</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 75 }}>Period Fr</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Rep. Method</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 80 }}>PR Cat</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Pay Day</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 80 }}>QBO</th>
             </>
             )}
             {variant === "tax_returns" && (
@@ -903,7 +899,7 @@ export default function WorklistTable({
             {variant === "t9" && (
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
             )}
-            {MONTHS_SHORT.map((m, mi) => {
+            {variant !== "payroll" && MONTHS_SHORT.map((m, mi) => {
               // For tax_returns, check if any client has this month as filingMonth
               const isFileMonth = variant === "tax_returns" && serviceClients.some((c) => {
                 const s = c.services?.find((s: any) => s.key === serviceKey);
@@ -1104,124 +1100,16 @@ export default function WorklistTable({
                       >{displayName}</button>
                     </td>
 
-                  {/* Payroll-specific columns: Bi-weekly Code, PayDay, Pay Start Date */}
+                  {/* Payroll-specific columns: Pay Day, QBO (read-only) */}
                   {variant === "payroll" && (
                   <>
-                    {/* Bi-weekly Code */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 90 }}>
-                      <select
-                        value={svc.biweeklyCode || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, biweeklyCode: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[90px]"
-                      >
-                        {BIWEEKLY_CODES.map((opt) => (
-                          <option key={opt} value={opt}>{opt || "—"}</option>
-                        ))}
-                      </select>
+                    {/* Pay Day */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
+                      {svc.paydate || "—"}
                     </td>
-                    {/* PayDay */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
-                      <select
-                        value={svc.paydate || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, paydate: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[95px]"
-                      >
-                        <option value="">—</option>
-                        {PAYDAY_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </td>
-                    {/* Pay Start Date */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
-                      <input
-                        type="text"
-                        defaultValue={svc.payStartDate || ""}
-                        placeholder="mm/dd"
-                        onBlur={(e) => {
-                          const val = e.target.value.trim();
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, payStartDate: val || null }),
-                          }).catch(() => {});
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] w-full min-w-[55px] max-w-[75px]"
-                      />
-                    </td>
-                    {/* Pay Period Frequency */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 75 }}>
-                      <select
-                        value={svc.payPeriodFrequency || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, payPeriodFrequency: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[60px] max-w-[75px]"
-                      >
-                        {PAY_PERIOD_FREQ.map((opt) => (
-                          <option key={opt} value={opt}>{opt || "—"}</option>
-                        ))}
-                      </select>
-                    </td>
-                    {/* Reporting Method */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
-                      <select
-                        value={svc.reportingMethod || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, reportingMethod: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[95px]"
-                      >
-                        {REPORTING_METHODS.map((opt) => (
-                          <option key={opt} value={opt}>{opt || "—"}</option>
-                        ))}
-                      </select>
-                    </td>
-                    {/* Payroll Category */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 80 }}>
-                      <select
-                        value={svc.payrollCategory || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, payrollCategory: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[60px] max-w-[75px]"
-                      >
-                        {PAYROLL_CATEGORIES.map((opt) => (
-                          <option key={opt} value={opt}>{opt || "—"}</option>
-                        ))}
-                      </select>
+                    {/* QBO (processor) */}
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 80 }}>
+                      {processor === "QBO" ? "✓" : processor === "ADP" ? "ADP" : processor === "Quickbooks Desktop" ? "QB Desktop" : processor === "Quickbooks Desktop 24" ? "QB24" : processor !== "-" ? processor : "—"}
                     </td>
                   </>
                   )}
@@ -1272,8 +1160,11 @@ export default function WorklistTable({
                   </>
                   )}
 
-                  {/* Assigned — inline editable dropdown (all services) */}
+                  {/* Assigned — read-only text for payroll, inline editable dropdown for others */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
+                    {variant === "payroll" ? (
+                      <span className="text-[var(--ink)]">{svc.assignedTo || svc.processor || "—"}</span>
+                    ) : (
                     <select
                       value={assignedOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "") : (svc.assignedTo || svc.processor || ""))}
                       onChange={(e) => {
@@ -1306,13 +1197,17 @@ export default function WorklistTable({
                         <option key={s} value={s}>{toShortName(s)}</option>
                       ))}
                     </select>
+                    )}
                   </td>
 
-                  {/* Cadence — inline editable dropdown */}
+                  {/* Cadence — read-only text for payroll, inline editable dropdown for others */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
+                    {variant === "payroll" ? (
+                      <span className="text-[var(--ink)]">{prCadence}</span>
+                    ) : (
                     <select
-                      value={frequencyOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.frequency || svc.frequency || "Monthly") : (variant === "payroll" ? prCadence : svc.frequency || "Monthly"))}
+                      value={frequencyOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.frequency || svc.frequency || "Monthly") : (svc.frequency || "Monthly"))}
                       onChange={(e) => {
                         const val = e.target.value;
                         const key = `${client.id}:${serviceKey}:${stxIdx}`;
@@ -1337,39 +1232,15 @@ export default function WorklistTable({
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
+                    )}
                   </td>
                   )}
 
-                  {/* Month cells */}
-                  {MONTHS_SHORT.map((_m, i) => {
+                  {/* Month cells — skip for payroll (read-only tab) */}
+                  {variant !== "payroll" && MONTHS_SHORT.map((_m, i) => {
                     const isActive = activeMonths.has(i);
                     const isCurrentMonth = i === currentMonth && !isHistorical;
                     const cellReadOnly = readOnly || isHistorical;
-
-                    // ── Payroll variant: show next processing date ──
-                    if (variant === "payroll" && isActive) {
-                      const nextDate = getNextProcessingDate(prCadence, svc.payStartDate);
-                      const hasPRCmt = (svc.comments || []).some((c: any) => c.month === i);
-
-                      return (
-                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
-                          <div
-                            className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums"
-                            style={{
-                              color: nextDate !== "·" ? "var(--ink)" : "var(--muted)",
-                              backgroundColor: nextDate !== "·" ? "var(--blue-soft)" : "transparent",
-                            }}
-                            title={`${MONTHS_SHORT[i]} — next processing: ${nextDate}`}
-                          >
-                            {nextDate}
-                          </div>
-                          {/* ── Comment marker blue dot ── */}
-                          {hasPRCmt && (
-                            <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
-                          )}
-                        </td>
-                      );
-                    }
 
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
