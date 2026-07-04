@@ -1696,59 +1696,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 Services
               </div>
               {localSvcs.map((svc: any) => (
-                <div key={svc.key} className="svc" style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "10px 13px",
-                  background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12,
-                  marginBottom: 8,
-                }}>
-                  <div className="si" style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: svcBg(svc.key) }}>
-                    {svcIc(svc.key)}
-                  </div>
-                  <div className="st" style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
-                  </div>
-                  <div
-                    className={`sw ${svc.enabled ? "on" : ""}`}
-                    onClick={() => toggleSvc(svc.key)}
-                    style={{
-                      width: 46, height: 27, borderRadius: 20,
-                      background: svc.enabled ? "var(--teal)" : "#d8d2c4",
-                      position: "relative", cursor: "pointer", transition: ".16s", flex: "0 0 auto",
-                    }}
-                  >
-                    <div style={{
-                      position: "absolute", top: 3, left: svc.enabled ? 22 : 3, width: 21, height: 21,
-                      borderRadius: "50%", background: "#fff", transition: ".16s",
-                      boxShadow: "0 1px 3px rgba(0,0,0,.25)",
-                    }} />
-                  </div>
-                </div>
+                <SingleServiceCard key={svc.key} svc={svc} />
               ))}
             </div>
-
-            {/* ── Services tracking ── */}
-            {localSvcs.filter((s: any) => s.enabled).length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 10px" }}>
-                  Service Tracking
-                </div>
-                {localSvcs.filter((s: any) => s.enabled).map((svc: any) => (
-                  <div key={svc.key} style={{ marginBottom: 14, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px" }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{svcLabel(svc.key)}</div>
-                    {monthCells(svc.key)}
-                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 6, fontSize: 10.5, color: "var(--muted)" }}>
-                      {UNIFIED_STAGES.map(s => (
-                        <span key={s.k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <i style={{ width: 9, height: 9, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
-                          {svc.key === "tax_returns" && s.k === "dn" ? "Filed" : s.l}
-                        </span>
-                      ))}
-                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><i style={{ width: 9, height: 9, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
           </div>
 
