@@ -17,6 +17,7 @@ interface TimeEntry {
   note: string;
   edited?: boolean;
   isRunning?: boolean;
+  manual?: boolean;
 }
 
 interface StaffMember { id: string; name: string; role: string; }
@@ -117,6 +118,7 @@ export default function TimePage() {
             duration: e.duration || 0, date: e.date || "", note: e.note || "",
             edited: e.edited || false,
             isRunning: isFromToday && (e.duration || 0) === 0,
+            manual: e.manual || false,
           };
         }));
         // Re-activate timer state if there's a running entry from today
@@ -229,7 +231,7 @@ export default function TimePage() {
       id: entryId, clientName: client.name, clientId: client.id,
       personName: person.name, personId: person.id,
       task: manualService, taskLabel: TASK_LABEL[manualService] || "Admin/Other",
-      duration: elapsed, date: dateStr, note: "", edited: false, isRunning: false,
+      duration: elapsed, date: dateStr, note: "", edited: false, isRunning: false, manual: true,
     };
     setEntries((prev) => [entry, ...prev]);
 
@@ -239,7 +241,7 @@ export default function TimePage() {
       body: JSON.stringify({
         id: entryId, who: person.id, client_id: client.id,
         task: TASK_LABEL[manualService] || "Admin/Other",
-        seconds: elapsed, started_at: dateStr, note: "",
+        seconds: elapsed, started_at: dateStr, note: "", manual: true,
       }),
     }).catch((e) => console.error("Manual save failed:", e));
 
@@ -525,7 +527,7 @@ export default function TimePage() {
                       <td className="lname">{shortName(entry.clientName)}</td>
                       <td style={{ color: "var(--muted)" }}>{entry.taskLabel || toTaskLabel(entry.task) || "—"}</td>
                       <td className="mono" style={{ whiteSpace: "nowrap" }}>
-                        {fmtDur(entry.duration)}{entry.edited && <span className="edited">edited</span>}
+                        {fmtDur(entry.duration)}{entry.edited && <span className="edited">edited</span>}{entry.manual && <span className="edited" style={{ color: "var(--teal)" }}>manual</span>}
                       </td>
                       <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
                         {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

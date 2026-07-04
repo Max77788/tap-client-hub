@@ -40,6 +40,7 @@ export async function GET() {
     date: e.started_at,
     note: e.note || "",
     edited: e.edited || false,
+    manual: e.manual || false,
   }));
 
   return NextResponse.json({ entries });
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
       seconds: body.seconds || 0,
       note: body.note || "",
       company: body.company || "Tap Associates",
+      manual: body.manual || false,
       edited: false,
     })
     .select()
