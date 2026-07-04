@@ -54,7 +54,7 @@ export default function PrPage() {
       c.services?.some((s: any) => s.key === "payroll" && s.frequency === "Weekly")
     ).length;
     const biWeekly = prClients.filter((c: any) =>
-      c.services?.some((s: any) => s.key === "payroll" && (s.frequency === "Bi-Weekly" || s.frequency === "Semi-Monthly"))
+      c.services?.some((s: any) => s.key === "payroll" && (s.frequency === "Bi-Weekly" || s.frequency === "Bi-Weekly A" || s.frequency === "Bi-Weekly B" || s.frequency === "Semi-Monthly"))
     ).length;
     const monthly = prClients.filter((c: any) =>
       c.services?.some((s: any) => s.key === "payroll" && s.frequency === "Monthly")

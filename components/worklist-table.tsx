@@ -30,7 +30,7 @@ const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 const PAYROLL_PROCESSOR_OPTIONS = ["ADP", "QBO", "Quickbooks Desktop", "Quickbooks Desktop 24"];
 
 const BIWEEKLY_CODES = ["", "1 - ODD", "2 - EVEN"];
-const PAY_PERIOD_FREQ = ["", "Monthly", "Semi-Monthly", "Bi-Weekly", "Quarterly"];
+const PAY_PERIOD_FREQ = ["", "Monthly", "Semi-Monthly", "Bi-Weekly A", "Bi-Weekly B", "Quarterly"];
 const REPORTING_METHODS = ["", "PR Reports only", "Email Paystub to Client", "Log into Client"];
 const PAYROLL_CATEGORIES = ["", "Monthly", "Salary", "SAME", "Right Network", "Tushar"];
 const PAYDAY_OPTIONS = [
@@ -94,6 +94,8 @@ function getActiveMonths(
     case "Monthly":
     case "Weekly":
     case "Bi-Weekly":
+    case "Bi-Weekly A":
+    case "Bi-Weekly B":
     case "Semi-Monthly": {
       // If a start month is set, only mark months from start onwards as active
       if (startMonth !== undefined && startMonth >= 0) {
@@ -116,11 +118,13 @@ function getActiveMonths(
 }
 
 // ── Payroll: max runs per month by cadence ──
-type PayrollCadence = "Weekly" | "Bi-Weekly" | "Semi-Monthly" | "Monthly";
+type PayrollCadence = "Weekly" | "Bi-Weekly" | "Bi-Weekly A" | "Bi-Weekly B" | "Semi-Monthly" | "Monthly";
 function getMaxRunsPerMonth(cadence: PayrollCadence): number {
   switch (cadence) {
     case "Weekly":   return 5;
-    case "Bi-Weekly": return 2;
+    case "Bi-Weekly":
+    case "Bi-Weekly A":
+    case "Bi-Weekly B": return 2;
     case "Semi-Monthly": return 2;
     case "Monthly":  return 1;
   }
@@ -247,7 +251,7 @@ export default function WorklistTable({
   // ── Cadence filter options (dynamic per module) ──
   const cadenceOptions = useMemo(() => {
     if (variant === "payroll") {
-      return ["Weekly", "Bi-Weekly", "Semi-Monthly", "Monthly"];
+      return ["Weekly", "Bi-Weekly A", "Bi-Weekly B", "Semi-Monthly", "Monthly"];
     }
     if (serviceKey === "financials" || serviceKey === "sales_tax") {
       return ["Monthly", "Quarterly", "Annually"];
@@ -288,7 +292,8 @@ export default function WorklistTable({
             const svc = c.services?.find((s: any) => s.key === "payroll");
             const freq = svc?.frequency || "Monthly";
             const cadence = freq === "Weekly" ? "Weekly"
-              : freq === "Bi-Weekly" ? "Bi-Weekly"
+              : freq === "Bi-Weekly" || freq === "Bi-Weekly A" ? "Bi-Weekly A"
+              : freq === "Bi-Weekly B" ? "Bi-Weekly B"
               : freq === "Semi-Monthly" ? "Semi-Monthly"
               : "Monthly";
             return cadence === cadenceFilter;
@@ -480,7 +485,8 @@ export default function WorklistTable({
     const svc = client.services?.find((s: any) => s.key === "payroll");
     const freq = svc?.frequency || "Monthly";
     if (freq === "Weekly") return "Weekly";
-    if (freq === "Bi-Weekly") return "Bi-Weekly";
+    if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") return "Bi-Weekly A";
+    if (freq === "Bi-Weekly B") return "Bi-Weekly B";
     if (freq === "Semi-Monthly") return "Semi-Monthly";
     return "Monthly";
   }

@@ -42,7 +42,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [finFreq, setFinFreq] = useState("Monthly");
   const [finMonth, setFinMonth] = useState("1");
 
-  const [prFreq, setPrFreq] = useState("Bi-Weekly");
+  const [prFreq, setPrFreq] = useState("Bi-Weekly A");
   const [prPaydate, setPrPaydate] = useState("");
   const [prPin, setPrPin] = useState("");
   const [prEftps, setPrEftps] = useState("");
@@ -105,7 +105,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setEmail(""); setAddEmail(""); setPhone(""); setAddPhone("");
       setAddress(""); setCity(""); setSt("TX"); setZip("");
       setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
-      setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
+      setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business");
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
@@ -289,7 +289,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>
                 <select style={inputStyle} value={prFreq} onChange={e => setPrFreq(e.target.value)}>
-                  <option>Weekly</option><option>Bi-Weekly</option><option>Semi-Monthly</option><option>Monthly</option><option>Quarterly</option>
+                  <option>Weekly</option><option>Bi-Weekly A</option><option>Bi-Weekly B</option><option>Semi-Monthly</option><option>Monthly</option><option>Quarterly</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>

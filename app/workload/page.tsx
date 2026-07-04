@@ -37,6 +37,8 @@ interface TeamRollup {
 const FREQ_LOAD: Record<string, number> = {
   Weekly: 52,
   "Bi-Weekly": 26,
+  "Bi-Weekly A": 26,
+  "Bi-Weekly B": 26,
   "Semi-Monthly": 24,
   Monthly: 12,
   Quarterly: 4,
@@ -53,7 +55,8 @@ function getFreqLoad(freq: string | undefined | null): number {
   // Case-insensitive fallback
   const lower = key.toLowerCase();
   if (lower === "weekly" || lower === "week") return 52;
-  if (lower === "bi-weekly" || lower === "biweekly" || lower === "bi week") return 26;
+  if (lower === "bi-weekly" || lower === "biweekly" || lower === "bi week" || lower === "bi-weekly a") return 26;
+  if (lower === "bi-weekly b") return 26;
   if (lower === "semi-monthly" || lower === "semimonthly") return 24;
   if (lower === "monthly") return 12;
   if (lower === "quarterly") return 4;

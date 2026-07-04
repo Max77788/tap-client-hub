@@ -320,7 +320,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (!svc.enabled) return "off";
     if (moduleKey && key !== moduleKey) return "";
     if (key === "financials") return (svc.frequency || "Monthly") + " · in Financials list";
-    if (key === "payroll") return (svc.frequency || "Bi-Weekly") + " · " + (svc.processor || "-");
+    if (key === "payroll") return (svc.frequency || "Bi-Weekly A") + " · " + (svc.processor || "-");
     if (key === "sales_tax") return (svc.frequency || "Monthly") + " · in Sales Tax list";
     if (key === "tax_returns") return svc.frequency || "Business";
     if (key === "1099s") return "in 1099 worklist";
@@ -672,7 +672,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <option value="">—</option>
                       <option value="Monthly">Monthly</option>
                       <option value="Semi-Monthly">Semi-Monthly</option>
-                      <option value="Bi-Weekly">Bi-Weekly</option>
+                      <option value="Bi-Weekly A">Bi-Weekly A</option>
+                      <option value="Bi-Weekly B">Bi-Weekly B</option>
                       <option value="Quarterly">Quarterly</option>
                     </select>
                   </div>
