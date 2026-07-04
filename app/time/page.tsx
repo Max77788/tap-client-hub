@@ -71,6 +71,7 @@ export default function TimePage() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [viewingAs, setViewingAs] = useState<string | null>(null);
+  const [impersonatingAs, setImpersonatingAs] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [currentUser, setCurrentUser] = useState<StaffMember | null>(null);
   const [loading, setLoading] = useState(true);
@@ -292,24 +293,34 @@ export default function TimePage() {
   const today = new Date().toISOString().slice(0, 10);
   const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
   const isStaff = currentUser && currentUser.role && currentUser.role !== "owner" && currentUser.role !== "admin";
+  const effectiveIsStaff = isStaff || !!impersonatingAs;
 
   // Auto-select current user for staff
   useEffect(() => {
-    if (isStaff && currentUser && !selectedPerson) {
+    if (effectiveIsStaff && !impersonatingAs && currentUser && !selectedPerson) {
       setSelectedPerson(currentUser.id);
     }
-  }, [isStaff, currentUser, selectedPerson]);
+  }, [effectiveIsStaff, impersonatingAs, currentUser, selectedPerson]);
+
+  // When impersonating, auto-select that person and set viewingAs
+  useEffect(() => {
+    if (impersonatingAs) {
+      setSelectedPerson(impersonatingAs);
+      setViewingAs(impersonatingAs);
+      setEntryTab("timer");
+    }
+  }, [impersonatingAs]);
 
   const displayEntries = useMemo(() => {
     let list = entries.filter((e) => e.date.slice(0, 10) === today);
     if (viewingAs) list = list.filter((e) => e.personId === viewingAs);
-    if (isStaff && currentUser) list = list.filter((e) => e.personId === currentUser.id);
+    if (!impersonatingAs && effectiveIsStaff && currentUser) list = list.filter((e) => e.personId === currentUser.id);
     return [...list].sort((a, b) => {
       if (a.isRunning && !b.isRunning) return -1;
       if (!a.isRunning && b.isRunning) return 1;
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  }, [entries, today, viewingAs, isStaff, currentUser]);
+  }, [entries, today, viewingAs, effectiveIsStaff, impersonatingAs, isStaff, currentUser]);
 
   const totalToday = displayEntries.reduce((s, e) =>
     s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
@@ -335,7 +346,7 @@ export default function TimePage() {
           color: entryTab === "timer" ? "var(--teal)" : "var(--muted)",
           transition: ".12s",
         }}>Timer</button>
-        {!isStaff && <button onClick={() => setEntryTab("manual")} style={{
+        {!effectiveIsStaff && <button onClick={() => setEntryTab("manual")} style={{
           all: "unset", cursor: "pointer",
           padding: "10px 20px", fontWeight: 700, fontSize: 13,
           borderBottom: entryTab === "manual" ? "2px solid var(--teal)" : "2px solid transparent",
@@ -349,7 +360,7 @@ export default function TimePage() {
         <div className="tw-timer">
           <div className="fld">
             <label>Who</label>
-            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} disabled={isStaff}>
+            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} disabled={effectiveIsStaff}>
               <option value="">— choose —</option>
               {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
@@ -456,11 +467,35 @@ export default function TimePage() {
         </div>
       )}
 
+      {/* ── Impersonation: View as Staff ── */}
+      {!isStaff && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+          <span style={{ color: "var(--muted)", fontWeight: 500 }}>View as Staff:</span>
+          <select
+            value={impersonatingAs ?? ""}
+            onChange={(e) => setImpersonatingAs(e.target.value || null)}
+            className="pick"
+            style={{ minWidth: 180 }}
+          >
+            <option value="">— Admin view —</option>
+            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          {impersonatingAs && (
+            <button
+              onClick={() => { setImpersonatingAs(null); setViewingAs(null); setSelectedPerson(""); }}
+              style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 12 }}
+            >
+              ✕ Exit impersonation
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
         <div className="count">Entries</div>
-        {!isStaff && (
-          <select value={viewingAs ?? ""} onChange={(e) => setViewingAs(e.target.value || null)} className="pick">
+        {!effectiveIsStaff && (
+          <select value={impersonatingAs ? impersonatingAs : (viewingAs ?? "")} onChange={(e) => setViewingAs(e.target.value || null)} className="pick">
             <option value="">All staff</option>
             {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
