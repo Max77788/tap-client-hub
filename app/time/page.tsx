@@ -72,6 +72,7 @@ export default function TimePage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [viewingAs, setViewingAs] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [currentUser, setCurrentUser] = useState<StaffMember | null>(null);
   const [loading, setLoading] = useState(true);
 
   const { clients, loading: clientsLoading } = useClients();
@@ -83,7 +84,7 @@ export default function TimePage() {
     return () => clearInterval(id);
   }, []);
 
-  // Staff
+  // Staff + current user detection
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -92,7 +93,18 @@ export default function TimePage() {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {
-          setStaff(data.filter((u: any) => u.status === "Active").map((u: any) => ({ id: u.id, name: u.name, role: u.role })));
+          const active = data.filter((u: any) => u.status === "Active").map((u: any) => ({ id: u.id, name: u.name, role: u.role }));
+          setStaff(active);
+          // Identify current user from cookie
+          const cookieMatch = document.cookie.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
+          const userName = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
+          if (userName) {
+            const match = active.find((u: any) => {
+              const dbName = (u.name || "").trim().toLowerCase();
+              return dbName === userName.toLowerCase() || dbName.startsWith(userName.split(" ").pop()?.toLowerCase() || "");
+            });
+            if (match) setCurrentUser(match);
+          }
         }
       } catch {}
       finally { if (!cancelled) setLoading(false); }
@@ -278,15 +290,26 @@ export default function TimePage() {
 
   // Derived
   const today = new Date().toISOString().slice(0, 10);
+  const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
+  const isStaff = currentUser && currentUser.role !== "owner" && currentUser.role !== "admin";
+
+  // Auto-select current user for staff
+  useEffect(() => {
+    if (isStaff && currentUser && !selectedPerson) {
+      setSelectedPerson(currentUser.id);
+    }
+  }, [isStaff, currentUser, selectedPerson]);
+
   const displayEntries = useMemo(() => {
     let list = entries.filter((e) => e.date.slice(0, 10) === today);
     if (viewingAs) list = list.filter((e) => e.personId === viewingAs);
+    if (isStaff && currentUser) list = list.filter((e) => e.personId === currentUser.id);
     return [...list].sort((a, b) => {
       if (a.isRunning && !b.isRunning) return -1;
       if (!a.isRunning && b.isRunning) return 1;
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  }, [entries, today, viewingAs]);
+  }, [entries, today, viewingAs, isStaff, currentUser]);
 
   const totalToday = displayEntries.reduce((s, e) =>
     s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
@@ -298,8 +321,6 @@ export default function TimePage() {
   });
   const whoCards = Object.keys(byWho).sort((a, b) => byWho[b] - byWho[a]);
   const [showStaffList, setShowStaffList] = useState(false);
-
-  const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
 
   if (loading || clientsLoading) return <PageSkeleton rows={6} />;
 
@@ -314,13 +335,13 @@ export default function TimePage() {
           color: entryTab === "timer" ? "var(--teal)" : "var(--muted)",
           transition: ".12s",
         }}>Timer</button>
-        <button onClick={() => setEntryTab("manual")} style={{
+        {!isStaff && <button onClick={() => setEntryTab("manual")} style={{
           all: "unset", cursor: "pointer",
           padding: "10px 20px", fontWeight: 700, fontSize: 13,
           borderBottom: entryTab === "manual" ? "2px solid var(--teal)" : "2px solid transparent",
           color: entryTab === "manual" ? "var(--teal)" : "var(--muted)",
           transition: ".12s",
-        }}>Manual Entry</button>
+        }}>Manual Entry</button>}
       </div>
 
       {/* ── Timer Form ── */}
@@ -328,7 +349,7 @@ export default function TimePage() {
         <div className="tw-timer">
           <div className="fld">
             <label>Who</label>
-            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)}>
+            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} disabled={isStaff}>
               <option value="">— choose —</option>
               {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
@@ -438,10 +459,12 @@ export default function TimePage() {
       {/* ── Table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
         <div className="count">Entries</div>
-        <select value={viewingAs ?? ""} onChange={(e) => setViewingAs(e.target.value || null)} className="pick">
-          <option value="">All staff</option>
-          {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        {!isStaff && (
+          <select value={viewingAs ?? ""} onChange={(e) => setViewingAs(e.target.value || null)} className="pick">
+            <option value="">All staff</option>
+            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="panel" style={{ overflowX: "auto" }}>
