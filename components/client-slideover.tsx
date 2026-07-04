@@ -1390,36 +1390,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </select>
             </div>
 
-            {/* Month tracker for this service */}
-            <div style={{ marginBottom: 12 }}>
-              <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
-                Month tracker
-              </div>
-              {targetSvc.enabled ? (
-                <>
-                  {monthCells(moduleKey)}
-                  {moduleKey === "1099s" ? (
-                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
-                      <span style={{ fontStyle: "italic" }}>Click to add, right-click to remove</span>
-                    </div>
-                  ) : (
-                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
-                      {UNIFIED_STAGES.map(s => (
-                        <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                          <i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
-                          {moduleKey === "tax_returns" && s.k === "dn" ? "Filed" : s.l}
-                        </span>
-                      ))}
-                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
-                      <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--blue)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)" }}></i>Has comments</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>This module is not enabled for this client.</div>
-              )}
-            </div>
-
             {/* Payroll: credentials section */}
             {moduleKey === "payroll" && targetSvc.enabled && (
               <>
@@ -1556,13 +1526,39 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             </div>
 
-            {/* Full client record link */}
+            {/* Full client record */}
             <div style={{ marginTop: 20 }}>
               <button className="reveal" onClick={() => {
-                setShowFullRecord(true);
+                setShowFullRecord((p) => !p);
               }} style={{ fontWeight: 600, fontSize: 13 }}>
-                Full client record →
+                {showFullRecord ? "▲ Hide" : "▶ Full client record"}
               </button>
+
+              {showFullRecord && (
+                <div style={{ marginTop: 12, padding: "12px 14px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--card)" }}>
+                  <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>Client Info</div>
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span style={{ color: "var(--muted)" }}>Email</span>
+                    <span style={{ fontWeight: 500 }}>{eEmail || "—"}</span>
+                  </div>
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span style={{ color: "var(--muted)" }}>Phone</span>
+                    <span style={{ fontWeight: 500 }}>{ePhone || "—"}</span>
+                  </div>
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span style={{ color: "var(--muted)" }}>Address</span>
+                    <span style={{ fontWeight: 500, textAlign: "right" }}>{[eAddress, eCity, eState, eZip].filter(Boolean).join(", ") || "—"}</span>
+                  </div>
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span style={{ color: "var(--muted)" }}>Assigned</span>
+                    <span style={{ fontWeight: 500 }}>{eAssigned || "—"}</span>
+                  </div>
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13px" }}>
+                    <span style={{ color: "var(--muted)" }}>EIN</span>
+                    <span style={{ fontWeight: 500, fontFamily: "var(--mono)" }}>{c.ein || "—"}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
