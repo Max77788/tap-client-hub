@@ -291,7 +291,7 @@ export default function TimePage() {
   // Derived
   const today = new Date().toISOString().slice(0, 10);
   const whoOpts = useMemo(() => staff.filter((s) => s.name !== "Unassigned"), [staff]);
-  const isStaff = currentUser && currentUser.role !== "owner" && currentUser.role !== "admin";
+  const isStaff = currentUser && currentUser.role && currentUser.role !== "owner" && currentUser.role !== "admin";
 
   // Auto-select current user for staff
   useEffect(() => {
