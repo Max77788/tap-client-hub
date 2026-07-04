@@ -951,7 +951,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ══════════════════════════════════════════════════════════════
   // MODULE-SPECIFIC VIEW (from worklist — shows detail for one module)
   // ══════════════════════════════════════════════════════════════
-  if (false) {
+  if (moduleKey) {
     const targetSvc = localSvcs.find((s: any) => s.key === moduleKey);
     if (!targetSvc) return null;
 
@@ -1509,7 +1509,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ══════════════════════════════════════════════════════════════
   // UNIVERSAL DETAIL VIEW (shows fields with edit toggle)
   // ══════════════════════════════════════════════════════════════
-  if (true) {
+  if (!moduleKey) {
     const prSvc = localSvcs.find((s: any) => s.key === "payroll");
 
     function handleSave() {
@@ -1556,9 +1556,44 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Body */}
           <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
+            {/* ── Services ── */}
+            <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
+              Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them</span>
+            </div>
+            {localSvcs.map((svc: any) => (
+              <div key={svc.key} className="svc" style={{
+                display: "flex", alignItems: "center", gap: 12, padding: "10px 13px",
+                background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12,
+                marginBottom: 8,
+              }}>
+                <div className="si" style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: svcBg(svc.key) }}>
+                  {svcIc(svc.key)}
+                </div>
+                <div className="st" style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
+                </div>
+                <div
+                  className={`sw ${svc.enabled ? "on" : ""}`}
+                  onClick={() => toggleSvc(svc.key)}
+                  style={{
+                    width: 46, height: 27, borderRadius: 20,
+                    background: svc.enabled ? "var(--teal)" : "#d8d2c4",
+                    position: "relative", cursor: "pointer", transition: ".16s", flex: "0 0 auto",
+                  }}
+                >
+                  <div style={{
+                    position: "absolute", top: 3, left: svc.enabled ? 22 : 3, width: 21, height: 21,
+                    borderRadius: "50%", background: "#fff", transition: ".16s",
+                    boxShadow: "0 1px 3px rgba(0,0,0,.25)",
+                  }} />
+                </div>
+              </div>
+            ))}
+            <div style={{ height: 20 }} />
+
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
-                Payroll Details
+                Details
               </div>
               {!editing ? (
                 <button className="reveal" onClick={() => setEditing(true)} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
