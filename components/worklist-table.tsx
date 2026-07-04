@@ -1245,25 +1245,48 @@ export default function WorklistTable({
                     const isCurrentMonth = i === currentMonth && !isHistorical;
                     const cellReadOnly = readOnly || isHistorical;
 
-                    // ── Payroll variant: count-based editable cells ──
+                    // ── Payroll variant: count-based editable cells (inline input) ──
                     if (variant === "payroll") {
                       const prKey = `${client.id}:payroll`;
                       const count = prCounts[prKey]?.[i] ?? 0;
                       const maxRuns = getMaxRunsPerMonth(prCadence);
                       const hasPRCmt = (svc.comments || []).some((c: any) => c.month === i);
+                      const cellEditKey = `${client.id}:${i}`;
+                      const isEditing = editingPr === cellEditKey;
                       return (
                         <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
-                          <div
-                            onClick={!isHistorical ? (e) => prBump(client.id, i, e) : undefined}
-                            className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums transition-colors cursor-pointer hover:scale-110 hover:shadow-sm active:scale-95"
-                            style={{
-                              backgroundColor: count > 0 ? "var(--green-soft)" : "transparent",
-                              color: count > 0 ? "var(--green)" : "var(--muted)",
-                            }}
-                            title={`${MONTHS_SHORT[i]}: ${count}/${maxRuns} runs — click to toggle`}
-                          >
-                            {count > 0 ? count : "·"}
-                          </div>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min="0"
+                              max={maxRuns}
+                              value={editPrValue}
+                              onChange={(e) => setEditPrValue(e.target.value)}
+                              onBlur={() => prCommitEdit(client.id, i)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") prCommitEdit(client.id, i);
+                                if (e.key === "Escape") setEditingPr(null);
+                              }}
+                              autoFocus
+                              className="inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums text-center"
+                              style={{
+                                backgroundColor: "#fff",
+                                border: "2px solid var(--teal)",
+                                color: "var(--ink)",
+                                outline: "none",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              onClick={!isHistorical ? () => prStartEdit(client.id, i, count) : undefined}
+                              className={`inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
+                              style={{
+                                backgroundColor: count > 0 ? "var(--green-soft)" : "transparent",
+                                color: count > 0 ? "var(--green)" : "var(--muted)",
+                              }}
+                              title={`${MONTHS_SHORT[i]}: ${count}/${maxRuns} runs — click to edit`}
+                            >{count > 0 ? count : "·"}</div>
+                          )}
                           {hasPRCmt && (
                             <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
                           )}
