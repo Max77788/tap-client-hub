@@ -834,7 +834,7 @@ export default function WorklistTable({
       </div>
 
       {/* ── Legend ── */}
-      {variant !== "payroll" && variant !== "tax_returns" && (
+      {variant !== "tax_returns" && (
       <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ margin: "14px 0 2px" }}>
         {STAGE_CYCLE.filter(s => s !== "").map(s => (
           <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
@@ -856,7 +856,7 @@ export default function WorklistTable({
         {serviceKey === "sales_tax"
           ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
           : variant === "payroll"
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
           : variant === "tax_returns"
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
           : !isHistorical
@@ -1241,31 +1241,6 @@ export default function WorklistTable({
                     const isActive = activeMonths.has(i);
                     const isCurrentMonth = i === currentMonth && !isHistorical;
                     const cellReadOnly = readOnly || isHistorical;
-
-                    // ── Payroll variant: show next processing date ──
-                    if (variant === "payroll" && isActive) {
-                      const nextDate = getNextProcessingDate(prCadence, svc.payStartDate);
-                      const hasPRCmt = (svc.comments || []).some((c: any) => c.month === i);
-
-                      return (
-                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
-                          <div
-                            className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums"
-                            style={{
-                              color: nextDate !== "·" ? "var(--ink)" : "var(--muted)",
-                              backgroundColor: nextDate !== "·" ? "var(--blue-soft)" : "transparent",
-                            }}
-                            title={`${MONTHS_SHORT[i]} — next processing: ${nextDate}`}
-                          >
-                            {nextDate}
-                          </div>
-                          {/* ── Comment marker blue dot ── */}
-                          {hasPRCmt && (
-                            <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
-                          )}
-                        </td>
-                      );
-                    }
 
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
