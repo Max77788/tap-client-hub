@@ -347,12 +347,6 @@ export default function TimePage() {
             </select>
           </div>
 
-          <div className={"tw-clock" + (timerRunning ? " run" : "")}>
-            {fmtClock(timerRunning
-              ? Math.floor((Date.now() - new Date(entries.find(e => e.isRunning)?.date || Date.now()).getTime()) / 1000)
-              : 0)}
-          </div>
-
           <button className={"tw-go" + (timerRunning ? " stop" : "")}
             onClick={timerRunning ? () => stopTimer() : startTimer}
             disabled={!selectedClient || !selectedPerson}>
