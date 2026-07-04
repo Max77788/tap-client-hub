@@ -68,6 +68,7 @@ interface ClientSlideoverProps {
 
 export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser }: ClientSlideoverProps) {
   const [editing, setEditing] = useState(false);
+  const [showFullRecord, setShowFullRecord] = useState(false);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
   // ── Comment state ──
@@ -140,6 +141,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   useEffect(() => {
     setLocalSvcs(client.services);
     setEditing(false);
+    setShowFullRecord(false);
     // Initialize per-service assignees for edit view
     const assigneeMap: Record<string, string> = {};
     client.services.forEach((s: any) => {
@@ -949,7 +951,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ══════════════════════════════════════════════════════════════
   // MODULE-SPECIFIC VIEW (from worklist — shows detail for one module)
   // ══════════════════════════════════════════════════════════════
-  if (moduleKey) {
+  if (moduleKey && !showFullRecord) {
     const targetSvc = localSvcs.find((s: any) => s.key === moduleKey);
     if (!targetSvc) return null;
 
@@ -1475,9 +1477,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Full client record link */}
             <div style={{ marginTop: 20 }}>
               <button className="reveal" onClick={() => {
-                // Navigate to full client view by re-rendering without moduleKey
-                // This would be handled by the parent page — for now, just close
-                onClose();
+                setShowFullRecord(true);
               }} style={{ fontWeight: 600, fontSize: 13 }}>
                 Full client record →
               </button>
