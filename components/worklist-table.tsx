@@ -856,7 +856,7 @@ export default function WorklistTable({
         {serviceKey === "sales_tax"
           ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
           : variant === "payroll"
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · read-only view`
+          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
           : variant === "tax_returns"
           ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
           : !isHistorical
@@ -899,7 +899,7 @@ export default function WorklistTable({
             {variant === "t9" && (
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
             )}
-            {variant !== "payroll" && MONTHS_SHORT.map((m, mi) => {
+            {MONTHS_SHORT.map((m, mi) => {
               // For tax_returns, check if any client has this month as filingMonth
               const isFileMonth = variant === "tax_returns" && serviceClients.some((c) => {
                 const s = c.services?.find((s: any) => s.key === serviceKey);
@@ -1237,10 +1237,35 @@ export default function WorklistTable({
                   )}
 
                   {/* Month cells — skip for payroll (read-only tab) */}
-                  {variant !== "payroll" && MONTHS_SHORT.map((_m, i) => {
+                  {MONTHS_SHORT.map((_m, i) => {
                     const isActive = activeMonths.has(i);
                     const isCurrentMonth = i === currentMonth && !isHistorical;
                     const cellReadOnly = readOnly || isHistorical;
+
+                    // ── Payroll variant: show next processing date ──
+                    if (variant === "payroll" && isActive) {
+                      const nextDate = getNextProcessingDate(prCadence, svc.payStartDate);
+                      const hasPRCmt = (svc.comments || []).some((c: any) => c.month === i);
+
+                      return (
+                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
+                          <div
+                            className="inline-flex items-center justify-center w-full h-6 rounded text-xs font-semibold tabular-nums"
+                            style={{
+                              color: nextDate !== "·" ? "var(--ink)" : "var(--muted)",
+                              backgroundColor: nextDate !== "·" ? "var(--blue-soft)" : "transparent",
+                            }}
+                            title={`${MONTHS_SHORT[i]} — next processing: ${nextDate}`}
+                          >
+                            {nextDate}
+                          </div>
+                          {/* ── Comment marker blue dot ── */}
+                          {hasPRCmt && (
+                            <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
+                          )}
+                        </td>
+                      );
+                    }
 
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
