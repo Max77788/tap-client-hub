@@ -253,7 +253,7 @@ tbody tr:hover { background: #fcfaf4; }
 /* ── Slideover ── */
 .scrim { position: fixed; inset: 0; background: rgba(33,31,26,.34); opacity: 0; pointer-events: none; transition: .2s; z-index: 40; }
 .scrim.show { opacity: 1; pointer-events: auto; }
-.over { position: fixed; top: 0; right: 0; height: 100vh; width: 460px; max-width: 92vw; transform: translateX(102%); transition: .24s cubic-bezier(.4,0,.2,1); z-index: 50; display: flex; flex-direction: column; }
+.over { position: fixed; top: 0; right: 0; height: 100vh; width: 600px; max-width: 95vw; transform: translateX(102%); transition: .24s cubic-bezier(.4,0,.2,1); z-index: 50; display: flex; flex-direction: column; }
 .over.show { transform: translateX(0); }
 
 /* ── Modal ── */
