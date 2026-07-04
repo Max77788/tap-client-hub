@@ -40,7 +40,6 @@ export async function GET() {
     date: e.started_at,
     note: e.note || "",
     edited: e.edited || false,
-    company: e.company || "Tap Associates",
   }));
 
   return NextResponse.json({ entries });
