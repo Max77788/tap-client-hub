@@ -1690,6 +1690,30 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} disabled={!editing} placeholder="—" />
             </div>
 
+            {/* ── Services tracking ── */}
+            {localSvcs.filter((s: any) => s.enabled).length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 10px" }}>
+                  Service Tracking
+                </div>
+                {localSvcs.filter((s: any) => s.enabled).map((svc: any) => (
+                  <div key={svc.key} style={{ marginBottom: 14, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{svcLabel(svc.key)}</div>
+                    {monthCells(svc.key)}
+                    <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 6, fontSize: 10.5, color: "var(--muted)" }}>
+                      {UNIFIED_STAGES.map(s => (
+                        <span key={s.k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <i style={{ width: 9, height: 9, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
+                          {svc.key === "tax_returns" && s.k === "dn" ? "Filed" : s.l}
+                        </span>
+                      ))}
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><i style={{ width: 9, height: 9, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
           </div>
 
           {/* Footer */}
