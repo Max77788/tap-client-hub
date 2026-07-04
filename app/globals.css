@@ -408,7 +408,9 @@ select.pick { padding: 10px 12px; border: 1px solid var(--line); border-radius: 
 .tw-clock { font-variant-numeric: tabular-nums; font-size: 40px; font-weight: 800; color: var(--muted); letter-spacing: 1px; min-width: 182px; line-height: 1; }
 .tw-clock.run { color: var(--green); }
 .tw-go { all: unset; cursor: pointer; background: var(--green); color: #fff; padding: 13px 24px; border-radius: 12px; font-weight: 700; font-size: 15px; }
+.tw-go:disabled { opacity: 0.35; cursor: not-allowed; }
 .tw-go.stop { background: var(--red); }
+.tw-go.stop:disabled { opacity: 0.35; cursor: not-allowed; }
 .tw-go:hover { opacity: .9; }
 .tw-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--green); }
 @keyframes twpulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
