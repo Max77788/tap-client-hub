@@ -24,14 +24,14 @@ const US_STATES = [
   "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
 ];
 
-// ── Stage display for month tracking in the slideover ──
+  // ── Stage display for month tracking in the slideover ──
 const UNIFIED_STAGES = [
-  { k: "ip", t: "•", cls: "prog", l: "In progress" },
-  { k: "wc", t: "⏳", cls: "wait", l: "Waiting on client" },
   { k: "pp", t: "✓", cls: "prep", l: "Prepared" },
   { k: "dn", t: "✓", cls: "done", l: "Done" },
 ];
 const NA_STAGE = { k: "na", t: "–", cls: "na", l: "N/A" };
+
+const NOTE_TYPES = ["Delayed", "Waiting on client", "Issues", "others"];
 
 const STAGE_STYLES: Record<string, { bg: string; fg: string; border: string; cls: string; label: string }> = {
   "":   { bg: "transparent", fg: "#c2c8d4", border: "transparent", cls: "lock", label: "Not due" },
@@ -78,6 +78,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ── Client-level notes state ──
   const [notesMonth, setNotesMonth] = useState(new Date().getMonth());
   const [notesText, setNotesText] = useState("");
+  const [noteType, setNoteType] = useState("others");
 
   // ── Sales tax line items state ──
   const [stxLineItems, setStxLineItems] = useState<any[]>([]);
@@ -271,10 +272,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (!notesText.trim()) return;
     const firstEnabledSvc = localSvcs.find((s: any) => s.enabled);
     if (!firstEnabledSvc) return;
+    const prefix = noteType !== "others" ? `[${noteType}] ` : "";
     const comment: CommentEntry = {
       id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       month: notesMonth,
-      text: notesText.trim(),
+      text: prefix + notesText.trim(),
       author: currentUser || "You",
       createdAt: new Date().toISOString(),
     };
@@ -287,6 +289,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     });
     setLocalSvcs(updated);
     setNotesText("");
+    setNoteType("others");
     onSave?.({ ...client, services: updated });
   }
 
@@ -951,10 +954,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
     function handleAddNoteForModule() {
       if (!notesText.trim()) return;
+      const prefix = noteType !== "others" ? `[${noteType}] ` : "";
       const comment: CommentEntry = {
         id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         month: notesMonth,
-        text: notesText.trim(),
+        text: prefix + notesText.trim(),
         author: currentUser || "You",
         createdAt: new Date().toISOString(),
       };
@@ -967,7 +971,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       });
       setLocalSvcs(updated);
       setNotesText("");
-      onSave?.({ ...client, services: updated });
+      setNoteType("others");
+      onSave?.({ ...client, services: updated } as Client);
     }
 
     // ── Sales tax line item section ──
@@ -1431,6 +1436,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
                   {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
                 </select>
+                <select value={noteType} onChange={e => setNoteType(e.target.value)}
+                  style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
+                  {NOTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
                 <input value={notesText} onChange={e => setNotesText(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNoteForModule(); } }}
                   placeholder="Add a note..." style={{ flex: 1, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }} />
@@ -1529,66 +1538,75 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
-                Everything about this client
+                Payroll Details
               </div>
               <button className="reveal" onClick={() => setEditing(true)} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
                 ✎ Edit details
               </button>
             </div>
 
-            {/* Info fields */}
-            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Client ID</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{c.cid || `CID-${c.id}`}</span></div>
-            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Group / Owner</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.group || "—"}</span></div>
-            {(c.emails || []).filter(Boolean).map((email, i) => (
-              <div key={`e${i}`} className="field" style={fieldStyle}>
-                <span className="k" style={{ color: "var(--muted)" }}>{i === 0 ? "Email" : "Additional email"}</span>
-                <span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{email}</span>
-              </div>
-            ))}
-            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Phone</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{(c.phones || []).filter(Boolean).join(", ") || "—"}</span></div>
-            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Address</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.address || "—"}</span></div>
-            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Location</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.city}, {c.state}</span></div>
-            <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Type</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{c.type}</span></div>
-            {c.ein && <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>EIN</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{c.ein}</span></div>}
+            {(() => {
+              const prSvc = localSvcs.find((s: any) => s.key === "payroll");
+              if (!prSvc?.enabled) return <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic" }}>Payroll is not enabled for this client.</div>;
+              return (
+                <>
+                  {/* Contact info */}
+                  {(c.emails || []).filter(Boolean).map((email, i) => (
+                    <div key={`e${i}`} className="field" style={fieldStyle}>
+                      <span className="k" style={{ color: "var(--muted)" }}>{i === 0 ? "Email" : "Additional email"}</span>
+                      <span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{email}</span>
+                    </div>
+                  ))}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Phone</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{(c.phones || []).filter(Boolean).join(", ") || "—"}</span></div>
 
-            {/* Client notes */}
-            {c.notes && (
-              <div style={{ marginTop: 16, padding: "10px 12px", background: "var(--amber-soft)", borderRadius: 10, fontSize: 12, lineHeight: 1.5, color: "var(--ink)" }}>
-                <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 4 }}>Notes</div>
-                {c.notes}
-              </div>
-            )}
+                  {/* Assigned */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Assigned</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.processor || prSvc.assignedTo || "—"}</span></div>
 
-            {/* Who's assigned per service */}
-            <div className="sect" style={sectStyle}>Who&apos;s assigned — per service</div>
-            {localSvcs.filter((s: any) => s.enabled).map((svc: any) => (
-              <div key={svc.key} className="field" style={fieldStyle}>
-                <span className="k" style={{ color: "var(--muted)" }}>{svcLabel(svc.key)}</span>
-                <span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{svc.processor || svc.assignedTo || "—"}</span>
-              </div>
-            ))}
+                  {/* Cadence */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Cadence</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.payPeriodFrequency || prSvc.frequency || "—"}</span></div>
 
-            {/* Services */}
-            <div className="sect" style={sectStyle}>Services — flip on/off, no formulas</div>
-            {localSvcs.map((svc: any) => <SingleServiceCard key={svc.key} svc={svc} />)}
+                  {/* Pay Day */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Pay Day</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.paydate || "—"}</span></div>
 
-          {/* ── Notes for this client ── */}
+                  {/* QBO (Bi-Weekly Code) */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.biweeklyCode || "—"}</span></div>
+
+                  {/* Processor */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Processor</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.processor || "—"}</span></div>
+
+                  {/* EIN */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>EIN</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{c.ein || "—"}</span></div>
+
+                  {/* EFTPS Password */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.eftps ? maskNum(prSvc.eftps) : "—"}</span></div>
+
+                  {/* PIN */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>PIN</span><span className="v mono" style={{ textAlign: "right", fontWeight: 500 }}>{prSvc.payrollPassword ? maskNum(prSvc.payrollPassword) : "—"}</span></div>
+
+                  {/* Payroll emails */}
+                  <div className="field" style={fieldStyle}><span className="k" style={{ color: "var(--muted)" }}>Payroll email</span><span className="v" style={{ textAlign: "right", fontWeight: 500 }}>{(prSvc.payEmails || []).filter(Boolean).join(", ") || "—"}</span></div>
+                </>
+              );
+            })()}
+
+          {/* ── Notes for payroll ── */}
           <div style={{ marginTop: 28, borderTop: "1px solid var(--line)", padding: "14px 0 4px" }}>
-            <div className="sect" style={sectStyle}>Notes for this client</div>
-            <div style={{ fontSize: 11.5, color: "var(--muted)", marginBottom: 12, fontStyle: "italic" }}>
-              Anyone on this account can leave a month note; a blue dot then shows on the worklist.
-            </div>
+            <div className="sect" style={sectStyle}>Notes for payroll</div>
 
-            {/* Month selector + add note — noteadd style */}
-            <div className="noteadd" style={{ marginTop: 0 }}>
+            {/* Month selector + Note Type + text */}
+            <div className="noteadd" style={{ marginTop: 0, flexWrap: "wrap", gap: 8 }}>
               <select value={notesMonth} onChange={e => setNotesMonth(Number(e.target.value))}
                 style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
+              <select value={noteType} onChange={e => setNoteType(e.target.value)}
+                style={{ padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)" }}>
+                {NOTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
               <input value={notesText} onChange={e => setNotesText(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddNote(); } }}
                 placeholder="Add a note for the selected month"
-                style={{ flex: 1, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }}
+                style={{ flex: 1, minWidth: 180, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, background: "var(--paper)", color: "var(--ink)", outline: "none" }}
               />
               <button onClick={handleAddNote}
                 style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, whiteSpace: "nowrap" }}>
@@ -1596,7 +1614,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </button>
             </div>
 
-            {/* Existing notes for this month — note style */}
+            {/* Existing notes */}
             <div style={{ marginTop: 10 }}>
               {(() => {
                 const filtered = getAllServiceComments().filter((cm: CommentEntry) => cm.month === notesMonth);
