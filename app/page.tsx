@@ -436,19 +436,33 @@ function GroupCard({
               </button>
             </div>
             <div className="overflow-y-auto p-3 space-y-2 flex-1">
-              {clients.map((c) => (
+              {clients.map((c) => {
+                const enabledSvcs = c.services.filter((s) => s.enabled && s.key).map((s) => SERVICE_META[s.key as ServiceKey]).filter(Boolean);
+                return (
                 <div key={c.id}
                   onClick={() => { setPopupOpen(false); onClientClick(c.id); }}
                   className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]">
                   <div className="min-w-0 flex-1 pr-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
                     <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
+                    {enabledSvcs.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {enabledSvcs.map((m) => (
+                          <span key={m.label}
+                            className="inline-flex text-[9.5px] font-bold px-[6px] py-[2px] rounded-[20px]"
+                            style={{ backgroundColor: m.pillBg, color: m.pillColor, letterSpacing: "0.02em" }}>
+                            {m.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <span className={`badge ${c.type === "Business" ? "b-biz" : "b-per"}`}>
                     {c.type === "Business" ? "BIZ" : "PERS"}
                   </span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
