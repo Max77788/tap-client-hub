@@ -962,10 +962,10 @@ export default function WorklistTable({
                       expanded.push({ ...client, _stxItem: null, _stxIdx: -1, _stxName: client.name });
                     }
                   }
-                  // Count registrations per original client
+                  // Count registrations per original client (based on expanded rows)
                   const regCounts = new Map<string, number>();
-                  for (const client of filteredClients) {
-                    const origId = client._originalClientId || client.id;
+                  for (const row of expanded) {
+                    const origId = row._originalClientId || row.id;
                     regCounts.set(origId, (regCounts.get(origId) || 0) + 1);
                   }
                   // Build final array with group headers inserted
