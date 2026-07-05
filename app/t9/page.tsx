@@ -54,6 +54,7 @@ export default function T9Page() {
           open={slideoverOpen}
           onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
           onSave={handleSlideoverSave}
+          moduleKey="1099s"
         />
       )}
     </div>
