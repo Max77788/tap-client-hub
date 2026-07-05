@@ -1358,12 +1358,27 @@ export function getStats(clients: Client[]): ClientStats {
 
   let monthlyFinancials = 0;
   let behindThisMonth = 0;
+  let financialsCount = 0;
+  let payrollCount = 0;
+  let salesTaxCount = 0;
+  let t9Count = 0;
+  let renditionsCount = 0;
+  let taxReturnsCount = 0;
 
   for (const client of clients) {
+    for (const svc of client.services) {
+      if (!svc.enabled) continue;
+      if (svc.key === "financials") financialsCount++;
+      if (svc.key === "payroll") payrollCount++;
+      if (svc.key === "sales_tax") salesTaxCount++;
+      if (svc.key === "1099s") t9Count++;
+      if (svc.key === "renditions") renditionsCount++;
+      if (svc.key === "tax_returns") taxReturnsCount++;
+    }
+
     // Financials: check if financials service exists and is active
     const fin = client.services.find((s) => s.key === "financials");
     if (fin?.enabled) {
-      // Count clients that have financials processing in the current month
       const status = fin.months[currentMonth];
       if (status && status !== "na" && status !== "lock") {
         monthlyFinancials++;
@@ -1389,6 +1404,12 @@ export function getStats(clients: Client[]): ClientStats {
     personal: clients.filter((c) => c.type === "Personal").length,
     monthlyFinancials,
     behindThisMonth,
+    financialsCount,
+    payrollCount,
+    salesTaxCount,
+    t9Count,
+    renditionsCount,
+    taxReturnsCount,
   };
 }
 

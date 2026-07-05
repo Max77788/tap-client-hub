@@ -24,7 +24,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
-  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
+  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats, refresh } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -121,11 +121,14 @@ export default function ClientsPage() {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         console.error("PUT /api/clients failed:", res.status, errData);
+      } else {
+        // Re-fetch from DB so context has persisted data (comments, notes, etc.)
+        refresh();
       }
     } catch (e) {
       console.error("Failed to save client:", e);
     }
-  }, [updateClient]);
+  }, [updateClient, refresh]);
 
   const handleSlideoverDelete = useCallback((clientId: string) => {
     deleteFromState(clientId);
@@ -158,6 +161,11 @@ export default function ClientsPage() {
             <StatCard label="Personal" value={computedStats.personal} color="var(--blue)" />
             <StatCard label="Monthly Financials" value={computedStats.monthlyFinancials} color="var(--green)" />
             <StatCard label="Behind this month" value={computedStats.behindThisMonth} color="var(--amber)" />
+            <StatCard label="Financials" value={computedStats.financialsCount} color="var(--teal)" />
+            <StatCard label="Payroll" value={computedStats.payrollCount} color="var(--blue)" />
+            <StatCard label="Sales Tax" value={computedStats.salesTaxCount} color="var(--amber)" />
+            <StatCard label="1099s" value={computedStats.t9Count} color="var(--ink)" />
+            <StatCard label="Renditions" value={computedStats.renditionsCount} color="var(--green)" />
           </div>
 
           {/* ── Controls: Search + Filters + Actions ── */}

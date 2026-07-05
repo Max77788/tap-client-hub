@@ -115,6 +115,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // ── 1099s count state ──
   const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
+
+  // ── Profiles for assignee dropdown ──
+  const [profiles, setProfiles] = useState<{id: string; name: string}[]>([]);
+  useEffect(() => {
+    fetch("/api/profiles").then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setProfiles(data.filter((u: any) => u.status === "Active").map((u: any) => ({ id: u.id, name: u.name })));
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const svc = client.services.find((s: any) => s.key === "1099s");
     if (svc?.csId) {
@@ -1399,10 +1408,52 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   ));
                 }}
               >
-                {STAFF.map((m: any) => <option key={m.name}>{m.name}</option>)}
+                {profiles.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
                 <option>Unassigned</option>
               </select>
             </div>
+
+            {/* Frequency/Cadence for non-payroll services */}
+            {moduleKey !== "payroll" && targetSvc.enabled && (
+              <div style={{ marginBottom: 12 }}>
+                <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
+                  Details
+                </div>
+                {/* Cadence for Financials, Sales Tax, 1099s */}
+                {(moduleKey === "financials" || moduleKey === "sales_tax" || moduleKey === "1099s") && (
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
+                    <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                      value={targetSvc.frequency || "Monthly"} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === moduleKey ? { ...s, frequency: e.target.value } : s))}>
+                      <option value="Monthly">Monthly</option>
+                      <option value="Quarterly">Quarterly</option>
+                      <option value="Annual">Annual</option>
+                      <option value="Semi-Monthly">Semi-Monthly</option>
+                      <option value="Bi-Weekly">Bi-Weekly</option>
+                    </select>
+                  </div>
+                )}
+                {/* Expected Annual for 1099s */}
+                {moduleKey === "1099s" && (
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span className="k" style={{ color: "var(--muted)" }}>Expected Annual</span>
+                    <input style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                      type="number" value={targetSvc.expectedAnnual || 0} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))} placeholder="0" />
+                  </div>
+                )}
+                {/* Filing Month for Renditions */}
+                {moduleKey === "renditions" && (
+                  <div className="field" style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
+                    <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                      value={targetSvc.filingMonth || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingMonth: e.target.value } : s))}>
+                      <option value="">—</option>
+                      {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Payroll: credentials section */}
             {moduleKey === "payroll" && targetSvc.enabled && (
@@ -1609,7 +1660,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {showEditClient ? (
                       <select style={{ flex: 1, textAlign: "right", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                         value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s)); }}>
-                        {STAFF.map((m: any) => <option key={m.name}>{m.name}</option>)}
+                        {profiles.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
                         <option>Unassigned</option>
                       </select>
                     ) : (
@@ -1741,7 +1792,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <span className="k" style={{ color: "var(--muted)" }}>Assigned</span>
               <select style={{ flex: 1, textAlign: "right", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
                 value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s)); }} disabled={!editing}>
-                {STAFF.map((m: any) => <option key={m.name}>{m.name}</option>)}
+                {profiles.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
                 <option>Unassigned</option>
               </select>
             </div>

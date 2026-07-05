@@ -166,6 +166,12 @@ export interface ClientStats {
   personal: number;
   monthlyFinancials: number;
   behindThisMonth: number;
+  financialsCount: number;
+  payrollCount: number;
+  salesTaxCount: number;
+  t9Count: number;
+  renditionsCount: number;
+  taxReturnsCount: number;
 }
 
 export interface StaffMember {

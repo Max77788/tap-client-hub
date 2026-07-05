@@ -172,10 +172,39 @@ export async function PUT(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { id: clientId, services } = body;
+    const { id: clientId, services, name, type, group, emails, phones, address, city, state, zip, assignedStaff, ein, notes } = body;
 
     if (!clientId) {
       return NextResponse.json({ error: "client id is required" }, { status: 400 });
+    }
+
+    // Update client-level fields if provided
+    const clientUpdates: Record<string, any> = {};
+    if (name !== undefined) clientUpdates.name = name;
+    if (type !== undefined) clientUpdates.type = type;
+    if (group !== undefined) clientUpdates.group_owner = group;
+    if (address !== undefined) clientUpdates.address = address;
+    if (city !== undefined) clientUpdates.city = city;
+    if (state !== undefined) clientUpdates.state = state;
+    if (zip !== undefined) clientUpdates.zip = zip;
+    if (notes !== undefined) clientUpdates.notes = notes;
+
+    if (Object.keys(clientUpdates).length > 0) {
+      await supabase.from("clients").update(clientUpdates).eq("id", clientId);
+    }
+
+    // Update contact info if provided
+    if (emails || phones) {
+      const { data: existingContact } = await supabase
+        .from("contacts").select("id").eq("client_id", clientId).maybeSingle();
+      if (existingContact) {
+        const contactUpdates: Record<string, any> = {};
+        if (emails && emails.length > 0) contactUpdates.email = emails[0];
+        if (phones && phones.length > 0) contactUpdates.phone = phones[0];
+        if (Object.keys(contactUpdates).length > 0) {
+          await supabase.from("contacts").update(contactUpdates).eq("id", existingContact.id);
+        }
+      }
     }
 
     // Reverse map: frontend key -> service code
