@@ -90,13 +90,14 @@ function getActiveMonths(
   frequency: ServiceConfig["frequency"],
   startMonth?: number,
 ): Set<number> {
-  switch (frequency) {
-    case "Monthly":
-    case "Weekly":
-    case "Bi-Weekly":
-    case "Bi-Weekly A":
-    case "Bi-Weekly B":
-    case "Semi-Monthly": {
+  const f = (frequency || "").toLowerCase();
+  switch (f) {
+    case "monthly":
+    case "weekly":
+    case "bi-weekly":
+    case "bi-weekly a":
+    case "bi-weekly b":
+    case "semi-monthly": {
       // If a start month is set, only mark months from start onwards as active
       if (startMonth !== undefined && startMonth >= 0) {
         const s = new Set<number>();
@@ -105,15 +106,15 @@ function getActiveMonths(
       }
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     }
-    case "Quarterly": {
+    case "quarterly": {
       const s = startMonth ?? 0; // default Jan
       return new Set([s % 12, (s + 3) % 12, (s + 6) % 12, (s + 9) % 12]);
     }
-    case "Annually":
-    case "Yearly":
+    case "annually":
+    case "yearly":
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); // All months — yearly services can have work done in any month
     default:
-      return new Set();
+      return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); // Default to all months active
   }
 }
 
