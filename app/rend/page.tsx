@@ -52,6 +52,7 @@ export default function RendPage() {
         <ClientSlideover
           client={selectedClient}
           open={slideoverOpen}
+          moduleKey="renditions"
           onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
           onSave={handleSlideoverSave}
         />
