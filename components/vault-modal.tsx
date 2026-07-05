@@ -30,6 +30,7 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
   const isEdit = !!vaultEntry;
   const [form, setForm] = useState<Omit<VaultEntry, "id">>(makeEmptyEntry());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (vaultEntry) {
@@ -177,13 +178,36 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
                 />
               </Field>
               <Field label="Password" error={errors.password} required>
-                <input
-                  type="text"
-                  value={form.password}
-                  onChange={(e) => update("password", e.target.value)}
-                  placeholder="••••••••"
-                  className="field-input"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => update("password", e.target.value)}
+                    placeholder="••••••••"
+                    className="field-input pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      /* eye-off icon */
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      /* eye icon */
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </Field>
             </div>
 
