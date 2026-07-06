@@ -98,6 +98,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // ── Payroll details state ──
   const [prPaydate, setPrPaydate] = useState("");
+  const [prStartDate, setPrStartDate] = useState("");
   const [prPin, setPrPin] = useState("");
   const [prEftps, setPrEftps] = useState("");
   const [showPrPin, setShowPrPin] = useState(false);
@@ -180,6 +181,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     // Initialize payroll fields
     const prSvc = client.services.find((s: any) => s.key === "payroll");
     setPrPaydate(prSvc?.paydate || "");
+    setPrStartDate(prSvc?.pay_start_date || "");
     setPrPin(prSvc?.payrollPassword || "");
     setPrEftps(prSvc?.eftps || "");
     setPrEmails(prSvc?.payEmails || []);
@@ -1042,6 +1044,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           return {
             ...s,
             paydate: prPaydate,
+            pay_start_date: prStartDate,
             payrollPassword: prPin,
             eftps: prEftps,
             payEmails: prEmails,
@@ -1534,6 +1537,24 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }} placeholder="—" />
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Start Date</span>
+                  <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                    value={prStartDate} onChange={e => {
+                      const val = e.target.value;
+                      setPrStartDate(val);
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: val } : s));
+                      // Auto-detect Bi-Weekly A vs B from start date day
+                      const dayMatch = val.match(/(\d{1,2})\/\d{1,2}/);
+                      if (dayMatch) {
+                        const day = parseInt(dayMatch[1], 10);
+                        const isA = (day >= 1 && day <= 7) || (day >= 15 && day <= 22) || (day >= 29 && day <= 31);
+                        const autoCadence = isA ? "Bi-Weekly A" : "Bi-Weekly B";
+                        setPrPeriodFreq(autoCadence);
+                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: autoCadence } : s));
+                      }
+                    }} placeholder="e.g. 3/15" />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span>
                   <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                     value={targetSvc?.biweeklyCode || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, biweeklyCode: e.target.value } : s))} placeholder="—" />
@@ -1807,7 +1828,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
-          updated = { ...updated, paydate: prPaydate, payrollPassword: prPin, eftps: prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq };
+          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPin, eftps: prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq };
         }
         if (s.key === "tax_returns") {
           updated = { ...updated, filingState, filingMonth, filingType };
