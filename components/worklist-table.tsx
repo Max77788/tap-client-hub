@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 
-const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 // ── Worklist stage types ──
 export type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
@@ -896,8 +895,8 @@ export default function WorklistTable({
             {MONTHS_SHORT.map((m, mi) => {
               const isFileMonth = variant === "tax_returns" && serviceClients.some((c) => {
                 const s = c.services?.find((s: any) => s.key === serviceKey);
-                const fm = s?.filingMonth || "";
-                return MONTH_NAMES.indexOf(fm) === mi;
+                const fm = parseInt(s?.filingMonth, 10);
+                return fm - 1 === mi;
               });
               return (
                 <th key={m}
@@ -1191,8 +1190,8 @@ export default function WorklistTable({
 
                     // ── Tax returns: filingMonth highlight ──
                     const clientFilingMonth = variant === "tax_returns" ? (svc.filingMonth || "") : "";
-                    const filingMonthIdx = clientFilingMonth ? MONTH_NAMES.indexOf(clientFilingMonth) : -1;
-                    const isFilingMonth = filingMonthIdx === i;
+                    const filingMonthNum = clientFilingMonth ? parseInt(clientFilingMonth, 10) - 1 : -1;
+                    const isFilingMonth = filingMonthNum === i;
                     const isPastDue =
                       isActive &&
                       i < currentMonth &&
