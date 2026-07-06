@@ -788,8 +788,6 @@ export default function WorklistTable({
             <StatCard label="Not completed" value={Math.max(0, stats.yDue - stats.yDone)} color="var(--amber)" />
           </>
         )}
-        {/* ── Comment month markers ── */}
-        <CommentMarkers clients={serviceClients} serviceKey={serviceKey} currentMonth={currentMonth} />
       </div>
       )}
 
@@ -1198,7 +1196,7 @@ export default function WorklistTable({
                         {/* ── Filing month corner indicator ── */}
                         {isFilingMonth && (
                           <div style={{
-                            position: "absolute", top: 0, left: 0,
+                            position: "absolute", top: 0, right: 0,
                             width: 7, height: 7,
                             background: "var(--teal)",
                             borderRadius: 1,
@@ -1370,62 +1368,6 @@ function CellWrapper({
 // ══════════════════════════════════════════════
 // ── Comment Month Markers ──
 // ══════════════════════════════════════════════
-function CommentMarkers({
-  clients,
-  serviceKey,
-  currentMonth,
-}: {
-  clients: any[];
-  serviceKey: string;
-  currentMonth: number;
-}) {
-  // Collect all months that have at least one comment in the current year
-  const monthsWithComments = useMemo(() => {
-    const set = new Set<number>();
-    for (const client of clients) {
-      const svc = client.services?.find((s: any) => s.key === serviceKey);
-      if (svc?.comments && Array.isArray(svc.comments)) {
-        for (const c of svc.comments) {
-          if (c.month !== undefined && c.month >= 0 && c.month < 12) {
-            set.add(c.month);
-          }
-        }
-      }
-    }
-    return set;
-  }, [clients, serviceKey]);
-
-  if (monthsWithComments.size === 0) return null;
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-end",
-        gap: 2,
-        padding: "0 0 2px 0",
-        minWidth: 180,
-      }}
-      title="Months with comments"
-    >
-      {Array.from({ length: 12 }, (_, i) => (
-        <span
-          key={i}
-          style={{
-            fontSize: 13,
-            lineHeight: 1,
-            opacity: monthsWithComments.has(i) ? 1 : 0.12,
-            filter: monthsWithComments.has(i) ? "none" : "grayscale(1)",
-            transition: "opacity 0.15s",
-          }}
-        >
-          <span className="cdot" style={{ position: "relative", display: "inline-block", width: 7, height: 7, top: 0, right: 0 }} />
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ══════════════════════════════════════════════
 // ── Stat Card (demo v7 exact, shared) ──
 // ══════════════════════════════════════════════
