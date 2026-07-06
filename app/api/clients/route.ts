@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
+import { randomUUID } from "crypto";
 
 // ── Helper: create a Supabase client ──
 async function getSupabase() {
@@ -324,7 +325,7 @@ export async function PUT(request: Request) {
           const { error: insErr } = await supabase
             .from("client_services")
             .insert({
-              id: crypto.randomUUID(),
+              id: randomUUID(),
               client_id: clientId,
               service_id: serviceId,
               active: true,
