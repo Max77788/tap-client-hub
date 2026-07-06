@@ -936,7 +936,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{item.serviceName}</div>
                             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
-                              <span>{item.frequency || "Monthly"}</span>
                               {item.rt && <span>RT: {item.rt}</span>}
                               {item.taxId && <span>Tax ID: {item.taxId}</span>}
                               {item.bankName && <span>{item.bankName} {item.bankRouting && `· ${item.bankRouting}`} {item.bankAccount && `· ${item.bankAccount}`}</span>}
@@ -957,24 +956,28 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
-            {/* Legend */}
-            {svc.key === "1099s" ? (
-              <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
-                <span style={{ fontStyle: "italic" }}>Click to add, right-click to remove — count of 1099s filed per month</span>
-              </div>
-            ) : (
-              <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
-                {UNIFIED_STAGES.map(s => (
-                  <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
-                    {isTaxReturns && s.k === "dn" ? "Filed" : s.l}
-                  </span>
-                ))}
-                <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
-                <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--blue)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)" }}></i>Has comments</span>
-              </div>
+            {/* Legend + Month cells — skip for sales tax (handled by line items) */}
+            {!isSalesTax && (
+              <>
+                {svc.key === "1099s" ? (
+                  <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
+                    <span style={{ fontStyle: "italic" }}>Click to add, right-click to remove — count of 1099s filed per month</span>
+                  </div>
+                ) : (
+                  <div className="legend" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 8, fontSize: 11, color: "var(--muted)" }}>
+                    {UNIFIED_STAGES.map(s => (
+                      <span key={s.k} className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s.k]?.fg }}></i>
+                        {isTaxReturns && s.k === "dn" ? "Filed" : s.l}
+                      </span>
+                    ))}
+                    <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
+                    <span className="lgd" style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--blue)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)" }}></i>Has comments</span>
+                  </div>
+                )}
+                {monthCells(svc.key)}
+              </>
             )}
-            {monthCells(svc.key)}
           </div>
         )}
       </div>
@@ -1496,8 +1499,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                   Details
                 </div>
-                {/* Cadence for Financials, Sales Tax, 1099s */}
-                {(moduleKey === "financials" || moduleKey === "sales_tax" || moduleKey === "1099s") && (
+                {/* Cadence for Financials, 1099s (NOT sales tax) */}
+                {(moduleKey === "financials" || moduleKey === "1099s") && (
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
@@ -1626,7 +1629,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
-            {/* Notes section for this service */}
+            {/* Notes section — skip for sales tax (notes go on line items) */}
+            {moduleKey !== "sales_tax" && (
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
               <div className="notemo">Notes for {svcLabel(moduleKey)}</div>
               <div className="noteadd">
@@ -1669,6 +1673,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 })()}
               </div>
             </div>
+            )}
 
             {/* Full client record */}
             <div style={{ marginTop: 20 }}>
