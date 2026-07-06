@@ -1645,15 +1645,30 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Payroll email</span>
-                  <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={(prEmails || []).filter(Boolean).join(", ")}
-                    onChange={e => {
-                      const val = e.target.value;
-                      const emails = val.split(",").map(s => s.trim()).filter(Boolean);
-                      setPrEmails(emails);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: emails } : s));
-                    }}
-                    placeholder="—" />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+                      {prEmails.filter(Boolean).map((em, i) => (
+                        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--blue-soft)", borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 500 }}>
+                          {em}
+                          <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); }}
+                            style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 12, lineHeight: 1 }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)", outline: "none", boxSizing: "border-box" }}
+                      value={newPrEmail}
+                      onChange={e => setNewPrEmail(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && newPrEmail.trim()) {
+                          e.preventDefault();
+                          const upd = [...prEmails, newPrEmail.trim()];
+                          setPrEmails(upd);
+                          setNewPrEmail("");
+                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
+                        }
+                      }}
+                      placeholder="Type email + Enter to add" />
+                  </div>
                 </div>
               </>
             )}
