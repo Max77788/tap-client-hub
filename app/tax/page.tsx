@@ -45,7 +45,7 @@ export default function TaxPage() {
 
   return (
     <div className="space-y-4">
-      <WorklistTable serviceKey="tax_returns" clients={clients} year={year} loading={loading}
+      <WorklistTable serviceKey="tax_returns" variant="tax_returns" clients={clients} year={year} loading={loading}
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "tax_returns", monthIdx, stage)}
         onClientClick={handleClientClick} />
       {selectedClient && (
