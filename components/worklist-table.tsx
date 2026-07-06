@@ -1171,6 +1171,7 @@ export default function WorklistTable({
                           <div style={{ fontSize: 8, textAlign: "center", marginTop: 1, lineHeight: 1, whiteSpace: "nowrap" }}>
                             {(() => {
                               const freq = svc?.frequency || "";
+                              const pd = svc?.paydate || "";
                               const colorMap: Record<string, string> = {
                                 "Weekly": "#22c55e",
                                 "Bi-Weekly": "#3b82f6",
@@ -1180,24 +1181,106 @@ export default function WorklistTable({
                                 "Monthly": "#14b8a6",
                               };
                               const dateColor = colorMap[freq] || "var(--muted)";
+
+                              // Smart paydate parsing
                               const today = new Date();
-                              let d = new Date(today);
-                              d.setDate(d.getDate() + 1);
-                              if (freq === "Weekly") {
-                                while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
-                              } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
-                                while (!(d.getDay() === 5 && ((d.getDate() >= 1 && d.getDate() <= 7) || (d.getDate() >= 15 && d.getDate() <= 22) || (d.getDate() >= 29 && d.getDate() <= 31)))) d.setDate(d.getDate() + 1);
-                              } else if (freq === "Bi-Weekly B") {
-                                while (!(d.getDay() === 5 && ((d.getDate() >= 8 && d.getDate() <= 14) || (d.getDate() >= 23 && d.getDate() <= 28)))) d.setDate(d.getDate() + 1);
-                              } else if (freq === "Semi-Monthly") {
-                                while (d.getDate() !== 1 && d.getDate() !== 15) d.setDate(d.getDate() + 1);
-                              } else if (freq === "Monthly") {
-                                // Last business day of current month
-                                d = new Date();
-                                d.setMonth(d.getMonth() + 1);
-                                d.setDate(0);
-                                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-                              } else { return null; }
+                              const findNext = (d: Date, pred: (d: Date) => boolean): Date => {
+                                const cur = new Date(d);
+                                for (let i = 0; i < 60; i++) {
+                                  if (pred(cur)) return cur;
+                                  cur.setDate(cur.getDate() + 1);
+                                }
+                                return d;
+                              };
+                              const lastBizOfMonth = (d: Date) => {
+                                const e = new Date(d);
+                                e.setMonth(e.getMonth() + 1);
+                                e.setDate(0);
+                                while (e.getDay() === 0 || e.getDay() === 6) e.setDate(e.getDate() - 1);
+                                return e;
+                              };
+                              const nthDayOfMonth = (d: Date, dayNum: number) => {
+                                const e = new Date(d.getFullYear(), d.getMonth(), dayNum);
+                                if (e.getMonth() !== d.getMonth()) return null;
+                                return e;
+                              };
+                              const nextDow = (d: Date, dayName: string) => {
+                                const target = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"].indexOf(dayName.toLowerCase().replace(/s$/,""));
+                                if (target === -1) return null;
+                                return findNext(d, x => x.getDay() === target);
+                              };
+                              const parseOrdinal = (s: string): number | null => {
+                                const m = s.match(/^(\d{1,2})(st|nd|rd|th)/i);
+                                return m ? parseInt(m[1], 10) : null;
+                              };
+
+                              let d: Date | null = null;
+                              const startFrom = new Date(today);
+                              startFrom.setDate(startFrom.getDate() + 1); // tomorrow
+
+                              if (pd) {
+                                // Parse the paydate string
+                                const pdLower = pd.toLowerCase().trim();
+
+                                if (pdLower === "eom") {
+                                  d = lastBizOfMonth(today);
+                                } else if (/^fridays?$/i.test(pd)) {
+                                  d = nextDow(startFrom, "Friday");
+                                } else if (/^saturdays?$/i.test(pd)) {
+                                  d = nextDow(startFrom, "Saturday");
+                                } else if (/^thursdays?$/i.test(pd)) {
+                                  d = nextDow(startFrom, "Thursday");
+                                } else if (/\//.test(pd)) {
+                                  // e.g. "15th & EOM", "15th/EOM", "16th/EOM", "5th/20th"
+                                  const parts = pd.split(/[\/&]+/).map(s => s.trim()).filter(Boolean);
+                                  const candidates: Date[] = [];
+                                  for (const p of parts) {
+                                    if (/^eom$/i.test(p)) {
+                                      candidates.push(lastBizOfMonth(today));
+                                    } else {
+                                      const ord = parseOrdinal(p);
+                                      if (ord) {
+                                        const dt = nthDayOfMonth(today, ord);
+                                        if (dt) {
+                                          if (dt < startFrom) {
+                                            dt.setMonth(dt.getMonth() + 1);
+                                          }
+                                          candidates.push(dt);
+                                        }
+                                      }
+                                    }
+                                  }
+                                  // Pick nearest on or after tomorrow
+                                  const valid = candidates.filter(c => c >= startFrom);
+                                  d = valid.length ? valid.sort((a, b) => a.getTime() - b.getTime())[0] : null;
+                                } else {
+                                  // Single ordinal like "25th"
+                                  const ord = parseOrdinal(pd);
+                                  if (ord) {
+                                    d = nthDayOfMonth(today, ord);
+                                    if (d && d < startFrom) {
+                                      d.setMonth(d.getMonth() + 1);
+                                    }
+                                  }
+                                }
+                              }
+
+                              // Fallback to cadence-based logic if no paydate or parse failed
+                              if (!d) {
+                                d = new Date(startFrom);
+                                if (freq === "Weekly") {
+                                  d = findNext(startFrom, x => x.getDay() === 5);
+                                } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
+                                  d = findNext(startFrom, x => x.getDay() === 5 && ((x.getDate() >= 1 && x.getDate() <= 7) || (x.getDate() >= 15 && x.getDate() <= 22) || (x.getDate() >= 29 && x.getDate() <= 31)));
+                                } else if (freq === "Bi-Weekly B") {
+                                  d = findNext(startFrom, x => x.getDay() === 5 && ((x.getDate() >= 8 && x.getDate() <= 14) || (x.getDate() >= 23 && x.getDate() <= 28)));
+                                } else if (freq === "Semi-Monthly") {
+                                  d = findNext(startFrom, x => x.getDate() === 1 || x.getDate() === 15);
+                                } else if (freq === "Monthly") {
+                                  d = lastBizOfMonth(today);
+                                } else { return null; }
+                              }
+
                               const mm = String(d.getMonth() + 1).padStart(2, "0");
                               const dd = String(d.getDate()).padStart(2, "0");
                               return <span style={{ color: dateColor }}>{`${mm}/${dd}`}</span>;
