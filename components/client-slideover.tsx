@@ -1616,9 +1616,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Payroll email</span>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <span style={{ fontWeight: 500 }}>{(prEmails || []).filter(Boolean).join(", ") || "—"}</span>
-                  </div>
+                  <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                    value={(prEmails || []).filter(Boolean).join(", ")}
+                    onChange={e => {
+                      const val = e.target.value;
+                      const emails = val.split(",").map(s => s.trim()).filter(Boolean);
+                      setPrEmails(emails);
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: emails } : s));
+                    }}
+                    placeholder="—" />
                 </div>
               </>
             )}
