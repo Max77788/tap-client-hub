@@ -269,6 +269,7 @@ export async function PUT(request: Request) {
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
                 processor: svc.processor || existing.processor || null,
                 financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
+                expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
                 paydate: svc.paydate ?? existing.paydate ?? null,
                 payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
                 eftps: svc.eftps ?? existing.eftps ?? null,
@@ -293,7 +294,11 @@ export async function PUT(request: Request) {
             await supabase
               .from("client_services")
               .update({
+                frequency: svc.frequency ?? existing.frequency ?? null,
+                assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
+                processor: svc.processor ?? existing.processor ?? null,
                 financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
+                expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
                 paydate: svc.paydate ?? existing.paydate ?? null,
                 payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
                 eftps: svc.eftps ?? existing.eftps ?? null,
@@ -325,6 +330,8 @@ export async function PUT(request: Request) {
               frequency: svc.frequency || "Monthly",
               assigned_to: svc.assignedTo || null,
               processor: svc.processor || null,
+              financials_month: svc.financialsMonth ?? null,
+              expected_annual: svc.expectedAnnual ?? null,
               paydate: svc.paydate || null,
               payroll_password: svc.payrollPassword || null,
               eftps: svc.eftps || null,
