@@ -16,6 +16,27 @@ export async function GET() {
   // Try running SQL via the management endpoint
   // Supabase allows raw SQL via the REST API with service_role key
   const sql = `
+    -- period_counts table for count-based worklists (payroll, 1099s)
+    CREATE TABLE IF NOT EXISTS tap_hub_project.period_counts (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      client_service_id UUID NOT NULL,
+      period TEXT NOT NULL,
+      processed INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      UNIQUE(client_service_id, period)
+    );
+
+    ALTER TABLE tap_hub_project.period_counts
+      ADD CONSTRAINT IF NOT EXISTS fk_period_counts_client_service
+      FOREIGN KEY (client_service_id)
+      REFERENCES tap_hub_project.client_services(id)
+      ON DELETE CASCADE;
+
+    ALTER TABLE IF EXISTS tap_hub_project.period_counts ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS "Allow all" ON tap_hub_project.period_counts;
+    CREATE POLICY "Allow all" ON tap_hub_project.period_counts FOR ALL USING (true) WITH CHECK (true);
+
     -- Credentials table columns
     ALTER TABLE IF EXISTS credentials
       ADD COLUMN IF NOT EXISTS login TEXT,
