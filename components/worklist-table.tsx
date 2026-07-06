@@ -887,7 +887,7 @@ export default function WorklistTable({
         {/* Legend — status color indicators */}
         {variant !== "payroll" && variant !== "tax_returns" && (
         <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ zIndex: 5 }}>
-          {STAGE_CYCLE.filter(s => s !== "").map(s => (
+          {STAGE_CYCLE.filter(s => s !== "" && s !== "na").map(s => (
             <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
               <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s].fg }}></i>
               {STAGE_STYLES[s].label}
