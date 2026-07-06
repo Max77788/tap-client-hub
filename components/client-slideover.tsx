@@ -181,7 +181,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     // Initialize payroll fields
     const prSvc = client.services.find((s: any) => s.key === "payroll");
     setPrPaydate(prSvc?.paydate || "");
-    setPrStartDate(prSvc?.pay_start_date || "");
+    setPrStartDate(prSvc?.payStartDate || "");
     setPrPin(prSvc?.payrollPassword || "");
     setPrEftps(prSvc?.eftps || "");
     setPrEmails(prSvc?.payEmails || []);
