@@ -1159,7 +1159,7 @@ export default function WorklistTable({
                             >{count > 0 ? count : "·"}</div>
                           )}
                           {hasPRCmt && (
-                            <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
+                            <div className="cdot" style={{ position: "absolute", top: 0, right: 0, zIndex: 2 }} />
                           )}
                         </td>
                       );
@@ -1196,7 +1196,7 @@ export default function WorklistTable({
                         {/* ── Filing month corner indicator ── */}
                         {isFilingMonth && (
                           <div style={{
-                            position: "absolute", top: 0, right: 0,
+                            position: "absolute", top: 0, left: 0,
                             width: 7, height: 7,
                             background: "var(--teal)",
                             borderRadius: 1,
@@ -1223,7 +1223,7 @@ export default function WorklistTable({
                         >{isActive || lockHist ? t : ""}</div>
                         {/* ── Comment marker blue dot ── */}
                         {hasCmt && (
-                          <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
+                          <div className="cdot" style={{ position: "absolute", top: 0, right: 0, zIndex: 2 }} />
                         )}
                       </td>
                     );
