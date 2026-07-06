@@ -416,6 +416,9 @@ select.pick { padding: 10px 12px; border: 1px solid var(--line); border-radius: 
 @keyframes twpulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
 .tw-live i { width: 9px; height: 9px; border-radius: 50%; background: var(--green); animation: twpulse 1.1s infinite; }
 
+/* ── Toast fade-in ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
 /* ── Sales tax group band header ── */
 .stxband td { background: var(--teal); color: #fff; font-size: 13px; padding: 7px 12px; }
 .stxband td b { color: #fff; }

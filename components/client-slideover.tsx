@@ -71,6 +71,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [showFullRecord, setShowFullRecord] = useState(false);
   const [showEditClient, setShowEditClient] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
   // ── Comment state ──
@@ -155,12 +156,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   useEffect(() => {
     setLocalSvcs(client.services);
     setEditing(false);
-    setSaving(false);
     setShowFullRecord(false);
     // Initialize per-service assignees for edit view
     const assigneeMap: Record<string, string> = {};
     client.services.forEach((s: any) => {
-      assigneeMap[s.key] = s.processor || s.assignedTo || "Unassigned";
+      assigneeMap[s.key] = s.assignedTo || s.processor || "Unassigned";
     });
     setESvcAssignees(assigneeMap);
     // Load existing sales tax line items
@@ -224,7 +224,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // Unique assignees
   const assignees = [...new Set(
-    localSvcs.filter((s: any) => s.enabled).map((s: any) => s.processor || s.assignedTo).filter(Boolean)
+    localSvcs.filter((s: any) => s.enabled).map((s: any) => s.assignedTo || s.processor).filter(Boolean)
   )];
 
   // ── Helpers ──
@@ -1039,6 +1039,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         address: eAddress, city: eCity, state: eState, zip: eZip,
         assignedStaff: eAssigned,
       } as Client);
+      setToast("Changes saved");
+      setTimeout(() => { setToast(null); setSaving(false); }, 2500);
     }
 
     // ── Sales tax line item section ──
@@ -1405,6 +1407,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         <div className="over show" style={{
           background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
         }}>
+          {/* Toast notification */}
+          {toast && (
+            <div style={{
+              position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 100,
+              background: "var(--teal)", color: "#fff", padding: "8px 20px", borderRadius: 20,
+              fontSize: 13, fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,.15)",
+              animation: "fadeIn .25s ease",
+              pointerEvents: "none",
+            }}>{toast}</div>
+          )}
           {/* Header */}
           <div className="ohead" style={{
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
@@ -1431,7 +1443,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Module name and assignee */}
             <div className="mdhead">
               <div style={{ fontWeight: 700, fontSize: 17 }}>{svcLabel(moduleKey)}</div>
-              <div className="sub2">{targetSvc.processor || targetSvc.assignedTo || "Unassigned"}</div>
+              <div className="sub2">{targetSvc.assignedTo || targetSvc.processor || "Unassigned"}</div>
             </div>
 
             {/* Per-service assignee selector */}
@@ -1785,6 +1797,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         <div className="over show" style={{
           background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
         }}>
+          {/* Toast notification */}
+          {toast && (
+            <div style={{
+              position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 100,
+              background: "var(--teal)", color: "#fff", padding: "8px 20px", borderRadius: 20,
+              fontSize: 13, fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,.15)",
+              animation: "fadeIn .25s ease",
+              pointerEvents: "none",
+            }}>{toast}</div>
+          )}
           {/* Header */}
           <div className="ohead" style={{
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
