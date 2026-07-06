@@ -1456,13 +1456,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Body */}
           <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
-            {/* Module tag badge */}
-            <span className="modtag">{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
 
             {/* Module name and assignee */}
             <div className="mdhead">
               <div style={{ fontWeight: 700, fontSize: 17 }}>{svcLabel(moduleKey)}</div>
-              <div className="sub2">{targetSvc.assignedTo || targetSvc.processor || "Unassigned"}</div>
+              {(() => {
+                const name = targetSvc.assignedTo || targetSvc.processor || "Unassigned";
+                const firstName = name.includes(",") ? name.split(",")[1].trim() : name;
+                return <div className="sub2">{firstName}</div>;
+              })()}
             </div>
 
             {/* Per-service assignee selector */}
