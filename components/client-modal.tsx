@@ -47,9 +47,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [prPin, setPrPin] = useState("");
   const [prEftps, setPrEftps] = useState("");
   const [prProcessor, setPrProcessor] = useState("");
+  const [prEin, setPrEin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [showEftps, setShowEftps] = useState(false);
   const [prProcessorOther, setPrProcessorOther] = useState("");
+  const [prEmails, setPrEmails] = useState<string[]>([]);
   const [stxFreq, setStxFreq] = useState("Monthly");
   // Sales tax line items
   const [stxLineItems, setStxLineItems] = useState<any[]>([]);
@@ -96,7 +98,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       const finSvc = svcs.find(s => s.key === "financials");
       if (finSvc) { setFinFreq(finSvc.frequency || "Monthly"); setFinMonth(String(finSvc.financialsMonth || 1)); }
       const prSvc = svcs.find(s => s.key === "payroll");
-      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); }
+      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); setPrEmails(Array.isArray(prSvc.payEmails) ? prSvc.payEmails : []); }
+      setPrEin(client.ein || "");
       const t9Svc = svcs.find(s => s.key === "1099s");
       if (t9Svc) setT9Count(String(t9Svc.expectedAnnual || ""));
       // Restore sales tax line items
@@ -148,6 +151,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       payrollPassword: prPin || undefined,
       eftps: prEftps || undefined,
       processor: prProcessor === "Other" ? (prProcessorOther || "Other") : (prProcessor || undefined),
+      payEmails: prEmails.length > 0 ? prEmails : undefined,
       financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
     });
     addSvc("sales_tax", stx, stxFreq, stxAssigned, {
@@ -167,6 +171,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       emails: [email, addEmail].filter(Boolean),
       phones: [phone, addPhone].filter(Boolean),
       address, city, state: st,
+      ein: prEin || undefined,
       services: svcs.length ? svcs : [],
     } as any);
     onClose();
@@ -337,6 +342,35 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                   <input style={inputStyle} value={prProcessorOther} onChange={e => setPrProcessorOther(e.target.value)} placeholder="e.g. MyPayrollPro" />
                 </div>
               )}
+            </div>
+            <div className="two" style={{ display: "flex", gap: 12, marginTop: 8 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>EIN Number</label>
+                <input style={inputStyle} value={prEin} onChange={e => setPrEin(e.target.value)} placeholder="e.g. XX-XXXXXXX" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Payroll Emails</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", minHeight: 30 }}>
+                  {prEmails.map((em, i) => (
+                    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", color: "var(--blue)", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>
+                      {em}
+                      <button type="button" onClick={() => setPrEmails(prev => prev.filter((_, j) => j !== i))} style={{ all: "unset", cursor: "pointer", lineHeight: 1, fontSize: 13, marginLeft: 1, opacity: 0.7 }}>×</button>
+                    </span>
+                  ))}
+                  <input
+                    style={{ border: "none", outline: "none", fontSize: 12, flex: 1, minWidth: 100, background: "transparent" }}
+                    placeholder="Type email and press Enter"
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const val = (e.target as HTMLInputElement).value.trim();
+                        if (val && !prEmails.includes(val)) setPrEmails(prev => [...prev, val]);
+                        (e.target as HTMLInputElement).value = "";
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={prAssigned} onChange={e => setPrAssigned(e.target.value)}>
