@@ -873,7 +873,6 @@ export default function WorklistTable({
             <>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Pay Day</th>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 80 }}>Cadence</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 75, maxWidth: 90 }}>Start Date</th>
             </>
             )}
             {variant === "tax_returns" && (
@@ -1065,7 +1064,7 @@ export default function WorklistTable({
                       >{displayName}</button>
                     </td>
 
-                  {/* Payroll-specific columns: Pay Day, QBO (read-only) */}
+                  {/* Payroll-specific columns: Pay Day, Cadence (read-only) */}
                   {variant === "payroll" && (
                   <>
                     {/* Pay Day */}
@@ -1075,10 +1074,6 @@ export default function WorklistTable({
                     {/* Cadence (frequency) */}
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 80 }}>
                       {svc.frequency || "—"}
-                    </td>
-                    {/* Start Date */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 75, maxWidth: 90 }}>
-                      {svc.pay_start_date || "—"}
                     </td>
                   </>
                   )}
