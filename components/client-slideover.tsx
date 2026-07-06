@@ -1001,6 +1001,40 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       } as Client);
     }
 
+    function handleSaveModule() {
+      // Ensure payroll separate state is synced into localSvcs before saving
+      const synced = localSvcs.map((s: any) => {
+        if (s.key === "payroll") {
+          return {
+            ...s,
+            paydate: prPaydate,
+            payrollPassword: prPin,
+            eftps: prEftps,
+            payEmails: prEmails,
+            payPeriodFrequency: prPeriodFreq,
+            reportingMethod: prReportingMethod,
+            payrollCategory: prPayrollCategory,
+            qbLicense: prQbLicense,
+            reportingNotes: prReportingNotes,
+          };
+        }
+        if (s.key === "tax_returns") {
+          return { ...s, filingState, filingMonth, filingType };
+        }
+        return s;
+      });
+      onSave?.({
+        ...c,
+        services: synced,
+        // Also include client-level edits if Full client record was edited
+        name: eName, type: eType as "Business" | "Personal", group: eGroup,
+        emails: [eEmail, eAddEmail].filter(Boolean),
+        phones: [ePhone, eAddPhone].filter(Boolean),
+        address: eAddress, city: eCity, state: eState, zip: eZip,
+        assignedStaff: eAssigned,
+      } as Client);
+    }
+
     // ── Sales tax line item section ──
     function SalesTaxLineItemsSection() {
       const [editingStxIdx, setEditingStxIdx] = useState(-1);
@@ -1685,6 +1719,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               Remove client
             </button>
             <div style={{ flex: 1 }}></div>
+            <button className="btn" onClick={handleSaveModule} style={{
+              all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+              padding: "10px 20px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+            }}>
+              Save
+            </button>
             <button className="btn alt" onClick={onClose} style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
               border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
