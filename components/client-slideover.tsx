@@ -1526,8 +1526,22 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <option value="">—</option>
                     <option value="Monthly">Monthly</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
-                    <option value="Bi-Weekly A">Bi-Weekly A</option>
-                    <option value="Bi-Weekly B">Bi-Weekly B</option>
+                    <option value="Bi-Weekly A" disabled={
+                      (() => {
+                        if (!prStartDate) return false;
+                        const day = new Date(prStartDate + "T00:00:00").getUTCDate();
+                        if (isNaN(day)) return false;
+                        return !((day >= 1 && day <= 7) || (day >= 15 && day <= 22) || (day >= 29 && day <= 31));
+                      })()
+                    }>Bi-Weekly A</option>
+                    <option value="Bi-Weekly B" disabled={
+                      (() => {
+                        if (!prStartDate) return false;
+                        const day = new Date(prStartDate + "T00:00:00").getUTCDate();
+                        if (isNaN(day)) return false;
+                        return (day >= 1 && day <= 7) || (day >= 15 && day <= 22) || (day >= 29 && day <= 31);
+                      })()
+                    }>Bi-Weekly B</option>
                     <option value="Quarterly">Quarterly</option>
                   </select>
                 </div>
