@@ -1551,26 +1551,36 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                    value={prPeriodFreq} onChange={e => { setPrPeriodFreq(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value } : s)); }}>
+                    value={prPeriodFreq} onChange={e => {
+                      const val = e.target.value;
+                      setPrPeriodFreq(val);
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val } : s));
+                      // Auto-set start date for Bi-Weekly A/B
+                      if (val === "Bi-Weekly A" || val === "Bi-Weekly B") {
+                        const cadence = val === "Bi-Weekly A" ? "A" : "B";
+                        const today = new Date();
+                        let d = new Date(today);
+                        d.setDate(d.getDate() + 1); // start from tomorrow
+                        while (true) {
+                          if (d.getDay() === 5) { // Friday
+                            const dom = d.getDate();
+                            const isA = (dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31);
+                            if ((cadence === "A" && isA) || (cadence === "B" && !isA)) {
+                              const iso = d.toISOString().slice(0, 10);
+                              setPrStartDate(iso);
+                              setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
+                              break;
+                            }
+                          }
+                          d.setDate(d.getDate() + 1);
+                        }
+                      }
+                    }}>
                     <option value="">—</option>
                     <option value="Monthly">Monthly</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
-                    <option value="Bi-Weekly A" disabled={
-                      (() => {
-                        if (!prStartDate) return false;
-                        const day = new Date(prStartDate + "T00:00:00").getUTCDate();
-                        if (isNaN(day)) return false;
-                        return !((day >= 1 && day <= 7) || (day >= 15 && day <= 22) || (day >= 29 && day <= 31));
-                      })()
-                    }>Bi-Weekly A</option>
-                    <option value="Bi-Weekly B" disabled={
-                      (() => {
-                        if (!prStartDate) return false;
-                        const day = new Date(prStartDate + "T00:00:00").getUTCDate();
-                        if (isNaN(day)) return false;
-                        return (day >= 1 && day <= 7) || (day >= 15 && day <= 22) || (day >= 29 && day <= 31);
-                      })()
-                    }>Bi-Weekly B</option>
+                    <option value="Bi-Weekly A">Bi-Weekly A</option>
+                    <option value="Bi-Weekly B">Bi-Weekly B</option>
                     <option value="Quarterly">Quarterly</option>
                   </select>
                 </div>
@@ -1581,22 +1591,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Start Date</span>
-                  <input type="date" style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={prStartDate} onChange={e => {
-                      const val = e.target.value;
-                      setPrStartDate(val);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: val } : s));
-                      // Auto-detect Bi-Weekly A vs B from start date day
-                      if (val) {
-                        const day = new Date(val + "T00:00:00").getUTCDate();
-                        if (!isNaN(day)) {
-                          const isA = (day >= 1 && day <= 7) || (day >= 15 && day <= 22) || (day >= 29 && day <= 31);
-                          const autoCadence = isA ? "Bi-Weekly A" : "Bi-Weekly B";
-                          setPrPeriodFreq(autoCadence);
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: autoCadence } : s));
-                        }
-                      }
-                    }} />
+                  <input type="date" style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--paper)", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "default" }}
+                    value={prStartDate} readOnly />
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
