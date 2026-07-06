@@ -324,6 +324,7 @@ export async function PUT(request: Request) {
           const { error: insErr } = await supabase
             .from("client_services")
             .insert({
+              id: crypto.randomUUID(),
               client_id: clientId,
               service_id: serviceId,
               active: true,
