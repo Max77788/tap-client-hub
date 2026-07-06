@@ -350,7 +350,7 @@ export default function WorklistTable({
   // ── Resolve active dropdown cell info for portal ──
   const activeDropdownInfo = useMemo(() => {
     if (!activeDropdown) return null;
-    const [clientId, monthIdxStr] = activeDropdown.split(":");
+    const [clientId, monthIdxStr] = activeDropdown.split("|");
     const monthIdx = parseInt(monthIdxStr, 10);
     const client = serviceClients.find((c) => c.id === clientId);
     if (!client) return null;
@@ -530,7 +530,7 @@ export default function WorklistTable({
   const handleCellClick = useCallback(
     (clientId: string, monthIdx: number, e: React.MouseEvent) => {
       if (readOnly || isHistorical) return;
-      const key = `${clientId}:${monthIdx}`;
+      const key = `${clientId}|${monthIdx}`;
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       setActiveDropdown((prev) => {
         if (prev === key) {
