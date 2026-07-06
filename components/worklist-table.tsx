@@ -1133,48 +1133,16 @@ export default function WorklistTable({
                   </>
                   )}
 
-                  {/* Tax Return columns: Filing State, Filing Type */}
+                  {/* Tax Return columns: Filing State, Filing Type (read-only) */}
                   {variant === "tax_returns" && (
                   <>
                     {/* Filing State */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
-                      <select
-                        value={svc.filingState || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, filingState: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[55px] max-w-[75px]"
-                      >
-                        <option value="">—</option>
-                        {US_STATES.map((st) => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
+                      {svc.filingState || "—"}
                     </td>
                     {/* Filing Type */}
-                    <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
-                      <select
-                        value={svc.filingType || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, filingType: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[70px] max-w-[95px]"
-                      >
-                        <option value="">—</option>
-                        {FILING_TYPES.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
+                      {svc.filingType || "—"}
                     </td>
                   </>
                   )}
