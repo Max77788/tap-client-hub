@@ -47,7 +47,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [prPin, setPrPin] = useState("");
   const [prEftps, setPrEftps] = useState("");
   const [prProcessor, setPrProcessor] = useState("");
-  const [prEin, setPrEin] = useState("");
+  const [clientEin, setClientEin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [showEftps, setShowEftps] = useState(false);
   const [prProcessorOther, setPrProcessorOther] = useState("");
@@ -99,7 +99,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       if (finSvc) { setFinFreq(finSvc.frequency || "Monthly"); setFinMonth(String(finSvc.financialsMonth || 1)); }
       const prSvc = svcs.find(s => s.key === "payroll");
       if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); setPrEmails(Array.isArray(prSvc.payEmails) ? prSvc.payEmails : []); }
-      setPrEin(client.ein || "");
+      setClientEin(client.ein || "");
       const t9Svc = svcs.find(s => s.key === "1099s");
       if (t9Svc) setT9Count(String(t9Svc.expectedAnnual || ""));
       // Restore sales tax line items
@@ -111,7 +111,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setAddress(""); setCity(""); setSt("TX"); setZip("");
       setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
-      setStxFreq("Monthly"); setT9Count(""); setTaxType("Business");
+      setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
@@ -171,7 +171,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       emails: [email, addEmail].filter(Boolean),
       phones: [phone, addPhone].filter(Boolean),
       address, city, state: st,
-      ein: prEin || undefined,
+      ein: clientEin || undefined,
       services: svcs.length ? svcs : [],
     } as any);
     onClose();
@@ -251,6 +251,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <input style={inputStyle} value={zip} onChange={e => setZip(e.target.value)} placeholder="77002" />
             </div>
           </div>
+          <label style={labelStyle}>EIN Number <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <input style={inputStyle} value={clientEin} onChange={e => setClientEin(e.target.value)} placeholder="e.g. XX-XXXXXXX" />
 
           {/* ── Services section (order: Fin → PR → STX → T9 → Rend → Tax) ── */}
           <div className="fsect" style={fsectStyle}>Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them; details appear as you tick</span></div>
@@ -343,14 +345,9 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 </div>
               )}
             </div>
-            <div className="two" style={{ display: "flex", gap: 12, marginTop: 8 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>EIN Number</label>
-                <input style={inputStyle} value={prEin} onChange={e => setPrEin(e.target.value)} placeholder="e.g. XX-XXXXXXX" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Payroll Emails</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", minHeight: 30 }}>
+            <div style={{ marginTop: 8 }}>
+              <label style={labelStyle}>Payroll Emails</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", minHeight: 30 }}>
                   {prEmails.map((em, i) => (
                     <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", color: "var(--blue)", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>
                       {em}
@@ -369,7 +366,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                       }
                     }}
                   />
-                </div>
               </div>
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
