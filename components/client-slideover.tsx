@@ -1639,13 +1639,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
               <div style={{ marginTop: 10 }}>
                 {(() => {
-                  const filtered = getServiceComments(moduleKey, notesMonth);
-                  return filtered.length > 0 ? (
+                  const svc = localSvcs.find((s: any) => s.key === moduleKey);
+                  const allComments = (svc?.comments || []).sort((a: CommentEntry, b: CommentEntry) => a.month - b.month);
+                  return allComments.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {filtered.map((cm: CommentEntry) => (
+                      {allComments.map((cm: CommentEntry) => (
                         <div key={cm.id} className="note">
                           <div className="ntxt">{cm.text}</div>
-                          <div className="nmeta">{cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                          <div className="nmeta">{MONTHS[cm.month]} · {cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                           <button onClick={() => deleteComment(moduleKey, cm.id)}
                             style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
                             × Delete
