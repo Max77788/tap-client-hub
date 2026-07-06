@@ -1028,7 +1028,7 @@ export default function WorklistTable({
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
                     <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
-                      <span className="text-[var(--ink)]">{svc.assignedTo || svc.processor || "—"}</span>
+                      <span className="text-[var(--ink)]">{toShortName(svc.assignedTo || svc.processor || "—")}</span>
                     </td>
                     {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                     <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
@@ -1158,7 +1158,7 @@ export default function WorklistTable({
 
                   {/* Assigned — read-only text for payroll, inline editable dropdown for others */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
-                    <span className="text-[var(--ink)]">{isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "—") : (svc.assignedTo || svc.processor || "—")}</span>
+                    <span className="text-[var(--ink)]">{toShortName(isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "—") : (svc.assignedTo || svc.processor || "—"))}</span>
                   </td>
 
                   {/* Cadence — read-only text for payroll, inline editable dropdown for others */}
