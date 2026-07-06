@@ -337,54 +337,6 @@ export default function WorklistTable({
       .catch(() => {});
   }, []);
 
-  // ── Handle Assigned change (payroll inline dropdown) ──
-  const [assignedOverrides, setAssignedOverrides] = useState<Record<string, string>>({});
-  const handleAssignedChange = useCallback(
-    (client: any, svc: any, value: string) => {
-      if (!svc?.csId) return;
-      const key = `${client.id}:${svc.key || serviceKey}`;
-      setAssignedOverrides((prev) => ({ ...prev, [key]: value }));
-      fetch("/api/clients", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csId: svc.csId, assignedTo: value }),
-      }).catch((e) => console.error("Failed to update assigned:", e));
-    },
-    [serviceKey],
-  );
-
-  // ── Handle Processor change (inline dropdown) ──
-  const [processorOverrides, setProcessorOverrides] = useState<Record<string, string>>({});
-  const handleProcessorChange = useCallback(
-    (client: any, svc: any, value: string) => {
-      if (!svc?.csId) return;
-      const key = `${client.id}:${svc.key || serviceKey}`;
-      setProcessorOverrides((prev) => ({ ...prev, [key]: value }));
-      fetch("/api/clients", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csId: svc.csId, processor: value }),
-      }).catch((e) => console.error("Failed to update processor:", e));
-    },
-    [serviceKey],
-  );
-
-  // ── Handle Frequency / Cadence change (inline dropdown) ──
-  const [frequencyOverrides, setFrequencyOverrides] = useState<Record<string, string>>({});
-  const handleFrequencyChange = useCallback(
-    (client: any, svc: any, value: string) => {
-      if (!svc?.csId) return;
-      const key = `${client.id}:${svc.key || serviceKey}`;
-      setFrequencyOverrides((prev) => ({ ...prev, [key]: value }));
-      fetch("/api/clients", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csId: svc.csId, frequency: value }),
-      }).catch((e) => console.error("Failed to update frequency:", e));
-    },
-    [serviceKey],
-  );
-
   // ── Initialize worklist state from client data ──
   const [worklistState, setWorklistState] = useState<
     Record<string, WorklistStage[]>
@@ -1152,39 +1104,14 @@ export default function WorklistTable({
                     <span className="text-[var(--ink)]">{toShortName(isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "—") : (svc.assignedTo || svc.processor || "—"))}</span>
                   </td>
 
-                  {/* Cadence — read-only text for payroll, inline editable dropdown for others */}
+                  {/* Cadence — read-only text */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
-                  <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
-                    {variant === "payroll" ? (
-                      <span className="text-[var(--ink)]">{prCadence}</span>
-                    ) : (
-                    <select
-                      value={frequencyOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.frequency || svc.frequency || "Monthly") : (svc.frequency || "Monthly"))}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const key = `${client.id}:${serviceKey}:${stxIdx}`;
-                        setFrequencyOverrides((prev) => ({ ...prev, [key]: val }));
-                        if (isStxItem && stxIdx >= 0) {
-                          const updated = [...(svc.salesTaxLineItems || [])];
-                          if (updated[stxIdx]) {
-                            updated[stxIdx] = { ...updated[stxIdx], frequency: val };
-                            fetch("/api/clients", {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: updated }),
-                            }).catch(() => {});
-                          }
-                        } else {
-                          handleFrequencyChange(client, svc, val);
-                        }
-                      }}
-                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[80px] max-w-[95px]"
-                    >
-                      {(cadenceOptions.length > 0 ? cadenceOptions : ["Monthly", "Quarterly", "Annually"]).map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                    )}
+                  <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
+                    {variant === "payroll"
+                      ? prCadence
+                      : isStxItem
+                      ? (stxItem.frequency || svc.frequency || "Monthly")
+                      : (svc.frequency || "Monthly")}
                   </td>
                   )}
 
