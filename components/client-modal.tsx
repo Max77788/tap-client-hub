@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Client, ServiceKey } from "@/lib/types";
-import { SERVICE_META } from "@/lib/data";
+import { SERVICE_META, STAFF } from "@/lib/data";
 
 interface ClientModalProps {
   open: boolean;
@@ -11,7 +11,7 @@ interface ClientModalProps {
   onSave: (client: Client | Omit<Client, "id" | "cid">) => void;
 }
 
-const STAFF = ["Terry Anderson", "Lindsay", "Misty", "Jill", "Unassigned"];
+const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
 
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
@@ -222,7 +222,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           </div>
           <label style={labelStyle}>Assigned to</label>
           <select style={inputStyle} value={assigned} onChange={e => setAssigned(e.target.value)}>
-            {STAFF.map(s => <option key={s}>{s}</option>)}
+            {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
           </select>
 
           {/* ── Contact section ── */}
@@ -278,7 +278,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             )}
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={finAssigned} onChange={e => setFinAssigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -374,7 +374,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={prAssigned} onChange={e => setPrAssigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -386,7 +386,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={stxAssigned} onChange={e => setStxAssigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
 
             {/* Sales tax line items — always visible when Sales Tax is checked */}
@@ -481,7 +481,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={t9Assigned} onChange={e => setT9Assigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -489,7 +489,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <ServiceCard icon="🏠" label="Renditions (property tax)" checked={rend} onChange={setRend}>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -501,7 +501,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
-              {STAFF.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
           </ServiceCard>
         </div>
