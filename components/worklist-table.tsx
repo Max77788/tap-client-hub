@@ -1205,7 +1205,8 @@ export default function WorklistTable({
                   {MONTHS_SHORT.map((_m, i) => {
                     const isActive = activeMonths.has(i);
                     const isCurrentMonth = i === currentMonth && !isHistorical;
-                    const cellReadOnly = readOnly || isHistorical;
+                    // Lock current & future months from status changes (only past months are editable)
+                    const cellReadOnly = readOnly || isHistorical || i >= currentMonth;
 
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
@@ -1258,7 +1259,7 @@ export default function WorklistTable({
                         >{isActive || lockHist ? t : ""}</div>
                         {/* ── Payroll: next pay date MM/DD in current month cell ── */}
                         {variant === "payroll" && isCurrentMonth && (
-                          <div style={{ fontSize: 8, textAlign: "center", marginTop: 1, lineHeight: 1, whiteSpace: "nowrap" }}>
+                          <div style={{ fontSize: 10, textAlign: "center", marginTop: 2, lineHeight: 1, whiteSpace: "nowrap" }}>
                             {(() => {
                               const freq = svc?.frequency || "";
                               const pd = svc?.paydate || "";
