@@ -979,6 +979,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const targetSvc = localSvcs.find((s: any) => s.key === moduleKey);
     if (!targetSvc) return null;
 
+    // Resolve short/partial name to full profile name so select matches correctly
+    const svcAssignee = targetSvc.assignedTo || targetSvc.processor || "Unassigned";
+    const resolvedAssignee = svcAssignee !== "Unassigned" && !profiles.some((p: any) => p.name === svcAssignee)
+      ? profiles.find((p: any) => {
+          const parts = p.name.split(",").map((s: string) => s.trim().toLowerCase());
+          const svc = svcAssignee.toLowerCase();
+          return p.name.toLowerCase().includes(svc) || parts.some((part: string) => svc.includes(part));
+        })?.name || svcAssignee
+      : svcAssignee;
+
     function handleAddNoteForModule() {
       if (!notesText.trim()) return;
       const prefix = noteType !== "others" ? `[${noteType}] ` : "";
@@ -1461,7 +1471,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 Assignee
               </div>
               <select className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                value={targetSvc.assignedTo || targetSvc.processor || "Unassigned"}
+                value={resolvedAssignee}
                 onChange={e => {
                   setESvcAssignees((prev: any) => ({ ...prev, [moduleKey]: e.target.value }));
                   setLocalSvcs((prev: any) => prev.map((s: any) =>
