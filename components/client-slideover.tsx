@@ -1584,7 +1584,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span>
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                      type={showPrEftps ? "text" : "password"} value={prEftps ? maskNum(prEftps) : ""}
+                      type={showPrEftps ? "text" : "password"} value={prEftps || ""}
                       onChange={e => { setPrEftps(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s)); }} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrEftps(!showPrEftps)}
@@ -1601,7 +1601,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>PIN</span>
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                      type={showPrPin ? "text" : "password"} value={prPin ? maskNum(prPin) : ""}
+                      type={showPrPin ? "text" : "password"} value={prPin || ""}
                       onChange={e => { setPrPin(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s)); }} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrPin(!showPrPin)}
