@@ -420,7 +420,7 @@ select.pick { padding: 10px 12px; border: 1px solid var(--line); border-radius: 
 @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 /* ── Sales tax group band header ── */
-.stxband td { background: var(--teal); color: #fff; font-size: 13px; padding: 7px 12px; }
+.stxband td { background: var(--blue); color: #fff; font-size: 13px; padding: 7px 12px; }
 .stxband td b { color: #fff; }
 
 /* ── Blue dot comment marker ── */
