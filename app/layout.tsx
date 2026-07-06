@@ -39,6 +39,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/stx": { title: "Sales Tax", subtitle: "Auto-populated from clients with Sales Tax switched on." },
   "/t9": { title: "1099s", subtitle: "Clients flagged for 1099 filing." },
   "/tax": { title: "Tax Returns", subtitle: "Annual returns — clients flagged for tax prep." },
+  "/rend": { title: "Renditions", subtitle: "Clients flagged for renditions filing." },
   "/vault": { title: "Password Vault", subtitle: "Portal logins. Kept separate from client files, on purpose." },
   "/users": { title: "Users & Access", subtitle: "Who can get into the platform, what they can see, and who they report to. Owner-controlled." },
   "/support": { title: "Help & Support", subtitle: "Stuck on something? Open a ticket and our team will jump on it." },

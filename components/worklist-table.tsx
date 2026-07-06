@@ -802,7 +802,7 @@ export default function WorklistTable({
             }
             <StatCard label="In progress" value={stats.inProgress} color="var(--blue)" />
             <StatCard label="Waiting on client" value={stats.waiting} color="var(--amber)" />
-            <StatCard label="Prepared" value={stats.prepared} color="var(--teal)" />
+            <StatCard label="Delayed" value={stats.behind ?? 0} color="var(--red)" />
             <StatCard label={variant === "tax_returns" ? "Filed" : "Done"} value={stats.done} color="var(--green)" />
             <StatCard label="Not started" value={stats.notStarted || 0} color="var(--red)" />
           </>
