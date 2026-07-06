@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 // GET /api/period-counts?client_service_id=X&year=2026
+// GET /api/period-counts?year=2026 (batch: all counts for that year)
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);

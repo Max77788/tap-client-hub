@@ -366,8 +366,8 @@ export default function WorklistTable({
       const svc = client.services.find((s: any) => s.key === "payroll");
       if (!svc?.enabled) continue;
       const key = `${client.id}:payroll`;
-      if (svc.prCounts && Array.isArray(svc.prCounts)) {
-        map[key] = [...svc.prCounts];
+      if (svc.periodCounts && Array.isArray(svc.periodCounts)) {
+        map[key] = [...svc.periodCounts];
       } else {
         map[key] = Array(12).fill(0);
       }
@@ -384,67 +384,73 @@ export default function WorklistTable({
         if (!svc?.enabled) continue;
         const key = `${client.id}:payroll`;
         if (prev[key]) { next[key] = prev[key]; }
-        else if (svc.prCounts && Array.isArray(svc.prCounts)) { next[key] = [...svc.prCounts]; }
+        else if (svc.periodCounts && Array.isArray(svc.periodCounts)) { next[key] = [...svc.periodCounts]; }
         else { next[key] = Array(12).fill(0); }
       }
       return next;
     });
   }, [clients]);
 
-  // Load payroll counts from period_counts API on mount
+  // Load payroll counts from period_counts API on mount (batch, year-specific refresh)
   useEffect(() => {
     if (variant !== "payroll" || serviceClients.length === 0) return;
     const yearStr = String(year);
-    const promises = serviceClients.map(async (client) => {
-      const svc = client.services?.find((s: any) => s.key === "payroll");
-      if (!svc?.csId) return;
-      try {
-        const res = await fetch(`/api/period-counts?client_service_id=${svc.csId}&year=${yearStr}`);
-        const data = await res.json();
+    fetch(`/api/period-counts?year=${yearStr}`)
+      .then((res) => res.json())
+      .then((data) => {
         if (!data.counts || !Array.isArray(data.counts)) return;
-        const counts = Array(12).fill(0);
+        const countsByCsId: Record<string, number[]> = {};
         for (const c of data.counts) {
           const parts = c.period?.split("-");
-          if (parts && parts.length >= 2) {
-            const monthIdx = parseInt(parts[1]) - 1;
-            if (monthIdx >= 0 && monthIdx < 12) {
-              counts[monthIdx] = Math.max(0, c.processed || 0);
-            }
-          }
+          if (!parts || parts.length < 2) continue;
+          const monthIdx = parseInt(parts[1]) - 1;
+          if (monthIdx < 0 || monthIdx >= 12) continue;
+          if (!countsByCsId[c.client_service_id]) countsByCsId[c.client_service_id] = Array(12).fill(0);
+          countsByCsId[c.client_service_id][monthIdx] = Math.max(0, c.processed || 0);
         }
-        const key = `${client.id}:payroll`;
-        setPrCounts((prev) => ({ ...prev, [key]: counts }));
-      } catch {}
-    });
-    Promise.all(promises).catch(() => {});
+        setPrCounts((prev) => {
+          const next = { ...prev };
+          for (const client of serviceClients) {
+            const svc = client.services?.find((s: any) => s.key === "payroll");
+            if (!svc?.csId) continue;
+            const key = `${client.id}:payroll`;
+            if (countsByCsId[svc.csId]) next[key] = countsByCsId[svc.csId];
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
   }, [variant, serviceClients, year]);
 
-  // Load t9 counts from period_counts API on mount
+  // Load t9 counts from period_counts API on mount (batch, year-specific refresh)
   useEffect(() => {
     if (variant !== "t9" || serviceClients.length === 0) return;
     const yearStr = String(year);
-    const promises = serviceClients.map(async (client) => {
-      const svc = client.services?.find((s: any) => s.key === "1099s");
-      if (!svc?.csId) return;
-      try {
-        const res = await fetch(`/api/period-counts?client_service_id=${svc.csId}&year=${yearStr}`);
-        const data = await res.json();
+    fetch(`/api/period-counts?year=${yearStr}`)
+      .then((res) => res.json())
+      .then((data) => {
         if (!data.counts || !Array.isArray(data.counts)) return;
-        const counts = Array(12).fill(0);
+        const countsByCsId: Record<string, number[]> = {};
         for (const c of data.counts) {
           const parts = c.period?.split("-");
-          if (parts && parts.length >= 2) {
-            const monthIdx = parseInt(parts[1]) - 1;
-            if (monthIdx >= 0 && monthIdx < 12) {
-              counts[monthIdx] = Math.max(0, c.processed || 0);
-            }
-          }
+          if (!parts || parts.length < 2) continue;
+          const monthIdx = parseInt(parts[1]) - 1;
+          if (monthIdx < 0 || monthIdx >= 12) continue;
+          if (!countsByCsId[c.client_service_id]) countsByCsId[c.client_service_id] = Array(12).fill(0);
+          countsByCsId[c.client_service_id][monthIdx] = Math.max(0, c.processed || 0);
         }
-        const key = `${client.id}:1099s`;
-        setT9Counts((prev) => ({ ...prev, [key]: counts }));
-      } catch {}
-    });
-    Promise.all(promises).catch(() => {});
+        setT9Counts((prev) => {
+          const next = { ...prev };
+          for (const client of serviceClients) {
+            const svc = client.services?.find((s: any) => s.key === "1099s");
+            if (!svc?.csId) continue;
+            const key = `${client.id}:1099s`;
+            if (countsByCsId[svc.csId]) next[key] = countsByCsId[svc.csId];
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
   }, [variant, serviceClients, year]);
 
   // ── Payroll: get real cadence from client service ──
@@ -567,8 +573,8 @@ export default function WorklistTable({
       const svc = client.services.find((s: any) => s.key === "1099s");
       if (!svc?.enabled) continue;
       const key = `${client.id}:1099s`;
-      if (svc.t9Counts && Array.isArray(svc.t9Counts)) {
-        map[key] = [...svc.t9Counts];
+      if (svc.periodCounts && Array.isArray(svc.periodCounts)) {
+        map[key] = [...svc.periodCounts];
       } else {
         map[key] = Array(12).fill(0);
       }
@@ -585,7 +591,7 @@ export default function WorklistTable({
         if (!svc?.enabled) continue;
         const key = `${client.id}:1099s`;
         if (prev[key]) { next[key] = prev[key]; }
-        else if (svc.t9Counts && Array.isArray(svc.t9Counts)) { next[key] = [...svc.t9Counts]; }
+        else if (svc.periodCounts && Array.isArray(svc.periodCounts)) { next[key] = [...svc.periodCounts]; }
         else { next[key] = Array(12).fill(0); }
       }
       return next;
@@ -833,8 +839,8 @@ export default function WorklistTable({
             ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
             : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
         </div>
-        {/* Legend — status color indicators */}
-        {variant !== "payroll" && (
+        {/* Legend — status color indicators (hidden for count-based worklists) */}
+        {variant !== "payroll" && variant !== "t9" && (
         <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ zIndex: 5 }}>
           {STAGE_CYCLE.filter(s => s !== "" && s !== "na").map(s => (
             <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
@@ -847,8 +853,8 @@ export default function WorklistTable({
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
           {variant === "tax_returns" && (
           <>
-            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 7, height: 7, borderRadius: 1, display: "inline-block", background: "var(--teal)", boxShadow: "0 0 0 1.5px #fff" }}></i>Filing month</span>
-            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
+            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: 1, display: "inline-block", background: "var(--teal)", boxShadow: "0 0 0 1.5px #fff" }}></i>Filing month</span>
+            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
           </>
           )}
         </div>
@@ -1009,8 +1015,9 @@ export default function WorklistTable({
                       const isCM = i === currentMonth && !isHistorical;
                       const cellEditKey = `${client.id}:${i}`;
                       const isEditing = editingT9 === cellEditKey;
+                      const hasT9Cmt = (svc.comments || []).some((c: any) => c.month === i);
                       return (
-                        <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`} style={{ width: 44, minWidth: 44, maxWidth: 44 }}>
+                        <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`} style={{ position: "relative", width: 44, minWidth: 44, maxWidth: 44 }}>
                           {isEditing ? (
                             <input
                               type="number"
@@ -1041,6 +1048,9 @@ export default function WorklistTable({
                               }}
                               title={`${mo}: ${n} processed — click to edit`}
                             >{n || "·"}</div>
+                          )}
+                          {hasT9Cmt && (
+                            <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />
                           )}
                         </td>
                       );
@@ -1159,7 +1169,7 @@ export default function WorklistTable({
                             >{count > 0 ? count : "·"}</div>
                           )}
                           {hasPRCmt && (
-                            <div className="cdot" style={{ position: "absolute", top: 0, right: 0, zIndex: 2 }} />
+                            <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />
                           )}
                         </td>
                       );
@@ -1196,11 +1206,11 @@ export default function WorklistTable({
                         {/* ── Filing month corner indicator ── */}
                         {isFilingMonth && (
                           <div style={{
-                            position: "absolute", top: 0, left: 0,
-                            width: 7, height: 7,
+                            position: "absolute", top: 1, left: 1,
+                            width: 6, height: 6,
                             background: "var(--teal)",
                             borderRadius: 1,
-                            zIndex: 3,
+                            zIndex: 2,
                             boxShadow: "0 0 0 1.5px #fff",
                           }} />
                         )}
@@ -1223,7 +1233,7 @@ export default function WorklistTable({
                         >{isActive || lockHist ? t : ""}</div>
                         {/* ── Comment marker blue dot ── */}
                         {hasCmt && (
-                          <div className="cdot" style={{ position: "absolute", top: 0, right: 0, zIndex: 2 }} />
+                          <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />
                         )}
                       </td>
                     );

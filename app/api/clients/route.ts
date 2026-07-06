@@ -98,6 +98,30 @@ export async function GET(request: Request) {
       }
     }
 
+    // Fetch period_counts (processed counts for payroll, 1099s, etc.)
+    const countByCsId: Record<string, number[]> = {};
+    if (allCsIds.length > 0) {
+      const BATCH_SIZE_PC = 500;
+      let allCounts: any[] = [];
+      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE_PC) {
+        const batch = allCsIds.slice(i, i + BATCH_SIZE_PC);
+        const { data: batchCounts } = await supabase
+          .from("period_counts")
+          .select("client_service_id, period, processed")
+          .in("client_service_id", batch);
+        if (batchCounts) allCounts = allCounts.concat(batchCounts);
+      }
+      for (const pc of allCounts) {
+        const m = pc.period?.match(/^\d{4}-(\d{2})$/);
+        if (!m) continue;
+        const mi = parseInt(m[1]) - 1;
+        if (mi >= 0 && mi < 12) {
+          if (!countByCsId[pc.client_service_id]) countByCsId[pc.client_service_id] = Array(12).fill(0);
+          countByCsId[pc.client_service_id][mi] = Math.max(0, pc.processed || 0);
+        }
+      }
+    }
+
     const { data: staffRows } = await supabase.from("profiles").select("id, full_name");
     const staffNames: Record<string, string> = {};
     for (const s of staffRows || []) staffNames[s.id] = s.full_name;
@@ -140,12 +164,13 @@ export async function GET(request: Request) {
             const s = periodByCsId[cs.id]?.[i];
             return !s ? "lock" : s === "done" ? "done" : s === "na" ? "na" : s === "in_progress" ? "in_progress" : s === "waiting_client" ? "waiting" : s === "prepared" ? "billed" : "lock";
           }),
+          periodCounts: countByCsId[cs.id] || Array(12).fill(0),
           svcNotes: cs.notes || "",
         };
       });
       const seen = new Set(services.map((s: any) => s.key));
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock") });
+        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),

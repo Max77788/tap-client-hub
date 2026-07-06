@@ -424,7 +424,7 @@ select.pick { padding: 10px 12px; border: 1px solid var(--line); border-radius: 
 .stxband td b { color: #fff; }
 
 /* ── Blue dot comment marker ── */
-.cdot { position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 1.5px #fff; z-index: 2; }
+.cdot { position: absolute; top: 1px; right: 1px; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 1.5px #fff; z-index: 2; }
 .mcell { position: relative; }
 
 /* ── Edit indicator ── */
