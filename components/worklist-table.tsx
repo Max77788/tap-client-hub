@@ -280,19 +280,6 @@ export default function WorklistTable({
     return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
 
-  // ── Resolve active dropdown cell info for portal ──
-  const activeDropdownInfo = useMemo(() => {
-    if (!activeDropdown) return null;
-    const [clientId, monthIdxStr] = activeDropdown.split(":");
-    const monthIdx = parseInt(monthIdxStr, 10);
-    const client = serviceClients.find((c) => c.id === clientId);
-    if (!client) return null;
-    const key = `${clientId}:${serviceKey}`;
-    const stages = worklistState[key];
-    const stage = stages?.[monthIdx] ?? "";
-    return { client, monthIdx, stage };
-  }, [activeDropdown, serviceClients, serviceKey, worklistState]);
-
   // ── Filter clients by search + cadence ──
   const filteredClients = useMemo(
     () => {
@@ -407,6 +394,19 @@ export default function WorklistTable({
   useEffect(() => {
     setWorklistState(buildWorklistState(clients, serviceKey));
   }, [clients, serviceKey]);
+
+  // ── Resolve active dropdown cell info for portal ──
+  const activeDropdownInfo = useMemo(() => {
+    if (!activeDropdown) return null;
+    const [clientId, monthIdxStr] = activeDropdown.split(":");
+    const monthIdx = parseInt(monthIdxStr, 10);
+    const client = serviceClients.find((c) => c.id === clientId);
+    if (!client) return null;
+    const key = `${clientId}:${serviceKey}`;
+    const stages = worklistState[key];
+    const stage = stages?.[monthIdx] ?? "";
+    return { client, monthIdx, stage };
+  }, [activeDropdown, serviceClients, serviceKey, worklistState]);
 
   // ── Payroll count state (number of runs completed per month) ──
   const [prCounts, setPrCounts] = useState<Record<string, number[]>>(() => {
