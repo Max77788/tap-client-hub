@@ -112,6 +112,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prQbLicense, setPrQbLicense] = useState("");
   const [prReportingNotes, setPrReportingNotes] = useState("");
 
+  // ── Pay Day options (fetched from DB) ──
+  const [payDayOptions, setPayDayOptions] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/payroll/paydays")
+      .then(r => r.json())
+      .then(data => { if (data.paydays) setPayDayOptions(data.paydays); })
+      .catch(() => {});
+  }, []);
+
   // ── Notes pagination ──
   const [notePage, setNotePage] = useState(0);
 
@@ -735,11 +744,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       }}
                     >
                       <option value="">—</option>
-                      <option value="Monthly">Monthly</option>
-                      <option value="Semi-Monthly">Semi-Monthly</option>
+                      <option value="Weekly">Weekly</option>
                       <option value="Bi-Weekly A">Bi-Weekly A</option>
                       <option value="Bi-Weekly B">Bi-Weekly B</option>
-                      <option value="Quarterly">Quarterly</option>
+                      <option value="Semi-Monthly">Semi-Monthly</option>
+                      <option value="Monthly">Monthly</option>
                     </select>
                   </div>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
@@ -1577,17 +1586,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       }
                     }}>
                     <option value="">—</option>
-                    <option value="Monthly">Monthly</option>
-                    <option value="Semi-Monthly">Semi-Monthly</option>
+                    <option value="Weekly">Weekly</option>
                     <option value="Bi-Weekly A">Bi-Weekly A</option>
                     <option value="Bi-Weekly B">Bi-Weekly B</option>
-                    <option value="Quarterly">Quarterly</option>
+                    <option value="Semi-Monthly">Semi-Monthly</option>
+                    <option value="Monthly">Monthly</option>
                   </select>
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
-                  <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }} placeholder="—" />
+                  <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                    value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }}>
+                    <option value="">—</option>
+                    {payDayOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Start Date</span>
