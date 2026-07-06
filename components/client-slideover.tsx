@@ -810,7 +810,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     ))}
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
-                    <input style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
+                    <input style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "#fff" }}
                       value={newPrEmail}
                       onChange={e => setNewPrEmail(e.target.value)}
                       onKeyDown={e => {
@@ -1655,7 +1655,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         </span>
                       ))}
                     </div>
-                    <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)", outline: "none", boxSizing: "border-box" }}
+                    <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", outline: "none", boxSizing: "border-box" }}
                       value={newPrEmail}
                       onChange={e => setNewPrEmail(e.target.value)}
                       onKeyDown={e => {
