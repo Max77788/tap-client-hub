@@ -769,11 +769,7 @@ export default function WorklistTable({
           <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
           <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
         </div>
-      ) : variant === "payroll" && !onPayrollMissingRuns ? (
-        <div className="stats" style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <StatCard label="Total missing runs" value={Math.max(0, stats.totalMax - stats.totalRuns)} color="var(--red)" />
-        </div>
-      ) : variant === "payroll" ? null : (
+      ) : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
         {!isHistorical ? (
           <>
@@ -828,16 +824,14 @@ export default function WorklistTable({
         <div className="text-xs" style={{ color: "var(--muted)" }}>
           {serviceKey === "sales_tax"
             ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
-            : variant === "payroll"
-            ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
             : variant === "tax_returns"
             ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
             : !isHistorical
             ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
             : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
         </div>
-        {/* Legend — status color indicators (hidden for count-based worklists) */}
-        {variant !== "payroll" && variant !== "t9" && (
+        {/* Legend — status color indicators (hidden for t9 only) */}
+        {variant !== "t9" && (
         <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ zIndex: 5 }}>
           {STAGE_CYCLE.filter(s => s !== "" && s !== "na").map(s => (
             <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
@@ -982,10 +976,6 @@ export default function WorklistTable({
 
               const payrollSvc = client.services.find((s: any) => s.key === "payroll");
               const processor = payrollSvc?.processor || "-";
-              const prCadence = getClientPayrollCadence(client);
-              const maxRuns = getMaxRunsPerMonth(prCadence);
-              const prKey = `${client.id}:payroll`;
-              const prCountsArr = prCounts[prKey] ?? Array(12).fill(0);
 
               // ── T9 variant: count-based table ──
               if (variant === "t9") {
@@ -1110,67 +1100,18 @@ export default function WorklistTable({
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
                     {variant === "payroll"
-                      ? prCadence
+                      ? (svc.frequency || "Monthly")
                       : isStxItem
                       ? (stxItem.frequency || svc.frequency || "Monthly")
                       : (svc.frequency || "Monthly")}
                   </td>
                   )}
 
-                  {/* Month cells — skip for payroll (read-only tab) */}
+                  {/* Month cells */}
                   {MONTHS_SHORT.map((_m, i) => {
                     const isActive = activeMonths.has(i);
                     const isCurrentMonth = i === currentMonth && !isHistorical;
                     const cellReadOnly = readOnly || isHistorical;
-
-                    // ── Payroll variant: count-based editable cells (inline input) ──
-                    if (variant === "payroll") {
-                      const prKey = `${client.id}:payroll`;
-                      const count = prCounts[prKey]?.[i] ?? 0;
-                      const maxRuns = getMaxRunsPerMonth(prCadence);
-                      const hasPRCmt = (svc.comments || []).some((c: any) => c.month === i);
-                      const cellEditKey = `${client.id}:${i}`;
-                      const isEditing = editingPr === cellEditKey;
-                      return (
-                        <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min="0"
-                              max={maxRuns}
-                              value={editPrValue}
-                              onChange={(e) => setEditPrValue(e.target.value)}
-                              onBlur={() => prCommitEdit(client.id, i)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") prCommitEdit(client.id, i);
-                                if (e.key === "Escape") setEditingPr(null);
-                              }}
-                              autoFocus
-                              className="inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums text-center"
-                              style={{
-                                backgroundColor: "#fff",
-                                border: "2px solid var(--teal)",
-                                color: "var(--ink)",
-                                outline: "none",
-                              }}
-                            />
-                          ) : (
-                            <div
-                              onClick={!isHistorical ? () => prStartEdit(client.id, i, count) : undefined}
-                              className={`inline-flex items-center justify-center w-full h-6 rounded text-[11px] font-semibold tabular-nums transition-colors ${!isHistorical ? "cursor-pointer" : "cursor-default"} hover:scale-110 hover:shadow-sm active:scale-95`}
-                              style={{
-                                backgroundColor: count > 0 ? "var(--green-soft)" : "transparent",
-                                color: count > 0 ? "var(--green)" : "var(--muted)",
-                              }}
-                              title={`${MONTHS_SHORT[i]}: ${count}/${maxRuns} runs — click to edit`}
-                            >{count > 0 ? count : "·"}</div>
-                          )}
-                          {hasPRCmt && (
-                            <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />
-                          )}
-                        </td>
-                      );
-                    }
 
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
@@ -1260,12 +1201,6 @@ export default function WorklistTable({
           process each month here. &ldquo;Left&rdquo; stays amber until the
           expected count is cleared. Click a month to add one, shift-click to
           subtract.
-        </p>
-      ) : variant === "payroll" ? (
-        <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
-          Click any month cell to toggle its run count -- click 0 to add one, click a nonzero cell to reduce it.
-          Shift-click always removes one. Cadence (Weekly=&thinsp;5, Bi-Weekly=&thinsp;2, Monthly=&thinsp;1) sets the maximum
-          runs per month for each client. Double-click to type a specific number.
         </p>
       ) : variant === "tax_returns" ? (
         <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
