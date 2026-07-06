@@ -850,7 +850,7 @@ export default function WorklistTable({
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
           {variant === "tax_returns" && (
           <>
-            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 5, height: 5, borderRadius: 1, display: "inline-block", background: "var(--teal)" }}></i>Filing month</span>
+            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 7, height: 7, borderRadius: 1, display: "inline-block", background: "var(--teal)", boxShadow: "0 0 0 1.5px #fff" }}></i>Filing month</span>
             <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
           </>
           )}
@@ -909,10 +909,11 @@ export default function WorklistTable({
                 >
                   {isFileMonth && (
                     <div style={{
-                      position: "absolute", top: 2, left: 2,
-                      width: 4, height: 4,
+                      position: "absolute", top: 0, left: 0,
+                      width: 7, height: 7,
                       background: "var(--teal)",
                       borderRadius: 1,
+                      boxShadow: "0 0 0 1.5px #fff",
                     }} />
                   )}
                   {m}
@@ -1215,11 +1216,12 @@ export default function WorklistTable({
                         {/* ── Filing month corner indicator ── */}
                         {isFilingMonth && (
                           <div style={{
-                            position: "absolute", top: 1, left: 1,
-                            width: 5, height: 5,
+                            position: "absolute", top: 0, left: 0,
+                            width: 7, height: 7,
                             background: "var(--teal)",
                             borderRadius: 1,
-                            zIndex: 1,
+                            zIndex: 3,
+                            boxShadow: "0 0 0 1.5px #fff",
                           }} />
                         )}
                         <div
