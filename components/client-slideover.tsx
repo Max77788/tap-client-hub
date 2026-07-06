@@ -536,6 +536,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const STAGE_CYCLE = ["", "ip", "wc", "pp", "dl", "dn", "na"];
 
     function handleNextStage(svcKey: string, monthIdx: number) {
+      if (!moduleKey) return; // read-only from Clients tab
       const svc = localSvcs.find((s: any) => s.key === svcKey);
       const currentStage = toStageKey((svc?.months || [])[monthIdx] || "");
       const idx = STAGE_CYCLE.indexOf(currentStage);
@@ -565,6 +566,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{mo}</div>
                   <div
                     onClick={() => {
+                      if (!moduleKey) return;
                       const newCounts = [...t9Counts];
                       newCounts[i] = (newCounts[i] || 0) + 1;
                       setT9Counts(newCounts);
@@ -579,6 +581,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       }
                     }}
                     onContextMenu={(e) => {
+                      if (!moduleKey) return;
                       e.preventDefault();
                       const newCounts = [...t9Counts];
                       newCounts[i] = Math.max(0, (newCounts[i] || 0) - 1);
@@ -599,11 +602,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       color: n > 0 ? "var(--green)" : "var(--muted)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       margin: "0 auto", fontWeight: 700, fontSize: 13, userSelect: "none",
-                      cursor: "pointer",
+                      cursor: moduleKey ? "pointer" : "default",
                       border: n > 0 ? "1px solid var(--green)" : "1px solid transparent",
                       position: "relative",
                     }}
-                    title={`${mo}: ${n} processed — click +1, right-click -1`}
+                    title={`${mo}: ${n} processed${moduleKey ? " — click +1, right-click -1" : ""}`}
                   >
                     {n || "·"}
                     {cmt && (
@@ -647,11 +650,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     color: style.fg,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     margin: "0 auto", fontWeight: 700, fontSize: 14, userSelect: "none",
-                    cursor: "pointer",
+                    cursor: moduleKey ? "pointer" : "default",
                     boxShadow: hasDelayBorder ? "0 0 0 2px var(--red)" : "none",
                     position: "relative",
                   }}
-                  title={`${mo} — ${hasDelayBorder ? "DELAYED · " : ""}${stageLabel} — click to cycle`}
+                  title={`${mo} — ${hasDelayBorder ? "DELAYED · " : ""}${stageLabel}${moduleKey ? " — click to cycle" : ""}`}
                 >
                   {t}
                   {cmt && (
