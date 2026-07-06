@@ -207,7 +207,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="min-h-screen flex flex-col md:flex-row" style={{ backgroundColor: "var(--paper)" }}>
+      <body className="h-screen flex flex-col md:flex-row overflow-hidden" style={{ backgroundColor: "var(--paper)" }}>
         {/* ── Desktop Sidebar ── */}
         {!isAuthPage && (
           <aside
@@ -289,7 +289,7 @@ export default function RootLayout({
         )}
 
         {/* ── Main content ── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
           {/* Top bar */}
           {!isAuthPage && (
             <header
