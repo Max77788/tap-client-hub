@@ -1452,7 +1452,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 Assignee
               </div>
               <select className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
-                value={eSvcAssignees[moduleKey] || "Unassigned"}
+                value={targetSvc.assignedTo || targetSvc.processor || "Unassigned"}
                 onChange={e => {
                   setESvcAssignees((prev: any) => ({ ...prev, [moduleKey]: e.target.value }));
                   setLocalSvcs((prev: any) => prev.map((s: any) =>
