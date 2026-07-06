@@ -388,7 +388,7 @@ export default function WorklistTable({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: clientId,
-          services: [{ csId: svc.csId, key: serviceKey, comments: updatedComments }],
+          services: [{ csId: svc.csId, key: serviceKey, enabled: true, comments: updatedComments }],
         }),
       });
       if (res.ok) {
@@ -415,7 +415,7 @@ export default function WorklistTable({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: clientId,
-          services: [{ csId: svc.csId, key: serviceKey, comments: updatedComments }],
+          services: [{ csId: svc.csId, key: serviceKey, enabled: true, comments: updatedComments }],
         }),
       });
       if (res.ok) {
