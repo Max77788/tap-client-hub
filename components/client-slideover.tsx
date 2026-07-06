@@ -872,12 +872,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
                       </div>
                       <div>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
-                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
-                          <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
-                        </select>
-                      </div>
-                      <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
                         <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
                       </div>
@@ -1234,12 +1228,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
-                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
-                    <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
-                  </select>
-                </div>
-                <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
                   <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
                 </div>
@@ -1295,12 +1283,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxName} onChange={e => setEditStxName(e.target.value)} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
-                      <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxFreq} onChange={e => setEditStxFreq(e.target.value)}>
-                        <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
-                      </select>
-                    </div>
-                    <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxRt} onChange={e => setEditStxRt(e.target.value)} />
                     </div>
@@ -1337,14 +1319,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   </div>
 
                   <div className="stxfields">
-                    <div>
-                      <span className="fk">Frequency</span>
-                      <span className="fv">
-                        <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, background: "var(--amber-soft)", color: "#8a560f", padding: "2px 8px", borderRadius: 6 }}>
-                          {item.frequency || "Monthly"}
-                        </span>
-                      </span>
-                    </div>
                     <div>
                       <span className="fk">RT #</span>
                       <span className="fv mono">{item.rt || "—"}</span>
