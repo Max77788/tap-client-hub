@@ -421,7 +421,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         setAddingStx(true);
       }
     }
-    onSave?.({ ...client, services: updated });
+    // Persist to DB without triggering full refresh
+    const toggled = updated.find(s => s.key === key);
+    if (toggled?.csId) {
+      fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: client.id, services: [{ csId: toggled.csId, key, enabled: toggled.enabled }] }),
+      }).catch(() => {});
+    }
   }
 
   function freqLabel(key: string, svc: any) {
