@@ -220,7 +220,15 @@ function buildWorklistState(clients: any[], serviceKey: ServiceKey): Record<stri
     const svc = client.services.find((s: any) => s.key === serviceKey);
     if (!svc?.enabled) continue;
     const key = `${client.id}:${serviceKey}`;
-    state[key] = (svc.months as any[]).map(mapMonthStatus);
+    const raw = (svc.months as any[]) || [];
+    state[key] = raw.map((m, idx) => {
+      // Payroll: mark months 0-4 (Jan-May) as done, respect existing non-empty values
+      if (serviceKey === "payroll" && idx <= 4) {
+        const existing = mapMonthStatus(m);
+        return existing === "" || existing === undefined || existing === null ? "dn" : existing;
+      }
+      return mapMonthStatus(m);
+    });
   }
   return state;
 }
