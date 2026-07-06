@@ -1583,6 +1583,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Filing Type</span>
                   <select value={filingType} onChange={e => { setFilingType(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s)); }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
+                    <option value="">—</option>
                     {FILING_TYPES.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
