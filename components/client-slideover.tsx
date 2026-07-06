@@ -197,7 +197,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setPrPin(prSvc?.payrollPassword || "");
     setPrEftps(prSvc?.eftps || "");
     setPrEmails(prSvc?.payEmails || []);
-    setPrPeriodFreq(prSvc?.payPeriodFrequency || "");
+    setPrPeriodFreq(prSvc?.frequency || prSvc?.payPeriodFrequency || "");
     setPrReportingMethod(prSvc?.reportingMethod || "");
     setPrPayrollCategory(prSvc?.payrollCategory || "");
     setPrQbLicense(prSvc?.qbLicense || "");
@@ -740,7 +740,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       value={prPeriodFreq}
                       onChange={e => {
                         setPrPeriodFreq(e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value } : s));
+                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s));
                       }}
                     >
                       <option value="">—</option>
@@ -1087,6 +1087,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             eftps: prEftps,
             payEmails: prEmails,
             payPeriodFrequency: prPeriodFreq,
+            frequency: prPeriodFreq,
             reportingMethod: prReportingMethod,
             payrollCategory: prPayrollCategory,
             qbLicense: prQbLicense,
@@ -1563,7 +1564,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={prPeriodFreq} onChange={e => {
                       const val = e.target.value;
                       setPrPeriodFreq(val);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val } : s));
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val } : s));
                       // Auto-set start date for Bi-Weekly A/B
                       if (val === "Bi-Weekly A" || val === "Bi-Weekly B") {
                         const cadence = val === "Bi-Weekly A" ? "A" : "B";
@@ -1914,7 +1915,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
-          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPin, eftps: prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq };
+          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPin, eftps: prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
         }
         if (s.key === "tax_returns") {
           updated = { ...updated, filingState, filingMonth, filingType };

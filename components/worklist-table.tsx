@@ -771,6 +771,14 @@ export default function WorklistTable({
           <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
           <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
         </div>
+      ) : variant === "payroll" ? (
+        <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+          <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" />
+          <StatCard label="Total Runs" value={stats.totalRuns ?? 0} color="var(--blue)" />
+          <StatCard label="Max Runs" value={stats.totalMax ?? 0} color="var(--muted)" />
+          <StatCard label="Completion" value={(stats.pct ?? 0) + "%"} color="var(--green)" />
+          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Month runs`} value={stats.monthRuns ?? 0} color="var(--amber)" />
+        </div>
       ) : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
         {!isHistorical ? (
