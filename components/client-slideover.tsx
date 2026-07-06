@@ -237,6 +237,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   )];
 
   // ── Helpers ──
+  function getAuthorName(): string {
+    if (currentUser) return currentUser;
+    if (typeof document !== "undefined") {
+      const m = document.cookie.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+      if (m?.[1]) return decodeURIComponent(m[1]);
+    }
+    return "You";
+  }
+
   function getServiceComments(svcKey: string, monthIdx: number): CommentEntry[] {
     const svc = localSvcs.find((s: any) => s.key === svcKey);
     return (svc?.comments || []).filter((cm: CommentEntry) => cm.month === monthIdx);
@@ -252,7 +261,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       month: monthIdx,
       text: text.trim(),
-      author: currentUser || "You",
+      author: getAuthorName(),
       createdAt: new Date().toISOString(),
     };
     const updated = localSvcs.map((s: any) => {
@@ -303,7 +312,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       month: notesMonth,
       text: prefix + notesText.trim(),
-      author: currentUser || "You",
+      author: getAuthorName(),
       createdAt: new Date().toISOString(),
     };
     const updated = localSvcs.map((s: any) => {
@@ -996,7 +1005,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         month: notesMonth,
         text: prefix + notesText.trim(),
-        author: currentUser || "You",
+        author: getAuthorName(),
         createdAt: new Date().toISOString(),
       };
       const updated = localSvcs.map((s: any) => {
@@ -1123,7 +1132,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           id: `stx-cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           month,
           text,
-          author: currentUser || "You",
+          author: getAuthorName(),
           createdAt: new Date().toISOString(),
           _lineItemKey: `stx-item-${itemIdx}`,
         };
