@@ -112,6 +112,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prQbLicense, setPrQbLicense] = useState("");
   const [prReportingNotes, setPrReportingNotes] = useState("");
 
+  // ── Notes pagination ──
+  const [notePage, setNotePage] = useState(0);
+
   // ── Tax returns state ──
   const [filingState, setFilingState] = useState("");
   const [filingMonth, setFilingMonth] = useState("");
@@ -190,6 +193,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setPrPayrollCategory(prSvc?.payrollCategory || "");
     setPrQbLicense(prSvc?.qbLicense || "");
     setPrReportingNotes(prSvc?.reportingNotes || "");
+    // Reset notes pagination
+    setNotePage(0);
     // Initialize tax returns fields
     const trSvc = client.services.find((s: any) => s.key === "tax_returns");
     setFilingState(trSvc?.filingState || "");
@@ -290,6 +295,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       return s;
     });
     setLocalSvcs(updated);
+    // If current page is now empty, go back one
+    const svc = updated.find((s: any) => s.key === svcKey);
+    const remaining = (svc?.comments || []).length;
+    if (notePage > 0 && notePage * 3 >= remaining) {
+      setNotePage(Math.max(0, Math.floor((remaining - 1) / 3)));
+    }
     onSave?.({ ...client, services: updated });
   }
 
@@ -1020,6 +1031,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       setLocalSvcs(updated);
       setNotesText("");
       setNoteType("others");
+      // Jump to last page so new note is visible
+      const targetSvc = updated.find((s: any) => s.key === moduleKey);
+      const newTotal = (targetSvc?.comments || []).length;
+      setNotePage(Math.floor(Math.max(0, newTotal - 1) / 3));
       onSave?.({ ...client, services: updated } as Client);
     }
 
@@ -1696,18 +1711,36 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 {(() => {
                   const svc = localSvcs.find((s: any) => s.key === moduleKey);
                   const allComments = (svc?.comments || []).sort((a: CommentEntry, b: CommentEntry) => a.month - b.month);
+                  const PER_PAGE = 3;
+                  const totalPages = Math.ceil(allComments.length / PER_PAGE);
+                  const pageComments = allComments.slice(notePage * PER_PAGE, (notePage + 1) * PER_PAGE);
                   return allComments.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {allComments.map((cm: CommentEntry) => (
-                        <div key={cm.id} className="note">
-                          <div className="ntxt">{cm.text}</div>
-                          <div className="nmeta">{MONTHS[cm.month]} · {cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                          <button onClick={() => deleteComment(moduleKey, cm.id)}
-                            style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
-                            × Delete
+                    <div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: totalPages > 1 ? 8 : 0 }}>
+                        {pageComments.map((cm: CommentEntry) => (
+                          <div key={cm.id} className="note">
+                            <div className="ntxt">{cm.text}</div>
+                            <div className="nmeta">{MONTHS[cm.month]} · {cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                            <button onClick={() => deleteComment(moduleKey, cm.id)}
+                              style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
+                              × Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {totalPages > 1 && (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12 }}>
+                          <button onClick={() => setNotePage(p => Math.max(0, p - 1))} disabled={notePage === 0}
+                            style={{ all: "unset", cursor: notePage === 0 ? "default" : "pointer", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--line)", color: notePage === 0 ? "var(--muted)" : "var(--ink)", fontSize: 11, opacity: notePage === 0 ? 0.4 : 1 }}>
+                            ← Prev
+                          </button>
+                          <span style={{ color: "var(--muted)", fontWeight: 500 }}>{notePage + 1} / {totalPages}</span>
+                          <button onClick={() => setNotePage(p => Math.min(totalPages - 1, p + 1))} disabled={notePage >= totalPages - 1}
+                            style={{ all: "unset", cursor: notePage >= totalPages - 1 ? "default" : "pointer", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--line)", color: notePage >= totalPages - 1 ? "var(--muted)" : "var(--ink)", fontSize: 11, opacity: notePage >= totalPages - 1 ? 0.4 : 1 }}>
+                            Next →
                           </button>
                         </div>
-                      ))}
+                      )}
                     </div>
                   ) : (
                     <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>No notes yet.</div>
