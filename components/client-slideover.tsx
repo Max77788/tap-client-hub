@@ -167,6 +167,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const stxSvc = client.services.find((s: any) => s.key === "sales_tax");
     const items = stxSvc?.salesTaxLineItems || [];
     setStxLineItems(items);
+    // Auto-select the month with the earliest comment for the active module
+    if (moduleKey) {
+      const svc = client.services.find((s: any) => s.key === moduleKey);
+      const comments = svc?.comments || [];
+      if (comments.length > 0) {
+        const months = [...new Set(comments.map((c: any) => c.month))].sort((a: number, b: number) => a - b);
+        setNotesMonth(months[0]);
+      }
+    }
     // Initialize payroll fields
     const prSvc = client.services.find((s: any) => s.key === "payroll");
     setPrPaydate(prSvc?.paydate || "");
