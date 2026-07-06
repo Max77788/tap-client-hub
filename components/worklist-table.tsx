@@ -1168,9 +1168,18 @@ export default function WorklistTable({
                         >{isActive || lockHist ? t : ""}</div>
                         {/* ── Payroll: next pay date MM/DD in current month cell ── */}
                         {variant === "payroll" && isCurrentMonth && (
-                          <div style={{ fontSize: 8, color: "var(--muted)", textAlign: "center", marginTop: 1, lineHeight: 1, whiteSpace: "nowrap" }}>
+                          <div style={{ fontSize: 8, textAlign: "center", marginTop: 1, lineHeight: 1, whiteSpace: "nowrap" }}>
                             {(() => {
                               const freq = svc?.frequency || "";
+                              const colorMap: Record<string, string> = {
+                                "Weekly": "#22c55e",
+                                "Bi-Weekly": "#3b82f6",
+                                "Bi-Weekly A": "#3b82f6",
+                                "Bi-Weekly B": "#a855f7",
+                                "Semi-Monthly": "#f97316",
+                                "Monthly": "#14b8a6",
+                              };
+                              const dateColor = colorMap[freq] || "var(--muted)";
                               const today = new Date();
                               let d = new Date(today);
                               d.setDate(d.getDate() + 1);
@@ -1191,7 +1200,7 @@ export default function WorklistTable({
                               } else { return null; }
                               const mm = String(d.getMonth() + 1).padStart(2, "0");
                               const dd = String(d.getDate()).padStart(2, "0");
-                              return `${mm}/${dd}`;
+                              return <span style={{ color: dateColor }}>{`${mm}/${dd}`}</span>;
                             })()}
                           </div>
                         )}
