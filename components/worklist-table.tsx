@@ -1025,24 +1025,7 @@ export default function WorklistTable({
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0">{client.name}</button>
                     </td>
                     <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
-                      <select
-                        value={assignedOverrides[`${client.id}:1099s`] ?? (svc.assignedTo || svc.processor || "")}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAssignedOverrides((prev) => ({ ...prev, [`${client.id}:1099s`]: val }));
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
-                          }).catch(() => {});
-                        }}
-                        className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[100px] max-w-[140px]"
-                      >
-                        <option value="">Unassigned</option>
-                        {staffList.map((s) => (
-                          <option key={s} value={s}>{toShortName(s)}</option>
-                        ))}
-                      </select>
+                      <span className="text-[var(--ink)]">{svc.assignedTo || svc.processor || "—"}</span>
                     </td>
                     {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                     <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
@@ -1172,42 +1155,7 @@ export default function WorklistTable({
 
                   {/* Assigned — read-only text for payroll, inline editable dropdown for others */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
-                    {variant === "payroll" ? (
-                      <span className="text-[var(--ink)]">{svc.assignedTo || svc.processor || "—"}</span>
-                    ) : (
-                    <select
-                      value={assignedOverrides[`${client.id}:${serviceKey}:${stxIdx}`] ?? (isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "") : (svc.assignedTo || svc.processor || ""))}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const key = `${client.id}:${serviceKey}:${stxIdx}`;
-                        setAssignedOverrides((prev) => ({ ...prev, [key]: val }));
-                        if (isStxItem && stxIdx >= 0) {
-                          // Update line item's assignedTo in the JSONB
-                          const updated = [...(svc.salesTaxLineItems || [])];
-                          if (updated[stxIdx]) {
-                            updated[stxIdx] = { ...updated[stxIdx], assignedTo: val };
-                            fetch("/api/clients", {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: updated }),
-                            }).catch(() => {});
-                          }
-                        } else {
-                          fetch("/api/clients", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ csId: svc.csId, assignedTo: val }),
-                          }).catch((e) => console.error("Failed to update assigned:", e));
-                        }
-                      }}
-                      className="text-[11px] bg-transparent border border-[var(--line)] rounded px-1 py-0.5 text-[var(--ink)] outline-none focus:border-[var(--teal)] cursor-pointer min-w-[100px] max-w-[140px]"
-                    >
-                      <option value="">Unassigned</option>
-                      {staffList.map((s) => (
-                        <option key={s} value={s}>{toShortName(s)}</option>
-                      ))}
-                    </select>
-                    )}
+                    <span className="text-[var(--ink)]">{isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "—") : (svc.assignedTo || svc.processor || "—")}</span>
                   </td>
 
                   {/* Cadence — read-only text for payroll, inline editable dropdown for others */}
