@@ -1457,7 +1457,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           {/* Body */}
           <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
             {/* Module tag badge */}
-            <span className="modtag">{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
+            <span className="modtag" style={{ marginBottom: 12 }}>{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
 
             {/* Per-service assignee selector */}
             <div style={{ marginBottom: 12 }}>
