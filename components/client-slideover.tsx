@@ -1556,11 +1556,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     }} />
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                  <span className="k" style={{ color: "var(--muted)" }}>QBO (Bi-Weekly Code)</span>
-                  <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                    value={targetSvc?.biweeklyCode || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, biweeklyCode: e.target.value } : s))} placeholder="—" />
-                </div>
-                <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                     value={targetSvc?.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))}>
