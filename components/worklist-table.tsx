@@ -777,10 +777,7 @@ export default function WorklistTable({
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
         {!isHistorical ? (
           <>
-            {serviceKey === "renditions"
-              ? <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" />
-              : <StatCard label={`Due in ${stats.currentMonthName}`} value={stats.dueThisMonth} color="var(--ink)" />
-            }
+            <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" />
             <StatCard label="In progress" value={stats.inProgress} color="var(--blue)" />
             <StatCard label="Waiting on client" value={stats.waiting} color="var(--amber)" />
             <StatCard label="Delayed" value={stats.behind ?? 0} color="var(--red)" />
