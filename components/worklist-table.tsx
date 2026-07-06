@@ -1166,6 +1166,31 @@ export default function WorklistTable({
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
+                        {/* ── Payroll: next pay date MM/DD in current month cell ── */}
+                        {variant === "payroll" && isCurrentMonth && (
+                          <div style={{ fontSize: 8, color: "var(--muted)", textAlign: "center", marginTop: 1, lineHeight: 1, whiteSpace: "nowrap" }}>
+                            {(() => {
+                              const freq = svc?.frequency || "";
+                              const today = new Date();
+                              let d = new Date(today);
+                              d.setDate(d.getDate() + 1);
+                              if (freq === "Weekly") {
+                                while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+                              } else if (freq === "Bi-Weekly A") {
+                                while (!(d.getDay() === 5 && ((d.getDate() >= 1 && d.getDate() <= 7) || (d.getDate() >= 15 && d.getDate() <= 22) || (d.getDate() >= 29 && d.getDate() <= 31)))) d.setDate(d.getDate() + 1);
+                              } else if (freq === "Bi-Weekly B") {
+                                while (!(d.getDay() === 5 && ((d.getDate() >= 8 && d.getDate() <= 14) || (d.getDate() >= 23 && d.getDate() <= 28)))) d.setDate(d.getDate() + 1);
+                              } else if (freq === "Semi-Monthly") {
+                                while (d.getDate() !== 1 && d.getDate() !== 15) d.setDate(d.getDate() + 1);
+                              } else if (freq === "Monthly") {
+                                while (d.getDate() !== 1) d.setDate(d.getDate() + 1);
+                              } else { return null; }
+                              const mm = String(d.getMonth() + 1).padStart(2, "0");
+                              const dd = String(d.getDate()).padStart(2, "0");
+                              return `${mm}/${dd}`;
+                            })()}
+                          </div>
+                        )}
                         {/* ── Comment marker blue dot ── */}
                         {hasCmt && (
                           <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />

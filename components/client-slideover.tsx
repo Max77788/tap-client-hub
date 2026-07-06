@@ -198,6 +198,56 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setPrEftps(prSvc?.eftps || "");
     setPrEmails(prSvc?.payEmails || []);
     setPrPeriodFreq(prSvc?.frequency || prSvc?.payPeriodFrequency || "");
+    // Auto-fill start date if cadence is set but start date is not
+    if ((prSvc?.frequency || prSvc?.payPeriodFrequency) && !prSvc?.payStartDate) {
+      const freq = prSvc?.frequency || prSvc?.payPeriodFrequency || "";
+      const today = new Date();
+      let d = new Date(today);
+      d.setDate(d.getDate() + 1);
+      if (freq === "Weekly") {
+        while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+        setPrStartDate(d.toISOString().slice(0, 10));
+      } else if (freq === "Bi-Weekly A") {
+        while (true) {
+          if (d.getDay() === 5) {
+            const dom = d.getDate();
+            if ((dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31)) {
+              setPrStartDate(d.toISOString().slice(0, 10));
+              break;
+            }
+          }
+          d.setDate(d.getDate() + 1);
+        }
+      } else if (freq === "Bi-Weekly B") {
+        while (true) {
+          if (d.getDay() === 5) {
+            const dom = d.getDate();
+            if ((dom >= 8 && dom <= 14) || (dom >= 23 && dom <= 28)) {
+              setPrStartDate(d.toISOString().slice(0, 10));
+              break;
+            }
+          }
+          d.setDate(d.getDate() + 1);
+        }
+      } else if (freq === "Semi-Monthly") {
+        while (true) {
+          const dom = d.getDate();
+          if (dom === 1 || dom === 15) {
+            setPrStartDate(d.toISOString().slice(0, 10));
+            break;
+          }
+          d.setDate(d.getDate() + 1);
+        }
+      } else if (freq === "Monthly") {
+        while (true) {
+          if (d.getDate() === 1) {
+            setPrStartDate(d.toISOString().slice(0, 10));
+            break;
+          }
+          d.setDate(d.getDate() + 1);
+        }
+      }
+    }
     setPrReportingMethod(prSvc?.reportingMethod || "");
     setPrPayrollCategory(prSvc?.payrollCategory || "");
     setPrQbLicense(prSvc?.qbLicense || "");
@@ -1565,24 +1615,65 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       const val = e.target.value;
                       setPrPeriodFreq(val);
                       setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val } : s));
-                      // Auto-set start date for Bi-Weekly A/B
-                      if (val === "Bi-Weekly A" || val === "Bi-Weekly B") {
-                        const cadence = val === "Bi-Weekly A" ? "A" : "B";
+                      // Auto-set start date based on cadence
+                      if (val) {
                         const today = new Date();
                         let d = new Date(today);
-                        d.setDate(d.getDate() + 1); // start from tomorrow
-                        while (true) {
-                          if (d.getDay() === 5) { // Friday
+                        d.setDate(d.getDate() + 1);
+                        if (val === "Weekly") {
+                          while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+                          const iso = d.toISOString().slice(0, 10);
+                          setPrStartDate(iso);
+                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
+                        } else if (val === "Bi-Weekly A") {
+                          while (true) {
+                            if (d.getDay() === 5) {
+                              const dom = d.getDate();
+                              if ((dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31)) {
+                                const iso = d.toISOString().slice(0, 10);
+                                setPrStartDate(iso);
+                                setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
+                                break;
+                              }
+                            }
+                            d.setDate(d.getDate() + 1);
+                          }
+                        } else if (val === "Bi-Weekly B") {
+                          while (true) {
+                            if (d.getDay() === 5) {
+                              const dom = d.getDate();
+                              if ((dom >= 8 && dom <= 14) || (dom >= 23 && dom <= 28)) {
+                                const iso = d.toISOString().slice(0, 10);
+                                setPrStartDate(iso);
+                                setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
+                                break;
+                              }
+                            }
+                            d.setDate(d.getDate() + 1);
+                          }
+                        } else if (val === "Semi-Monthly") {
+                          // Next 1st or 15th
+                          while (true) {
                             const dom = d.getDate();
-                            const isA = (dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31);
-                            if ((cadence === "A" && isA) || (cadence === "B" && !isA)) {
+                            if (dom === 1 || dom === 15) {
                               const iso = d.toISOString().slice(0, 10);
                               setPrStartDate(iso);
                               setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
                               break;
                             }
+                            d.setDate(d.getDate() + 1);
                           }
-                          d.setDate(d.getDate() + 1);
+                        } else if (val === "Monthly") {
+                          // Next 1st of month
+                          while (true) {
+                            if (d.getDate() === 1) {
+                              const iso = d.toISOString().slice(0, 10);
+                              setPrStartDate(iso);
+                              setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
+                              break;
+                            }
+                            d.setDate(d.getDate() + 1);
+                          }
                         }
                       }
                     }}>
