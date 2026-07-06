@@ -1220,8 +1220,8 @@ export default function WorklistTable({
                     const stage = (stages[i] || "") as WorklistStage;
                     const style = STAGE_STYLES[stage];
 
-                    // ── Tax returns: filingMonth highlight ──
-                    const clientFilingMonth = variant === "tax_returns" ? (svc.filingMonth || "") : "";
+                    // ── Tax returns / Renditions: filingMonth highlight ──
+                    const clientFilingMonth = (variant === "tax_returns" || serviceKey === "renditions") ? (svc.filingMonth || "") : "";
                     const filingMonthNum = clientFilingMonth ? parseInt(clientFilingMonth, 10) - 1 : -1;
                     const isFilingMonth = filingMonthNum === i;
 

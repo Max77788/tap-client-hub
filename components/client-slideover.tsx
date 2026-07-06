@@ -1590,16 +1590,34 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       type="number" value={targetSvc.expectedAnnual || 0} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))} placeholder="0" />
                   </div>
                 )}
-                {/* Filing Month for Renditions */}
+                {/* Filing State, Filing Type, Filing Month for Renditions */}
                 {moduleKey === "renditions" && (
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
-                    <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                      value={targetSvc.filingMonth || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingMonth: e.target.value } : s))}>
-                      <option value="">—</option>
-                      {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                    </select>
-                  </div>
+                  <>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>Filing State</span>
+                      <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                        value={targetSvc.filingState || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingState: e.target.value } : s))}>
+                        <option value="">Select state…</option>
+                        {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                    </div>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>Filing Type</span>
+                      <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                        value={targetSvc.filingType || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingType: e.target.value } : s))}>
+                        <option value="">—</option>
+                        {FILING_TYPES.map(ft => <option key={ft} value={ft}>{ft}</option>)}
+                      </select>
+                    </div>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
+                      <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                        value={targetSvc.filingMonth || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingMonth: e.target.value } : s))}>
+                        <option value="">—</option>
+                        {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                      </select>
+                    </div>
+                  </>
                 )}
               </div>
             )}
