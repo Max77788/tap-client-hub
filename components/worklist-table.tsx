@@ -267,6 +267,7 @@ export default function WorklistTable({
   const [activeCommentMonth, setActiveCommentMonth] = useState<number>(-1);
   const [commentText, setCommentText] = useState("");
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
+  const [commentPanelPos, setCommentPanelPos] = useState<{ top: number; left: number } | null>(null);
 
   // ── Close comment panel on outside click ──
   useEffect(() => {
@@ -276,6 +277,7 @@ export default function WorklistTable({
       if (!target.closest(".comment-panel-wl") && !target.closest(".cdot")) {
         setActiveCommentClientId(null);
         setActiveCommentMonth(-1);
+        setCommentPanelPos(null);
       }
     }
     document.addEventListener("mousedown", onClick);
@@ -1391,6 +1393,8 @@ export default function WorklistTable({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              const rect = (e.target as HTMLElement).getBoundingClientRect();
+                              setCommentPanelPos({ top: rect.top - 120, left: rect.left + 14 });
                               const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                               setActiveCommentClientId(isOpen ? null : client.id);
                               setActiveCommentMonth(isOpen ? -1 : i);
@@ -1401,11 +1405,11 @@ export default function WorklistTable({
                             title={`Comments for ${MONTHS_SHORT[i]}`}
                           />
                         )}
-                        {activeCommentClientId === client.id && activeCommentMonth === i && (
+                        {activeCommentClientId === client.id && activeCommentMonth === i && commentPanelPos && (
                           <div
                             className="comment-panel-wl"
                             style={{
-                              position: "absolute", top: 30, right: 0, zIndex: 9999,
+                              position: "fixed", top: commentPanelPos.top, left: commentPanelPos.left, zIndex: 99999,
                               background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10,
                               padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,.08)",
                               fontSize: 12, width: 240,
