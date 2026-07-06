@@ -535,7 +535,7 @@ function ServiceCard({ icon, label, checked, onChange, children }: {
       </label>
       {children && (
         <div className={`svcsub${checked ? " open" : ""}`} style={{
-          maxHeight: checked ? 400 : 0, opacity: checked ? 1 : 0,
+          maxHeight: checked ? 9999 : 0, opacity: checked ? 1 : 0,
           padding: checked ? "6px 13px 13px" : "0 13px",
           transition: ".18s", background: "#faf7f0",
           borderTop: checked ? "1px solid var(--line)" : "none",
