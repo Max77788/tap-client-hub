@@ -848,6 +848,12 @@ export default function WorklistTable({
           {!isHistorical && <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>Delayed</span>}
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
+          {variant === "tax_returns" && (
+          <>
+            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 5, height: 5, borderRadius: 1, display: "inline-block", background: "var(--teal)" }}></i>Filing month</span>
+            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
+          </>
+          )}
         </div>
         )}
       </div>
@@ -888,7 +894,6 @@ export default function WorklistTable({
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
             )}
             {MONTHS_SHORT.map((m, mi) => {
-              // For tax_returns, check if any client has this month as filingMonth
               const isFileMonth = variant === "tax_returns" && serviceClients.some((c) => {
                 const s = c.services?.find((s: any) => s.key === serviceKey);
                 const fm = s?.filingMonth || "";
@@ -899,10 +904,19 @@ export default function WorklistTable({
                   className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2"
                   style={{
                     width: variant === "t9" ? 44 : 30,
-                    backgroundColor: isFileMonth ? "var(--teal-soft)" : undefined,
-                    borderBottom: isFileMonth ? "2px solid var(--teal)" : undefined,
+                    position: "relative",
                   }}
-                >{m}</th>
+                >
+                  {isFileMonth && (
+                    <div style={{
+                      position: "absolute", top: 2, left: 2,
+                      width: 4, height: 4,
+                      background: "var(--teal)",
+                      borderRadius: 1,
+                    }} />
+                  )}
+                  {m}
+                </th>
               );
             })}
             {variant === "t9" && (
@@ -1198,19 +1212,29 @@ export default function WorklistTable({
                     const hasCmt = (svc.comments || []).some((c: any) => c.month === i);
                     return (
                       <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
+                        {/* ── Filing month corner indicator ── */}
+                        {isFilingMonth && (
+                          <div style={{
+                            position: "absolute", top: 1, left: 1,
+                            width: 5, height: 5,
+                            background: "var(--teal)",
+                            borderRadius: 1,
+                            zIndex: 1,
+                          }} />
+                        )}
                         <div
                           onClick={cellReadOnly ? undefined : (e) => handleCellClick(client.id, i, e)}
                           className="mcell"
                           style={{
                             width: 26, height: 26, borderRadius: 6,
-                            border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : isFilingMonth ? "var(--teal)" : style.border}`,
-                            background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : (isFilingMonth ? "var(--teal-soft)" : style.bg),
-                            color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : (isFilingMonth ? "var(--teal-ink)" : style.fg),
+                            border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
+                            background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
+                            color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto",
                             fontWeight: 600, fontSize: 11, userSelect: "none",
                             cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
-                            boxShadow: delayed ? "0 0 0 2px var(--red)" : isFilingMonth ? "0 0 0 2px var(--teal)" : "none",
+                            boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
                             opacity: !isActive && !lockHist ? 0 : 1,
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
@@ -1258,7 +1282,7 @@ export default function WorklistTable({
         <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
           Every service uses one workflow: In progress → Waiting on Client → Prepared → Filed.
           &ldquo;Waiting on client&rdquo; signals you&rsquo;re blocked; anything past due flags red
-          automatically. Filing month is highlighted with a teal ring and background.
+          automatically. Filing month is marked with a teal square in the top-left corner.
         </p>
       ) : (
       <p className="text-[11px] text-[var(--muted)] leading-relaxed" style={{ margin: "14px 2px 0", fontStyle: "italic" }}>
