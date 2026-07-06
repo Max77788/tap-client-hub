@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 
@@ -264,6 +265,7 @@ export default function WorklistTable({
   }, [serviceKey, variant]);
   // ── Stage dropdown picker ──
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -277,6 +279,19 @@ export default function WorklistTable({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
+
+  // ── Resolve active dropdown cell info for portal ──
+  const activeDropdownInfo = useMemo(() => {
+    if (!activeDropdown) return null;
+    const [clientId, monthIdxStr] = activeDropdown.split(":");
+    const monthIdx = parseInt(monthIdxStr, 10);
+    const client = serviceClients.find((c) => c.id === clientId);
+    if (!client) return null;
+    const key = `${clientId}:${serviceKey}`;
+    const stages = worklistState[key];
+    const stage = stages?.[monthIdx] ?? "";
+    return { client, monthIdx, stage };
+  }, [activeDropdown, serviceClients, serviceKey, worklistState]);
 
   // ── Filter clients by search + cadence ──
   const filteredClients = useMemo(
@@ -561,10 +576,18 @@ export default function WorklistTable({
 
   // ── Cell click handler — opens stage picker dropdown ──
   const handleCellClick = useCallback(
-    (clientId: string, monthIdx: number) => {
+    (clientId: string, monthIdx: number, e: React.MouseEvent) => {
       if (readOnly || isHistorical) return;
       const key = `${clientId}:${monthIdx}`;
-      setActiveDropdown((prev) => (prev === key ? null : key));
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setActiveDropdown((prev) => {
+        if (prev === key) {
+          setDropdownPos(null);
+          return null;
+        }
+        setDropdownPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
+        return key;
+      });
     },
     [readOnly, isHistorical],
   );
@@ -580,6 +603,7 @@ export default function WorklistTable({
       setWorklistState((prev) => ({ ...prev, [key]: stages }));
       if (onStageChange) onStageChange(clientId, monthIdx, stage, csId);
       setActiveDropdown(null);
+      setDropdownPos(null);
     },
     [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
   );
@@ -847,26 +871,22 @@ export default function WorklistTable({
       </div>
 
 
-      <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
-        {serviceKey === "sales_tax"
-          ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
-          : variant === "payroll"
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
-          : variant === "tax_returns"
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
-          : !isHistorical
-          ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
-          : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
-      </div>
-
-      {/* ── Main table with scroll arrows ── */}
-      <div style={{ position: "relative" }}>
-        {/* Legend overlay */}
+      {/* ── Info line + Legend row ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", margin: "6px 2px", gap: 8 }}>
+        <div className="text-xs" style={{ color: "var(--muted)" }}>
+          {serviceKey === "sales_tax"
+            ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
+            : variant === "payroll"
+            ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · click a cell to add/remove a run (click nonzero to reduce), shift-click to remove · cadence sets max per month (Wk=5, B/W=2, Mo=1)`
+            : variant === "tax_returns"
+            ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]}) · filing month shows visual highlight`
+            : !isHistorical
+            ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
+            : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
+        </div>
+        {/* Legend — status color indicators */}
         {variant !== "payroll" && variant !== "tax_returns" && (
-        <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{
-          position: "absolute", top: -26, left: 0, right: 0, zIndex: 5,
-          pointerEvents: "none",
-        }}>
+        <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ zIndex: 5 }}>
           {STAGE_CYCLE.filter(s => s !== "").map(s => (
             <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
               <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s].fg }}></i>
@@ -878,6 +898,10 @@ export default function WorklistTable({
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
         </div>
         )}
+      </div>
+
+      {/* ── Main table with scroll arrows ── */}
+      <div style={{ position: "relative" }}>
         <button
           onClick={() => {
             const el = document.getElementById(`table-scroll-${serviceKey}`);
@@ -1280,7 +1304,7 @@ export default function WorklistTable({
                     return (
                       <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
                         <div
-                          onClick={cellReadOnly ? undefined : () => handleCellClick(client.id, i)}
+                          onClick={cellReadOnly ? undefined : (e) => handleCellClick(client.id, i, e)}
                           className="mcell"
                           style={{
                             width: 26, height: 26, borderRadius: 6,
@@ -1299,49 +1323,6 @@ export default function WorklistTable({
                         {/* ── Comment marker blue dot ── */}
                         {hasCmt && (
                           <div className="cdot" style={{ position: "absolute", top: -2, right: -2, zIndex: 2 }} />
-                        )}
-                        {activeDropdown === `${client.id}:${i}` && !cellReadOnly && (
-                          <div
-                            ref={dropdownRef}
-                            className="stage-picker"
-                            style={{
-                              position: "absolute", zIndex: 50, top: "100%", left: "50%",
-                              transform: "translateX(-50%)", marginTop: 4,
-                              background: "#fff", border: "1px solid #d8d2c4",
-                              borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
-                              padding: "4px 0", minWidth: 160,
-                            }}
-                          >
-                            {STAGE_CYCLE.map((s) => {
-                              const ss = STAGE_STYLES[s];
-                              const isCurrent = stage === s;
-                              return (
-                                <div
-                                  key={s}
-                                  onClick={(e) => { e.stopPropagation(); handleStageSelect(client.id, i, s); }}
-                                  style={{
-                                    display: "flex", alignItems: "center", gap: 8,
-                                    padding: "7px 14px", cursor: "pointer", fontSize: 13,
-                                    fontWeight: isCurrent ? 700 : 400,
-                                    color: isCurrent ? "var(--ink)" : "var(--muted)",
-                                    background: isCurrent ? "#f0f4f8" : "transparent",
-                                    borderBottom: s !== "na" ? "1px solid #f0ede8" : "none",
-                                  }}
-                                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f5f7fa"; }}
-                                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isCurrent ? "#f0f4f8" : "transparent"; }}
-                                >
-                                  <i style={{
-                                    width: 12, height: 12, borderRadius: 4,
-                                    display: "inline-block", flexShrink: 0,
-                                    background: s === "na" ? "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)"
-                                      : s === "" ? "#c2c8d4" : ss.fg,
-                                  }} />
-                                  <span>{s === "" ? "Not Started" : getStageLabel(s, variant)}</span>
-                                  {isCurrent && <span style={{ marginLeft: "auto", color: "var(--teal)", fontSize: 14 }}>✓</span>}
-                                </div>
-                              );
-                            })}
-                          </div>
                         )}
                       </td>
                     );
@@ -1392,6 +1373,52 @@ export default function WorklistTable({
             : "Every service uses one workflow: In progress → Waiting on client → Prepared → Done. &ldquo;Waiting on client&rdquo; signals you&rsquo;re blocked; anything past due flags red automatically."
           : `Read-only history for ${year}. Switch the Year selector back to ${currentYear} to make changes.`}
       </p>
+      )}
+      {/* ── Portal stage picker dropdown (rendered at body level, never clipped) ── */}
+      {activeDropdown && activeDropdownInfo && dropdownPos && createPortal(
+        <div
+          ref={dropdownRef}
+          className="stage-picker"
+          style={{
+            position: "fixed", zIndex: 9999,
+            top: dropdownPos.top, left: dropdownPos.left,
+            transform: "translateX(-50%)",
+            background: "#fff", border: "1px solid #d8d2c4",
+            borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
+            padding: "4px 0", minWidth: 160,
+          }}
+        >
+          {STAGE_CYCLE.map((s) => {
+            const ss = STAGE_STYLES[s];
+            const isCurrent = activeDropdownInfo.stage === s;
+            return (
+              <div
+                key={s}
+                onClick={(e) => { e.stopPropagation(); handleStageSelect(activeDropdownInfo.client.id, activeDropdownInfo.monthIdx, s); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "7px 14px", cursor: "pointer", fontSize: 13,
+                  fontWeight: isCurrent ? 700 : 400,
+                  color: isCurrent ? "var(--ink)" : "var(--muted)",
+                  background: isCurrent ? "#f0f4f8" : "transparent",
+                  borderBottom: s !== "na" ? "1px solid #f0ede8" : "none",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f5f7fa"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isCurrent ? "#f0f4f8" : "transparent"; }}
+              >
+                <i style={{
+                  width: 12, height: 12, borderRadius: 4,
+                  display: "inline-block", flexShrink: 0,
+                  background: s === "na" ? "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)"
+                    : s === "" ? "#c2c8d4" : ss.fg,
+                }} />
+                <span>{s === "" ? "Not Started" : getStageLabel(s, variant)}</span>
+                {isCurrent && <span style={{ marginLeft: "auto", color: "var(--teal)", fontSize: 14 }}>✓</span>}
+              </div>
+            );
+          })}
+        </div>,
+        document.body
       )}
     </div>
   );
