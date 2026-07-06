@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import type { Client, ServiceKey } from "@/lib/types";
 
-type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
+type WorklistStage = "" | "ip" | "wc" | "pp" | "dl" | "dn" | "na";
 
 interface ClientsContextValue {
   clients: Client[];
@@ -22,12 +22,12 @@ const ClientsContext = createContext<ClientsContextValue | null>(null);
 
 const STAGE_TO_WP: Record<WorklistStage, string> = {
   "": "not_started", ip: "in_progress", wc: "waiting_client",
-  pp: "prepared", dn: "done", na: "na",
+  pp: "prepared", dl: "delayed", dn: "done", na: "na",
 };
 
 const STAGE_TO_MONTH: Record<WorklistStage, string> = {
   "": "lock", ip: "in_progress", wc: "waiting",
-  pp: "billed", dn: "done", na: "na",
+  pp: "billed", dl: "delayed", dn: "done", na: "na",
 };
 
 // ── In-flight request deduplication ──

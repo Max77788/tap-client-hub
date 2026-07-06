@@ -7,13 +7,14 @@ import { MONTHS_SHORT } from "@/lib/data";
 
 
 // ── Worklist stage types ──
-export type WorklistStage = "" | "ip" | "wc" | "pp" | "dn" | "na";
+export type WorklistStage = "" | "ip" | "wc" | "pp" | "dl" | "dn" | "na";
 
 const STAGE_LABELS: Record<WorklistStage, string> = {
   "": "Not Started",
   ip: "In Progress",
   wc: "Waiting on Client",
   pp: "Prepared",
+  dl: "Delayed",
   dn: "Done",
   na: "N/A",
 };
@@ -23,8 +24,6 @@ function getStageLabel(stage: WorklistStage, variant?: string): string {
   if (variant === "tax_returns" && stage === "dn") return "Filed";
   return STAGE_LABELS[stage];
 }
-
-const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
 
 // ── Stage colors (matching demo v7 mcell classes exactly) ──
 const PAYROLL_PROCESSOR_OPTIONS = ["ADP", "QBO", "Quickbooks Desktop", "Quickbooks Desktop 24"];
@@ -54,13 +53,15 @@ const STAGE_STYLES: Record<
   ip: { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2", cls: "prog", label: "In progress" },
   wc: { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6", cls: "wait", label: "Waiting on client" },
   pp: { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec", cls: "prep", label: "Prepared" },
+  dl: { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf", cls: "delay", label: "Delayed" },
   dn: { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6", cls: "done", label: "Done" },
   na: { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf", cls: "na", label: "N/A" },
 };
+const STAGE_CYCLE: WorklistStage[] = ["", "ip", "wc", "pp", "dl", "dn", "na"];
 
 // Single-click cycling: advances to next stage, wraps from na back to blank
 function nextStage(current: WorklistStage): WorklistStage {
-  const cycle: WorklistStage[] = ["", "ip", "wc", "pp", "dn", "na"];
+  const cycle: WorklistStage[] = ["", "ip", "wc", "pp", "dl", "dn", "na"];
   const idx = cycle.indexOf(current);
   return cycle[(idx + 1) % cycle.length];
 }
@@ -73,6 +74,8 @@ function mapMonthStatus(status: MonthStatus): WorklistStage {
       return "dn";
     case "billed":
       return "pp";
+    case "delayed":
+      return "dl";
     case "na":
       return "na";
     case "in_progress":
@@ -183,6 +186,8 @@ export function stageToMonthStatus(stage: WorklistStage): MonthStatus {
       return "done";
     case "pp":
       return "billed";
+    case "dl":
+      return "delayed";
     case "":
       return "lock";
     case "na":
@@ -706,14 +711,11 @@ export default function WorklistTable({
           dueThisMonth++;
           if (!stages[m] || stages[m] === "") notStarted++;
         }
-        // Past due check: month is before current, not done, not na, not empty
-        if (m < currentMonth && stages[m] !== "dn" && stages[m] !== "na" && stages[m] !== "" && !isHistorical) {
-          behind++;
-        }
         switch (stages[m]) {
           case "ip": inProgress++; break;
           case "wc": waiting++; break;
           case "pp": prepared++; break;
+          case "dl": behind++; break;
           case "dn": done++; break;
         }
       }
@@ -839,7 +841,6 @@ export default function WorklistTable({
               {getStageLabel(s, variant)}
             </span>
           ))}
-          {!isHistorical && <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>Delayed</span>}
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
           {variant === "tax_returns" && (
@@ -1121,21 +1122,14 @@ export default function WorklistTable({
                     const clientFilingMonth = variant === "tax_returns" ? (svc.filingMonth || "") : "";
                     const filingMonthNum = clientFilingMonth ? parseInt(clientFilingMonth, 10) - 1 : -1;
                     const isFilingMonth = filingMonthNum === i;
-                    const isPastDue =
-                      isActive &&
-                      i < currentMonth &&
-                      stage !== "dn" &&
-                      stage !== "na" &&
-                      stage !== "" &&
-                      !isHistorical;
 
-                    const t = stage === "" ? (isPastDue && !isHistorical ? "!" : "·")
+                    const t = stage === "" ? "·"
                       : stage === "ip" ? "•"
                       : stage === "wc" ? "⏳"
                       : stage === "pp" ? "✓"
+                      : stage === "dl" ? "!"
                       : stage === "dn" ? "✓"
                       : stage === "na" ? "–" : "";
-                    const delayed = isPastDue && !isHistorical;
                     const lockHist = isHistorical && isActive;
                     // ── Comment marker: check if any comment exists for this month ──
                     const hasCmt = (svc.comments || []).some((c: any) => c.month === i);
@@ -1157,17 +1151,17 @@ export default function WorklistTable({
                           className="mcell"
                           style={{
                             width: 26, height: 26, borderRadius: 6,
-                            border: `1px solid ${!isActive ? "transparent" : delayed ? "var(--red)" : style.border}`,
+                            border: `1px solid ${!isActive ? "transparent" : style.border}`,
                             background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
                             color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto",
                             fontWeight: 600, fontSize: 11, userSelect: "none",
                             cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
-                            boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
+                            boxShadow: "none",
                             opacity: !isActive && !lockHist ? 0 : 1,
                           } as React.CSSProperties}
-                          title={`${MONTHS_SHORT[i]} — ${delayed ? "DELAYED · " : ""}${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
+                          title={`${MONTHS_SHORT[i]} — ${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
                         {/* ── Comment marker blue dot ── */}
                         {hasCmt && (

@@ -38,6 +38,7 @@ const STAGE_STYLES: Record<string, { bg: string; fg: string; border: string; cls
   ip:   { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2", cls: "prog", label: "In progress" },
   wc:   { bg: "var(--amber-soft)", fg: "var(--amber)", border: "#e8d3a6", cls: "wait", label: "Waiting on client" },
   pp:   { bg: "var(--teal-soft)", fg: "var(--teal-ink)", border: "#c5d0ec", cls: "prep", label: "Prepared" },
+  dl:   { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf", cls: "delay", label: "Delayed" },
   dn:   { bg: "var(--green-soft)", fg: "var(--green)", border: "#bcdcc6", cls: "done", label: "Done" },
   na:   { bg: "var(--red-soft)", fg: "var(--red)", border: "#e8c4bf", cls: "na", label: "N/A" },
 };
@@ -441,6 +442,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         case "in_progress": return "ip";
         case "waiting": return "wc";
         case "billed": return "pp";
+        case "delayed": return "dl";
         case "done": return "dn";
         case "na": return "na";
         default: return ms;
@@ -452,13 +454,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         case "ip": return "in_progress";
         case "wc": return "waiting";
         case "pp": return "billed";
+        case "dl": return "delayed";
         case "dn": return "done";
         case "na": return "na";
         default: return sk;
       }
     }
 
-    const STAGE_CYCLE = ["", "ip", "wc", "pp", "dn", "na"];
+    const STAGE_CYCLE = ["", "ip", "wc", "pp", "dl", "dn", "na"];
 
     function handleNextStage(svcKey: string, monthIdx: number) {
       const svc = localSvcs.find((s: any) => s.key === svcKey);
@@ -550,8 +553,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             const stage = toStageKey(stages[i] || "");
             const style = STAGE_STYLES[stage] || STAGE_STYLES[""];
             const stageLabel = isTaxReturns && stage === "dn" ? "Filed" : style.label;
-            const t = stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : (stage === "dn" ? (isTaxReturns ? "📋" : "✓") : stage === "na" ? "–" : "");
-            const delayed = stage !== "" && stage !== "dn" && stage !== "na" && i < now;
+            const t = stage === "" ? "·" : stage === "ip" ? "•" : stage === "wc" ? "⏳" : stage === "pp" ? "✓" : stage === "dl" ? "!" : (stage === "dn" ? (isTaxReturns ? "📋" : "✓") : stage === "na" ? "–" : "");
+            const hasDelayBorder = stage === "dl";
             const cmt = hasComment(svcKey, i);
             return (
               <div key={mo} style={{ textAlign: "center" }}>
@@ -560,16 +563,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   onClick={() => handleNextStage(svcKey, i)}
                   style={{
                     width: 30, height: 30, borderRadius: 8,
-                    border: `1px solid ${delayed ? "var(--red)" : style.border}`,
-                    background: delayed || stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
+                    border: `1px solid ${hasDelayBorder ? "var(--red)" : style.border}`,
+                    background: stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
                     color: style.fg,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     margin: "0 auto", fontWeight: 700, fontSize: 14, userSelect: "none",
                     cursor: "pointer",
-                    boxShadow: delayed ? "0 0 0 2px var(--red)" : "none",
+                    boxShadow: hasDelayBorder ? "0 0 0 2px var(--red)" : "none",
                     position: "relative",
                   }}
-                  title={`${mo} — ${delayed ? "DELAYED · " : ""}${stageLabel} — click to cycle`}
+                  title={`${mo} — ${hasDelayBorder ? "DELAYED · " : ""}${stageLabel} — click to cycle`}
                 >
                   {t}
                   {cmt && <div className="cdot" />}
@@ -1165,7 +1168,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         // Same stage cycling as the parent month tracker
         const svc = localSvcs.find((s: any) => s.key === "sales_tax");
         const currentStage = (svc?.months || [])[monthIdx] || "lock";
-        const STAGE_CYCLE = ["lock", "in_progress", "waiting", "billed", "done", "na"];
+        const STAGE_CYCLE = ["lock", "in_progress", "waiting", "billed", "delayed", "done", "na"];
         const idx = STAGE_CYCLE.indexOf(currentStage);
         const nextStage = STAGE_CYCLE[(idx + 1) % STAGE_CYCLE.length];
         const updated = localSvcs.map((s: any) =>

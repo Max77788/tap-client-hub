@@ -162,7 +162,7 @@ export async function GET(request: Request) {
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
-            return !s ? "lock" : s === "done" ? "done" : s === "na" ? "na" : s === "in_progress" ? "in_progress" : s === "waiting_client" ? "waiting" : s === "prepared" ? "billed" : "lock";
+            return !s ? "lock" : s === "done" ? "done" : s === "na" ? "na" : s === "in_progress" ? "in_progress" : s === "waiting_client" ? "waiting" : s === "prepared" ? "billed" : s === "delayed" ? "delayed" : "lock";
           }),
           periodCounts: countByCsId[cs.id] || Array(12).fill(0),
           svcNotes: cs.notes || "",
