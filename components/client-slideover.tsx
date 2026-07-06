@@ -1568,8 +1568,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                   Details
                 </div>
-                {/* Cadence for Financials, 1099s (NOT sales tax) */}
-                {(moduleKey === "financials" || moduleKey === "1099s") && (
+                {/* Cadence for Financials only (1099s is always Annual) */}
+                {moduleKey === "financials" && (
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
