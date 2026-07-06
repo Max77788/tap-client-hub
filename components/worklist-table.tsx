@@ -254,6 +254,26 @@ export default function WorklistTable({
   const [search, setSearch] = useState("");
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
 
+  // ── Comment panel state ──
+  const [activeCommentClientId, setActiveCommentClientId] = useState<string | null>(null);
+  const [activeCommentMonth, setActiveCommentMonth] = useState<number>(-1);
+  const [commentText, setCommentText] = useState("");
+  const [commentRefreshKey, setCommentRefreshKey] = useState(0);
+
+  // ── Close comment panel on outside click ──
+  useEffect(() => {
+    if (activeCommentMonth === -1) return;
+    function onClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".comment-panel-wl") && !target.closest(".cdot")) {
+        setActiveCommentClientId(null);
+        setActiveCommentMonth(-1);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [activeCommentMonth]);
+
   // ── Cadence filter options (dynamic per module) ──
   const cadenceOptions = useMemo(() => {
     if (variant === "payroll") {
@@ -323,6 +343,78 @@ export default function WorklistTable({
     if (!name.includes(",")) return name;
     return name.split(",")[1].trim();
   };
+
+  // ── Comment helpers ──
+  const getAuthorName = (): string => {
+    if (typeof document !== "undefined") {
+      const m = document.cookie.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+      if (m?.[1]) return decodeURIComponent(m[1]);
+    }
+    return "You";
+  };
+
+  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string) => {
+    if (!text.trim()) return;
+    // Find the client and service to get csId
+    const cl = clients.find((c: any) => c.id === clientId);
+    if (!cl) return;
+    const svc = cl.services.find((s: any) => s.key === serviceKey);
+    if (!svc?.csId) return;
+
+    const newComment = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      month: monthIdx,
+      text: text.trim(),
+      author: getAuthorName(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedComments = [...(svc.comments || []), newComment];
+    // Update local state directly for instant UI feedback
+    svc.comments = updatedComments;
+    try {
+      const res = await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: clientId,
+          services: [{ csId: svc.csId, key: serviceKey, comments: updatedComments }],
+        }),
+      });
+      if (res.ok) {
+        setCommentText("");
+        setCommentRefreshKey(k => k + 1);
+      }
+    } catch (e) {
+      console.error("Failed to add comment:", e);
+    }
+  }, [clients, serviceKey]);
+
+  const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string) => {
+    const cl = clients.find((c: any) => c.id === clientId);
+    if (!cl) return;
+    const svc = cl.services.find((s: any) => s.key === serviceKey);
+    if (!svc?.csId) return;
+
+    const updatedComments = (svc.comments || []).filter((c: any) => c.id !== commentId);
+    // Update local state directly for instant UI feedback
+    svc.comments = updatedComments;
+    try {
+      const res = await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: clientId,
+          services: [{ csId: svc.csId, key: serviceKey, comments: updatedComments }],
+        }),
+      });
+      if (res.ok) {
+        setCommentRefreshKey(k => k + 1);
+      }
+    } catch (e) {
+      console.error("Failed to delete comment:", e);
+    }
+  }, [clients, serviceKey]);
 
   // ── Staff list for dropdowns — only active members, full names, no duplicates ──
   const [staffList, setStaffList] = useState<string[]>([]);
@@ -851,12 +943,10 @@ export default function WorklistTable({
           ))}
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
-          {variant === "tax_returns" && (
-          <>
+          {(variant === "tax_returns" || serviceKey === "renditions") && (
             <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: 1, display: "inline-block", background: "var(--teal)", boxShadow: "0 0 0 1.5px #fff" }}></i>Filing month</span>
-            <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
-          </>
           )}
+          <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
         </div>
         )}
       </div>
@@ -1289,7 +1379,64 @@ export default function WorklistTable({
                         )}
                         {/* ── Comment marker blue dot ── */}
                         {hasCmt && (
-                          <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
+                              setActiveCommentClientId(isOpen ? null : client.id);
+                              setActiveCommentMonth(isOpen ? -1 : i);
+                              if (!isOpen) setCommentText("");
+                            }}
+                            className="cdot"
+                            style={{ all: "unset", cursor: "pointer", position: "absolute", top: 1, right: 1, zIndex: 3, width: 6, height: 6, borderRadius: "50%", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}
+                            title={`Comments for ${MONTHS_SHORT[i]}`}
+                          />
+                        )}
+                        {activeCommentClientId === client.id && activeCommentMonth === i && (
+                          <div
+                            className="comment-panel-wl"
+                            style={{
+                              position: "absolute", top: 30, right: 0, zIndex: 9999,
+                              background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10,
+                              padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,.08)",
+                              fontSize: 12, width: 240,
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
+                              Comments — {MONTHS_SHORT[i]}
+                            </div>
+                            {(svc.comments || []).filter((c: any) => c.month === i).length > 0 && (
+                              <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                                {(svc.comments || []).filter((c: any) => c.month === i).map((cm: any) => (
+                                  <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
+                                    <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
+                                      <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
+                                    <button
+                                      onClick={() => deleteComment(client.id, i, cm.id)}
+                                      style={{ all: "unset", cursor: "pointer", position: "absolute", top: 4, right: 6, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
+                                      title="Delete comment"
+                                    >×</button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <input
+                                style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
+                                value={commentText}
+                                onChange={e => setCommentText(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText); } }}
+                                placeholder="Add a comment…"
+                              />
+                              <button
+                                onClick={() => addComment(client.id, i, commentText)}
+                                style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
+                              >Send</button>
+                            </div>
+                          </div>
                         )}
                       </td>
                     );
