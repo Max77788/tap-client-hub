@@ -1183,7 +1183,11 @@ export default function WorklistTable({
                               } else if (freq === "Semi-Monthly") {
                                 while (d.getDate() !== 1 && d.getDate() !== 15) d.setDate(d.getDate() + 1);
                               } else if (freq === "Monthly") {
-                                while (d.getDate() !== 1) d.setDate(d.getDate() + 1);
+                                // Last business day of current month
+                                d = new Date();
+                                d.setMonth(d.getMonth() + 1);
+                                d.setDate(0);
+                                while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
                               } else { return null; }
                               const mm = String(d.getMonth() + 1).padStart(2, "0");
                               const dd = String(d.getDate()).padStart(2, "0");
