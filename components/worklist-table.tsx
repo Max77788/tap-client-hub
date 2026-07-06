@@ -846,25 +846,7 @@ export default function WorklistTable({
         )}
       </div>
 
-      {/* ── Legend ── */}
-      {variant !== "payroll" && variant !== "tax_returns" && (
-      <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ margin: "14px 0 2px" }}>
-        {STAGE_CYCLE.filter(s => s !== "").map(s => (
-          <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
-            <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s].fg }}></i>
-            {STAGE_STYLES[s].label}
-          </span>
-        ))}
-        {!isHistorical && <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>Delayed</span>}
-        <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
-        <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
-        <span style={{ marginLeft: "auto", fontStyle: "italic", opacity: 0.8, fontSize: 11, color: "var(--muted)" }}>
-          {!isHistorical ? "click a cell to advance · red ring = past due" : `${year} — read-only history`}
-        </span>
-      </div>
-      )}
 
-      {/* ── Count line ── */}
       <div className="text-xs" style={{ color: "var(--muted)", margin: "6px 2px 6px" }}>
         {serviceKey === "sales_tax"
           ? "Grouped by client — each registration tracked on its own row. Open one for its bank details and notes."
@@ -879,6 +861,23 @@ export default function WorklistTable({
 
       {/* ── Main table with scroll arrows ── */}
       <div style={{ position: "relative" }}>
+        {/* Legend overlay */}
+        {variant !== "payroll" && variant !== "tax_returns" && (
+        <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{
+          position: "absolute", top: -26, left: 0, right: 0, zIndex: 5,
+          pointerEvents: "none",
+        }}>
+          {STAGE_CYCLE.filter(s => s !== "").map(s => (
+            <span key={s} className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
+              <i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: STAGE_STYLES[s].fg }}></i>
+              {STAGE_STYLES[s].label}
+            </span>
+          ))}
+          {!isHistorical && <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "var(--red)" }}></i>Delayed</span>}
+          <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
+          <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
+        </div>
+        )}
         <button
           onClick={() => {
             const el = document.getElementById(`table-scroll-${serviceKey}`);
