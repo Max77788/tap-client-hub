@@ -547,7 +547,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     title={`${mo}: ${n} processed — click +1, right-click -1`}
                   >
                     {n || "·"}
-                    {cmt && <div className="cdot" />}
+                    {cmt && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveCommentSvc(svcKey); setActiveCommentMonth(i); setCommentText(""); }}
+                        className="cdot"
+                        style={{ all: "unset", cursor: "pointer", position: "absolute", top: 1, right: 1, width: 6, height: 6, borderRadius: "50%", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff", zIndex: 2 }}
+                        title={`Comments for ${mo}`}
+                      />
+                    )}
                   </div>
                   {/* Comment icon */}
                   <button
@@ -588,7 +595,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   title={`${mo} — ${hasDelayBorder ? "DELAYED · " : ""}${stageLabel} — click to cycle`}
                 >
                   {t}
-                  {cmt && <div className="cdot" />}
+                  {cmt && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveCommentSvc(svcKey); setActiveCommentMonth(i); setCommentText(""); }}
+                      className="cdot"
+                      style={{ all: "unset", cursor: "pointer", position: "absolute", top: 1, right: 1, width: 6, height: 6, borderRadius: "50%", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff", zIndex: 2 }}
+                      title={`Comments for ${mo}`}
+                    />
+                  )}
                 </div>
                 {/* Comment icon */}
                 <button
