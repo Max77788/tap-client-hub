@@ -872,7 +872,7 @@ export default function WorklistTable({
             {variant === "payroll" && (
             <>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Pay Day</th>
-              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 80 }}>QBO</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 65, maxWidth: 80 }}>Cadence</th>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 75, maxWidth: 90 }}>Start Date</th>
             </>
             )}
@@ -1072,9 +1072,9 @@ export default function WorklistTable({
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
                       {svc.paydate || "—"}
                     </td>
-                    {/* QBO (processor) */}
+                    {/* Cadence (frequency) */}
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 65, maxWidth: 80 }}>
-                      {processor === "QBO" ? "✓" : processor === "ADP" ? "ADP" : processor === "Quickbooks Desktop" ? "QB Desktop" : processor === "Quickbooks Desktop 24" ? "QB24" : processor !== "-" ? processor : "—"}
+                      {svc.frequency || "—"}
                     </td>
                     {/* Start Date */}
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 75, maxWidth: 90 }}>
