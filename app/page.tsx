@@ -29,7 +29,7 @@ export default function ClientsPage() {
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Compute stats from full client data (includes monthlyFinancials & behindThisMonth)
+  // Compute stats from full client data
   const computedStats = useMemo(() => getStats(clients), [clients]);
 
   const groups = useMemo(() => getGroups(clients), [clients]);
@@ -159,8 +159,6 @@ export default function ClientsPage() {
             <StatCard label="Total clients" value={computedStats.total} color="var(--ink)" />
             <StatCard label="Business" value={computedStats.business} color="var(--teal)" />
             <StatCard label="Personal" value={computedStats.personal} color="var(--blue)" />
-            <StatCard label="Monthly Financials" value={computedStats.monthlyFinancials} color="var(--green)" />
-            <StatCard label="Behind this month" value={computedStats.behindThisMonth} color="var(--amber)" />
             <StatCard label="Financials" value={computedStats.financialsCount} color="var(--teal)" />
             <StatCard label="Payroll" value={computedStats.payrollCount} color="var(--blue)" />
             <StatCard label="Sales Tax" value={computedStats.salesTaxCount} color="var(--amber)" />
