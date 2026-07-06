@@ -893,30 +893,13 @@ export default function WorklistTable({
             <th className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 60, minWidth: 60 }}>Expected</th>
             )}
             {MONTHS_SHORT.map((m, mi) => {
-              const isFileMonth = variant === "tax_returns" && serviceClients.some((c) => {
-                const s = c.services?.find((s: any) => s.key === serviceKey);
-                const fm = parseInt(s?.filingMonth, 10);
-                return fm - 1 === mi;
-              });
               return (
                 <th key={m}
                   className="text-center text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-0.5 py-2"
                   style={{
                     width: variant === "t9" ? 44 : 30,
-                    position: "relative",
                   }}
-                >
-                  {isFileMonth && (
-                    <div style={{
-                      position: "absolute", top: 0, left: 0,
-                      width: 7, height: 7,
-                      background: "var(--teal)",
-                      borderRadius: 1,
-                      boxShadow: "0 0 0 1.5px #fff",
-                    }} />
-                  )}
-                  {m}
-                </th>
+                >{m}</th>
               );
             })}
             {variant === "t9" && (
