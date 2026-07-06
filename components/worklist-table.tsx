@@ -257,7 +257,7 @@ export default function WorklistTable({
   // ── Cadence filter options (dynamic per module) ──
   const cadenceOptions = useMemo(() => {
     if (variant === "payroll") {
-      return ["Weekly", "Bi-Weekly A", "Bi-Weekly B", "Semi-Monthly", "Monthly"];
+      return ["Weekly", "Bi-Weekly", "Bi-Weekly A", "Bi-Weekly B", "Semi-Monthly", "Monthly"];
     }
     if (serviceKey === "financials" || serviceKey === "sales_tax") {
       return ["Monthly", "Quarterly", "Annually"];
@@ -303,7 +303,7 @@ export default function WorklistTable({
               : freq === "Bi-Weekly B" ? "Bi-Weekly B"
               : freq === "Semi-Monthly" ? "Semi-Monthly"
               : "Monthly";
-            return cadence === cadenceFilter;
+            return cadence === cadenceFilter || freq === cadenceFilter;
           });
         } else {
           // financials, sales_tax — filter by frequency directly
@@ -1176,7 +1176,7 @@ export default function WorklistTable({
                               d.setDate(d.getDate() + 1);
                               if (freq === "Weekly") {
                                 while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
-                              } else if (freq === "Bi-Weekly A") {
+                              } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
                                 while (!(d.getDay() === 5 && ((d.getDate() >= 1 && d.getDate() <= 7) || (d.getDate() >= 15 && d.getDate() <= 22) || (d.getDate() >= 29 && d.getDate() <= 31)))) d.setDate(d.getDate() + 1);
                               } else if (freq === "Bi-Weekly B") {
                                 while (!(d.getDay() === 5 && ((d.getDate() >= 8 && d.getDate() <= 14) || (d.getDate() >= 23 && d.getDate() <= 28)))) d.setDate(d.getDate() + 1);

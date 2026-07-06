@@ -207,7 +207,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       if (freq === "Weekly") {
         while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
         setPrStartDate(d.toISOString().slice(0, 10));
-      } else if (freq === "Bi-Weekly A") {
+      } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
         while (true) {
           if (d.getDay() === 5) {
             const dom = d.getDate();
@@ -794,15 +794,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       }}
                     >
                       <option value="">—</option>
-                      <option value="Weekly">Weekly</option>
-                      <option value="Bi-Weekly A">Bi-Weekly A</option>
-                      <option value="Bi-Weekly B">Bi-Weekly B</option>
-                      <option value="Semi-Monthly">Semi-Monthly</option>
-                      <option value="Monthly">Monthly</option>
-                    </select>
-                  </div>
-                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Method</label>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Bi-Weekly">Bi-Weekly</option>
+                    <option value="Bi-Weekly A">Bi-Weekly A</option>
+                    <option value="Bi-Weekly B">Bi-Weekly B</option>
+                    <option value="Semi-Monthly">Semi-Monthly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                </div>
+                <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Method</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prReportingMethod}
                       onChange={e => {
@@ -1625,7 +1626,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           const iso = d.toISOString().slice(0, 10);
                           setPrStartDate(iso);
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
-                        } else if (val === "Bi-Weekly A") {
+                        } else if (val === "Bi-Weekly" || val === "Bi-Weekly A") {
                           while (true) {
                             if (d.getDay() === 5) {
                               const dom = d.getDate();
@@ -1679,6 +1680,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     }}>
                     <option value="">—</option>
                     <option value="Weekly">Weekly</option>
+                    <option value="Bi-Weekly">Bi-Weekly</option>
                     <option value="Bi-Weekly A">Bi-Weekly A</option>
                     <option value="Bi-Weekly B">Bi-Weekly B</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
