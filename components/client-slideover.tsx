@@ -1527,7 +1527,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <button className="ox" onClick={onClose} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
             <div className="sub" style={{ color: "var(--muted)", fontSize: 13, marginTop: 5 }}>
-              <span className="mono" style={{ color: "#9a9484" }}>{c.cid || `CID-${c.id}`}</span>
               <span className="badge b-biz" style={{
                 fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: 20,
                 textTransform: "uppercase", letterSpacing: "0.05em",

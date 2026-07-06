@@ -197,15 +197,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
         <div className="mform" style={{ padding: "18px 24px" }}>
           {/* CID box */}
-          <div className="cidbox" style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "var(--teal-soft)", border: "1px solid #cdd6ec",
-            borderRadius: 11, padding: "10px 14px", fontSize: 13,
-            color: "var(--teal-ink)", fontWeight: 600, marginBottom: 4,
-          }}>
-            New Client ID <b className="mono" style={{ fontSize: 15 }}>{previewCid}</b>
-            <span style={{ marginLeft: "auto", fontWeight: 500, fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", opacity: .7 }}>auto-assigned</span>
-          </div>
+
 
           {/* ── Client section ── */}
           <div className="fsect" style={fsectStyle}>Client</div>
