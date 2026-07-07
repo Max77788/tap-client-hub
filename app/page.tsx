@@ -24,7 +24,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
-  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats, refresh } = useClients();
+  const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -121,14 +121,11 @@ export default function ClientsPage() {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         console.error("PUT /api/clients failed:", res.status, errData);
-      } else {
-        // Re-fetch from DB so context has persisted data (comments, notes, etc.)
-        refresh();
       }
     } catch (e) {
       console.error("Failed to save client:", e);
     }
-  }, [updateClient, refresh]);
+  }, [updateClient]);
 
   const handleSlideoverDelete = useCallback((clientId: string) => {
     deleteFromState(clientId);
