@@ -436,13 +436,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         setAddingStx(true);
       }
     }
-    // Persist to DB with full save for data sync
+    // Persist to DB without triggering full page refresh
     const toggled = updated.find(s => s.key === key);
     if (toggled) {
-      onSave?.({
-        ...client,
-        services: updated,
-      } as Client);
+      fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: client.id,
+          services: [{ key: toggled.key, enabled: toggled.enabled, frequency: toggled.frequency, assignedTo: toggled.assignedTo, processor: toggled.processor }],
+        }),
+      }).catch(() => {});
     }
   }
 
