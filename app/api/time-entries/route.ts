@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { randomUUID } from "crypto";
 
 // GET /api/time-entries — list all time entries with joined profile/client names
 export async function GET() {
@@ -8,21 +7,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("time_entries")
-    .select(`
-      id,
-      who,
-      client_id,
-      client_service_id,
-      task,
-      started_at,
-      seconds,
-      note,
-      edited,
-      edited_by,
-      edited_at,
-      profile:profiles!time_entries_who_fkey(full_name),
-      client:clients(name)
-    `)
+    .select(`*`)
     .order("started_at", { ascending: false })
     .limit(500);
 
@@ -30,12 +15,32 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Batch fetch profiles and clients for name resolution
+  const whoIds = [...new Set((data || []).map((e: any) => e.who).filter(Boolean))];
+  const clientIds = [...new Set((data || []).map((e: any) => e.client_id).filter(Boolean))];
+
+  let profiles: any[] = [];
+  let clients: any[] = [];
+  if (whoIds.length > 0) {
+    const { data: pData } = await supabase.from("profiles").select("id, full_name").in("id", whoIds);
+    if (pData) profiles = pData;
+  }
+  if (clientIds.length > 0) {
+    const { data: cData } = await supabase.from("clients").select("id, name").in("id", clientIds);
+    if (cData) clients = cData;
+  }
+
+  const profileMap: Record<string, string> = {};
+  for (const p of profiles) profileMap[p.id] = p.full_name || "Unknown";
+  const clientMap: Record<string, string> = {};
+  for (const c of clients) clientMap[c.id] = c.name || "";
+
   const entries = (data || []).map((e: any) => ({
     id: e.id,
     personId: e.who,
-    personName: e.profile?.full_name || "Unknown",
+    personName: profileMap[e.who] || "Unknown",
     clientId: e.client_id,
-    clientName: e.client?.name || "",
+    clientName: clientMap[e.client_id] || "",
     serviceLabel: e.task || "",
     duration: e.seconds || 0,
     date: e.started_at,
