@@ -207,7 +207,7 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount }, _debug: { contactsInDb: dbContacts.length, clientsWithContacts: Object.keys(contactByClient).length } });
+    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount } });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }
