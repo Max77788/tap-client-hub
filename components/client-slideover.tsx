@@ -688,6 +688,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const isPayroll = svc.key === "payroll";
     const isSalesTax = svc.key === "sales_tax";
     const isTaxReturns = svc.key === "tax_returns";
+    const isFin = svc.key === "financials";
+    const isT9 = svc.key === "1099s";
+    const isRend = svc.key === "renditions";
 
     return (
       <div style={{ marginBottom: 12, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
@@ -892,6 +895,39 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
+            {/* Financials: cadence */}
+            {isFin && svc.enabled && (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ flex: "1 0 100px" }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Cadence</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.frequency || "Monthly"}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "financials" ? { ...s, frequency: e.target.value } : s))}
+                  >
+                    <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
+                    <option value="Annual">Annual</option>
+                    <option value="Semi-Monthly">Semi-Monthly</option>
+                    <option value="Bi-Weekly">Bi-Weekly</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* 1099s: expected annual */}
+            {isT9 && svc.enabled && (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ flex: "1 0 100px" }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Expected Annual</label>
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    type="number" value={svc.expectedAnnual || 0}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Tax Returns: filing details */}
             {isTaxReturns && svc.enabled && (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
@@ -929,6 +965,42 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       setFilingType(e.target.value);
                       setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s));
                     }}
+                  >
+                    <option value="">Select type…</option>
+                    {FILING_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Renditions: filing details */}
+            {isRend && svc.enabled && (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ flex: "1 0 100px" }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Filing state</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.filingState || ""}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, filingState: e.target.value } : s))}
+                  >
+                    <option value="">Select state…</option>
+                    {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: "1 0 100px" }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Filing month</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.filingMonth || ""}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, filingMonth: e.target.value } : s))}
+                  >
+                    <option value="">Select month…</option>
+                    {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: "1 0 100px" }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Filing type</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.filingType || ""}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, filingType: e.target.value } : s))}
                   >
                     <option value="">Select type…</option>
                     {FILING_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
