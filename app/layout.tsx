@@ -180,7 +180,18 @@ export default function RootLayout({
         if (!userName) return;
         const currentUser = users.find((u: any) => {
           const dbName = (u.name || "").trim().toLowerCase();
-          return dbName === userName.toLowerCase() || dbName.startsWith(userName.split(" ").pop()?.toLowerCase() || "");
+          // Try exact match and comma-separated format match
+          if (dbName === userName.toLowerCase()) return true;
+          const nameParts = userName.trim().split(/\s+/);
+          const commaForm = nameParts.filter(Boolean).reverse().join(", ").toLowerCase();
+          if (dbName === commaForm) return true;
+          // Surname match — only if unique
+          const surname = nameParts[nameParts.length - 1]?.toLowerCase() || "";
+          if (surname) {
+            const sameSurname = users.filter((u2: any) => (u2.name || "").trim().toLowerCase().startsWith(surname));
+            if (sameSurname.length === 1) return dbName.startsWith(surname);
+          }
+          return false;
         });
         if (currentUser?.modules) {
           setUserModules(currentUser.modules as string[]);

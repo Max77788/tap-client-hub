@@ -100,9 +100,23 @@ export default function TimePage() {
           const cookieMatch = document.cookie.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
           const userName = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
           if (userName) {
+            // Try full name match first (both "First Last" and "Last, First" formats)
+            const nameParts = userName.trim().split(/\s+/);
             const match = active.find((u: any) => {
               const dbName = (u.name || "").trim().toLowerCase();
-              return dbName === userName.toLowerCase() || dbName.startsWith(userName.split(" ").pop()?.toLowerCase() || "");
+              const searchName = userName.toLowerCase();
+              // Exact match: "Tushar Patil" vs "tushar patil" OR "Patil, Tushar" vs "tushar patil"
+              if (dbName === searchName) return true;
+              // Comma-separated match: "patil, tushar" vs "tushar patil"
+              const commaForm = nameParts.filter(Boolean).reverse().join(", ").toLowerCase();
+              if (dbName === commaForm) return true;
+              // Surname match — but only if unique to avoid matching wrong person
+              const surname = nameParts[nameParts.length - 1]?.toLowerCase() || "";
+              if (surname) {
+                const sameSurname = active.filter((u2: any) => (u2.name || "").trim().toLowerCase().startsWith(surname));
+                if (sameSurname.length === 1) return dbName.startsWith(surname);
+              }
+              return false;
             });
             if (match) setCurrentUser(match);
           }
