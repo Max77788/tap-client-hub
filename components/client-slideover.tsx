@@ -1755,17 +1755,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       type="number" value={targetSvc.expectedAnnual || 0} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))} placeholder="0" />
                   </div>
                 )}
-                {/* Assigned To for Renditions (no filing fields) */}
-                {moduleKey === "renditions" && (
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span className="k" style={{ color: "var(--muted)" }}>Assigned To</span>
-                    <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                      value={targetSvc.assignedTo || targetSvc.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value } : s))}>
-                      <option value="">—</option>
-                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
-                    </select>
-                  </div>
-                )}
               </div>
             )}
 
