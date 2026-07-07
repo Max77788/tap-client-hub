@@ -921,7 +921,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
-            {/* Financials: cadence */}
+            {/* Financials: cadence + Assigned To */}
             {isFin && svc.enabled && (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                 <div style={{ flex: "1 0 100px" }}>
@@ -937,10 +937,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <option value="Bi-Weekly">Bi-Weekly</option>
                   </select>
                 </div>
+                <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.assignedTo || svc.processor || ""}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "financials" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                  >
+                    <option value="">—</option>
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </select>
+                </div>
               </div>
             )}
 
-            {/* 1099s: expected annual */}
+            {/* 1099s: expected annual + Assigned To */}
             {isT9 && svc.enabled && (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                 <div style={{ flex: "1 0 100px" }}>
@@ -951,10 +961,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     placeholder="0"
                   />
                 </div>
+                <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.assignedTo || svc.processor || ""}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                  >
+                    <option value="">—</option>
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </select>
+                </div>
               </div>
             )}
 
-            {/* Tax Returns: filing details */}
+            {/* Tax Returns: filing details + Assigned To */}
             {isTaxReturns && svc.enabled && (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                 <div style={{ flex: "1 0 100px" }}>
@@ -996,41 +1016,33 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {FILING_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 </div>
+                <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.assignedTo || svc.processor || ""}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "tax_returns" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                  >
+                    <option value="">—</option>
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </select>
+                </div>
               </div>
             )}
 
-            {/* Renditions: filing details */}
+            {/* Renditions: Assigned To only */}
             {isRend && svc.enabled && (
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                <div style={{ flex: "1 0 100px" }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Filing state</label>
-                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                    value={svc.filingState || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, filingState: e.target.value } : s))}
-                  >
-                    <option value="">Select state…</option>
-                    {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: "1 0 100px" }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Filing month</label>
-                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                    value={svc.filingMonth || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, filingMonth: e.target.value } : s))}
-                  >
-                    <option value="">Select month…</option>
-                    {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: "1 0 100px" }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Filing type</label>
-                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                    value={svc.filingType || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, filingType: e.target.value } : s))}
-                  >
-                    <option value="">Select type…</option>
-                    {FILING_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
+                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                      value={svc.assignedTo || svc.processor || ""}
+                      onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                    >
+                      <option value="">—</option>
+                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
@@ -1695,34 +1707,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       type="number" value={targetSvc.expectedAnnual || 0} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))} placeholder="0" />
                   </div>
                 )}
-                {/* Filing State, Filing Type, Filing Month for Renditions */}
+                {/* Assigned To for Renditions (no filing fields) */}
                 {moduleKey === "renditions" && (
-                  <>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>Filing State</span>
-                      <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                        value={targetSvc.filingState || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingState: e.target.value } : s))}>
-                        <option value="">Select state…</option>
-                        {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-                      </select>
-                    </div>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>Filing Type</span>
-                      <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                        value={targetSvc.filingType || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingType: e.target.value } : s))}>
-                        <option value="">—</option>
-                        {FILING_TYPES.map(ft => <option key={ft} value={ft}>{ft}</option>)}
-                      </select>
-                    </div>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
-                      <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                        value={targetSvc.filingMonth || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, filingMonth: e.target.value } : s))}>
-                        <option value="">—</option>
-                        {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                      </select>
-                    </div>
-                  </>
+                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span className="k" style={{ color: "var(--muted)" }}>Assigned To</span>
+                    <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                      value={targetSvc.assignedTo || targetSvc.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}>
+                      <option value="">—</option>
+                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </select>
+                  </div>
                 )}
               </div>
             )}

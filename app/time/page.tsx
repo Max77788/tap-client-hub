@@ -28,6 +28,7 @@ const TASK_LABEL: Record<string, string> = {
   stx: "Sales Tax",
   t9: "1099s",
   rend: "Renditions",
+  tax: "Tax Returns",
   admin: "Admin/Other",
 };
 
@@ -309,6 +310,31 @@ export default function TimePage() {
   const isStaff = currentUser && currentUser.role && !/owner|admin/i.test(currentUser.role);
   const effectiveIsStaff = isStaff || !!impersonatingAs;
 
+  // Filters + filtered entries
+  const [filterPerson, setFilterPerson] = useState("");
+  const [filterTask, setFilterTask] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+
+  const filteredEntries = useMemo(() => {
+    let list = [...entries];
+    if (filterPerson) list = list.filter((e) => e.personId === filterPerson);
+    if (filterTask) list = list.filter((e) => e.task === filterTask || taskKeyFromLabel(e.taskLabel) === filterTask);
+    if (filterDateFrom) list = list.filter((e) => e.date.slice(0, 10) >= filterDateFrom);
+    if (filterDateTo) list = list.filter((e) => e.date.slice(0, 10) <= filterDateTo);
+    if (!filterDateFrom && !filterDateTo) list = list.filter((e) => e.date.slice(0, 10) === today);
+    if (viewingAs) list = list.filter((e) => e.personId === viewingAs);
+    if (!impersonatingAs && effectiveIsStaff && currentUser) list = list.filter((e) => e.personId === currentUser.id);
+    return [...list].sort((a, b) => {
+      if (a.isRunning && !b.isRunning) return -1;
+      if (!a.isRunning && b.isRunning) return 1;
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+  }, [entries, filterPerson, filterTask, filterDateFrom, filterDateTo, today, viewingAs, effectiveIsStaff, impersonatingAs, currentUser]);
+
+  const totalFiltered = filteredEntries.reduce((s, e) =>
+    s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
+
   // Auto-select current user for staff
   useEffect(() => {
     if (effectiveIsStaff && !impersonatingAs && currentUser && !selectedPerson) {
@@ -449,11 +475,30 @@ export default function TimePage() {
         </div>
       )}
 
-      {/* ── Stats: Total Today + collapsible staff breakdown ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* ── Stats: Total filtered + filters ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <div className="statcard" style={{ background: "var(--green-soft)", borderColor: "var(--green)" }}>
-          <div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalToday)}</div>
-          <div className="sl">Total Today</div>
+          <div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalFiltered)}</div>
+          <div className="sl">{filterDateFrom || filterDateTo ? "Filtered total" : "Total Today"}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <select className="pick" value={filterPerson} onChange={e => setFilterPerson(e.target.value)} style={{ minWidth: 130, fontSize: 12, padding: "4px 6px" }}>
+            <option value="">All staff</option>
+            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <select className="pick" value={filterTask} onChange={e => setFilterTask(e.target.value)} style={{ minWidth: 110, fontSize: 12, padding: "4px 6px" }}>
+            <option value="">All tasks</option>
+            {TASK_KEYS.map((k) => <option key={k} value={k}>{TASK_LABEL[k]}</option>)}
+          </select>
+          <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+            style={{ padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, font: "inherit" }} />
+          <span style={{ color: "var(--muted)", fontSize: 12 }}>—</span>
+          <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+            style={{ padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, font: "inherit" }} />
+          {(filterPerson || filterTask || filterDateFrom || filterDateTo) && (
+            <button onClick={() => { setFilterPerson(""); setFilterTask(""); setFilterDateFrom(""); setFilterDateTo(""); }}
+              style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: 12 }}>✕ Clear</button>
+          )}
         </div>
         {whoCards.length > 0 && (
           <button onClick={() => setShowStaffList((p) => !p)}
@@ -507,13 +552,7 @@ export default function TimePage() {
 
       {/* ── Table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-        <div className="count">Entries</div>
-        {!effectiveIsStaff && (
-          <select value={impersonatingAs ? impersonatingAs : (viewingAs ?? "")} onChange={(e) => setViewingAs(e.target.value || null)} className="pick">
-            <option value="">All staff</option>
-            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        )}
+        <div className="count">Entries {filteredEntries.length > 0 && <span style={{ fontWeight: 400, color: "var(--muted)" }}>({filteredEntries.length})</span>}</div>
       </div>
 
       <div className="panel" style={{ overflowX: "auto" }}>
@@ -529,20 +568,8 @@ export default function TimePage() {
             </tr>
           </thead>
           <tbody>
-            {entries.length > 0 ? (
-              (() => {
-                const todayRows = entries.filter((e) => e.date.slice(0, 10) === today && (!viewingAs || e.personId === viewingAs))
-                  .sort((a, b) => {
-                    if (a.isRunning && !b.isRunning) return -1;
-                    if (!a.isRunning && b.isRunning) return 1;
-                    return new Date(b.date).getTime() - new Date(a.date).getTime();
-                  });
-                const earlier = viewingAs
-                  ? entries.filter((e) => e.date.slice(0, 10) !== today && e.personId === viewingAs)
-                  : entries.filter((e) => e.date.slice(0, 10) !== today);
-                const allDisplay = [...todayRows, ...earlier.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())];
-
-                return allDisplay.map((entry) => {
+            {filteredEntries.length > 0 ? (
+              filteredEntries.map((entry) => {
                   const idx = entries.indexOf(entry);
                   const isEditing = editIdx === idx;
                   const h = Math.floor(entry.duration / 3600);
@@ -623,8 +650,7 @@ export default function TimePage() {
                       </td>
                     </tr>
                   );
-                });
-              })()
+                })
             ) : (
               <tr>
                 <td colSpan={6} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>
