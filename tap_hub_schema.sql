@@ -147,7 +147,9 @@ create table if not exists tap_hub_project.time_entries (
   edited            boolean not null default false,
   edited_by         uuid references tap_hub_project.profiles(id),
   edited_at         timestamptz,
-  created_at        timestamptz not null default now()
+  created_at        timestamptz not null default now(),
+  company           text,
+  manual            boolean not null default false
 );
 
 -- billing_periods

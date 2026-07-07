@@ -62,8 +62,6 @@ export async function POST(request: Request) {
       started_at: body.started_at || new Date().toISOString(),
       seconds: body.seconds || 0,
       note: body.note || "",
-      company: body.company || "Tap Associates",
-      manual: body.manual || false,
       edited: false,
     })
     .select()
