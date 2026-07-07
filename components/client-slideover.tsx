@@ -431,18 +431,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         setAddingStx(true);
       }
     }
-    // Persist to DB without triggering full refresh
+    // Persist to DB with full save for data sync
     const toggled = updated.find(s => s.key === key);
-    const wasOff = !localSvcs.find((s: any) => s.key === key)?.enabled;
-    if (toggled && (toggled.csId || wasOff)) {
-      fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: client.id,
-          services: [{ csId: toggled.csId || "", key, enabled: toggled.enabled }],
-        }),
-      }).catch(() => {});
+    if (toggled) {
+      onSave?.({
+        ...client,
+        services: updated,
+      } as Client);
     }
   }
 
@@ -1081,6 +1076,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           }];
                           setStxLineItems(upd);
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+                          onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                           setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
                           setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
                           setAddingStx(false);
@@ -1187,6 +1183,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   const upd = stxLineItems.filter((_, j) => j !== i);
                                   setStxLineItems(upd);
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+                                  onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                                 }}
                               >✕</button>
                             </div>
