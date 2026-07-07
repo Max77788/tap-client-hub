@@ -252,7 +252,7 @@ export async function PUT(request: Request) {
         }
       } else {
         // No contact row yet — insert one (name is NOT NULL, use client name)
-        const contactInsert: Record<string, any> = { client_id: clientId, name: name || "Contact" };
+        const contactInsert: Record<string, any> = { id: randomUUID(), client_id: clientId, name: name || "Contact" };
         if (emails && emails.length > 0) contactInsert.email = emails[0];
         if (phones && phones.length > 0) contactInsert.phone = phones[0];
         const { error: insertErr } = await supabase.from("contacts").insert(contactInsert);
