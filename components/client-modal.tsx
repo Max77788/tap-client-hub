@@ -64,6 +64,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [newStxFreq, setNewStxFreq] = useState("Monthly");
   const [t9Count, setT9Count] = useState("");
   const [taxType, setTaxType] = useState("Business");
+  const [taxFilingMonth, setTaxFilingMonth] = useState("");
+  const [taxFilingState, setTaxFilingState] = useState("");
 
   // Per-service assigned staff
   const [finAssigned, setFinAssigned] = useState("Unassigned");
@@ -105,6 +107,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       // Restore sales tax line items
       const stxSvc = svcs.find(s => s.key === "sales_tax");
       if (stxSvc) setStxLineItems(stxSvc.salesTaxLineItems || []);
+      const trSvc = svcs.find(s => s.key === "tax_returns");
+      if (trSvc) { setTaxFilingMonth(trSvc.filingMonth || ""); setTaxFilingState(trSvc.filingState || ""); }
     } else {
       setName(""); setType("Business"); setGroup(""); setAssigned("Unassigned");
       setEmail(""); setAddEmail(""); setPhone(""); setAddPhone("");
@@ -112,6 +116,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
+      setTaxFilingMonth(""); setTaxFilingState("");
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
@@ -163,6 +168,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     addSvc("renditions", rend, "Yearly", rendAssigned);
     addSvc("tax_returns", tax, "Yearly", taxAssigned, {
       processor: taxType,
+      filingMonth: taxFilingMonth || undefined,
+      filingState: taxFilingState || undefined,
     });
 
     onSave({
@@ -503,6 +510,22 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
               {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
             </select>
+            <div className="two" style={{ display: "flex", gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Filing Month</label>
+                <select style={inputStyle} value={taxFilingMonth} onChange={e => setTaxFilingMonth(e.target.value)}>
+                  <option value="">—</option>
+                  {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Filing State</label>
+                <select style={inputStyle} value={taxFilingState} onChange={e => setTaxFilingState(e.target.value)}>
+                  <option value="">—</option>
+                  {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+            </div>
           </ServiceCard>
         </div>
 
@@ -551,6 +574,10 @@ function ServiceCard({ icon, label, checked, onChange, children }: {
     </div>
   );
 }
+
+// ── Shared constants ──
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
 // ── Shared styles ──
 const fsectStyle: React.CSSProperties = {
