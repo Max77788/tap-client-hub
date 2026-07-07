@@ -96,6 +96,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [newStxAccount, setNewStxAccount] = useState("");
   const [newStxFreq, setNewStxFreq] = useState("Monthly");
 
+  // ── Sales tax line item editing state (clients tab inline edit) ──
+  const [editingStxIdx, setEditingStxIdx] = useState<number>(-1);
+  const [editStxName, setEditStxName] = useState("");
+  const [editStxRt, setEditStxRt] = useState("");
+  const [editStxTaxId, setEditStxTaxId] = useState("");
+  const [editStxBank, setEditStxBank] = useState("");
+  const [editStxRouting, setEditStxRouting] = useState("");
+  const [editStxAccount, setEditStxAccount] = useState("");
+  const [editStxFreq, setEditStxFreq] = useState("Monthly");
+
   // ── Payroll details state ──
   const [prPaydate, setPrPaydate] = useState("");
   const [prStartDate, setPrStartDate] = useState("");
@@ -1087,26 +1097,101 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {stxLineItems.map((item: any, i: number) => (
-                        <div key={i} style={{
-                          display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center",
-                          background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "9px 11px",
-                        }}>
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{item.serviceName}</div>
-                            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
-                              {item.rt && <span>RT: {item.rt}</span>}
-                              {item.taxId && <span>Tax ID: {item.taxId}</span>}
-                              {item.bankName && <span>{item.bankName} {item.bankRouting && `· ${item.bankRouting}`} {item.bankAccount && `· ${item.bankAccount}`}</span>}
+                        editingStxIdx === i ? (
+                          <div key={i} style={{ background: "var(--paper)", border: "1px solid var(--teal)", borderRadius: 8, padding: 10 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Service name</label>
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxName} onChange={e => setEditStxName(e.target.value)} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>RT #</label>
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxRt} onChange={e => setEditStxRt(e.target.value)} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Tax ID</label>
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxTaxId} onChange={e => setEditStxTaxId(e.target.value)} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Frequency</label>
+                                <select style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxFreq} onChange={e => setEditStxFreq(e.target.value)}>
+                                  <option>Monthly</option><option>Quarterly</option><option>Annually</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Bank name</label>
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxBank} onChange={e => setEditStxBank(e.target.value)} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Routing #</label>
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxRouting} onChange={e => setEditStxRouting(e.target.value)} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Account #</label>
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxAccount} onChange={e => setEditStxAccount(e.target.value)} />
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                              <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: 11, padding: "4px 8px" }}
+                                onClick={() => setEditingStxIdx(-1)}>Cancel</button>
+                              <button className="reveal" style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", fontWeight: 600, fontSize: 11, padding: "4px 10px", borderRadius: 6 }}
+                                onClick={() => {
+                                  if (!editStxName.trim()) return;
+                                  const upd = [...stxLineItems];
+                                  upd[i] = {
+                                    ...upd[i],
+                                    serviceName: editStxName.trim(), rt: editStxRt.trim(), taxId: editStxTaxId.trim(),
+                                    bankName: editStxBank.trim(), bankRouting: editStxRouting.trim(), bankAccount: editStxAccount.trim(),
+                                    frequency: editStxFreq,
+                                  };
+                                  setStxLineItems(upd);
+                                  setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+                                  onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                                  setEditingStxIdx(-1);
+                                }}>
+                                Save
+                              </button>
                             </div>
                           </div>
-                          <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 11 }}
-                            onClick={() => {
-                              const upd = stxLineItems.filter((_, j) => j !== i);
-                              setStxLineItems(upd);
-                              setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                            }}
-                          >✕</button>
-                        </div>
+                        ) : (
+                          <div key={i} style={{
+                            display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center",
+                            background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "9px 11px",
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{item.serviceName}</div>
+                              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
+                                {item.rt && <span>RT: {item.rt}</span>}
+                                {item.taxId && <span>Tax ID: {item.taxId}</span>}
+                                {item.frequency && <span>{item.frequency}</span>}
+                                {item.bankName && <span>{item.bankName} {item.bankRouting && `· ${item.bankRouting}`} {item.bankAccount && `· ${item.bankAccount}`}</span>}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: 11 }}
+                                onClick={() => {
+                                  setEditingStxIdx(i);
+                                  setEditStxName(item.serviceName || "");
+                                  setEditStxRt(item.rt || "");
+                                  setEditStxTaxId(item.taxId || "");
+                                  setEditStxBank(item.bankName || "");
+                                  setEditStxRouting(item.bankRouting || "");
+                                  setEditStxAccount(item.bankAccount || "");
+                                  setEditStxFreq(item.frequency || "Monthly");
+                                }}
+                              >Edit</button>
+                              <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 11 }}
+                                onClick={() => {
+                                  const upd = stxLineItems.filter((_, j) => j !== i);
+                                  setStxLineItems(upd);
+                                  setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+                                }}
+                              >✕</button>
+                            </div>
+                          </div>
+                        )
                       ))}
                     </div>
                   </>
@@ -1879,8 +1964,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </>
             )}
 
-            {/* Sales Tax: line items section */}
-            {targetSvc.enabled && <SalesTaxLineItemsSection />}
+            {/* Sales Tax: line items section — only on Sales Tax tab */}
+            {moduleKey === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
 
             {/* Service notes from DB */}
             {targetSvc.svcNotes && (
