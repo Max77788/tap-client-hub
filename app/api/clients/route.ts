@@ -60,10 +60,11 @@ export async function GET(request: Request) {
     const CONTACTS_BATCH = 500;
     for (let i = 0; i < ids.length; i += CONTACTS_BATCH) {
       const batch = ids.slice(i, i + CONTACTS_BATCH);
-      const { data: batchData } = await supabase
+      const { data: batchData, error: ctErr } = await supabase
         .from("contacts")
         .select("client_id, email, phone")
         .in("client_id", batch);
+      if (ctErr) console.error("contacts query error:", ctErr);
       if (batchData) dbContacts = dbContacts.concat(batchData);
     }
     const contactByClient: Record<string, { emails: string[]; phones: string[] }> = {};
@@ -206,7 +207,7 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount } });
+    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount }, _debug: { contactsInDb: dbContacts.length, clientsWithContacts: Object.keys(contactByClient).length } });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }
