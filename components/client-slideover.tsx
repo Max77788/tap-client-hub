@@ -153,6 +153,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     }).catch(() => {});
   }, []);
 
+  // ── Helper: extract first name (handles "Last, First" and "First Last" formats) ──
+  const firstName = (fullName: string) => fullName.includes(",")
+    ? fullName.split(",")[1].trim()
+    : fullName.split(" ")[0];
+
   useEffect(() => {
     const svc = client.services.find((s: any) => s.key === "1099s");
     if (svc?.csId) {
@@ -737,13 +742,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 {/* Assignee + Processor row */}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assignee</label>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={svc.assignedTo || svc.processor || ""}
-                      onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                      onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s))}
                     >
                       <option value="">—</option>
-                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name.split(" ")[0]}</option>)}
+                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                     </select>
                   </div>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
@@ -903,10 +908,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.assignedTo || svc.processor || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "financials" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "financials" ? { ...s, assignedTo: e.target.value } : s))}
                   >
                     <option value="">—</option>
-                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name.split(" ")[0]}</option>)}
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                   </select>
                 </div>
               </div>
@@ -927,10 +932,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.assignedTo || svc.processor || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, assignedTo: e.target.value } : s))}
                   >
                     <option value="">—</option>
-                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name.split(" ")[0]}</option>)}
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                   </select>
                 </div>
               </div>
@@ -982,10 +987,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.assignedTo || svc.processor || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "tax_returns" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "tax_returns" ? { ...s, assignedTo: e.target.value } : s))}
                   >
                     <option value="">—</option>
-                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name.split(" ")[0]}</option>)}
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                   </select>
                 </div>
               </div>
@@ -999,10 +1004,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={svc.assignedTo || svc.processor || ""}
-                      onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                      onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value } : s))}
                     >
                       <option value="">—</option>
-                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name.split(" ")[0]}</option>)}
+                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                     </select>
                   </div>
                 </div>
@@ -1706,12 +1711,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 onChange={e => {
                   setESvcAssignees((prev: any) => ({ ...prev, [moduleKey]: e.target.value }));
                   setLocalSvcs((prev: any) => prev.map((s: any) =>
-                    s.key === moduleKey ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s
+                    s.key === moduleKey ? { ...s, assignedTo: e.target.value } : s
                   ));
                 }}
               >
                 {profiles.map((m) => {
-                  const displayName = m.name.includes(",") ? m.name.split(",")[1].trim() : m.name.split(" ")[0];
+                  const displayName = firstName(m.name);
                   return <option key={m.id} value={m.name}>{displayName}</option>;
                 })}
                 <option>Unassigned</option>
@@ -1751,9 +1756,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span className="k" style={{ color: "var(--muted)" }}>Assigned To</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                      value={targetSvc.assignedTo || targetSvc.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}>
+                      value={targetSvc.assignedTo || targetSvc.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value } : s))}>
                       <option value="">—</option>
-                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name.split(" ")[0]}</option>)}
+                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                     </select>
                   </div>
                 )}
@@ -2104,8 +2109,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <span style={{ color: "var(--muted)" }}>Assigned To</span>
                     {showEditClient ? (
                       <select style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                        value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s)); }}>
-                        {profiles.map((m) => <option key={m.id} value={m.name}>{m.name.split(" ")[0]}</option>)}
+                        value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); }}>
+                        {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
                         <option>Unassigned</option>
                       </select>
                     ) : (
@@ -2255,8 +2260,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Assigned To</span>
               <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
-                value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value, assignedTo: e.target.value } : s)); }} disabled={!editing}>
-                {profiles.map((m) => <option key={m.id} value={m.name}>{m.name.split(" ")[0]}</option>)}
+                value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); }} disabled={!editing}>
+                {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
                 <option>Unassigned</option>
               </select>
             </div>
