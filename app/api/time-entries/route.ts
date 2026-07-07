@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 // GET /api/time-entries — list all time entries with joined profile/client names
 export async function GET() {
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("time_entries")
     .insert({
-      id: body.id || undefined,
+      id: body.id || randomUUID(),
       who: body.who,
       client_id: body.client_id || null,
       client_service_id: body.client_service_id || null,
