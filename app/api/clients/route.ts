@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       else if (r.type?.toLowerCase() === "personal") persCount++;
     }
 
-    let query = supabase.from("clients").select("*, contacts(*)").eq("status", "active");
+    let query = supabase.from("clients").select("*").eq("status", "active");
 
     if (typeFilter === "business" || typeFilter === "personal") {
       query = query.filter("type", "ilike", typeFilter);
@@ -54,6 +54,25 @@ export async function GET(request: Request) {
     if (!dbClients || dbClients.length === 0) return NextResponse.json({ clients: [], stats: { total: totalCount || 0, business: bizCount, personal: persCount } });
 
     const ids = dbClients.map((c: any) => c.id);
+
+    // ── Batch contacts query (replaces broken embedded contacts(*) join) ──
+    let dbContacts: any[] = [];
+    const CONTACTS_BATCH = 500;
+    for (let i = 0; i < ids.length; i += CONTACTS_BATCH) {
+      const batch = ids.slice(i, i + CONTACTS_BATCH);
+      const { data: batchData } = await supabase
+        .from("contacts")
+        .select("client_id, email, phone")
+        .in("client_id", batch);
+      if (batchData) dbContacts = dbContacts.concat(batchData);
+    }
+    const contactByClient: Record<string, { emails: string[]; phones: string[] }> = {};
+    for (const ct of dbContacts) {
+      if (!contactByClient[ct.client_id]) contactByClient[ct.client_id] = { emails: [], phones: [] };
+      if (ct.email) contactByClient[ct.client_id].emails.push(ct.email);
+      if (ct.phone) contactByClient[ct.client_id].phones.push(ct.phone);
+    }
+
     // Batch IN queries — PostgREST chokes on too many values (Bad Request)
     const BATCH_SIZE = 500;
     let dbServices: any[] = [];
@@ -177,8 +196,8 @@ export async function GET(request: Request) {
         name: db.name, type: db.type === "Business" ? "Business" : "Personal",
         group: db.group_owner || "Unassigned", status: db.status || "active",
         city: db.city || "", state: db.state || "TX",
-        emails: [...new Set((db.contacts || []).map((c: any) => c.email).filter(Boolean))],
-        phones: (db.contacts || []).map((c: any) => c.phone).filter(Boolean),
+        emails: [...new Set((contactByClient[db.id]?.emails || []))],
+        phones: contactByClient[db.id]?.phones || [],
         address: db.address || "",
         assignedStaff: staffNames[svcs[0]?.assigned_to || ""] || svcs[0]?.assigned_to || "Unassigned",
         notes: db.notes || "",
