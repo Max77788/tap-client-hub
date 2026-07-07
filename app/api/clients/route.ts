@@ -331,10 +331,6 @@ export async function PUT(request: Request) {
                 eftps: svc.eftps ?? existing.eftps ?? null,
                 biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
                 pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
-                pay_period_frequency: svc.payPeriodFrequency ?? existing.pay_period_frequency ?? null,
-                reporting_method: svc.reportingMethod ?? existing.reporting_method ?? null,
-                payroll_category: svc.payrollCategory ?? existing.payroll_category ?? null,
-                qb_license: svc.qbLicense ?? existing.qb_license ?? null,
                 reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 filing_month: svc.filingMonth ?? existing.filing_month ?? null,
@@ -360,10 +356,6 @@ export async function PUT(request: Request) {
                 eftps: svc.eftps ?? existing.eftps ?? null,
                 biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
                 pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
-                pay_period_frequency: svc.payPeriodFrequency ?? existing.pay_period_frequency ?? null,
-                reporting_method: svc.reportingMethod ?? existing.reporting_method ?? null,
-                payroll_category: svc.payrollCategory ?? existing.payroll_category ?? null,
-                qb_license: svc.qbLicense ?? existing.qb_license ?? null,
                 reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 filing_month: svc.filingMonth ?? existing.filing_month ?? null,
@@ -394,10 +386,6 @@ export async function PUT(request: Request) {
               eftps: svc.eftps || null,
               biweekly_code: svc.biweeklyCode || null,
               pay_start_date: svc.payStartDate || null,
-              pay_period_frequency: svc.payPeriodFrequency || null,
-              reporting_method: svc.reportingMethod || null,
-              payroll_category: svc.payrollCategory || null,
-              qb_license: svc.qbLicense || null,
               reporting_notes: svc.reportingNotes || null,
               filing_state: svc.filingState || null,
               filing_month: svc.filingMonth || null,
@@ -490,22 +478,6 @@ export async function PATCH(request: Request) {
 
     if (payStartDate !== undefined) {
       updates.pay_start_date = payStartDate || null;
-    }
-
-    if (payPeriodFrequency !== undefined) {
-      updates.pay_period_frequency = payPeriodFrequency || null;
-    }
-
-    if (reportingMethod !== undefined) {
-      updates.reporting_method = reportingMethod || null;
-    }
-
-    if (payrollCategory !== undefined) {
-      updates.payroll_category = payrollCategory || null;
-    }
-
-    if (qbLicense !== undefined) {
-      updates.qb_license = qbLicense || null;
     }
 
     if (reportingNotes !== undefined) {
