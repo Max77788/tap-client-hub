@@ -1831,7 +1831,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Sales Tax: line items section */}
-            {moduleKey === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
+            {targetSvc.enabled && <SalesTaxLineItemsSection />}
 
             {/* Service notes from DB */}
             {targetSvc.svcNotes && (
