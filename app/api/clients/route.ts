@@ -236,7 +236,10 @@ export async function PUT(request: Request) {
         if (emails && emails.length > 0) contactInsert.email = emails[0];
         if (phones && phones.length > 0) contactInsert.phone = phones[0];
         const { error: insertErr } = await supabase.from("contacts").insert(contactInsert);
-        if (insertErr) console.error("contacts insert failed:", insertErr);
+        if (insertErr) {
+          console.error("contacts insert failed:", insertErr);
+          return NextResponse.json({ success: false, error: "contacts insert: " + insertErr.message }, { status: 500 });
+        }
       }
     }
 
