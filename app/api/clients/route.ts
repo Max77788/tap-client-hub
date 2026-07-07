@@ -18,7 +18,7 @@ const CODE_TO_KEY: Record<string, ServiceKey> = {
   T9: "1099s", REND: "renditions", TAX: "tax_returns",
 };
 
-export const revalidate = 30; // Revalidate every 30 seconds — faster than re-fetching on every navigation
+export const dynamic = "force-dynamic"; // Never cache — data changes frequently
 
 export async function GET(request: Request) {
   try {
