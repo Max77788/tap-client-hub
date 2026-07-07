@@ -231,11 +231,12 @@ export async function PUT(request: Request) {
           await supabase.from("contacts").update(contactUpdates).eq("id", existingContact.id);
         }
       } else {
-        // No contact row yet — insert one
-        const contactInsert: Record<string, any> = { client_id: clientId };
+        // No contact row yet — insert one (name is NOT NULL, use client name)
+        const contactInsert: Record<string, any> = { client_id: clientId, name: name || "Contact" };
         if (emails && emails.length > 0) contactInsert.email = emails[0];
         if (phones && phones.length > 0) contactInsert.phone = phones[0];
-        await supabase.from("contacts").insert(contactInsert);
+        const { error: insertErr } = await supabase.from("contacts").insert(contactInsert);
+        if (insertErr) console.error("contacts insert failed:", insertErr);
       }
     }
 
