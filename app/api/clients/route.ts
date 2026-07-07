@@ -230,6 +230,12 @@ export async function PUT(request: Request) {
         if (Object.keys(contactUpdates).length > 0) {
           await supabase.from("contacts").update(contactUpdates).eq("id", existingContact.id);
         }
+      } else {
+        // No contact row yet — insert one
+        const contactInsert: Record<string, any> = { client_id: clientId };
+        if (emails && emails.length > 0) contactInsert.email = emails[0];
+        if (phones && phones.length > 0) contactInsert.phone = phones[0];
+        await supabase.from("contacts").insert(contactInsert);
       }
     }
 
