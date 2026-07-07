@@ -55,7 +55,6 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("time_entries")
     .insert({
-      id: body.id || randomUUID(),
       who: body.who,
       client_id: body.client_id || null,
       client_service_id: body.client_service_id || null,
