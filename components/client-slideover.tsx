@@ -423,11 +423,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     }
     // Persist to DB without triggering full refresh
     const toggled = updated.find(s => s.key === key);
-    if (toggled?.csId) {
+    const wasOff = !localSvcs.find((s: any) => s.key === key)?.enabled;
+    if (toggled && (toggled.csId || wasOff)) {
       fetch("/api/clients", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: client.id, services: [{ csId: toggled.csId, key, enabled: toggled.enabled }] }),
+        body: JSON.stringify({
+          id: client.id,
+          services: [{ csId: toggled.csId || "", key, enabled: toggled.enabled }],
+        }),
       }).catch(() => {});
     }
   }
