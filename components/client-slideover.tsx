@@ -834,51 +834,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <option value="Monthly">Monthly</option>
                   </select>
                 </div>
-                <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }} title="How payroll reports are delivered to the client">Reporting Method</label>
-                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
-                      value={prReportingMethod}
-                      onChange={e => {
-                        setPrReportingMethod(e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, reportingMethod: e.target.value } : s));
-                      }}
-                    >
-                      <option value="">—</option>
-                      <option value="PR Reports only">PR Reports only</option>
-                      <option value="Email Paystub to Client">Email Paystub to Client</option>
-                      <option value="Log into Client">Log into Client</option>
-                    </select>
-                  </div>
-                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }} title="e.g. Monthly, Salary, Right Network, etc.">Payroll Category</label>
-                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
-                      value={prPayrollCategory}
-                      onChange={e => {
-                        setPrPayrollCategory(e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollCategory: e.target.value } : s));
-                      }}
-                    >
-                      <option value="">—</option>
-                      <option value="Monthly">Monthly</option>
-                      <option value="Salary">Salary</option>
-                      <option value="SAME">SAME</option>
-                      <option value="Right Network">Right Network</option>
-                      <option value="Tushar">Tushar</option>
-                    </select>
-                  </div>
-                  <div style={{ flex: "1 0 120px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }} title="QuickBooks license number for payroll access">QB License</label>
-                    <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
-                      value={prQbLicense}
-                      onChange={e => {
-                        setPrQbLicense(e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, qbLicense: e.target.value } : s));
-                      }}
-                      placeholder="QB license #"
-                    />
-                  </div>
-                </div>
-                <div style={{ marginBottom: 6 }}>
+              </div>
+              <div style={{ marginBottom: 6 }}>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Notes</label>
                   <textarea style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", minHeight: 50, resize: "vertical" }}
                     value={prReportingNotes}
