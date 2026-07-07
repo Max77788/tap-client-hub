@@ -517,7 +517,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
       financials: "FINANCIALS",
       payroll: "PAYROLL",
       sales_tax: "SALES TAX",
-      tax_returns: "TAX RTN",
+      tax_returns: "TAX RETURNS",
       "1099s": "1099",
       renditions: "RENDITION",
     };
