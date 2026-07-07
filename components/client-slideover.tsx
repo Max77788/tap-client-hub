@@ -1617,7 +1617,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Per-service assignee selector */}
             <div style={{ marginBottom: 12 }}>
               <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
-                Assignee
+                Assigned To
               </div>
               <select className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
                 value={resolvedAssignee}
