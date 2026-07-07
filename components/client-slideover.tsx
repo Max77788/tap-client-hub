@@ -729,6 +729,32 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Payroll: credentials section */}
             {isPayroll && svc.enabled && (
               <div style={{ marginBottom: 10 }}>
+                {/* Assignee + Processor row */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assignee</label>
+                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                      value={svc.assignedTo || svc.processor || ""}
+                      onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value, processor: e.target.value } : s))}
+                    >
+                      <option value="">—</option>
+                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Processor</label>
+                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                      value={svc.processor || ""}
+                      onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))}
+                    >
+                      <option value="">—</option>
+                      <option value="Quickbooks Desktop 24">Quickbooks Desktop 24</option>
+                      <option value="Quickbooks Desktop">Quickbooks Desktop</option>
+                      <option value="ADP">ADP</option>
+                      <option value="QBO">QBO</option>
+                    </select>
+                  </div>
+                </div>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Pay date / day</label>
@@ -809,7 +835,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   </select>
                 </div>
                 <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Method</label>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }} title="How payroll reports are delivered to the client">Reporting Method</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prReportingMethod}
                       onChange={e => {
@@ -824,7 +850,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </select>
                   </div>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll Category</label>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }} title="e.g. Monthly, Salary, Right Network, etc.">Payroll Category</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prPayrollCategory}
                       onChange={e => {
@@ -841,7 +867,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </select>
                   </div>
                   <div style={{ flex: "1 0 120px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>QB License</label>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }} title="QuickBooks license number for payroll access">QB License</label>
                     <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prQbLicense}
                       onChange={e => {
