@@ -626,12 +626,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       />
                     )}
                   </div>
-                  {/* Comment icon */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setActiveCommentSvc(svcKey); setActiveCommentMonth(activeCommentSvc === svcKey && activeCommentMonth === i ? -1 : i); setCommentText(""); }}
-                    style={{ all: "unset", cursor: "pointer", fontSize: 10, color: "var(--muted)", marginTop: 2, display: "block", lineHeight: 1 }}
-                    title="Comments"
-                  >💬</button>
                   {activeCommentSvc === svcKey && activeCommentMonth === i && (
                     <CommentPanel svcKey={svcKey} monthIdx={i} />
                   )}
@@ -674,12 +668,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     />
                   )}
                 </div>
-                {/* Comment icon */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setActiveCommentSvc(svcKey); setActiveCommentMonth(activeCommentSvc === svcKey && activeCommentMonth === i ? -1 : i); setCommentText(""); }}
-                  style={{ all: "unset", cursor: "pointer", fontSize: 10, color: "var(--muted)", marginTop: 2, display: "block", lineHeight: 1 }}
-                  title="Comments"
-                >💬</button>
                 {activeCommentSvc === svcKey && activeCommentMonth === i && (
                   <CommentPanel svcKey={svcKey} monthIdx={i} />
                 )}
