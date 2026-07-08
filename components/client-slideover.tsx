@@ -2283,6 +2283,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </select>
             </div>
 
+            {/* Address */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Address</span>
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eAddress} onChange={e => setEAddress(e.target.value)} disabled={!editing} placeholder="—" />
+            </div>
+
             {/* EIN */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
