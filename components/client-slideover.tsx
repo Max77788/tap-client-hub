@@ -455,20 +455,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         setAddingStx(true);
       }
     }
-    // Persist to DB without triggering full page refresh
-    const toggled = updated.find(s => s.key === key);
-    if (toggled) {
-      fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: client.id,
-          services: [{ key: toggled.key, enabled: toggled.enabled, frequency: toggled.frequency, assignedTo: toggled.assignedTo, processor: toggled.processor }],
-        }),
-      }).then(async (res) => {
-        if (!res.ok) console.error("toggleSvc PUT failed:", res.status, await res.text());
-      }).catch((err) => console.error("toggleSvc PUT error:", err));
-    }
+    // Persist to DB and update parent state immediately
+    onSave?.({ ...client, services: updated });
   }
 
   function freqLabel(key: string, svc: any) {
@@ -1340,6 +1328,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       } as Client);
     }
 
+    function autoSave(services?: any[]) {
+      const svcs = services || localSvcs;
+      onSave?.({ ...c, services: svcs } as Client);
+    }
+
     function handleSaveModule() {
       setSaving(true);
       // Ensure payroll separate state is synced into localSvcs before saving
@@ -1804,9 +1797,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 value={resolvedAssignee}
                 onChange={e => {
                   setESvcAssignees((prev: any) => ({ ...prev, [moduleKey]: e.target.value }));
-                  setLocalSvcs((prev: any) => prev.map((s: any) =>
+                  const updated = localSvcs.map((s: any) =>
                     s.key === moduleKey ? { ...s, assignedTo: e.target.value } : s
-                  ));
+                  );
+                  setLocalSvcs(updated);
+                  autoSave(updated);
                 }}
               >
                 {profiles.map((m) => {
@@ -1828,7 +1823,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                      value={targetSvc.frequency || "Monthly"} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === moduleKey ? { ...s, frequency: e.target.value } : s))}>
+                      value={targetSvc.frequency || "Monthly"} onChange={e => {
+                        const updated = localSvcs.map((s: any) => s.key === moduleKey ? { ...s, frequency: e.target.value } : s);
+                        setLocalSvcs(updated);
+                        autoSave(updated);
+                      }}>
                       <option value="Monthly">Monthly</option>
                       <option value="Quarterly">Quarterly</option>
                       <option value="Annual">Annual</option>
@@ -1933,7 +1932,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                    value={prPaydate} onChange={e => { setPrPaydate(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s)); }}>
+                    value={prPaydate} onChange={e => {
+                      setPrPaydate(e.target.value);
+                      const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s);
+                      setLocalSvcs(updated);
+                      autoSave(updated);
+                    }}>
                     <option value="">—</option>
                     {payDayOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
@@ -1946,7 +1950,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                    value={targetSvc?.processor || ""} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))}>
+                    value={targetSvc?.processor || ""} onChange={e => {
+                      const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s);
+                      setLocalSvcs(updated);
+                      autoSave(updated);
+                    }}>
                     <option value="">—</option>
                     <option value="Quickbooks Desktop 24">Quickbooks Desktop 24</option>
                     <option value="Quickbooks Desktop">Quickbooks Desktop</option>
@@ -2031,7 +2039,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="sect" style={sectStyle}>Tax Return Details</div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Filing Type</span>
-                  <select value={filingType} onChange={e => { setFilingType(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s)); }}
+                  <select value={filingType} onChange={e => {
+                    setFilingType(e.target.value);
+                    const updated = localSvcs.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s);
+                    setLocalSvcs(updated);
+                    autoSave(updated);
+                  }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                     <option value="">—</option>
                     {FILING_TYPES.map(t => <option key={t}>{t}</option>)}
@@ -2039,7 +2052,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Filing State</span>
-                  <select value={filingState} onChange={e => { setFilingState(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingState: e.target.value } : s)); }}
+                  <select value={filingState} onChange={e => {
+                    setFilingState(e.target.value);
+                    const updated = localSvcs.map((s: any) => s.key === "tax_returns" ? { ...s, filingState: e.target.value } : s);
+                    setLocalSvcs(updated);
+                    autoSave(updated);
+                  }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                     <option value="">—</option>
                     {US_STATES.map(st => <option key={st}>{st}</option>)}
@@ -2047,7 +2065,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
-                  <select value={filingMonth} onChange={e => { setFilingMonth(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingMonth: e.target.value } : s)); }}
+                  <select value={filingMonth} onChange={e => {
+                    setFilingMonth(e.target.value);
+                    const updated = localSvcs.map((s: any) => s.key === "tax_returns" ? { ...s, filingMonth: e.target.value } : s);
+                    setLocalSvcs(updated);
+                    autoSave(updated);
+                  }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                     <option value="">—</option>
                     {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
