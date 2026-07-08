@@ -335,6 +335,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (eCityRef.current) eCityRef.current.value = client.city || "";
     if (eStateRef.current) eStateRef.current.value = client.state || "";
     if (eZipRef.current) eZipRef.current.value = (client as any).zip || "";
+    if (eEinRef.current) eEinRef.current.value = client.ein || "";
     // Reset notes pagination
     setNotePage(0);
     // Initialize tax returns fields
@@ -360,6 +361,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eCity, setECity] = useState(client.city);
   const [eState, setEState] = useState(client.state);
   const [eZip, setEZip] = useState((client as any).zip || "");
+  const [eEin, setEEin] = useState(client.ein || "");
+  const eEinRef = useRef<HTMLInputElement>(null);
   const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
   const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
   const [eFinMonth, setEFinMonth] = useState(() => {
@@ -2257,7 +2260,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   )}
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px" }}>
                     <span style={{ color: "var(--muted)" }}>EIN</span>
-                    <span style={{ fontWeight: 500, fontFamily: "var(--mono)" }}>{c.ein || "—"}</span>
+                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                      ref={eEinRef} defaultValue={eEin} onBlur={e => setEEin(e.target.value)} placeholder="—" />
                   </div>
                 </div>
               )}
@@ -2321,7 +2325,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         emails: [...new Set([eEmailRef.current?.value ?? eEmail, eAddEmailRef.current?.value ?? eAddEmail].filter(Boolean))],
         phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
         address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,
-        assignedStaff: eAssigned,
+ ein: eEinRef.current?.value ?? eEin,
+ assignedStaff: eAssigned,
         services: updatedSvcs,
       } as Client);
       setToast("Changes saved");
@@ -2428,7 +2433,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} placeholder="—" />
+                ref={eEinRef} defaultValue={eEin} onBlur={e => setEEin(e.target.value)} placeholder="—" />
             </div>
 
             {/* ── Services ── */}
