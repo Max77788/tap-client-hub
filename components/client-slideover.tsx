@@ -1893,7 +1893,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                      value={targetSvc.frequency || "Monthly"} onChange={e => {
+                      value={(targetSvc.frequency || "Monthly") === "Yearly" || (targetSvc.frequency || "Monthly") === "yearly" || (targetSvc.frequency || "Monthly") === "annual" ? "Annual" : (targetSvc.frequency || "Monthly")} onChange={e => {
                         autoSave(prev => prev.map((s: any) => s.key === moduleKey ? { ...s, frequency: e.target.value } : s));
                       }}>
                       <option value="Monthly">Monthly</option>
@@ -2082,6 +2082,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       onClick={addPrEmail}
                       style={{ all: "unset", cursor: "pointer", padding: "4px 9px", background: "var(--ink)", color: "#fff", borderRadius: 6, fontSize: 14, fontWeight: 700, lineHeight: 1 }}>+</button>
                     </div>
+                </div>
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Reporting Notes</span>
