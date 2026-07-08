@@ -560,11 +560,11 @@ export default function TimePage() {
             onClick={() => {
               const headers = ["Who","Client","Task","Minutes","Date","Note"];
               const rows = filteredEntries.map((e: any) => [
-                e.whoName || "",
+                e.personName || "",
                 e.clientName || "",
-                e.task || "",
-                String(Math.round((e.seconds || 0) / 60)),
-                e.when ? new Date(e.when).toLocaleDateString() : "",
+                e.taskLabel || e.task || "",
+                String(Math.round((e.duration || 0) / 60)),
+                e.date ? new Date(e.date).toLocaleDateString() : "",
                 (e.note || "").replace(/"/g, '""'),
               ]);
               const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
