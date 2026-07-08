@@ -136,22 +136,23 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [editStxAssigned, setEditStxAssigned] = useState("");
 
   // ── Payroll details state ──
-  const [prPaydate, setPrPaydate] = useState("");
-  const [prStartDate, setPrStartDate] = useState("");
-  const [prPin, setPrPin] = useState("");
+  const prSvcInit = client.services.find((s: any) => s.key === "payroll");
+  const [prPaydate, setPrPaydate] = useState(prSvcInit?.paydate || "");
+  const [prStartDate, setPrStartDate] = useState(prSvcInit?.payStartDate || "");
+  const [prPin, setPrPin] = useState(prSvcInit?.payrollPassword || "");
   const [showPrPin, setShowPrPin] = useState(false);
-  const [prEftps, setPrEftps] = useState("");
+  const [prEftps, setPrEftps] = useState(prSvcInit?.eftps || "");
   const [showPrEftps, setShowPrEftps] = useState(false);
   const prPinRef = useRef<HTMLInputElement>(null);
   const prEftpsRef = useRef<HTMLInputElement>(null);
-  const [prEmails, setPrEmails] = useState<string[]>([]);
+  const [prEmails, setPrEmails] = useState<string[]>(prSvcInit?.payEmails || []);
   const [newPrEmail, setNewPrEmail] = useState("");
   // New payroll fields
-  const [prPeriodFreq, setPrPeriodFreq] = useState("");
-  const [prReportingMethod, setPrReportingMethod] = useState("");
-  const [prPayrollCategory, setPrPayrollCategory] = useState("");
-  const [prQbLicense, setPrQbLicense] = useState("");
-  const [prReportingNotes, setPrReportingNotes] = useState("");
+  const [prPeriodFreq, setPrPeriodFreq] = useState(prSvcInit?.frequency || prSvcInit?.payPeriodFrequency || "");
+  const [prReportingMethod, setPrReportingMethod] = useState(prSvcInit?.reportingMethod || "");
+  const [prPayrollCategory, setPrPayrollCategory] = useState(prSvcInit?.payrollCategory || "");
+  const [prQbLicense, setPrQbLicense] = useState(prSvcInit?.qbLicense || "");
+  const [prReportingNotes, setPrReportingNotes] = useState(prSvcInit?.reportingNotes || "");
   const reportingRef = useRef<HTMLTextAreaElement>(null);
   // ── Client detail refs (uncontrolled — avoids mobile keyboard dismissal) ──
   const newPrEmailRef = useRef<HTMLInputElement>(null);
@@ -321,6 +322,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setPrPayrollCategory(prSvc?.payrollCategory || "");
     setPrQbLicense(prSvc?.qbLicense || "");
     setPrReportingNotes(prSvc?.reportingNotes || "");
+    // Sync uncontrolled input refs when switching clients
+    if (prPinRef.current) prPinRef.current.value = prSvc?.payrollPassword || "";
+    if (prEftpsRef.current) prEftpsRef.current.value = prSvc?.eftps || "";
+    if (reportingRef.current) reportingRef.current.value = prSvc?.reportingNotes || "";
+    // Sync client detail uncontrolled inputs
+    if (eEmailRef.current) eEmailRef.current.value = (client.emails || [""])[0] || "";
+    if (eAddEmailRef.current) eAddEmailRef.current.value = (client.emails || [])[1] || "";
+    if (ePhoneRef.current) ePhoneRef.current.value = (client.phones || [""])[0] || "";
+    if (eAddPhoneRef.current) eAddPhoneRef.current.value = (client.phones || [])[1] || "";
+    if (eAddressRef.current) eAddressRef.current.value = client.address || "";
+    if (eCityRef.current) eCityRef.current.value = client.city || "";
+    if (eStateRef.current) eStateRef.current.value = client.state || "";
+    if (eZipRef.current) eZipRef.current.value = (client as any).zip || "";
     // Reset notes pagination
     setNotePage(0);
     // Initialize tax returns fields
