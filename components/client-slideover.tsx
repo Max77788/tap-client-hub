@@ -463,7 +463,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           id: client.id,
           services: [{ key: toggled.key, enabled: toggled.enabled, frequency: toggled.frequency, assignedTo: toggled.assignedTo, processor: toggled.processor }],
         }),
-      }).catch(() => {});
+      }).then(async (res) => {
+        if (!res.ok) console.error("toggleSvc PUT failed:", res.status, await res.text());
+      }).catch((err) => console.error("toggleSvc PUT error:", err));
     }
   }
 
