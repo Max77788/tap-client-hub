@@ -829,10 +829,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div style={{ position: "relative" }}>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
                         type={showPrPin ? "text" : "password"} value={prPin}
-                        onChange={e => {
-                          setPrPin(e.target.value);
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s));
-                        }}
+                        onChange={e => setPrPin(e.target.value)}
                         placeholder="EFT pin"
                       />
                       <button type="button" tabIndex={-1}
@@ -852,10 +849,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div style={{ position: "relative" }}>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
                         type={showPrEftps ? "text" : "password"} value={prEftps}
-                        onChange={e => {
-                          setPrEftps(e.target.value);
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s));
-                        }}
+                        onChange={e => setPrEftps(e.target.value)}
                         placeholder="EFTPS password"
                       />
                       <button type="button" tabIndex={-1}
@@ -896,10 +890,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Notes</label>
                   <textarea style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", minHeight: 50, resize: "vertical" }}
                     value={prReportingNotes}
-                    onChange={e => {
-                      setPrReportingNotes(e.target.value);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, reportingNotes: e.target.value } : s));
-                    }}
+                    onChange={e => setPrReportingNotes(e.target.value)}
                     placeholder="Add notes about payroll filing/reporting..."
                   />
                 </div>
