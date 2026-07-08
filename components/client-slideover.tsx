@@ -139,9 +139,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prPaydate, setPrPaydate] = useState("");
   const [prStartDate, setPrStartDate] = useState("");
   const [prPin, setPrPin] = useState("");
-  const [prEftps, setPrEftps] = useState("");
   const [showPrPin, setShowPrPin] = useState(false);
+  const [prEftps, setPrEftps] = useState("");
   const [showPrEftps, setShowPrEftps] = useState(false);
+  const prPinRef = useRef<HTMLInputElement>(null);
+  const prEftpsRef = useRef<HTMLInputElement>(null);
   const [prEmails, setPrEmails] = useState<string[]>([]);
   const [newPrEmail, setNewPrEmail] = useState("");
   // New payroll fields
@@ -829,8 +831,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll PIN</label>
                     <div style={{ position: "relative" }}>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
-                        type={showPrPin ? "text" : "password"} value={prPin}
-                        onChange={e => setPrPin(e.target.value)}
+                        type={showPrPin ? "text" : "password"} ref={prPinRef} defaultValue={prPin}
+                        onBlur={e => setPrPin(e.target.value)}
                         placeholder="EFT pin"
                       />
                       <button type="button" tabIndex={-1}
@@ -849,8 +851,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>EFTPS Password</label>
                     <div style={{ position: "relative" }}>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
-                        type={showPrEftps ? "text" : "password"} value={prEftps}
-                        onChange={e => setPrEftps(e.target.value)}
+                        type={showPrEftps ? "text" : "password"} ref={prEftpsRef} defaultValue={prEftps}
+                        onBlur={e => setPrEftps(e.target.value)}
                         placeholder="EFTPS password"
                       />
                       <button type="button" tabIndex={-1}
@@ -1357,8 +1359,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             ...s,
             paydate: prPaydate,
             pay_start_date: prStartDate,
-            payrollPassword: prPin,
-            eftps: prEftps,
+            payrollPassword: prPinRef.current?.value ?? prPin,
+            eftps: prEftpsRef.current?.value ?? prEftps,
             payEmails: prEmails,
             payPeriodFrequency: prPeriodFreq,
             frequency: prPeriodFreq,
@@ -1977,8 +1979,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>EFTPS Password</span>
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                      type={showPrEftps ? "text" : "password"} value={prEftps || ""}
-                      onChange={e => setPrEftps(e.target.value)} placeholder="—" />
+                      type={showPrEftps ? "text" : "password"} ref={prEftpsRef} defaultValue={prEftps || ""}
+                      onBlur={e => setPrEftps(e.target.value)} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrEftps(!showPrEftps)}
                       style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}>
@@ -1994,8 +1996,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>PIN</span>
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                      type={showPrPin ? "text" : "password"} value={prPin || ""}
-                      onChange={e => setPrPin(e.target.value)} placeholder="—" />
+                      type={showPrPin ? "text" : "password"} ref={prPinRef} defaultValue={prPin || ""}
+                      onBlur={e => setPrPin(e.target.value)} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrPin(!showPrPin)}
                       style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}>
@@ -2259,7 +2261,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
-          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPin, eftps: prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
+          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPinRef.current?.value ?? prPin, eftps: prEftpsRef.current?.value ?? prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
         }
         if (s.key === "tax_returns") {
           updated = { ...updated, filingState, filingMonth, filingType };
