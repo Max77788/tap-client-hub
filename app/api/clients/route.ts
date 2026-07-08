@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get("type")?.toLowerCase();
     const limit = parseInt(searchParams.get("limit") || "1000");
+    const lite = searchParams.get("fields") === "lite";
     const offset = parseInt(searchParams.get("offset") || "0");
 
     // ── Single count query instead of 3 separate ones ──
@@ -214,12 +215,12 @@ export async function GET(request: Request) {
           filingMonth: cs.filing_month ? String(cs.filing_month) : "",
           filingType: cs.filing_type || "",
           payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
-          comments: (() => {
+          comments: lite ? [] : (() => {
             const oldCmts = Array.isArray(cs.comments) ? cs.comments : [];
             const newCmts = normCommentsByCsId[cs.id] || [];
             return [...oldCmts, ...newCmts];
           })(),
-          salesTaxLineItems: (() => {
+          salesTaxLineItems: lite ? [] : (() => {
             const oldStx = Array.isArray(cs.sales_tax_line_items)
               ? cs.sales_tax_line_items.map((item: any) => ({
                   ...item,
@@ -230,7 +231,7 @@ export async function GET(request: Request) {
             return [...oldStx, ...newStx];
           })(),
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
-          months: Array.from({ length: 12 }, (_, i) => {
+          months: lite ? Array(12).fill("lock") : Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
             return !s ? "lock" : s === "done" ? "done" : s === "na" ? "na" : s === "in_progress" ? "in_progress" : s === "waiting_client" ? "waiting" : s === "prepared" ? "billed" : s === "delayed" ? "delayed" : "lock";
           }),
