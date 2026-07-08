@@ -153,6 +153,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prQbLicense, setPrQbLicense] = useState("");
   const [prReportingNotes, setPrReportingNotes] = useState("");
   const reportingRef = useRef<HTMLTextAreaElement>(null);
+  // ── Client detail refs (uncontrolled — avoids mobile keyboard dismissal) ──
+  const eEmailRef = useRef<HTMLInputElement>(null);
+  const eAddEmailRef = useRef<HTMLInputElement>(null);
+  const ePhoneRef = useRef<HTMLInputElement>(null);
+  const eAddPhoneRef = useRef<HTMLInputElement>(null);
+  const eAddressRef = useRef<HTMLInputElement>(null);
+  const eCityRef = useRef<HTMLInputElement>(null);
+  const eStateRef = useRef<HTMLInputElement>(null);
+  const eZipRef = useRef<HTMLInputElement>(null);
 
   // ── Pay Day options (fetched from DB) ──
   const [payDayOptions, setPayDayOptions] = useState<string[]>([]);
@@ -2273,9 +2282,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         name: eName,
         type: eType as "Business" | "Personal",
         group: eGroup,
-        emails: [...new Set([eEmail, eAddEmail].filter(Boolean))],
-        phones: [ePhone, eAddPhone].filter(Boolean),
-        address: eAddress, city: eCity, state: eState, zip: eZip,
+        emails: [...new Set([eEmailRef.current?.value ?? eEmail, eAddEmailRef.current?.value ?? eAddEmail].filter(Boolean))],
+        phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
+        address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,
         assignedStaff: eAssigned,
         services: updatedSvcs,
       } as Client);
@@ -2322,25 +2331,25 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Email</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eEmail} onChange={e => setEEmail(e.target.value)} placeholder="—" />
+                ref={eEmailRef} defaultValue={eEmail} onBlur={e => setEEmail(e.target.value)} placeholder="—" />
             </div>
             {/* Additional email */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional email</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eAddEmail} onChange={e => setEAddEmail(e.target.value)} placeholder="—" />
+                ref={eAddEmailRef} defaultValue={eAddEmail} onBlur={e => setEAddEmail(e.target.value)} placeholder="—" />
             </div>
             {/* Phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Phone</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="—" />
+                ref={ePhoneRef} defaultValue={ePhone} onBlur={e => setEPhone(e.target.value)} placeholder="—" />
             </div>
             {/* Additional phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eAddPhone} onChange={e => setEAddPhone(e.target.value)} placeholder="—" />
+                ref={eAddPhoneRef} defaultValue={eAddPhone} onBlur={e => setEAddPhone(e.target.value)} placeholder="—" />
             </div>
 
             {/* Assigned */}
@@ -2357,7 +2366,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Address</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="—" />
+                ref={eAddressRef} defaultValue={eAddress} onBlur={e => setEAddress(e.target.value)} placeholder="—" />
             </div>
 
             {/* City / State / ZIP row */}
@@ -2365,17 +2374,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div className="field" style={{ ...fieldStyle, flex: 2 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>City</span>
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  value={eCity} onChange={e => setECity(e.target.value)} placeholder="—" />
+                  ref={eCityRef} defaultValue={eCity} onBlur={e => setECity(e.target.value)} placeholder="—" />
               </div>
               <div className="field" style={{ ...fieldStyle, flex: 1 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>State</span>
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  value={eState} onChange={e => setEState(e.target.value)} placeholder="—" />
+                  ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="—" />
               </div>
               <div className="field" style={{ ...fieldStyle, flex: 1 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>ZIP</span>
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  value={eZip} onChange={e => setEZip(e.target.value)} placeholder="—" />
+                  ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="—" />
               </div>
             </div>
 
