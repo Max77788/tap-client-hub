@@ -194,8 +194,23 @@ export async function GET(request: Request) {
         };
       });
       const seen = new Set(services.map((s: any) => s.key));
+      // Merge duplicate services: combine salesTaxLineItems from extras into the first occurrence
+      const mergedSvcs: any[] = [];
+      const mergedKeys = new Set<string>();
+      for (const svc of services) {
+        if (mergedKeys.has(svc.key)) {
+          // Merge salesTaxLineItems into the first occurrence
+          const existing = mergedSvcs.find((s: any) => s.key === svc.key);
+          if (existing && svc.salesTaxLineItems?.length) {
+            existing.salesTaxLineItems = [...(existing.salesTaxLineItems || []), ...svc.salesTaxLineItems];
+          }
+        } else {
+          mergedKeys.add(svc.key);
+          mergedSvcs.push(svc);
+        }
+      }
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!seen.has(key)) services.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
+        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -208,7 +223,7 @@ export async function GET(request: Request) {
         assignedStaff: staffNames[svcs[0]?.assigned_to || ""] || svcs[0]?.assigned_to || "Unassigned",
         notes: db.notes || "",
         ein: einMap[db.id] || "",
-        services,
+        services: mergedSvcs,
       };
     });
 
