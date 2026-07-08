@@ -1187,7 +1187,66 @@ export default function WorklistTable({
                             >{n || "·"}</div>
                           )}
                           {hasT9Cmt && (
-                            <div className="cdot" style={{ position: "absolute", top: 1, right: 1, zIndex: 2 }} />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                setCommentPanelPos({ top: Math.max(rect.top - 120, 10), left: rect.left + 14 });
+                                const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
+                                setActiveCommentClientId(isOpen ? null : client.id);
+                                setActiveCommentMonth(isOpen ? -1 : i);
+                                if (!isOpen) setCommentText("");
+                              }}
+                              className="cdot"
+                              style={{ all: "unset", cursor: "pointer", position: "absolute", top: 1, right: 1, zIndex: 3, width: 6, height: 6, borderRadius: "50%", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}
+                              title={`Comments for ${mo}`}
+                            />
+                          )}
+                          {activeCommentClientId === client.id && activeCommentMonth === i && commentPanelPos && (
+                            <div
+                              className="comment-panel-wl"
+                              style={{
+                                position: "fixed", top: commentPanelPos.top, left: commentPanelPos.left, zIndex: 99999,
+                                background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10,
+                                padding: "10px 12px", boxShadow: "0 4px 16px rgba(0,0,0,.08)",
+                                fontSize: 12, width: 240,
+                              }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
+                                Comments — {mo}
+                              </div>
+                              {(svc.comments || []).filter((c: any) => c.month === i).length > 0 && (
+                                <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                                  {(svc.comments || []).filter((c: any) => c.month === i).map((cm: any) => (
+                                    <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
+                                      <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
+                                        <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
+                                      </div>
+                                      <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
+                                      <button
+                                        onClick={() => deleteComment(client.id, i, cm.id)}
+                                        style={{ all: "unset", cursor: "pointer", position: "absolute", top: 4, right: 6, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
+                                        title="Delete comment"
+                                      >×</button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <input
+                                  style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
+                                  value={commentText}
+                                  onChange={e => setCommentText(e.target.value)}
+                                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText); } }}
+                                  placeholder="Add a comment…"
+                                />
+                                <button
+                                  onClick={() => addComment(client.id, i, commentText)}
+                                  style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
+                                >Send</button>
+                              </div>
+                            </div>
                           )}
                         </td>
                       );
