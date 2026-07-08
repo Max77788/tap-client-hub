@@ -304,7 +304,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     // Initialize tax returns fields
     const trSvc = client.services.find((s: any) => s.key === "tax_returns");
     setFilingState(trSvc?.filingState || "");
-    setFilingMonth(trSvc?.filingMonth || "");
+    setFilingMonth(trSvc?.filingMonth ? String(trSvc.filingMonth) : "");
     setFilingType(trSvc?.filingType || "");
     // Auto-open the add form when sales tax is enabled with no line items
     if (stxSvc?.enabled && items.length === 0 && !editing) {

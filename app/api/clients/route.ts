@@ -174,7 +174,7 @@ export async function GET(request: Request) {
           qbLicense: cs.qb_license || "",
           reportingNotes: cs.reporting_notes || "",
           filingState: cs.filing_state || "",
-          filingMonth: cs.filing_month || "",
+          filingMonth: cs.filing_month ? String(cs.filing_month) : "",
           filingType: cs.filing_type || "",
           payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
           comments: Array.isArray(cs.comments) ? cs.comments : [],
@@ -194,16 +194,30 @@ export async function GET(request: Request) {
         };
       });
       const seen = new Set(services.map((s: any) => s.key));
-      // Merge duplicate services: combine salesTaxLineItems from extras into the first occurrence
+      // Merge duplicate services: keep the first occurrence but prefer non-empty values from later ones
       const mergedSvcs: any[] = [];
       const mergedKeys = new Set<string>();
       for (const svc of services) {
         if (mergedKeys.has(svc.key)) {
-          // Merge salesTaxLineItems into the first occurrence
+          // Merge fields from duplicate into the first occurrence
           const existing = mergedSvcs.find((s: any) => s.key === svc.key);
-          if (existing && svc.salesTaxLineItems?.length) {
+          if (!existing) continue;
+          // Merge salesTaxLineItems
+          if (svc.salesTaxLineItems?.length) {
             existing.salesTaxLineItems = [...(existing.salesTaxLineItems || []), ...svc.salesTaxLineItems];
           }
+          // Prefer non-empty values from the duplicate for other fields
+          const copyFields = ["filingState","filingMonth","filingType","frequency","processor",
+            "assignedTo","expectedAnnual","financialsMonth","paydate","payrollPassword",
+            "eftps","biweeklyCode","payStartDate","payPeriodFrequency","reportingMethod",
+            "payrollCategory","qbLicense","reportingNotes","filingState","filingMonth",
+            "filingType","currentStage"];
+          for (const f of copyFields) {
+            if (svc[f] && !existing[f]) existing[f] = svc[f];
+          }
+          if (svc.svcNotes && !existing.svcNotes) existing.svcNotes = svc.svcNotes;
+          if (svc.payEmails?.length && !existing.payEmails?.length) existing.payEmails = svc.payEmails;
+          if (svc.comments?.length) existing.comments = [...(existing.comments || []), ...svc.comments];
         } else {
           mergedKeys.add(svc.key);
           mergedSvcs.push(svc);
