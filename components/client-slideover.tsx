@@ -91,6 +91,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       }, 800);
     }
   };
+  const addPrEmail = () => {
+    const val = newPrEmailRef.current?.value.trim();
+    if (!val) return;
+    const upd = [...prEmails, val];
+    setPrEmails(upd);
+    setNewPrEmail("");
+    if (newPrEmailRef.current) newPrEmailRef.current.value = "";
+    setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
+  };
   // ── STX line item focus ref for auto-scroll ──
   useEffect(() => {
     if (stxLineItemFocus && open) {
@@ -949,18 +958,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       ref={newPrEmailRef}
                       defaultValue={newPrEmail}
                       onBlur={e => setNewPrEmail(e.target.value)}
-                      onKeyDown={e => {
-                        const val = newPrEmailRef.current?.value.trim();
-                        if (e.key === "Enter" && val) {
-                          e.preventDefault();
-                          const upd = [...prEmails, val];
-                          setPrEmails(upd);
-                          setNewPrEmail("");
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
-                        }
-                      }}
-                      placeholder="Type email + Enter to add"
+                      onKeyDown={e => { if (e.key === "Enter") addPrEmail(); }}
+                      placeholder="Type email + Enter"
                     />
+                    <button className="reveal"
+                      onClick={addPrEmail}
+                      style={{ all: "unset", cursor: "pointer", padding: "5px 10px", background: "var(--ink)", color: "#fff", borderRadius: 7, fontSize: 14, fontWeight: 700, lineHeight: 1 }}>+</button>
                   </div>
                 </div>
               </div>
@@ -2067,22 +2070,18 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         </span>
                       ))}
                     </div>
-                    <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    <div style={{ display: "flex", gap: 4 }}>
+                    <input style={{ flex: 1, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", outline: "none", boxSizing: "border-box" }}
                       ref={newPrEmailRef}
                       defaultValue={newPrEmail}
                       onBlur={e => setNewPrEmail(e.target.value)}
-                      onKeyDown={e => {
-                        const val = newPrEmailRef.current?.value.trim();
-                        if (e.key === "Enter" && val) {
-                          e.preventDefault();
-                          const upd = [...prEmails, val];
-                          setPrEmails(upd);
-                          setNewPrEmail("");
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
-                        }
-                      }}
-                      placeholder="Type email + Enter to add" />
-                  </div>
+                      onKeyDown={e => { if (e.key === "Enter") addPrEmail(); }}
+                      placeholder="Type email + Enter"
+                    />
+                    <button className="reveal"
+                      onClick={addPrEmail}
+                      style={{ all: "unset", cursor: "pointer", padding: "4px 9px", background: "var(--ink)", color: "#fff", borderRadius: 6, fontSize: 14, fontWeight: 700, lineHeight: 1 }}>+</button>
+                    </div>
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Reporting Notes</span>
