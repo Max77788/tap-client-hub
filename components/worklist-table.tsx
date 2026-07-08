@@ -115,6 +115,7 @@ function getActiveMonths(
     }
     case "annually":
     case "yearly":
+    case "annual":
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); // All months — yearly services can have work done in any month
     default:
       return new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); // Default to all months active
@@ -290,7 +291,7 @@ export default function WorklistTable({
       return ["Weekly", "Bi-Weekly A", "Bi-Weekly B", "Semi-Monthly", "Monthly"];
     }
     if (serviceKey === "financials" || serviceKey === "sales_tax") {
-      return ["Monthly", "Quarterly", "Annually"];
+      return ["Monthly", "Quarterly", "Annual"];
     }
     if (variant === "t9") {
       return ["Yearly"];
@@ -356,7 +357,12 @@ export default function WorklistTable({
           // financials, sales_tax — filter by frequency directly
           list = list.filter((c) => {
             const svc = c.services?.find((s: any) => s.key === serviceKey);
-            return svc?.frequency === cadenceFilter;
+            const raw = (svc?.frequency || "").trim().toLowerCase();
+            const filter = cadenceFilter.trim().toLowerCase();
+            // Normalize yearly/annual → same bucket
+            return raw === filter
+              || (raw === "yearly" && filter === "annual")
+              || (raw === "annual" && filter === "yearly");
           });
         }
       }
@@ -1304,11 +1310,18 @@ export default function WorklistTable({
                   {/* Cadence — read-only text */}
                   {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
-                    {variant === "payroll"
-                      ? (svc.frequency || "Monthly")
-                      : isStxItem
-                      ? (stxItem.frequency || svc.frequency || "Monthly")
-                      : (svc.frequency || "Monthly")}
+                    {(() => {
+                      const raw = variant === "payroll"
+                        ? (svc.frequency || "Monthly")
+                        : isStxItem
+                        ? (stxItem.frequency || svc.frequency || "Monthly")
+                        : (svc.frequency || "Monthly");
+                      // Normalize to display labels matching the slideover dropdowns
+                      const norm = (raw || "").trim();
+                      if (norm === "yearly" || norm === "annual") return "Annual";
+                      if (norm === "annually") return "Annually";
+                      return norm || "Monthly";
+                    })()}
                   </td>
                   )}
 
