@@ -153,6 +153,43 @@ export async function GET(request: Request) {
       if (t.ein) einMap[t.client_id] = String(t.ein).replace(/\.0$/, "");
     }
 
+    // ── v7 normalized tables: sales_tax_registration + service_comments ──
+    const normStxByCsId: Record<string, any[]> = {};
+    const normCommentsByCsId: Record<string, any[]> = {};
+    if (allCsIds.length > 0) {
+      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE) {
+        const batch = allCsIds.slice(i, i + BATCH_SIZE);
+        // sales_tax_registration
+        const { data: stxBatch } = await supabase.from("sales_tax_registration")
+          .select("*").in("client_service_id", batch);
+        if (stxBatch) {
+          for (const stx of stxBatch) {
+            if (!normStxByCsId[stx.client_service_id]) normStxByCsId[stx.client_service_id] = [];
+            normStxByCsId[stx.client_service_id].push({
+              id: stx.id, serviceName: stx.rt_number, taxId: stx.tax_reg_id,
+              rt: stx.rt_number, frequency: stx.frequency,
+              bankName: stx.bank_name, bankAccount: stx.bank_account_ref,
+              bankRouting: stx.bank_routing_ref, notes: stx.notes,
+              assignedTo: staffNames[stx.assigned_to || ""] || stx.assigned_to || "",
+            });
+          }
+        }
+        // service_comments
+        const { data: cmtBatch } = await supabase.from("service_comments")
+          .select("*").in("client_service_id", batch);
+        if (cmtBatch) {
+          for (const cmt of cmtBatch) {
+            if (!normCommentsByCsId[cmt.client_service_id]) normCommentsByCsId[cmt.client_service_id] = [];
+            normCommentsByCsId[cmt.client_service_id].push({
+              id: cmt.id, month: cmt.month, body: cmt.body || cmt.body,
+              text: cmt.body, author: cmt.author_label || "",
+              createdAt: cmt.created_at,
+            });
+          }
+        }
+      }
+    }
+
     const clients = dbClients.map((db: any) => {
       const svcs = svcByClient[db.id] || [];
       const services = svcs.map((cs: any) => {
@@ -177,13 +214,21 @@ export async function GET(request: Request) {
           filingMonth: cs.filing_month ? String(cs.filing_month) : "",
           filingType: cs.filing_type || "",
           payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
-          comments: Array.isArray(cs.comments) ? cs.comments : [],
-          salesTaxLineItems: Array.isArray(cs.sales_tax_line_items)
-            ? cs.sales_tax_line_items.map((item: any) => ({
-                ...item,
-                assignedTo: staffNames[item.assignedTo || ""] || item.assignedTo || "",
-              }))
-            : [],
+          comments: (() => {
+            const oldCmts = Array.isArray(cs.comments) ? cs.comments : [];
+            const newCmts = normCommentsByCsId[cs.id] || [];
+            return [...oldCmts, ...newCmts];
+          })(),
+          salesTaxLineItems: (() => {
+            const oldStx = Array.isArray(cs.sales_tax_line_items)
+              ? cs.sales_tax_line_items.map((item: any) => ({
+                  ...item,
+                  assignedTo: staffNames[item.assignedTo || ""] || item.assignedTo || "",
+                }))
+              : [];
+            const newStx = (normStxByCsId[cs.id] || []);
+            return [...oldStx, ...newStx];
+          })(),
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
@@ -554,8 +599,47 @@ export async function PATCH(request: Request) {
       .update(updates)
       .eq("id", csId);
 
+    // ── Dual-write to normalized v7 tables ──
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Sync comments → service_comments
+    if (comments !== undefined) {
+      // Delete existing comments for this CS
+      await supabase.from("service_comments").delete().eq("client_service_id", csId);
+      // Re-insert all comments
+      const cmts = Array.isArray(comments) ? comments : [];
+      for (const c of cmts) {
+        if (c.text || c.body) {
+          await supabase.from("service_comments").insert({
+            client_service_id: csId,
+            month: c.month ?? null,
+            body: c.text || c.body || "",
+            author_label: c.author || "",
+            created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // Sync salesTaxLineItems → sales_tax_registration
+    if (salesTaxLineItems !== undefined) {
+      await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
+      const stxItems = Array.isArray(salesTaxLineItems) ? salesTaxLineItems : [];
+      for (const item of stxItems) {
+        await supabase.from("sales_tax_registration").insert({
+          client_service_id: csId,
+          rt_number: item.serviceName || item.rt_number || item.rt || "",
+          tax_reg_id: item.taxId || item.tax_reg_id || "",
+          frequency: item.frequency || null,
+          assigned_to: item.assignedTo || null,
+          bank_name: item.bankName || "",
+          bank_account_ref: item.bankAccount || "",
+          bank_routing_ref: item.bankRouting || "",
+          notes: item.notes || "",
+        });
+      }
     }
 
     return NextResponse.json({ success: true, ...updates });
