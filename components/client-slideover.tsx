@@ -68,6 +68,9 @@ interface ClientSlideoverProps {
 }
 
 export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser }: ClientSlideoverProps) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const scrollPosRef = useRef(0);
+  const clientRef = useRef(client.id);
   const [editing, setEditing] = useState(false);
   const [showFullRecord, setShowFullRecord] = useState(false);
   const [showEditClient, setShowEditClient] = useState(false);
@@ -185,6 +188,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     }
   }, [client]);
   useEffect(() => {
+    // Only sync local state when switching to a different client (not on data updates)
+    const currentId = clientRef.current;
+    if (currentId === client.id) return;
+    clientRef.current = client.id;
     setLocalSvcs(client.services);
     setEditing(false);
     setShowFullRecord(false);
@@ -307,6 +314,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (open) { document.addEventListener("keydown", onKey); document.body.style.overflow = "hidden"; }
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [open, onClose]);
+
+  // ── Preserve scroll position across re-renders ──
+  useEffect(() => {
+    if (bodyRef.current && scrollPosRef.current > 0) {
+      bodyRef.current.scrollTop = scrollPosRef.current;
+    }
+  });
+  const saveScroll = () => {
+    if (bodyRef.current) scrollPosRef.current = bodyRef.current.scrollTop;
+  };
 
   if (!open) return null;
 
@@ -1741,7 +1758,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           </div>
 
           {/* Body */}
-          <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
+          <div className="obody" ref={bodyRef} onScroll={saveScroll} style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
             {/* Module tag badge */}
             <span className="modtag" style={{ marginBottom: 12 }}>{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
 
@@ -2249,7 +2266,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           </div>
 
           {/* Body */}
-          <div className="obody" style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
+          <div className="obody" ref={bodyRef} onScroll={saveScroll} style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
