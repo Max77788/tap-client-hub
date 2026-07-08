@@ -319,9 +319,19 @@ export default function WorklistTable({
     () => {
       let list = serviceClients;
       if (search) {
-        list = list.filter((c) =>
-          c.name.toLowerCase().includes(search.toLowerCase()),
-        );
+        const q = search.toLowerCase();
+        list = list.filter((c) => {
+          if (c.name.toLowerCase().includes(q)) return true;
+          // For sales tax, also search within line item names
+          if (serviceKey === "sales_tax") {
+            const svc = c.services?.find((s: any) => s.key === "sales_tax");
+            const items = svc?.salesTaxLineItems || [];
+            return items.some((item: any) =>
+              (item.serviceName || "").toLowerCase().includes(q)
+            );
+          }
+          return false;
+        });
       }
       if (cadenceFilter !== "All") {
         if (variant === "payroll") {
@@ -1046,15 +1056,29 @@ export default function WorklistTable({
                     }
                   }
                   // Count registrations per original client (based on expanded rows)
+                  // If searching, also filter expanded rows by line item name
+                  let filteredExpanded = expanded;
+                  if (search) {
+                    const q = search.toLowerCase();
+                    filteredExpanded = expanded.filter((row) => {
+                      if (row._stxItem == null) {
+                        // No line items — keep if client name matched
+                        return row.name.toLowerCase().includes(q);
+                      }
+                      // Keep if either the client name or line item name matches
+                      const itemName = (row._stxItem.serviceName || "").toLowerCase();
+                      return row.name.toLowerCase().includes(q) || itemName.includes(q);
+                    });
+                  }
                   const regCounts = new Map<string, number>();
-                  for (const row of expanded) {
+                  for (const row of filteredExpanded) {
                     const origId = row._originalClientId || row.id;
                     regCounts.set(origId, (regCounts.get(origId) || 0) + 1);
                   }
                   // Build final array with group headers inserted
                   const rows: any[] = [];
                   let prevOrigId: string | null = null;
-                  for (const row of expanded) {
+                  for (const row of filteredExpanded) {
                     const origId = row._originalClientId || row.id;
                     if (origId !== prevOrigId) {
                       const count = regCounts.get(origId) || 0;
@@ -1072,7 +1096,7 @@ export default function WorklistTable({
                 return (
                   <tr className="stxband">
                     <td colSpan={colCount}>
-                      <b>{client._groupOrigId ? (filteredClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId)?.name || '') : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} registration{client._groupCount !== 1 ? "s" : ""}</span>
+                      <b>{client._groupOrigId ? (serviceClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId)?.name || '') : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} registration{client._groupCount !== 1 ? "s" : ""}</span>
                     </td>
                   </tr>
                 );
