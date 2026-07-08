@@ -2260,7 +2260,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const prSvc = localSvcs.find((s: any) => s.key === "payroll");
 
     function handleSave() {
-      if (!editing) return;
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
@@ -2409,41 +2408,26 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Footer */}
           <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10 }}>
-            {editing ? (
-              <>
-                <button onClick={() => setEditing(false)} style={{
-                  all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
-                  border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
-                  fontWeight: 600, fontSize: "13.5px",
-                }}>
-                  Cancel
-                </button>
-                <div style={{ flex: 1 }}></div>
-                <button onClick={handleSave} style={{
-                  all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
-                  padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
-                }}>
-                  Save changes
-                </button>
-              </>
-            ) : (
-              <>
-                <button className="danger" onClick={() => { onDelete?.(c.id); onClose(); }} style={{
-                  all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
-                  padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
-                }}>
-                  Remove client
-                </button>
-                <div style={{ flex: 1 }}></div>
-                <button onClick={onClose} style={{
-                  all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
-                  border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
-                  fontWeight: 600, fontSize: "13.5px",
-                }}>
-                  Done
-                </button>
-              </>
-            )}
+            <button className="danger" onClick={() => { onDelete?.(c.id); onClose(); }} style={{
+              all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
+              padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
+            }}>
+              Remove client
+            </button>
+            <div style={{ flex: 1 }}></div>
+            <button onClick={onClose} style={{
+              all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
+              border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
+              fontWeight: 600, fontSize: "13.5px",
+            }}>
+              Done
+            </button>
+            <button onClick={handleSave} style={{
+              all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+              padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+            }}>
+              Save changes
+            </button>
           </div>
         </div>
       </>
