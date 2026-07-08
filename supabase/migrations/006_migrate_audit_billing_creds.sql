@@ -4,11 +4,10 @@
 
 BEGIN;
 
--- ── audit_log ──
 DROP TABLE IF EXISTS tap_hub_project.audit_log CASCADE;
 CREATE TABLE tap_hub_project.audit_log (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id uuid REFERENCES tap_hub_project.clients(id),
+    client_id text REFERENCES tap_hub_project.clients(id),
     action text NOT NULL,
     entity_type text,
     entity_id uuid,
@@ -18,11 +17,10 @@ CREATE TABLE tap_hub_project.audit_log (
     created_at timestamptz DEFAULT now()
 );
 
--- ── billing_periods ──
 DROP TABLE IF EXISTS tap_hub_project.billing_periods CASCADE;
 CREATE TABLE tap_hub_project.billing_periods (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id uuid REFERENCES tap_hub_project.clients(id),
+    client_id text REFERENCES tap_hub_project.clients(id),
     period_start date,
     period_end date,
     status text DEFAULT 'pending',
@@ -32,11 +30,10 @@ CREATE TABLE tap_hub_project.billing_periods (
     updated_at timestamptz DEFAULT now()
 );
 
--- ── credentials ──
 DROP TABLE IF EXISTS tap_hub_project.credentials CASCADE;
 CREATE TABLE tap_hub_project.credentials (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id uuid REFERENCES tap_hub_project.clients(id),
+    client_id text REFERENCES tap_hub_project.clients(id),
     portal text,
     username text,
     vault_ref text,
@@ -57,5 +54,10 @@ CREATE TABLE tap_hub_project.credentials (
     created_at timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
+
+-- Grant API access
+GRANT SELECT, INSERT, UPDATE, DELETE ON tap_hub_project.audit_log TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tap_hub_project.billing_periods TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tap_hub_project.credentials TO anon, authenticated, service_role;
 
 COMMIT;
