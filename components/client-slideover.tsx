@@ -150,6 +150,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prPayrollCategory, setPrPayrollCategory] = useState("");
   const [prQbLicense, setPrQbLicense] = useState("");
   const [prReportingNotes, setPrReportingNotes] = useState("");
+  const reportingRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Pay Day options (fetched from DB) ──
   const [payDayOptions, setPayDayOptions] = useState<string[]>([]);
@@ -889,8 +890,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div style={{ marginBottom: 6 }}>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Notes</label>
                   <textarea style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", minHeight: 50, resize: "vertical" }}
-                    value={prReportingNotes}
-                    onChange={e => setPrReportingNotes(e.target.value)}
+                    ref={reportingRef}
+                    defaultValue={prReportingNotes}
+                    onBlur={e => setPrReportingNotes(e.target.value)}
                     placeholder="Add notes about payroll filing/reporting..."
                   />
                 </div>
@@ -1363,7 +1365,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             reportingMethod: prReportingMethod,
             payrollCategory: prPayrollCategory,
             qbLicense: prQbLicense,
-            reportingNotes: prReportingNotes,
+            reportingNotes: reportingRef.current?.value ?? prReportingNotes,
           };
         }
         if (s.key === "tax_returns") {
@@ -2035,8 +2037,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Reporting Notes</span>
                   <textarea style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", minHeight: 50, resize: "vertical" }}
-                    value={prReportingNotes}
-                    onChange={e => setPrReportingNotes(e.target.value)}
+                    ref={reportingRef}
+                    defaultValue={prReportingNotes}
+                    onBlur={e => setPrReportingNotes(e.target.value)}
                     placeholder="Add notes about payroll filing/reporting..." />
                 </div>
               </>
