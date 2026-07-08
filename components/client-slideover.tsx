@@ -163,9 +163,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [notePage, setNotePage] = useState(0);
 
   // ── Tax returns state ──
-  const [filingState, setFilingState] = useState("");
-  const [filingMonth, setFilingMonth] = useState("");
-  const [filingType, setFilingType] = useState("");
+  const trSvcInit = client.services.find((s: any) => s.key === "tax_returns");
+  const [filingState, setFilingState] = useState(trSvcInit?.filingState || "");
+  const [filingMonth, setFilingMonth] = useState(trSvcInit?.filingMonth ? String(trSvcInit.filingMonth) : "");
+  const [filingType, setFilingType] = useState(trSvcInit?.filingType || "");
 
   // ── 1099s count state ──
   const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
