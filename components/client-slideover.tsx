@@ -112,7 +112,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [noteType, setNoteType] = useState("others");
 
   // ── Sales tax line items state ──
-  const [stxLineItems, setStxLineItems] = useState<any[]>([]);
+  const stxSvcInit = client.services.find((s: any) => s.key === "sales_tax");
+  const [stxLineItems, setStxLineItems] = useState<any[]>(stxSvcInit?.salesTaxLineItems || []);
   const [addingStx, setAddingStx] = useState(false);
   const [newStxName, setNewStxName] = useState("");
   const [newStxRt, setNewStxRt] = useState("");
