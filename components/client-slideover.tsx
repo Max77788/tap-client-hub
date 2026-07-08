@@ -485,13 +485,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }
 
   function saveServiceField(key: string, field: string, value: any) {
-    setLocalSvcs(prev => {
-      const updated = prev.map((s: any) =>
+    setLocalSvcs(prev =>
+      prev.map((s: any) =>
         s.key === key ? { ...s, [field]: value } : s
-      );
-      throttledOnSave({ ...client, services: updated });
-      return updated;
-    });
+      )
+    );
   }
 
   function freqLabel(key: string, svc: any) {
@@ -882,7 +880,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         setPrPeriodFreq(e.target.value);
                         const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s);
                         setLocalSvcs(updated);
-                        throttledOnSave({ ...client, services: updated });
                       }}
                     >
                       <option value="">—</option>
@@ -1367,11 +1364,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     }
 
     function autoSave(updater: (prev: any[]) => any[]) {
-      setLocalSvcs(prev => {
-        const updated = updater(prev);
-        throttledOnSave({ ...c, services: updated } as Client);
-        return updated;
-      });
+      setLocalSvcs(prev => updater(prev));
     }
 
     function handleSaveModule() {
