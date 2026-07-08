@@ -1446,6 +1446,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const [editStxAssigned, setEditStxAssigned] = useState("");
       const [stxNoteText, setStxNoteText] = useState<Record<number, string>>({});
       const [stxNoteMonth, setStxNoteMonth] = useState<Record<number, number>>({});
+      const [stxNoteType, setStxNoteType] = useState<Record<number, string>>({});
 
       function startEdit(i: number) {
         const item = stxLineItems[i];
@@ -1493,10 +1494,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         const text = stxNoteText[itemIdx]?.trim();
         if (!text) return;
         const month = stxNoteMonth[itemIdx] ?? new Date().getMonth();
+        const ntype = (stxNoteType[itemIdx] || "others").trim();
+        const prefix = ntype !== "others" ? `[${ntype}] ` : "";
         const comment: CommentEntry & { _lineItemKey?: string } = {
           id: `stx-cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           month,
-          text,
+          text: prefix + text,
           author: getAuthorName(),
           createdAt: new Date().toISOString(),
           _lineItemKey: `stx-item-${itemIdx}`,
@@ -1804,6 +1807,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <select value={stxNoteMonth[i] ?? new Date().getMonth()} onChange={e => setStxNoteMonth((prev: any) => ({ ...prev, [i]: Number(e.target.value) }))}
                         style={{ padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}>
                         {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m}</option>)}
+                      </select>
+                      <select value={stxNoteType[i] || "others"} onChange={e => setStxNoteType((prev: any) => ({ ...prev, [i]: e.target.value }))}
+                        style={{ padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}>
+                        {NOTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                       </select>
                       <input value={stxNoteText[i] || ""} onChange={e => setStxNoteText((prev: any) => ({ ...prev, [i]: e.target.value }))}
                         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addStxNote(i); } }}
