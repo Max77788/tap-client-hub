@@ -154,6 +154,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [prReportingNotes, setPrReportingNotes] = useState("");
   const reportingRef = useRef<HTMLTextAreaElement>(null);
   // ── Client detail refs (uncontrolled — avoids mobile keyboard dismissal) ──
+  const newPrEmailRef = useRef<HTMLInputElement>(null);
   const eEmailRef = useRef<HTMLInputElement>(null);
   const eAddEmailRef = useRef<HTMLInputElement>(null);
   const ePhoneRef = useRef<HTMLInputElement>(null);
@@ -921,12 +922,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
                     <input style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "#fff" }}
-                      value={newPrEmail}
-                      onChange={e => setNewPrEmail(e.target.value)}
+                      ref={newPrEmailRef}
+                      defaultValue={newPrEmail}
+                      onBlur={e => setNewPrEmail(e.target.value)}
                       onKeyDown={e => {
-                        if (e.key === "Enter" && newPrEmail.trim()) {
+                        const val = newPrEmailRef.current?.value.trim();
+                        if (e.key === "Enter" && val) {
                           e.preventDefault();
-                          const upd = [...prEmails, newPrEmail.trim()];
+                          const upd = [...prEmails, val];
                           setPrEmails(upd);
                           setNewPrEmail("");
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
@@ -2031,12 +2034,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       ))}
                     </div>
                     <input style={{ width: "100%", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", outline: "none", boxSizing: "border-box" }}
-                      value={newPrEmail}
-                      onChange={e => setNewPrEmail(e.target.value)}
+                      ref={newPrEmailRef}
+                      defaultValue={newPrEmail}
+                      onBlur={e => setNewPrEmail(e.target.value)}
                       onKeyDown={e => {
-                        if (e.key === "Enter" && newPrEmail.trim()) {
+                        const val = newPrEmailRef.current?.value.trim();
+                        if (e.key === "Enter" && val) {
                           e.preventDefault();
-                          const upd = [...prEmails, newPrEmail.trim()];
+                          const upd = [...prEmails, val];
                           setPrEmails(upd);
                           setNewPrEmail("");
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
@@ -2187,25 +2192,25 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Email</span>
                     <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      value={eEmail} onChange={e => setEEmail(e.target.value)} placeholder="—" />
+                      ref={eEmailRef} defaultValue={eEmail} onBlur={e => setEEmail(e.target.value)} placeholder="—" />
                   </div>
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Phone</span>
                     <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="—" />
+                      ref={ePhoneRef} defaultValue={ePhone} onBlur={e => setEPhone(e.target.value)} placeholder="—" />
                   </div>
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Address</span>
                     <div style={{ flex: 1, textAlign: "left" }}>
                       <input style={{ width: "100%", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", marginBottom: 3, boxSizing: "border-box" }}
-                        value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="Address" />
+                        ref={eAddressRef} defaultValue={eAddress} onBlur={e => setEAddress(e.target.value)} placeholder="Address" />
                       <div style={{ display: "flex", gap: 3 }}>
                         <input style={{ flex: 1, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                          value={eCity} onChange={e => setECity(e.target.value)} placeholder="City" />
+                          ref={eCityRef} defaultValue={eCity} onBlur={e => setECity(e.target.value)} placeholder="City" />
                         <input style={{ width: 44, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                          value={eState} onChange={e => setEState(e.target.value)} placeholder="ST" />
+                          ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="ST" />
                         <input style={{ width: 65, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                          value={eZip} onChange={e => setEZip(e.target.value)} placeholder="ZIP" />
+                          ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="ZIP" />
                       </div>
                     </div>
                   </div>
