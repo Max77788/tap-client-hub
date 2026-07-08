@@ -62,6 +62,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [newStxRouting, setNewStxRouting] = useState("");
   const [newStxAccount, setNewStxAccount] = useState("");
   const [newStxFreq, setNewStxFreq] = useState("Monthly");
+  const [newStxAssigned, setNewStxAssigned] = useState("");
   const [t9Count, setT9Count] = useState("");
   const [taxType, setTaxType] = useState("Business");
   const [taxFilingMonth, setTaxFilingMonth] = useState("");
@@ -117,7 +118,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
       setTaxFilingMonth(""); setTaxFilingState("");
-      setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+      setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
     }
@@ -430,6 +431,16 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                     <input style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                   </div>
                 </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned to</label>
+                    <select style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }}
+                      value={newStxAssigned} onChange={e => setNewStxAssigned(e.target.value)}>
+                      <option value="">—</option>
+                      {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
                 <button
                   disabled={!newStxName.trim() || !newStxRt.trim() || !newStxTaxId.trim()}
                   style={{
@@ -441,10 +452,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                     setStxLineItems(prev => [...prev, {
                       serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
                       bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                      assignedTo: newStxAssigned,
                       frequency: newStxFreq,
                     }]);
                     setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
                   }}
                 >
                   + Add line item
@@ -461,6 +473,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 3 }}>{item.serviceName}</div>
                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
+                          {item.assignedTo && <span>👤 {item.assignedTo}</span>}
                           <span>{item.frequency || "Monthly"}</span>
                           {item.rt && <span>RT: {item.rt}</span>}
                           {item.taxId && <span>Tax ID: {item.taxId}</span>}

@@ -98,6 +98,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [newStxRouting, setNewStxRouting] = useState("");
   const [newStxAccount, setNewStxAccount] = useState("");
   const [newStxFreq, setNewStxFreq] = useState("Monthly");
+  const [newStxAssigned, setNewStxAssigned] = useState("");
 
   // ── Sales tax line item editing state (clients tab inline edit) ──
   const [editingStxIdx, setEditingStxIdx] = useState<number>(-1);
@@ -108,6 +109,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [editStxRouting, setEditStxRouting] = useState("");
   const [editStxAccount, setEditStxAccount] = useState("");
   const [editStxFreq, setEditStxFreq] = useState("Monthly");
+  const [editStxAssigned, setEditStxAssigned] = useState("");
 
   // ── Payroll details state ──
   const [prPaydate, setPrPaydate] = useState("");
@@ -1087,6 +1089,23 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                       </div>
                     </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <div>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned to</label>
+                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
+                          value={newStxAssigned} onChange={e => setNewStxAssigned(e.target.value)}>
+                          <option value="">—</option>
+                          {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
+                          value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
+                          <option>Monthly</option><option>Quarterly</option><option>Annually</option>
+                        </select>
+                      </div>
+                    </div>
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                       <button className="reveal" style={{ all: "unset", cursor: "pointer", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12, color: "var(--muted)" }}
                         onClick={() => setAddingStx(false)}>Cancel</button>
@@ -1100,13 +1119,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           const upd = [...stxLineItems, {
                             serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
                             bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                            assignedTo: newStxAssigned,
                             frequency: newStxFreq,
                           }];
                           setStxLineItems(upd);
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                           onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                           setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                          setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                          setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
                           setAddingStx(false);
                         }}
                       >Add line item</button>
@@ -1156,6 +1176,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Account #</label>
                                 <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxAccount} onChange={e => setEditStxAccount(e.target.value)} />
                               </div>
+                              <div>
+                                <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Assigned to</label>
+                                <select style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)" }}
+                                  value={editStxAssigned} onChange={e => setEditStxAssigned(e.target.value)}>
+                                  <option value="">—</option>
+                                  {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                                </select>
+                              </div>
                             </div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                               <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: 11, padding: "4px 8px" }}
@@ -1168,6 +1196,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                     ...upd[i],
                                     serviceName: editStxName.trim(), rt: editStxRt.trim(), taxId: editStxTaxId.trim(),
                                     bankName: editStxBank.trim(), bankRouting: editStxRouting.trim(), bankAccount: editStxAccount.trim(),
+                                    assignedTo: editStxAssigned.trim(),
                                     frequency: editStxFreq,
                                   };
                                   setStxLineItems(upd);
@@ -1187,6 +1216,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             <div>
                               <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{item.serviceName}</div>
                               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
+                                {item.assignedTo && <span>👤 {firstName(item.assignedTo)}</span>}
                                 {item.rt && <span>RT: {item.rt}</span>}
                                 {item.taxId && <span>Tax ID: {item.taxId}</span>}
                                 {item.frequency && <span>{item.frequency}</span>}
@@ -1204,6 +1234,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   setEditStxRouting(item.bankRouting || "");
                                   setEditStxAccount(item.bankAccount || "");
                                   setEditStxFreq(item.frequency || "Monthly");
+                                  setEditStxAssigned(item.assignedTo || "");
                                 }}
                               >Edit</button>
                               <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 11 }}
@@ -1358,6 +1389,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const [editStxBank, setEditStxBank] = useState("");
       const [editStxRouting, setEditStxRouting] = useState("");
       const [editStxAccount, setEditStxAccount] = useState("");
+      const [editStxAssigned, setEditStxAssigned] = useState("");
       const [stxNoteText, setStxNoteText] = useState<Record<number, string>>({});
       const [stxNoteMonth, setStxNoteMonth] = useState<Record<number, number>>({});
 
@@ -1371,6 +1403,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         setEditStxBank(item.bankName || "");
         setEditStxRouting(item.bankRouting || "");
         setEditStxAccount(item.bankAccount || "");
+        setEditStxAssigned(item.assignedTo || "");
       }
 
       function saveEditItem() {
@@ -1380,6 +1413,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           ...upd[editingStxIdx],
           serviceName: editStxName.trim(), rt: editStxRt.trim(), taxId: editStxTaxId.trim(),
           bankName: editStxBank.trim(), bankRouting: editStxRouting.trim(), bankAccount: editStxAccount.trim(),
+          assignedTo: editStxAssigned.trim(),
           frequency: editStxFreq,
         };
         setStxLineItems(upd);
@@ -1530,6 +1564,23 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                 </div>
               </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned to</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
+                    value={newStxAssigned} onChange={e => setNewStxAssigned(e.target.value)}>
+                    <option value="">—</option>
+                    {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
+                    value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
+                    <option>Monthly</option><option>Quarterly</option><option>Annually</option>
+                  </select>
+                </div>
+              </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button className="reveal" style={{ all: "unset", cursor: "pointer", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12, color: "var(--muted)" }}
                   onClick={() => setAddingStx(false)}>Cancel</button>
@@ -1539,13 +1590,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     const upd = [...stxLineItems, {
                       serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
                       bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                      assignedTo: newStxAssigned,
                       frequency: newStxFreq,
                     }];
                     setStxLineItems(upd);
                     setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                     onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                     setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly");
+                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
                     setAddingStx(false);
                   }}
                 >Add line item</button>
@@ -1581,6 +1633,21 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxAccount} onChange={e => setEditStxAccount(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned to</label>
+                      <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
+                        value={editStxAssigned} onChange={e => setEditStxAssigned(e.target.value)}>
+                        <option value="">—</option>
+                        {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
+                      <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
+                        value={editStxFreq} onChange={e => setEditStxFreq(e.target.value)}>
+                        <option>Monthly</option><option>Quarterly</option><option>Annually</option>
+                      </select>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -1618,6 +1685,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div>
                       <span className="fk">Account</span>
                       <span className="fv mono">{maskNum(item.bankAccount)}</span>
+                    </div>
+                    <div>
+                      <span className="fk">Assigned to</span>
+                      <span className="fv">{item.assignedTo ? firstName(item.assignedTo) : "—"}</span>
                     </div>
                   </div>
 
