@@ -482,17 +482,21 @@ export default function WorklistTable({
     return map;
   });
 
-  // Re-sync prCounts when clients change
+  // Re-sync prCounts when clients change (only add new clients, never remove)
   useEffect(() => {
     setPrCounts((prev) => {
-      const next: Record<string, number[]> = {};
+      const next: Record<string, number[]> = { ...prev };
       for (const client of clients) {
         const svc = client.services.find((s: any) => s.key === "payroll");
         if (!svc?.enabled) continue;
         const key = `${client.id}:payroll`;
-        if (prev[key]) { next[key] = prev[key]; }
-        else if (svc.periodCounts && Array.isArray(svc.periodCounts)) { next[key] = [...svc.periodCounts]; }
-        else { next[key] = Array(12).fill(0); }
+        if (!next[key]) {
+          if (svc.periodCounts && Array.isArray(svc.periodCounts)) {
+            next[key] = [...svc.periodCounts];
+          } else {
+            next[key] = Array(12).fill(0);
+          }
+        }
       }
       return next;
     });
