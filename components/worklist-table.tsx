@@ -1198,7 +1198,7 @@ export default function WorklistTable({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                setCommentPanelPos({ top: Math.max(rect.top - 120, 10), left: rect.left + 14 });
+                                setCommentPanelPos({ top: Math.max(Math.min(rect.top - 120, window.innerHeight - 280), 10), left: Math.min(rect.left + 14, window.innerWidth - 320) });
                                 const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                                 setActiveCommentClientId(isOpen ? null : client.id);
                                 setActiveCommentMonth(isOpen ? -1 : i);
@@ -1509,7 +1509,7 @@ export default function WorklistTable({
                           onClick={(e) => {
                             e.stopPropagation();
                             const rect = (e.target as HTMLElement).getBoundingClientRect();
-                            setCommentPanelPos({ top: Math.max(rect.top - 120, 10), left: rect.left + 14 });
+                            setCommentPanelPos({ top: Math.max(Math.min(rect.top - 120, window.innerHeight - 280), 10), left: Math.min(rect.left + 14, window.innerWidth - 320) });
                             const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                             setActiveCommentClientId(isOpen ? null : client.id);
                             setActiveCommentMonth(isOpen ? -1 : i);
