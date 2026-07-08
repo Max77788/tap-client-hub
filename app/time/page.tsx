@@ -579,6 +579,7 @@ export default function TimePage() {
             ⬇ Export CSV
           </button>
         )}
+      </div>
 
       <div className="panel" style={{ overflowX: "auto" }}>
         <table>
