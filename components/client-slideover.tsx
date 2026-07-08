@@ -1788,7 +1788,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Module tag badge */}
             <span className="modtag" style={{ marginBottom: 12 }}>{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
 
-            {/* Per-service assignee selector */}
+            {/* Per-service assignee selector — skip for sales_tax (assigned at line-item level) */}
+            {moduleKey !== "sales_tax" && (
             <div style={{ marginBottom: 12 }}>
               <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                 Assigned To
@@ -1811,6 +1812,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <option>Unassigned</option>
               </select>
             </div>
+            )}
 
             {/* Frequency/Cadence for non-payroll services */}
             {moduleKey !== "payroll" && targetSvc.enabled && (
