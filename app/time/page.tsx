@@ -477,13 +477,9 @@ export default function TimePage() {
         </div>
       )}
 
-      {/* ── Stats: Total filtered + filters ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <div className="statcard" style={{ background: "var(--green-soft)", borderColor: "var(--green)" }}>
-          <div className="sn" style={{ color: "var(--green)" }}>{fmtDur(totalFiltered)}</div>
-          <div className="sl">{filterDateFrom || filterDateTo ? "Filtered total" : "Total Today"}</div>
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      {/* ── Filters ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", width: "100%" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
           <select className="pick" value={filterPerson} onChange={e => setFilterPerson(e.target.value)} style={{ minWidth: 130, fontSize: 12, padding: "4px 6px" }}>
             <option value="">All staff</option>
             {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -532,8 +528,8 @@ export default function TimePage() {
         </div>
       )}
 
-      {/* ── Impersonation: View as Staff ── */}
-      {!isStaff && (
+      {/* ── Impersonation: View as Staff (hidden) ── */}
+      {false && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
           <span style={{ color: "var(--muted)", fontWeight: 500 }}>View as Staff:</span>
           <select
