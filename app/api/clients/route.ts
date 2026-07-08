@@ -273,7 +273,7 @@ export async function GET(request: Request) {
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
-        name: db.name, type: db.type === "Business" ? "Business" : "Personal",
+        name: db.name, type: (db.type || "").toLowerCase() === "business" ? "Business" : "Personal",
         group: db.group_owner || "Unassigned", status: db.status || "active",
         city: db.city || "", state: db.state || "TX",
         emails: [...new Set((contactByClient[db.id]?.emails || []))],
