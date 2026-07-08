@@ -887,7 +887,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     >
                       <option value="">—</option>
                     <option value="Weekly">Weekly</option>
-                    <option value="Bi-Weekly">Bi-Weekly</option>
                     <option value="Bi-Weekly A">Bi-Weekly A</option>
                     <option value="Bi-Weekly B">Bi-Weekly B</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
@@ -951,7 +950,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <option value="Quarterly">Quarterly</option>
                     <option value="Annual">Annual</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
-                    <option value="Bi-Weekly">Bi-Weekly</option>
                   </select>
                 </div>
                 <div style={{ flex: "1 0 100px", minWidth: 100 }}>
@@ -1877,7 +1875,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <option value="Quarterly">Quarterly</option>
                       <option value="Annual">Annual</option>
                       <option value="Semi-Monthly">Semi-Monthly</option>
-                      <option value="Bi-Weekly">Bi-Weekly</option>
                     </select>
                   </div>
                 )}
@@ -1967,7 +1964,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     }}>
                     <option value="">—</option>
                     <option value="Weekly">Weekly</option>
-                    <option value="Bi-Weekly">Bi-Weekly</option>
                     <option value="Bi-Weekly A">Bi-Weekly A</option>
                     <option value="Bi-Weekly B">Bi-Weekly B</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>

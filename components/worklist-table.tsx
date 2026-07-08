@@ -287,7 +287,7 @@ export default function WorklistTable({
   // ── Cadence filter options (dynamic per module) ──
   const cadenceOptions = useMemo(() => {
     if (variant === "payroll") {
-      return ["Weekly", "Bi-Weekly", "Bi-Weekly A", "Bi-Weekly B", "Semi-Monthly", "Monthly"];
+      return ["Weekly", "Bi-Weekly A", "Bi-Weekly B", "Semi-Monthly", "Monthly"];
     }
     if (serviceKey === "financials" || serviceKey === "sales_tax") {
       return ["Monthly", "Quarterly", "Annually"];

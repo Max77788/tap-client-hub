@@ -80,7 +80,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Shilpa",
     services: [
           svc("financials", true, "Monthly", "MC", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
-          svc("payroll", true, "Bi-Weekly", "Shilpa", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Shilpa", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", true, "Annually", "LB", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("1099s", true, "Annually", "JD", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
@@ -101,7 +101,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", true, "Monthly", "MC", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", true, "Annually", "LB", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("1099s", true, "Annually", "JD", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
@@ -269,7 +269,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", true, "Monthly", "MC", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -374,7 +374,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", true, "Monthly", "MC", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -479,7 +479,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", true, "Monthly", "MC", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -500,7 +500,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -605,7 +605,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", true, "Annually", "LB", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("1099s", true, "Annually", "JD", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
@@ -773,7 +773,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -878,7 +878,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Monthly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", true, "Annually", "LB", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("1099s", true, "Annually", "JD", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
@@ -899,7 +899,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -983,7 +983,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Yearly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -1004,7 +1004,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -1046,7 +1046,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Monthly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),
@@ -1088,7 +1088,7 @@ export const CLIENTS: any[] = [
     assignedStaff: "Janeth",
     services: [
           svc("financials", false, "Monthly", "MC", Array(12).fill("lock")),
-          svc("payroll", true, "Bi-Weekly", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
+          svc("payroll", true, "Bi-Weekly A", "Janeth", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("sales_tax", true, "Quarterly", "Sam", ["done", "done", "done", "done", "done", "billed", "lock", "lock", "lock", "lock", "lock", "lock"]),
           svc("renditions", false, "Annually", "LB", Array(12).fill("lock")),
           svc("1099s", false, "Annually", "JD", Array(12).fill("lock")),

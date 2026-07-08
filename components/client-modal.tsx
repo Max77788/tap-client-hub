@@ -101,7 +101,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       const finSvc = svcs.find(s => s.key === "financials");
       if (finSvc) { setFinFreq(finSvc.frequency || "Monthly"); setFinMonth(String(finSvc.financialsMonth || 1)); }
       const prSvc = svcs.find(s => s.key === "payroll");
-      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); setPrEmails(Array.isArray(prSvc.payEmails) ? prSvc.payEmails : []); }
+      if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly A"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); setPrEmails(Array.isArray(prSvc.payEmails) ? prSvc.payEmails : []); }
       setClientEin(client.ein || "");
       const t9Svc = svcs.find(s => s.key === "1099s");
       if (t9Svc) setT9Count(String(t9Svc.expectedAnnual || ""));
