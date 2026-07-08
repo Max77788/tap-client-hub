@@ -555,7 +555,30 @@ export default function TimePage() {
       {/* ── Table ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
         <div className="count">Entries {filteredEntries.length > 0 && <span style={{ fontWeight: 400, color: "var(--muted)" }}>({filteredEntries.length})</span>}</div>
-      </div>
+        {filteredEntries.length > 0 && (
+          <button
+            onClick={() => {
+              const headers = ["Who","Client","Task","Minutes","Date","Note"];
+              const rows = filteredEntries.map((e: any) => [
+                e.whoName || "",
+                e.clientName || "",
+                e.task || "",
+                String(Math.round((e.seconds || 0) / 60)),
+                e.when ? new Date(e.when).toLocaleDateString() : "",
+                (e.note || "").replace(/"/g, '""'),
+              ]);
+              const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = "timesheet_export.csv";
+              a.click();
+            }}
+            style={{ all: "unset", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--teal)", padding: "2px 8px", borderRadius: 4 }}
+          >
+            ⬇ Export CSV
+          </button>
+        )}
 
       <div className="panel" style={{ overflowX: "auto" }}>
         <table>
