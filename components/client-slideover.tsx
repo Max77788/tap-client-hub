@@ -1780,7 +1780,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <>
                 <div className="sect" style={sectStyle}>Payroll Details</div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
+                  <span className="k" style={{ color: "var(--muted)" }}>Frequency</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                     value={prPeriodFreq} onChange={e => {
                       const val = e.target.value;
@@ -1941,6 +1941,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       }}
                       placeholder="Type email + Enter to add" />
                   </div>
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>Reporting Notes</span>
+                  <textarea style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", minHeight: 50, resize: "vertical" }}
+                    value={prReportingNotes}
+                    onChange={e => { setPrReportingNotes(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, reportingNotes: e.target.value } : s)); }}
+                    placeholder="Add notes about payroll filing/reporting..." />
                 </div>
               </>
             )}
