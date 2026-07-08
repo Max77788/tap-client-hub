@@ -953,7 +953,7 @@ export default function WorklistTable({
           ))}
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "repeating-linear-gradient(45deg, var(--red) 0px, var(--red) 2px, transparent 2px, transparent 4px)" }}></i>N/A</span>
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 11, height: 11, borderRadius: 3, display: "inline-block", background: "#c2c8d4" }}></i>Not due</span>
-          {(variant === "tax_returns" || serviceKey === "renditions") && (
+          {variant === "tax_returns" && (
             <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: 1, display: "inline-block", background: "var(--teal)", boxShadow: "0 0 0 1.5px #fff" }}></i>Filing month</span>
           )}
           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--muted)" }}><i style={{ width: 6, height: 6, borderRadius: "50%", display: "inline-block", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}></i>Has comments</span>
@@ -1222,8 +1222,8 @@ export default function WorklistTable({
                     const stage = (stages[i] || "") as WorklistStage;
                     const style = STAGE_STYLES[stage];
 
-                    // ── Tax returns / Renditions: filingMonth highlight ──
-                    const clientFilingMonth = (variant === "tax_returns" || serviceKey === "renditions") ? (svc.filingMonth || "") : "";
+                    // ── Tax returns: filingMonth highlight ──
+                    const clientFilingMonth = (variant === "tax_returns") ? (svc.filingMonth || "") : "";
                     const filingMonthNum = clientFilingMonth ? parseInt(clientFilingMonth, 10) - 1 : -1;
                     const isFilingMonth = filingMonthNum === i;
 
