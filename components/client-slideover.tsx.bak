@@ -65,10 +65,9 @@ interface ClientSlideoverProps {
   onStageChange?: (clientId: string, serviceKey: string, monthIdx: number, stage: string) => void;
   moduleKey?: ServiceKey;
   currentUser?: string;
-  stxLineItemFocus?: string | null;
 }
 
-export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser, stxLineItemFocus }: ClientSlideoverProps) {
+export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser }: ClientSlideoverProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const scrollPosRef = useRef(0);
   const clientRef = useRef(client.id);
@@ -79,28 +78,21 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [toast, setToast] = useState<string | null>(null);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
-  // ── Throttled save: batch rapid onChange calls to reduce parent re-renders ──
+  // ── Throttled save: prevent per-keystroke re-renders ──
   const saveTimerRef = useRef<any>(null);
   const pendingSaveRef = useRef<any>(null);
-  const throttledOnSave = (data: any) => {
-    pendingSaveRef.current = data;
+  function throttledSave(clientData: any) {
+    pendingSaveRef.current = clientData;
     if (!saveTimerRef.current) {
       saveTimerRef.current = setTimeout(() => {
         saveTimerRef.current = null;
-        onSave?.(pendingSaveRef.current);
-        pendingSaveRef.current = null;
+        if (pendingSaveRef.current) {
+          onSave?.(pendingSaveRef.current);
+          pendingSaveRef.current = null;
+        }
       }, 800);
     }
-  };
-  // ── STX line item focus ref for auto-scroll ──
-  useEffect(() => {
-    if (stxLineItemFocus && open) {
-      setTimeout(() => {
-        const el = document.querySelector(`[data-stx-name="${stxLineItemFocus}"]`);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 400);
-    }
-  }, [stxLineItemFocus, open]);
+  }
 
   // ── Comment state ──
   const [activeCommentSvc, setActiveCommentSvc] = useState<string | null>(null);
@@ -401,7 +393,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setActiveCommentMonth(-1);
     setActiveCommentSvc(null);
     // Persist
-    throttledOnSave({ ...client, services: updated });
+    onSave?.({ ...client, services: updated });
   }
 
   function deleteComment(svcKey: string, commentId: string) {
@@ -418,7 +410,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (notePage > 0 && notePage * 3 >= remaining) {
       setNotePage(Math.max(0, Math.floor((remaining - 1) / 3)));
     }
-    throttledOnSave({ ...client, services: updated });
+    onSave?.({ ...client, services: updated });
   }
 
   // ── Client-level notes helpers ──
@@ -456,7 +448,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setLocalSvcs(updated);
     setNotesText("");
     setNoteType("others");
-    throttledOnSave({ ...client, services: updated });
+    onSave?.({ ...client, services: updated });
   }
 
   function deleteNote(commentId: string) {
@@ -465,7 +457,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       comments: (s.comments || []).filter((cm: CommentEntry) => cm.id !== commentId),
     }));
     setLocalSvcs(updated);
-    throttledOnSave({ ...client, services: updated });
+    onSave?.({ ...client, services: updated });
   }
 
   function toggleSvc(key: string) {
@@ -479,7 +471,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           setAddingStx(true);
         }
       }
-      throttledOnSave({ ...client, services: updated });
+      onSave?.({ ...client, services: updated });
       return updated;
     });
   }
@@ -489,7 +481,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const updated = prev.map((s: any) =>
         s.key === key ? { ...s, [field]: value } : s
       );
-      throttledOnSave({ ...client, services: updated });
+      onSave?.({ ...client, services: updated });
       return updated;
     });
   }
@@ -882,7 +874,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         setPrPeriodFreq(e.target.value);
                         const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s);
                         setLocalSvcs(updated);
-                        throttledOnSave({ ...client, services: updated });
+                        onSave?.({ ...client, services: updated });
                       }}
                     >
                       <option value="">—</option>
@@ -1149,7 +1141,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           }];
                           setStxLineItems(upd);
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                          throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                          onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                           setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
                           setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
                           setAddingStx(false);
@@ -1226,7 +1218,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   };
                                   setStxLineItems(upd);
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                                  throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                                  onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                                   setEditingStxIdx(-1);
                                 }}>
                                 Save
@@ -1234,12 +1226,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             </div>
                           </div>
                         ) : (
-                          <div key={i} data-stx-name={item.serviceName} style={{
+                          <div key={i} style={{
                             display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center",
-                            background: (stxLineItemFocus && item.serviceName === stxLineItemFocus) ? "var(--amber-soft)" : "var(--paper)",
-                            border: (stxLineItemFocus && item.serviceName === stxLineItemFocus) ? "2px solid var(--amber)" : "1px solid var(--line)",
-                            borderRadius: 8, padding: "9px 11px",
-                            transition: "border-color 0.3s, background 0.3s",
+                            background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: "9px 11px",
                           }}>
                             <div>
                               <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{item.serviceName}</div>
@@ -1270,7 +1259,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   const upd = stxLineItems.filter((_, j) => j !== i);
                                   setStxLineItems(upd);
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                                  throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                                  onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                                 }}
                               >✕</button>
                             </div>
@@ -1352,12 +1341,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const targetSvc = updated.find((s: any) => s.key === moduleKey);
       const newTotal = (targetSvc?.comments || []).length;
       setNotePage(Math.floor(Math.max(0, newTotal - 1) / 3));
-      throttledOnSave({ ...client, services: updated } as Client);
+      onSave?.({ ...client, services: updated } as Client);
     }
 
     function saveClientInfo() {
       setShowEditClient(false);
-      throttledOnSave({
+      onSave?.({
         ...c,
         name: eName, type: eType as "Business" | "Personal", group: eGroup,
         emails: [eEmail, eAddEmail].filter(Boolean),
@@ -1371,7 +1360,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     function autoSave(updater: (prev: any[]) => any[]) {
       setLocalSvcs(prev => {
         const updated = updater(prev);
-        throttledOnSave({ ...c, services: updated } as Client);
+        onSave?.({ ...c, services: updated } as Client);
         return updated;
       });
     }
@@ -1401,7 +1390,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         }
         return s;
       });
-      throttledOnSave({
+      onSave?.({
         ...c,
         services: synced,
         // Also include client-level edits if Full client record was edited
@@ -1454,7 +1443,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         };
         setStxLineItems(upd);
         setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-        throttledOnSave({
+        onSave?.({
           ...client,
           services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
         } as Client);
@@ -1465,7 +1454,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         const upd = stxLineItems.filter((_: any, j: number) => j !== i);
         setStxLineItems(upd);
         setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-        throttledOnSave({
+        onSave?.({
           ...client,
           services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
         } as Client);
@@ -1492,7 +1481,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         });
         setLocalSvcs(updated);
         setStxNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
-        throttledOnSave({ ...client, services: updated } as Client);
+        onSave?.({ ...client, services: updated } as Client);
       }
 
       function getStxComments(itemIdx: number): CommentEntry[] {
@@ -1524,7 +1513,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             : s
         );
         setLocalSvcs(updated);
-        throttledOnSave({ ...client, services: updated } as Client);
+        onSave?.({ ...client, services: updated } as Client);
       }
 
       const stxStageStyles: Record<string, { bg: string; fg: string; border: string }> = {
@@ -1631,7 +1620,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     }];
                     setStxLineItems(upd);
                     setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                    throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                    onSave?.({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
                     setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
                     setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
                     setAddingStx(false);
@@ -2115,7 +2104,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Sales Tax: line items section — only on Sales Tax tab */}
-            {targetSvc.key === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
+            {moduleKey === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
 
             {/* Service notes from DB */}
             {targetSvc.svcNotes && (
@@ -2325,7 +2314,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         }
         return updated;
       });
-      throttledOnSave({
+      onSave?.({
         ...c,
         name: eName,
         type: eType as "Business" | "Personal",

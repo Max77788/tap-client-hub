@@ -18,9 +18,9 @@ export default function StxPage() {
   const { clients, loading, updateServiceMonth, updateClient } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
+  const [stxLineItemFocus, setStxLineItemFocus] = useState<string | null>(null);
   const debounceRef = useRef<Record<string, any>>({});
 
-  // Flatten: each sales_tax service entry becomes its own row. Also merge all line items from all stx services.
   const flatClients = useMemo(() => {
     const result: any[] = [];
     for (const client of clients) {
@@ -29,7 +29,6 @@ export default function StxPage() {
       );
       if (stxServices.length === 0) continue;
 
-      // Merge all line items from all sales_tax services
       const allLineItems: any[] = [];
       for (const svc of stxServices) {
         if (svc.salesTaxLineItems?.length) {
@@ -39,8 +38,6 @@ export default function StxPage() {
         }
       }
 
-      // If there are line items, create one row per line item
-      // If no line items, create one row per service
       if (allLineItems.length > 0) {
         for (const item of allLineItems) {
           result.push({
@@ -48,7 +45,7 @@ export default function StxPage() {
             id: `${client.id}::${item._csId}::${item.serviceName}`,
             _originalClientId: client.id,
             _csId: item._csId,
-            services: [stxServices[0]], // Keep first service for months tracking
+            services: [stxServices[0]],
             _mergedLineItems: allLineItems,
             _stxItem: item,
             _stxName: item.serviceName,
@@ -67,7 +64,6 @@ export default function StxPage() {
         }
       }
     }
-    // Sort by client name first, then by line item name
     result.sort((a, b) => {
       const clientCmp = a.name.localeCompare(b.name);
       if (clientCmp !== 0) return clientCmp;
@@ -87,8 +83,12 @@ export default function StxPage() {
   );
 
   const handleClientClick = useCallback((flatId: string) => {
-    const origId = flatId.split("::")[0];
+    // Split composite ID: clientId::csId::serviceName or clientId::csId
+    const parts = flatId.split("::");
+    const origId = parts[0];
+    const lineItemName = parts.length > 2 ? parts.slice(2).join("::") : null;
     setSelectedClientId(origId);
+    setStxLineItemFocus(lineItemName);
     setSlideoverOpen(true);
   }, []);
 
@@ -103,7 +103,6 @@ export default function StxPage() {
   );
 
   const handleSlideoverSave = useCallback((updated: any) => {
-    // Debounce both local state AND network persist
     const key = `save_${updated.id}`;
     if (debounceRef.current[key]) clearTimeout(debounceRef.current[key]);
     debounceRef.current[key] = setTimeout(async () => {
@@ -132,7 +131,8 @@ export default function StxPage() {
           client={selectedClient}
           open={slideoverOpen}
           moduleKey="sales_tax"
-          onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
+          stxLineItemFocus={stxLineItemFocus}
+          onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); setStxLineItemFocus(null); }}
           onSave={handleSlideoverSave}
         />
       )}
