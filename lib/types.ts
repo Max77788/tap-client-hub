@@ -39,7 +39,6 @@ export interface SalesTaxLineItem {
   bankRouting?: string;
   bankAccount?: string;
   frequency?: string;
-  assignedTo?: string;
 }
 
 export interface ClientService {
