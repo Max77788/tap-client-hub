@@ -30,13 +30,13 @@ export default function TaxPage() {
     setSlideoverOpen(true);
   }, []);
 
-  const handleSlideoverSave = useCallback(async (updated: any) => {
-    updateClient(updated.id, updated);
-    // Debounce network persist
+  const handleSlideoverSave = useCallback((updated: any) => {
+    // Debounce both local state AND network persist
     const key = `save_${updated.id}`;
     if (debounceRef.current[key]) clearTimeout(debounceRef.current[key]);
     debounceRef.current[key] = setTimeout(async () => {
       delete debounceRef.current[key];
+      updateClient(updated.id, updated);
       try {
         const res = await fetch("/api/clients", {
           method: "PUT",

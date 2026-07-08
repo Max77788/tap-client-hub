@@ -111,13 +111,13 @@ export default function ClientsPage() {
     setModalOpen(true);
   }
 
-  const handleSlideoverSave = useCallback(async (updated: Client) => {
-    updateClient(updated.id, updated);
-    // Debounce network persist
+  const handleSlideoverSave = useCallback((updated: Client) => {
+    // Debounce both local state AND network persist - avoid re-render on every keystroke
     const key = `save_${updated.id}`;
     if (debounceRef.current[key]) clearTimeout(debounceRef.current[key]);
     debounceRef.current[key] = setTimeout(async () => {
       delete debounceRef.current[key];
+      updateClient(updated.id, updated);
       try {
         const res = await fetch("/api/clients", {
           method: "PUT",
