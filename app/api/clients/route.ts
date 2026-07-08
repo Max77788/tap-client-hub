@@ -178,7 +178,12 @@ export async function GET(request: Request) {
           filingType: cs.filing_type || "",
           payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
           comments: Array.isArray(cs.comments) ? cs.comments : [],
-          salesTaxLineItems: Array.isArray(cs.sales_tax_line_items) ? cs.sales_tax_line_items : [],
+          salesTaxLineItems: Array.isArray(cs.sales_tax_line_items)
+            ? cs.sales_tax_line_items.map((item: any) => ({
+                ...item,
+                assignedTo: staffNames[item.assignedTo || ""] || item.assignedTo || "",
+              }))
+            : [],
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: Array.from({ length: 12 }, (_, i) => {
             const s = periodByCsId[cs.id]?.[i];
