@@ -2220,6 +2220,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <span style={{ fontWeight: 500, textAlign: "left" }}>{[eAddress, eCity, eState, eZip].filter(Boolean).join(", ") || "—"}</span>
                     )}
                   </div>
+                  {moduleKey !== "sales_tax" && (
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Assigned To</span>
                     {showEditClient ? (
@@ -2232,6 +2233,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <span style={{ fontWeight: 500 }}>{eAssigned || "—"}</span>
                     )}
                   </div>
+                  )}
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px" }}>
                     <span style={{ color: "var(--muted)" }}>EIN</span>
                     <span style={{ fontWeight: 500, fontFamily: "var(--mono)" }}>{c.ein || "—"}</span>
