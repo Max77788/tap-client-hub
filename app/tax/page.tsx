@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useClients } from "@/hooks/use-clients-context";
 import WorklistTable, { type WorklistStage } from "@/components/worklist-table";
 import ClientSlideover from "@/components/client-slideover";
@@ -18,6 +18,7 @@ export default function TaxPage() {
   const { clients, loading, updateServiceMonth, updateClient } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
+  const debounceRef = useRef<Record<string, any>>({});
 
   const selectedClient = useMemo(
     () => (selectedClientId ? clients.find((c: any) => c.id === selectedClientId) ?? null : null),
@@ -31,16 +32,22 @@ export default function TaxPage() {
 
   const handleSlideoverSave = useCallback(async (updated: any) => {
     updateClient(updated.id, updated);
-    try {
-      const res = await fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-      if (!res.ok) console.error("PUT /api/clients failed:", res.status);
-    } catch (e) {
-      console.error("Failed to save client:", e);
-    }
+    // Debounce network persist
+    const key = `save_${updated.id}`;
+    if (debounceRef.current[key]) clearTimeout(debounceRef.current[key]);
+    debounceRef.current[key] = setTimeout(async () => {
+      delete debounceRef.current[key];
+      try {
+        const res = await fetch("/api/clients", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updated),
+        });
+        if (!res.ok) console.error("PUT /api/clients failed:", res.status);
+      } catch (e) {
+        console.error("Failed to save client:", e);
+      }
+    }, 400);
   }, [updateClient]);
 
   return (

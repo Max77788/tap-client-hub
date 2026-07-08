@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useClients } from "@/hooks/use-clients-context";
 import WorklistTable from "@/components/worklist-table";
 import ClientSlideover from "@/components/client-slideover";
@@ -18,10 +18,9 @@ export default function StxPage() {
   const { clients, loading, updateServiceMonth, updateClient } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
+  const debounceRef = useRef<Record<string, any>>({});
 
-  // Flatten: each sales_tax service entry becomes its own row
-  // Clients with multiple sales_tax services get duplicated with unique composite IDs
-  // Sort by line item/service name so same-name items are adjacent
+  // Flatten: each sales_tax service entry becomes its own row. Also merge all line items from all stx services.
   const flatClients = useMemo(() => {
     const result: any[] = [];
     for (const client of clients) {
@@ -29,24 +28,51 @@ export default function StxPage() {
         (s: any) => s.key === "sales_tax" && s.enabled
       );
       if (stxServices.length === 0) continue;
+
+      // Merge all line items from all sales_tax services
+      const allLineItems: any[] = [];
       for (const svc of stxServices) {
-        result.push({
-          ...client,
-          id: `${client.id}::${svc.csId || ""}`,
-          _originalClientId: client.id,
-          _csId: svc.csId,
-          services: [svc],
-        });
+        if (svc.salesTaxLineItems?.length) {
+          for (const item of svc.salesTaxLineItems) {
+            allLineItems.push({ ...item, _csId: svc.csId });
+          }
+        }
+      }
+
+      // If there are line items, create one row per line item
+      // If no line items, create one row per service
+      if (allLineItems.length > 0) {
+        for (const item of allLineItems) {
+          result.push({
+            ...client,
+            id: `${client.id}::${item._csId}::${item.serviceName}`,
+            _originalClientId: client.id,
+            _csId: item._csId,
+            services: [stxServices[0]], // Keep first service for months tracking
+            _mergedLineItems: allLineItems,
+            _stxItem: item,
+            _stxName: item.serviceName,
+          });
+        }
+      } else {
+        for (const svc of stxServices) {
+          result.push({
+            ...client,
+            id: `${client.id}::${svc.csId || ""}`,
+            _originalClientId: client.id,
+            _csId: svc.csId,
+            services: [svc],
+            _mergedLineItems: svc.salesTaxLineItems || [],
+          });
+        }
       }
     }
-    // Sort by client name first (groups same-client entries), then by line item name
+    // Sort by client name first, then by line item name
     result.sort((a, b) => {
       const clientCmp = a.name.localeCompare(b.name);
       if (clientCmp !== 0) return clientCmp;
-      const svcA = a.services?.[0];
-      const svcB = b.services?.[0];
-      const nameA = svcA?.salesTaxLineItems?.[0]?.serviceName || "";
-      const nameB = svcB?.salesTaxLineItems?.[0]?.serviceName || "";
+      const nameA = a._stxName || "";
+      const nameB = b._stxName || "";
       return nameA.localeCompare(nameB);
     });
     return result;
@@ -78,16 +104,22 @@ export default function StxPage() {
 
   const handleSlideoverSave = useCallback(async (updated: any) => {
     updateClient(updated.id, updated);
-    try {
-      const res = await fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-      if (!res.ok) console.error("PUT /api/clients failed:", res.status);
-    } catch (e) {
-      console.error("Failed to save client:", e);
-    }
+    // Debounce network persist
+    const key = `save_${updated.id}`;
+    if (debounceRef.current[key]) clearTimeout(debounceRef.current[key]);
+    debounceRef.current[key] = setTimeout(async () => {
+      delete debounceRef.current[key];
+      try {
+        const res = await fetch("/api/clients", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updated),
+        });
+        if (!res.ok) console.error("PUT /api/clients failed:", res.status);
+      } catch (e) {
+        console.error("Failed to save client:", e);
+      }
+    }, 400);
   }, [updateClient]);
 
   return (

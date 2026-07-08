@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   SERVICE_META,
@@ -28,6 +28,7 @@ export default function ClientsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const debounceRef = useRef<Record<string, any>>({});
 
   // Compute stats from full client data
   const computedStats = useMemo(() => getStats(clients), [clients]);
@@ -112,19 +113,25 @@ export default function ClientsPage() {
 
   const handleSlideoverSave = useCallback(async (updated: Client) => {
     updateClient(updated.id, updated);
-    try {
-      const res = await fetch("/api/clients", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updated),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        console.error("PUT /api/clients failed:", res.status, errData);
+    // Debounce network persist
+    const key = `save_${updated.id}`;
+    if (debounceRef.current[key]) clearTimeout(debounceRef.current[key]);
+    debounceRef.current[key] = setTimeout(async () => {
+      delete debounceRef.current[key];
+      try {
+        const res = await fetch("/api/clients", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updated),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error("PUT /api/clients failed:", res.status, errData);
+        }
+      } catch (e) {
+        console.error("Failed to save client:", e);
       }
-    } catch (e) {
-      console.error("Failed to save client:", e);
-    }
+    }, 400);
   }, [updateClient]);
 
   const handleSlideoverDelete = useCallback((clientId: string) => {

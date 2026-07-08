@@ -324,6 +324,13 @@ export default function WorklistTable({
           if (c.name.toLowerCase().includes(q)) return true;
           // For sales tax, also search within line item names
           if (serviceKey === "sales_tax") {
+            // Check pre-expanded data first (from stx/page.tsx)
+            if (c._stxName && c._stxName.toLowerCase().includes(q)) return true;
+            if (c._stxItem?.serviceName && c._stxItem.serviceName.toLowerCase().includes(q)) return true;
+            if (c._mergedLineItems?.some((item: any) =>
+              (item.serviceName || "").toLowerCase().includes(q)
+            )) return true;
+            // Fallback: check service line items
             const svc = c.services?.find((s: any) => s.key === "sales_tax");
             const items = svc?.salesTaxLineItems || [];
             return items.some((item: any) =>
@@ -1035,51 +1042,60 @@ export default function WorklistTable({
             </tr>
           ) : (
             (serviceKey === "sales_tax"
-              ? // ── Sales Tax: expand line items, group by client, add group header rows ──
+              ? // ── Sales Tax: group by client, add group header rows ──
+                // Flat clients may already be pre-expanded with _stxItem / _stxName from stx/page.tsx
                 (() => {
-                  // First: expand by line items
-                  const expanded: any[] = [];
-                  for (const client of filteredClients) {
-                    const svc = client.services?.find((s: any) => s.key === "sales_tax");
-                    const items = svc?.salesTaxLineItems;
-                    if (items?.length > 0) {
-                      items.forEach((item: any, idx: number) => {
-                        expanded.push({
-                          ...client,
-                          _stxItem: item,
-                          _stxIdx: idx,
-                          _stxName: item.serviceName,
+                  // Use pre-expanded data if available, otherwise expand from services
+                  let expanded: any[] = [];
+                  const hasPreExpanded = filteredClients.some((c: any) => c._stxItem !== undefined || c._stxName !== undefined);
+                  if (hasPreExpanded) {
+                    // Use the flat clients directly (already one row per line item)
+                    expanded = filteredClients.filter((c: any) => c._stxItem != null || c._stxName);
+                    if (expanded.length === 0) {
+                      // Fallback: all rows have no line items
+                      expanded = filteredClients.map((c: any) => ({ ...c, _stxItem: null, _stxIdx: -1, _stxName: c.name }));
+                    }
+                  } else {
+                    // Legacy: expand line items from service
+                    for (const client of filteredClients) {
+                      const svc = client.services?.find((s: any) => s.key === "sales_tax");
+                      const items = svc?.salesTaxLineItems;
+                      if (items?.length > 0) {
+                        items.forEach((item: any, idx: number) => {
+                          expanded.push({
+                            ...client,
+                            _stxItem: item,
+                            _stxIdx: idx,
+                            _stxName: item.serviceName,
+                          });
                         });
-                      });
-                    } else {
-                      expanded.push({ ...client, _stxItem: null, _stxIdx: -1, _stxName: client.name });
+                      } else {
+                        expanded.push({ ...client, _stxItem: null, _stxIdx: -1, _stxName: client.name });
+                      }
                     }
                   }
-                  // Count registrations per original client (based on expanded rows)
-                  // If searching, also filter expanded rows by line item name
+                  // If searching, further filter by line item name
                   let filteredExpanded = expanded;
                   if (search) {
                     const q = search.toLowerCase();
                     filteredExpanded = expanded.filter((row) => {
                       if (row._stxItem == null) {
-                        // No line items — keep if client name matched
                         return row.name.toLowerCase().includes(q);
                       }
-                      // Only keep rows whose line item name matches the search
-                      const itemName = (row._stxItem.serviceName || "").toLowerCase();
-                      return itemName.includes(q);
+                      const itemName = (row._stxItem.serviceName || row._stxName || "").toLowerCase();
+                      return itemName.includes(q) || row.name.toLowerCase().includes(q);
                     });
                   }
                   const regCounts = new Map<string, number>();
                   for (const row of filteredExpanded) {
-                    const origId = row._originalClientId || row.id;
+                    const origId = row._originalClientId || row.id.split("::")[0] || row.id;
                     regCounts.set(origId, (regCounts.get(origId) || 0) + 1);
                   }
                   // Build final array with group headers inserted
                   const rows: any[] = [];
                   let prevOrigId: string | null = null;
                   for (const row of filteredExpanded) {
-                    const origId = row._originalClientId || row.id;
+                    const origId = row._originalClientId || row.id.split("::")[0] || row.id;
                     if (origId !== prevOrigId) {
                       const count = regCounts.get(origId) || 0;
                       rows.push({ _isGroupHeader: true, _groupOrigId: origId, _groupCount: count });
