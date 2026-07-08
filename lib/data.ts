@@ -1400,8 +1400,8 @@ export function getStats(clients: Client[]): ClientStats {
 
   return {
     total: clients.length,
-    business: clients.filter((c) => c.type === "Business").length,
-    personal: clients.filter((c) => c.type === "Personal").length,
+    business: clients.filter((c) => (c.type || "").toLowerCase() === "business").length,
+    personal: clients.filter((c) => (c.type || "").toLowerCase() === "personal").length,
     monthlyFinancials,
     behindThisMonth,
     financialsCount,
