@@ -163,6 +163,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const eCityRef = useRef<HTMLInputElement>(null);
   const eStateRef = useRef<HTMLInputElement>(null);
   const eZipRef = useRef<HTMLInputElement>(null);
+  // ── STX line-item form refs (uncontrolled) ──
+  const stxNameRef = useRef<HTMLInputElement>(null);
+  const stxRtRef = useRef<HTMLInputElement>(null);
+  const stxTaxIdRef = useRef<HTMLInputElement>(null);
+  const stxBankRef = useRef<HTMLInputElement>(null);
+  const stxRoutingRef = useRef<HTMLInputElement>(null);
+  const stxAccountRef = useRef<HTMLInputElement>(null);
 
   // ── Pay Day options (fetched from DB) ──
   const [payDayOptions, setPayDayOptions] = useState<string[]>([]);
@@ -1092,29 +1099,29 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                       <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name <span style={{ color: "var(--red,#e74c3c)" }}>*</span></label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxNameRef} defaultValue={newStxName} onBlur={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
                       </div>
                       <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT # <span style={{ color: "var(--red,#e74c3c)" }}>*</span></label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRtRef} defaultValue={newStxRt} onBlur={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
                       </div>
                       <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID <span style={{ color: "var(--red,#e74c3c)" }}>*</span></label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxTaxIdRef} defaultValue={newStxTaxId} onBlur={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
                       </div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
                       <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxBankRef} defaultValue={newStxBank} onBlur={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
                       </div>
                       <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRoutingRef} defaultValue={newStxRouting} onBlur={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
                       </div>
                       <div>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
-                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
+                        <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxAccountRef} defaultValue={newStxAccount} onBlur={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                       </div>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
@@ -1139,22 +1146,26 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         onClick={() => setAddingStx(false)}>Cancel</button>
                       <button className="reveal" style={{
                         all: "unset", cursor: "pointer", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12,
-                        background: (!newStxName.trim() || !newStxRt.trim() || !newStxTaxId.trim()) ? "var(--line,#d8d2c4)" : "var(--ink)",
-                        color: (!newStxName.trim() || !newStxRt.trim() || !newStxTaxId.trim()) ? "var(--muted,#aaa)" : "#fff",
+                        background: "var(--ink)", color: "#fff",
                       }}
-                        disabled={!newStxName.trim() || !newStxRt.trim() || !newStxTaxId.trim()}
                         onClick={() => {
+                          const n = stxNameRef.current?.value.trim() || '';
+                          const r = stxRtRef.current?.value.trim() || '';
+                          const t = stxTaxIdRef.current?.value.trim() || '';
+                          if (!n || !r || !t) return;
                           const upd = [...stxLineItems, {
-                            serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
-                            bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                            serviceName: n, rt: r, taxId: t,
+                            bankName: stxBankRef.current?.value.trim() || '',
+                            bankRouting: stxRoutingRef.current?.value.trim() || '',
+                            bankAccount: stxAccountRef.current?.value.trim() || '',
                             assignedTo: newStxAssigned,
                             frequency: newStxFreq,
                           }];
                           setStxLineItems(upd);
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                           throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
-                          setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                          setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
+                          [stxNameRef, stxRtRef, stxTaxIdRef, stxBankRef, stxRoutingRef, stxAccountRef].forEach(r => { if (r.current) r.current.value = ''; });
+                          setNewStxFreq("Monthly"); setNewStxAssigned("");
                           setAddingStx(false);
                         }}
                       >Add line item</button>
@@ -1174,15 +1185,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Service name</label>
-                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxName} onChange={e => setEditStxName(e.target.value)} />
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} ref={stxNameRef} defaultValue={editStxName} onBlur={e => setEditStxName(e.target.value)} />
                               </div>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>RT #</label>
-                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxRt} onChange={e => setEditStxRt(e.target.value)} />
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} ref={stxRtRef} defaultValue={editStxRt} onBlur={e => setEditStxRt(e.target.value)} />
                               </div>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Tax ID</label>
-                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxTaxId} onChange={e => setEditStxTaxId(e.target.value)} />
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} ref={stxTaxIdRef} defaultValue={editStxTaxId} onBlur={e => setEditStxTaxId(e.target.value)} />
                               </div>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Frequency</label>
@@ -1194,15 +1205,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Bank name</label>
-                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxBank} onChange={e => setEditStxBank(e.target.value)} />
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} ref={stxBankRef} defaultValue={editStxBank} onBlur={e => setEditStxBank(e.target.value)} />
                               </div>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Routing #</label>
-                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxRouting} onChange={e => setEditStxRouting(e.target.value)} />
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} ref={stxRoutingRef} defaultValue={editStxRouting} onBlur={e => setEditStxRouting(e.target.value)} />
                               </div>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Account #</label>
-                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} value={editStxAccount} onChange={e => setEditStxAccount(e.target.value)} />
+                                <input style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12 }} ref={stxAccountRef} defaultValue={editStxAccount} onBlur={e => setEditStxAccount(e.target.value)} />
                               </div>
                               <div>
                                 <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Assigned to</label>
@@ -1218,12 +1229,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                 onClick={() => setEditingStxIdx(-1)}>Cancel</button>
                               <button className="reveal" style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", fontWeight: 600, fontSize: 11, padding: "4px 10px", borderRadius: 6 }}
                                 onClick={() => {
-                                  if (!editStxName.trim()) return;
+                                  const n = stxNameRef.current?.value.trim() || '';
+                                  if (!n) return;
                                   const upd = [...stxLineItems];
-                                  upd[i] = {
-                                    ...upd[i],
-                                    serviceName: editStxName.trim(), rt: editStxRt.trim(), taxId: editStxTaxId.trim(),
-                                    bankName: editStxBank.trim(), bankRouting: editStxRouting.trim(), bankAccount: editStxAccount.trim(),
+                                  upd[editingStxIdx] = {
+                                    ...upd[editingStxIdx],
+                                    serviceName: n, rt: stxRtRef.current?.value.trim() || '', taxId: stxTaxIdRef.current?.value.trim() || '',
+                                    bankName: stxBankRef.current?.value.trim() || '', bankRouting: stxRoutingRef.current?.value.trim() || '', bankAccount: stxAccountRef.current?.value.trim() || '',
                                     assignedTo: editStxAssigned.trim(),
                                     frequency: editStxFreq,
                                   };
@@ -1429,12 +1441,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       }
 
       function saveEditItem() {
-        if (editingStxIdx < 0 || !editStxName.trim()) return;
+        if (editingStxIdx < 0 || !(stxNameRef.current?.value.trim())) return;
         const upd = [...stxLineItems];
         upd[editingStxIdx] = {
           ...upd[editingStxIdx],
-          serviceName: editStxName.trim(), rt: editStxRt.trim(), taxId: editStxTaxId.trim(),
-          bankName: editStxBank.trim(), bankRouting: editStxRouting.trim(), bankAccount: editStxAccount.trim(),
+          serviceName: stxNameRef.current?.value.trim() || '', rt: stxRtRef.current?.value.trim() || '', taxId: stxTaxIdRef.current?.value.trim() || '',
+          bankName: stxBankRef.current?.value.trim() || '', bankRouting: stxRoutingRef.current?.value.trim() || '', bankAccount: stxAccountRef.current?.value.trim() || '',
           assignedTo: editStxAssigned.trim(),
           frequency: editStxFreq,
         };
@@ -1561,29 +1573,29 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
-                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxName} onChange={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxNameRef} defaultValue={newStxName} onBlur={e => setNewStxName(e.target.value)} placeholder="e.g. Texas Sales Tax" />
                 </div>
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
-                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRt} onChange={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRtRef} defaultValue={newStxRt} onBlur={e => setNewStxRt(e.target.value)} placeholder="e.g. 123456" />
                 </div>
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
-                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxTaxId} onChange={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxTaxIdRef} defaultValue={newStxTaxId} onBlur={e => setNewStxTaxId(e.target.value)} placeholder="e.g. 74-1234567" />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
-                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxBank} onChange={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxBankRef} defaultValue={newStxBank} onBlur={e => setNewStxBank(e.target.value)} placeholder="e.g. Chase" />
                 </div>
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
-                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxRouting} onChange={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRoutingRef} defaultValue={newStxRouting} onBlur={e => setNewStxRouting(e.target.value)} placeholder="e.g. 111000025" />
                 </div>
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
-                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxAccount} onChange={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
+                  <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxAccountRef} defaultValue={newStxAccount} onBlur={e => setNewStxAccount(e.target.value)} placeholder="e.g. 123456789" />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
@@ -1608,18 +1620,23 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   onClick={() => setAddingStx(false)}>Cancel</button>
                 <button className="reveal" style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "6px 12px", borderRadius: 8, fontWeight: 600, fontSize: 12 }}
                   onClick={() => {
-                    if (!newStxName.trim()) return;
+                    const n = stxNameRef.current?.value.trim() || '';
+                    const r = stxRtRef.current?.value.trim() || '';
+                    const t = stxTaxIdRef.current?.value.trim() || '';
+                    if (!n || !r || !t) return;
                     const upd = [...stxLineItems, {
-                      serviceName: newStxName.trim(), rt: newStxRt.trim(), taxId: newStxTaxId.trim(),
-                      bankName: newStxBank.trim(), bankRouting: newStxRouting.trim(), bankAccount: newStxAccount.trim(),
+                      serviceName: n, rt: r, taxId: t,
+                      bankName: stxBankRef.current?.value.trim() || '',
+                      bankRouting: stxRoutingRef.current?.value.trim() || '',
+                      bankAccount: stxAccountRef.current?.value.trim() || '',
                       assignedTo: newStxAssigned,
                       frequency: newStxFreq,
                     }];
                     setStxLineItems(upd);
                     setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                     throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
-                    setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank("");
-                    setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
+                    [stxNameRef, stxRtRef, stxTaxIdRef, stxBankRef, stxRoutingRef, stxAccountRef].forEach(r => { if (r.current) r.current.value = ''; });
+                    setNewStxFreq("Monthly"); setNewStxAssigned("");
                     setAddingStx(false);
                   }}
                 >Add line item</button>
@@ -1634,27 +1651,27 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxName} onChange={e => setEditStxName(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxNameRef} defaultValue={editStxName} onBlur={e => setEditStxName(e.target.value)} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxRt} onChange={e => setEditStxRt(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRtRef} defaultValue={editStxRt} onBlur={e => setEditStxRt(e.target.value)} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxTaxId} onChange={e => setEditStxTaxId(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxTaxIdRef} defaultValue={editStxTaxId} onBlur={e => setEditStxTaxId(e.target.value)} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxBank} onChange={e => setEditStxBank(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxBankRef} defaultValue={editStxBank} onBlur={e => setEditStxBank(e.target.value)} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxRouting} onChange={e => setEditStxRouting(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRoutingRef} defaultValue={editStxRouting} onBlur={e => setEditStxRouting(e.target.value)} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={editStxAccount} onChange={e => setEditStxAccount(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxAccountRef} defaultValue={editStxAccount} onBlur={e => setEditStxAccount(e.target.value)} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned to</label>

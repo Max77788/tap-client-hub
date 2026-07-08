@@ -1,0 +1,133 @@
+<style>
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+#erdv7{padding:1rem 0;overflow-x:auto}
+#erdv7 svg.erDiagram .divider path{stroke-opacity:0.5}
+#erdv7 svg.erDiagram .row-rect-odd path,#erdv7 svg.erDiagram .row-rect-odd rect,#erdv7 svg.erDiagram .row-rect-even path,#erdv7 svg.erDiagram .row-rect-even rect{stroke:none !important}
+</style>
+<h2 class="sr-only">Entity relationship diagram of the v7 TAP Hub data model, 13 tables. client_services is the hub linking clients, services, and profiles, now carrying tax-return fields return_type, filing_state, and due_month. Monthly work periods, counts, comments, and sales-tax registrations attach to it; clients hold vault credentials and annual filings; fees are owner-only; staff log time entries and audit rows.</h2>
+<div id="erdv7"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false, theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: { darkMode: dark, fontSize: '13px', fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c', textColor: dark ? '#c2c0b6' : '#3d3d3a' },
+});
+const src = `erDiagram
+  profiles ||--o{ client_services : "assigned to"
+  profiles ||--o{ service_comments : "authored"
+  profiles ||--o{ time_entries : "logged"
+  profiles ||--o{ audit_log : "actor"
+  profiles ||--o{ profiles : "manages"
+  clients ||--o{ client_services : "has"
+  services ||--o{ client_services : "typed as"
+  client_services ||--o{ work_periods : "stage / month"
+  client_services ||--o{ period_counts : "count / month"
+  client_services ||--o{ service_comments : "note / month"
+  client_services ||--o{ sales_tax_registration : "registrations"
+  client_services ||--|| client_service_billing : "fee · owner only"
+  clients ||--o{ credentials : "vault logins"
+  clients ||--o{ annual_filing : "renewals"
+  profiles {
+    uuid id PK
+    text full_name
+    enum role
+    uuid reporting_manager FK
+    text_array modules
+  }
+  clients {
+    uuid id PK
+    text client_code
+    text name
+    text type
+    text group_name
+    text_array emails
+    text_array phones
+    text ein
+  }
+  services {
+    uuid id PK
+    text code
+    text tracking
+  }
+  client_services {
+    uuid id PK
+    uuid client_id FK
+    uuid service_id FK
+    uuid assigned_to FK
+    text reg_label
+    enum return_type
+    text filing_state
+    int due_month
+    jsonb detail
+  }
+  work_periods {
+    uuid client_service_id FK
+    text period
+    enum stage
+  }
+  period_counts {
+    uuid client_service_id FK
+    text period
+    int processed
+  }
+  service_comments {
+    uuid id PK
+    uuid client_service_id FK
+    int month
+    uuid author_id FK
+    text body
+  }
+  sales_tax_registration {
+    uuid id PK
+    uuid client_service_id FK
+    text rt_number
+    text tax_reg_id
+    text bank_name
+  }
+  credentials {
+    uuid id PK
+    uuid client_id FK
+    text site
+    text vault_ref
+    bool is_bank
+  }
+  client_service_billing {
+    uuid client_service_id PK
+    numeric monthly_fee
+  }
+  annual_filing {
+    uuid id PK
+    uuid client_id FK
+    text state
+    date due_date
+  }
+  time_entries {
+    uuid id PK
+    uuid who FK
+    uuid client_service_id FK
+    int seconds
+  }
+  audit_log {
+    bigint id PK
+    uuid actor FK
+    text entity
+    jsonb detail
+  }`;
+const { svg } = await mermaid.render('erdv7-svg', src);
+document.getElementById('erdv7').innerHTML = svg;
+document.querySelectorAll('#erdv7 svg.erDiagram .node').forEach(node => {
+  const p = node.querySelector('path[d]'); if (!p) return;
+  const nums = p.getAttribute('d').match(/-?[\d.]+/g)?.map(Number); if (!nums || nums.length < 8) return;
+  const xs=[nums[0],nums[2],nums[4],nums[6]], ys=[nums[1],nums[3],nums[5],nums[7]];
+  const x=Math.min(...xs), y=Math.min(...ys), w=Math.max(...xs)-x, h=Math.max(...ys)-y;
+  const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x);rect.setAttribute('y',y);rect.setAttribute('width',w);rect.setAttribute('height',h);rect.setAttribute('rx','8');
+  for (const a of ['fill','stroke','stroke-width','class','style']) if (p.hasAttribute(a)) rect.setAttribute(a,p.getAttribute(a));
+  p.replaceWith(rect);
+});
+document.querySelectorAll('#erdv7 svg.erDiagram .row-rect-odd path, #erdv7 svg.erDiagram .row-rect-even path').forEach(p=>p.setAttribute('stroke','none'));
+</script>
