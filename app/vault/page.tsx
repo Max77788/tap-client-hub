@@ -195,7 +195,7 @@ export default function VaultPage() {
 
       {/* ── Vault groups (details/summary) ── */}
       {grouped.map(([name, entries]) => (
-        <details key={name} className="vgroup" open={name === grouped[0]?.[0]} style={{
+        <details key={name} className="vgroup" style={{
           background: "var(--card)", border: "1px solid var(--line)", borderRadius: 13,
           marginBottom: 10, overflow: "hidden",
         }}>
@@ -216,10 +216,9 @@ export default function VaultPage() {
               <table className="vault-table">
                 <thead>
                   <tr>
-                    <th className="col-portal">Portal</th>
-                    <th className="col-user">Username</th>
-                    <th className="col-pw">Password</th>
-                    <th className="col-actions" style={{ textAlign: "right", width: 1 }} />
+                    <th>Portal</th>
+                    <th>Username</th>
+                    <th>Password</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -229,41 +228,19 @@ export default function VaultPage() {
                     const pwVisible = visiblePws.has(pwKey);
                     return (
                       <tr key={entry.id}>
-                        <td className="vt-site">
-                          <b>{entry.site}</b>
-                          <div className="vt-meta">
-                            {entry.purpose && <span className="vt-purpose">{entry.purpose}</span>}
-                            {entry.url && (
-                              <a href={entry.url} target="_blank" rel="noopener noreferrer"
-                                className="vt-url">
-                                Open site ↗
-                              </a>
-                            )}
-                          </div>
-                        </td>
+                        <td><b>{entry.site}</b></td>
                         {isBank ? (
                           <>
                             <td className="vt-mono vt-muted">— linked —</td>
-                            <td className="vt-action">
-                              <a href="https://example.com" target="_blank" rel="noopener noreferrer"
-                                className="reveal" style={{
-                                  color: "var(--teal)", fontWeight: 600, fontSize: "11.5px",
-                                  whiteSpace: "nowrap", textDecoration: "none",
-                                }}>
+                            <td>
+                              <a href="#" onClick={e => { e.preventDefault(); }} className="vt-bank-link">
                                 Open in TAP&nbsp;Bank ↗
                               </a>
                             </td>
                           </>
                         ) : (
                           <>
-                            <td className="vt-user">
-                              {entry.email ? (
-                                <span className="vt-email">{entry.email}</span>
-                              ) : (
-                                <span className="vt-muted">—</span>
-                              )}
-                              {entry.notes && <div className="vt-notes" title={entry.notes}>{entry.notes}</div>}
-                            </td>
+                            <td className="vt-mono">{entry.email || "—"}</td>
                             <td className="vt-pw">
                               <span className="vt-pw-val">{pwVisible ? (entry.password || "—") : "••••••••"}</span>
                               <button className="vt-pw-toggle" onClick={() => {
@@ -274,20 +251,6 @@ export default function VaultPage() {
                             </td>
                           </>
                         )}
-                        <td className="vt-action" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                          {canEdit ? (
-                            <>
-                              <button onClick={() => handleEdit(entry)} className="vt-edit-btn">
-                                Edit
-                              </button>
-                              <button onClick={() => handleDelete(entry)} className="vt-del-btn">
-                                Delete
-                              </button>
-                            </>
-                          ) : (
-                            <span style={{ color: "var(--muted)", fontSize: "11px", fontStyle: "italic" }}>view only</span>
-                          )}
-                        </td>
                       </tr>
                     );
                   })}
@@ -333,52 +296,6 @@ export default function VaultPage() {
               .vt-muted {
                 color: var(--muted);
               }
-              .vt-site {
-                font-weight: 600;
-                white-space: nowrap;
-                min-width: 120px;
-                vertical-align: middle;
-              }
-              .vt-meta {
-                display: flex;
-                gap: 6px;
-                align-items: center;
-                margin-top: 2px;
-              }
-              .vt-purpose {
-                font-size: 10.5px;
-                font-weight: 500;
-                color: var(--muted);
-                white-space: nowrap;
-              }
-              .vt-url {
-                font-size: 10.5px;
-                font-weight: 500;
-                color: var(--teal);
-                text-decoration: none;
-                white-space: nowrap;
-              }
-              .vt-url:hover {
-                text-decoration: underline;
-              }
-              .vt-user {
-                max-width: 200px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-              .vt-email {
-                font-family: "SF Mono","Fira Code","Consolas",monospace;
-                font-size: 11.5px;
-              }
-              .vt-notes {
-                font-size: 10.5px;
-                color: var(--muted);
-                margin-top: 2px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 200px;
-              }
               .vt-pw {
                 white-space: nowrap;
               }
@@ -397,25 +314,16 @@ export default function VaultPage() {
               .vt-pw-toggle:hover {
                 opacity: 0.8;
               }
-              .vt-edit-btn, .vt-del-btn {
-                all: unset;
-                cursor: pointer;
+              .vt-bank-link {
+                color: var(--teal);
                 font-weight: 600;
                 font-size: 11.5px;
-                margin-left: 10px;
+                white-space: nowrap;
+                text-decoration: none;
               }
-              .vt-edit-btn {
-                color: var(--teal);
+              .vt-bank-link:hover {
+                text-decoration: underline;
               }
-              .vt-del-btn {
-                color: var(--red);
-              }
-              .vt-edit-btn:hover, .vt-del-btn:hover {
-                opacity: 0.8;
-              }
-              .col-portal { min-width: 140px; }
-              .col-user { min-width: 160px; }
-              .col-pw { min-width: 120px; }
             `}</style>
           </div>
         </details>
