@@ -2311,45 +2311,38 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
                 Details
               </div>
-              {!editing ? (
-                <button className="reveal" onClick={() => setEditing(true)} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12.5px" }}>
-                  ✎ Edit details
-                </button>
-              ) : (
-                <span style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>Editing...</span>
-              )}
             </div>
 
             {/* Email */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Email</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eEmail} onChange={e => setEEmail(e.target.value)} disabled={!editing} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eEmail} onChange={e => setEEmail(e.target.value)} placeholder="—" />
             </div>
             {/* Additional email */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional email</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eAddEmail} onChange={e => setEAddEmail(e.target.value)} disabled={!editing} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eAddEmail} onChange={e => setEAddEmail(e.target.value)} placeholder="—" />
             </div>
             {/* Phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Phone</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={ePhone} onChange={e => setEPhone(e.target.value)} disabled={!editing} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="—" />
             </div>
             {/* Additional phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eAddPhone} onChange={e => setEAddPhone(e.target.value)} disabled={!editing} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eAddPhone} onChange={e => setEAddPhone(e.target.value)} placeholder="—" />
             </div>
 
             {/* Assigned */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Assigned To</span>
-              <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: editing ? "pointer" : "default" }}
-                value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); }} disabled={!editing}>
+              <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
+                value={eAssigned} onChange={e => setEAssigned(e.target.value)}>
                 {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
                 <option>Unassigned</option>
               </select>
@@ -2358,34 +2351,34 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Address */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Address</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eAddress} onChange={e => setEAddress(e.target.value)} disabled={!editing} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="—" />
             </div>
 
             {/* City / State / ZIP row */}
             <div style={{ display: "flex", gap: 10 }}>
               <div className="field" style={{ ...fieldStyle, flex: 2 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>City</span>
-                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  value={eCity} onChange={e => setECity(e.target.value)} disabled={!editing} placeholder="—" />
+                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  value={eCity} onChange={e => setECity(e.target.value)} placeholder="—" />
               </div>
               <div className="field" style={{ ...fieldStyle, flex: 1 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>State</span>
-                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  value={eState} onChange={e => setEState(e.target.value)} disabled={!editing} placeholder="—" />
+                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  value={eState} onChange={e => setEState(e.target.value)} placeholder="—" />
               </div>
               <div className="field" style={{ ...fieldStyle, flex: 1 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>ZIP</span>
-                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  value={eZip} onChange={e => setEZip(e.target.value)} disabled={!editing} placeholder="—" />
+                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  value={eZip} onChange={e => setEZip(e.target.value)} placeholder="—" />
               </div>
             </div>
 
             {/* EIN */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} disabled={!editing} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                value={c.ein || ""} onChange={e => { /* EIN would need API update */ }} placeholder="—" />
             </div>
 
             {/* ── Services ── */}
