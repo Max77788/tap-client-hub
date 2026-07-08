@@ -1045,16 +1045,14 @@ export default function WorklistTable({
               ? // ── Sales Tax: group by client, add group header rows ──
                 // Flat clients may already be pre-expanded with _stxItem / _stxName from stx/page.tsx
                 (() => {
-                  // Use pre-expanded data if available, otherwise expand from services
                   let expanded: any[] = [];
                   const hasPreExpanded = filteredClients.some((c: any) => c._stxItem !== undefined || c._stxName !== undefined);
                   if (hasPreExpanded) {
-                    // Use the flat clients directly (already one row per line item)
-                    expanded = filteredClients.filter((c: any) => c._stxItem != null || c._stxName);
-                    if (expanded.length === 0) {
-                      // Fallback: all rows have no line items
-                      expanded = filteredClients.map((c: any) => ({ ...c, _stxItem: null, _stxIdx: -1, _stxName: c.name }));
-                    }
+                    // Preserve ALL rows — pre-expanded keep their _stxItem, others get fallback
+                    expanded = filteredClients.map((c: any) => {
+                      if (c._stxItem != null || c._stxName) return c;
+                      return { ...c, _stxItem: null, _stxIdx: -1, _stxName: c.name };
+                    });
                   } else {
                     // Legacy: expand line items from service
                     for (const client of filteredClients) {
