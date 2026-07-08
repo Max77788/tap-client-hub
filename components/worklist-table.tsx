@@ -1065,9 +1065,9 @@ export default function WorklistTable({
                         // No line items — keep if client name matched
                         return row.name.toLowerCase().includes(q);
                       }
-                      // Keep if either the client name or line item name matches
+                      // Only keep rows whose line item name matches the search
                       const itemName = (row._stxItem.serviceName || "").toLowerCase();
-                      return row.name.toLowerCase().includes(q) || itemName.includes(q);
+                      return itemName.includes(q);
                     });
                   }
                   const regCounts = new Map<string, number>();

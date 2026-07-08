@@ -57,7 +57,7 @@ export async function GET(request: Request) {
 
     // ── Batch contacts query (replaces broken embedded contacts(*) join) ──
     let dbContacts: any[] = [];
-    const CONTACTS_BATCH = 500;
+    const CONTACTS_BATCH = 200;
     for (let i = 0; i < ids.length; i += CONTACTS_BATCH) {
       const batch = ids.slice(i, i + CONTACTS_BATCH);
       const { data: batchData, error: ctErr } = await supabase
@@ -74,8 +74,8 @@ export async function GET(request: Request) {
       if (ct.phone) contactByClient[ct.client_id].phones.push(ct.phone);
     }
 
-    // Batch IN queries — PostgREST chokes on too many values (Bad Request)
-    const BATCH_SIZE = 500;
+    // Batch IN queries — keep under ~200 UUIDs to stay below Supabase's ~16KB URL header limit
+    const BATCH_SIZE = 200;
     let dbServices: any[] = [];
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
       const batch = ids.slice(i, i + BATCH_SIZE);
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     const allCsIds = (dbServices || []).map((cs: any) => cs.id);
     const periodByCsId: Record<string, Record<number, string>> = {};
     if (allCsIds.length > 0) {
-      const BATCH_SIZE_WP = 500;
+      const BATCH_SIZE_WP = 200;
       let allPeriods: any[] = [];
       for (let i = 0; i < allCsIds.length; i += BATCH_SIZE_WP) {
         const batch = allCsIds.slice(i, i + BATCH_SIZE_WP);
@@ -121,7 +121,7 @@ export async function GET(request: Request) {
     // Fetch period_counts (processed counts for payroll, 1099s, etc.)
     const countByCsId: Record<string, number[]> = {};
     if (allCsIds.length > 0) {
-      const BATCH_SIZE_PC = 500;
+      const BATCH_SIZE_PC = 200;
       let allCounts: any[] = [];
       for (let i = 0; i < allCsIds.length; i += BATCH_SIZE_PC) {
         const batch = allCsIds.slice(i, i + BATCH_SIZE_PC);
