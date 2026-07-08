@@ -1660,6 +1660,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
                   <div className="stxfields">
                     <div>
+                      <span className="fk">Frequency</span>
+                      <span className="fv">{item.frequency || "Monthly"}</span>
+                    </div>
+                    <div>
                       <span className="fk">RT #</span>
                       <span className="fv mono">{item.rt || "—"}</span>
                     </div>
