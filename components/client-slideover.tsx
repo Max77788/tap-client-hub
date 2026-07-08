@@ -2290,6 +2290,25 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 value={eAddress} onChange={e => setEAddress(e.target.value)} disabled={!editing} placeholder="—" />
             </div>
 
+            {/* City / State / ZIP row */}
+            <div style={{ display: "flex", gap: 10 }}>
+              <div className="field" style={{ ...fieldStyle, flex: 2 }}>
+                <span className="k" style={{ color: "var(--muted)" }}>City</span>
+                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  value={eCity} onChange={e => setECity(e.target.value)} disabled={!editing} placeholder="—" />
+              </div>
+              <div className="field" style={{ ...fieldStyle, flex: 1 }}>
+                <span className="k" style={{ color: "var(--muted)" }}>State</span>
+                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  value={eState} onChange={e => setEState(e.target.value)} disabled={!editing} placeholder="—" />
+              </div>
+              <div className="field" style={{ ...fieldStyle, flex: 1 }}>
+                <span className="k" style={{ color: "var(--muted)" }}>ZIP</span>
+                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: editing ? "1px solid var(--line)" : "none", borderRadius: 6, fontSize: 13, background: editing ? "#fff" : "transparent", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  value={eZip} onChange={e => setEZip(e.target.value)} disabled={!editing} placeholder="—" />
+              </div>
+            </div>
+
             {/* EIN */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
