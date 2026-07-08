@@ -74,7 +74,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const clientRef = useRef(client.id);
   const [editing, setEditing] = useState(false);
   const [showFullRecord, setShowFullRecord] = useState(false);
-  const [showEditClient, setShowEditClient] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
@@ -1350,19 +1349,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       throttledOnSave({ ...client, services: updated } as Client);
     }
 
-    function saveClientInfo() {
-      setShowEditClient(false);
-      throttledOnSave({
-        ...c,
-        name: eName, type: eType as "Business" | "Personal", group: eGroup,
-        emails: [eEmail, eAddEmail].filter(Boolean),
-        phones: [ePhone, eAddPhone].filter(Boolean),
-        address: eAddress, city: eCity, state: eState, zip: eZip,
-        assignedStaff: eAssigned,
-        services: localSvcs,
-      } as Client);
-    }
-
     function autoSave(updater: (prev: any[]) => any[]) {
       setLocalSvcs(prev => updater(prev));
     }
@@ -2190,70 +2176,40 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div style={{ marginTop: 12, padding: "12px 14px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--card)" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: 0 }}>Client Info</div>
-                    {!showEditClient ? (
-                      <button className="reveal" onClick={() => setShowEditClient(true)} style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: "12px" }}>
-                        ✎ Edit
-                      </button>
-                    ) : (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button className="reveal" onClick={saveClientInfo} style={{ all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff", padding: "4px 10px", borderRadius: 7, fontWeight: 600, fontSize: "11px" }}>
-                          Save
-                        </button>
-                        <button className="reveal" onClick={() => setShowEditClient(false)} style={{ all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: "11px" }}>
-                          Cancel
-                        </button>
-                      </div>
-                    )}
                   </div>
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Email</span>
-                    {showEditClient ? (
-                      <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                        value={eEmail} onChange={e => setEEmail(e.target.value)} placeholder="—" />
-                    ) : (
-                      <span style={{ fontWeight: 500 }}>{eEmail || "—"}</span>
-                    )}
+                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                      value={eEmail} onChange={e => setEEmail(e.target.value)} placeholder="—" />
                   </div>
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Phone</span>
-                    {showEditClient ? (
-                      <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                        value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="—" />
-                    ) : (
-                      <span style={{ fontWeight: 500 }}>{ePhone || "—"}</span>
-                    )}
+                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                      value={ePhone} onChange={e => setEPhone(e.target.value)} placeholder="—" />
                   </div>
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Address</span>
-                    {showEditClient ? (
-                      <div style={{ flex: 1, textAlign: "left" }}>
-                        <input style={{ width: "100%", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", marginBottom: 3, boxSizing: "border-box" }}
-                          value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="Address" />
-                        <div style={{ display: "flex", gap: 3 }}>
-                          <input style={{ flex: 1, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                            value={eCity} onChange={e => setECity(e.target.value)} placeholder="City" />
-                          <input style={{ width: 44, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                            value={eState} onChange={e => setEState(e.target.value)} placeholder="ST" />
-                          <input style={{ width: 65, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                            value={eZip} onChange={e => setEZip(e.target.value)} placeholder="ZIP" />
-                        </div>
+                    <div style={{ flex: 1, textAlign: "left" }}>
+                      <input style={{ width: "100%", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", marginBottom: 3, boxSizing: "border-box" }}
+                        value={eAddress} onChange={e => setEAddress(e.target.value)} placeholder="Address" />
+                      <div style={{ display: "flex", gap: 3 }}>
+                        <input style={{ flex: 1, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                          value={eCity} onChange={e => setECity(e.target.value)} placeholder="City" />
+                        <input style={{ width: 44, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                          value={eState} onChange={e => setEState(e.target.value)} placeholder="ST" />
+                        <input style={{ width: 65, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                          value={eZip} onChange={e => setEZip(e.target.value)} placeholder="ZIP" />
                       </div>
-                    ) : (
-                      <span style={{ fontWeight: 500, textAlign: "left" }}>{[eAddress, eCity, eState, eZip].filter(Boolean).join(", ") || "—"}</span>
-                    )}
+                    </div>
                   </div>
                   {moduleKey !== "sales_tax" && (
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Assigned To</span>
-                    {showEditClient ? (
-                      <select style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                        value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); }}>
-                        {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
-                        <option>Unassigned</option>
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: 500 }}>{eAssigned || "—"}</span>
-                    )}
+                    <select style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                      value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); }}>
+                      {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
+                      <option>Unassigned</option>
+                    </select>
                   </div>
                   )}
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px" }}>
