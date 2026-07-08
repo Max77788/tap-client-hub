@@ -459,6 +459,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     onSave?.({ ...client, services: updated });
   }
 
+  function saveServiceField(key: string, field: string, value: any) {
+    const updated = localSvcs.map((s: any) =>
+      s.key === key ? { ...s, [field]: value } : s
+    );
+    setLocalSvcs(updated);
+    onSave?.({ ...client, services: updated });
+  }
+
   function freqLabel(key: string, svc: any) {
     if (!svc.enabled) return "off";
     if (moduleKey && key !== moduleKey) return "";
@@ -758,7 +766,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={svc.assignedTo || svc.processor || ""}
-                      onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s))}
+                      onChange={e => saveServiceField("payroll", "assignedTo", e.target.value)}
                     >
                       <option value="">—</option>
                       {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
@@ -768,7 +776,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Processor</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={svc.processor || ""}
-                      onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s))}
+                      onChange={e => saveServiceField("payroll", "processor", e.target.value)}
                     >
                       <option value="">—</option>
                       <option value="Quickbooks Desktop 24">Quickbooks Desktop 24</option>
@@ -845,7 +853,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       value={prPeriodFreq}
                       onChange={e => {
                         setPrPeriodFreq(e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s));
+                        const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s);
+                        setLocalSvcs(updated);
+                        onSave?.({ ...client, services: updated });
                       }}
                     >
                       <option value="">—</option>
@@ -908,7 +918,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Cadence</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.frequency || "Monthly"}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "financials" ? { ...s, frequency: e.target.value } : s))}
+                    onChange={e => saveServiceField("financials", "frequency", e.target.value)}
                   >
                     <option value="Monthly">Monthly</option>
                     <option value="Quarterly">Quarterly</option>
@@ -921,7 +931,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.assignedTo || svc.processor || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "financials" ? { ...s, assignedTo: e.target.value } : s))}
+                    onChange={e => saveServiceField("financials", "assignedTo", e.target.value)}
                   >
                     <option value="">—</option>
                     {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
@@ -945,7 +955,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.assignedTo || svc.processor || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, assignedTo: e.target.value } : s))}
+                    onChange={e => saveServiceField("1099s", "assignedTo", e.target.value)}
                   >
                     <option value="">—</option>
                     {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
@@ -963,7 +973,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={filingState}
                     onChange={e => {
                       setFilingState(e.target.value);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingState: e.target.value } : s));
+                      saveServiceField("tax_returns", "filingState", e.target.value);
                     }}
                   >
                     <option value="">Select state…</option>
@@ -976,7 +986,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={filingMonth}
                     onChange={e => {
                       setFilingMonth(e.target.value);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingMonth: e.target.value } : s));
+                      saveServiceField("tax_returns", "filingMonth", e.target.value);
                     }}
                   >
                     <option value="">Select month…</option>
@@ -989,7 +999,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={filingType}
                     onChange={e => {
                       setFilingType(e.target.value);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s));
+                      saveServiceField("tax_returns", "filingType", e.target.value);
                     }}
                   >
                     <option value="">Select type…</option>
@@ -1000,7 +1010,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                   <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     value={svc.assignedTo || svc.processor || ""}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "tax_returns" ? { ...s, assignedTo: e.target.value } : s))}
+                    onChange={e => saveServiceField("tax_returns", "assignedTo", e.target.value)}
                   >
                     <option value="">—</option>
                     {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
@@ -1017,7 +1027,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={svc.assignedTo || svc.processor || ""}
-                      onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "renditions" ? { ...s, assignedTo: e.target.value } : s))}
+                      onChange={e => saveServiceField("renditions", "assignedTo", e.target.value)}
                     >
                       <option value="">—</option>
                       {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
