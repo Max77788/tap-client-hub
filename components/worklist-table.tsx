@@ -851,7 +851,7 @@ export default function WorklistTable({
   const baseCols = 2; // Client + Assigned
   const payrollCols = variant === "payroll" ? 2 : 0; // PayDay, QBO
   const taxReturnCols = variant === "tax_returns" ? 2 : 0; // Filing State, Filing Type
-  const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" ? 1 : 0; // Cadence
+  const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
   const colCount = baseCols + payrollCols + taxReturnCols + extraCols + t9PreCols + 12 + t9PostCols;
@@ -993,7 +993,7 @@ export default function WorklistTable({
             </>
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
-            {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+            {serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 90, maxWidth: 100 }}>Cadence</th>
             )}
             {variant === "t9" && (
@@ -1105,7 +1105,7 @@ export default function WorklistTable({
                     <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
                       <span className="text-[var(--ink)]">{toShortName(svc.assignedTo || svc.processor || "—")}</span>
                     </td>
-                    {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+                    {serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" && (
                     <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
                     )}
                     <td className="px-1.5 py-1 text-center text-[11px] font-semibold text-[var(--ink)] tabular-nums" style={{ width: 60, minWidth: 60 }}>{exp || "—"}</td>
