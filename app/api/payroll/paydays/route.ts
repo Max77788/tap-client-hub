@@ -21,7 +21,10 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const unique = Array.from(new Set(data.map((r: any) => r.paydate))).filter(Boolean).sort();
+    const unique = Array.from(new Set(data.map((r: any) => r.paydate)))
+      .filter(Boolean)
+      .filter((v: string) => !v.includes("@"))  // exclude emails
+      .sort();
     return NextResponse.json({ paydays: unique });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
