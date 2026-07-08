@@ -563,3 +563,65 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }
 }
+
+// ── DELETE /api/clients?id=... — cascade-delete client + all associated records ──
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const clientId = searchParams.get("id");
+    if (!clientId) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    // Use service_role for cascade deletes (RLS may block anon key)
+    const srKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      srKey || anonKey || "",
+      { db: { schema: "tap_hub_project" } }
+    );
+
+    const results: string[] = [];
+
+    // 1. Delete client_services
+    let { error: e1 } = await supabase.from("client_services").delete().eq("client_id", clientId);
+    if (e1) return NextResponse.json({ error: "client_services: " + e1.message }, { status: 500 });
+    results.push("client_services");
+
+    // 2. Delete contacts
+    let { error: e2 } = await supabase.from("contacts").delete().eq("client_id", clientId);
+    if (e2) results.push("contacts skipped: " + e2.message);
+    else results.push("contacts");
+
+    // 3. Delete credentials
+    let { error: e3 } = await supabase.from("credentials").delete().eq("client_id", clientId);
+    if (e3) results.push("credentials skipped: " + e3.message);
+    else results.push("credentials");
+
+    // 4. Delete work_periods
+    let { error: e4 } = await supabase.from("work_periods").delete().eq("client_id", clientId);
+    if (e4) results.push("work_periods skipped: " + e4.message);
+    else results.push("work_periods");
+
+    // 5. Delete period_counts
+    let { error: e5 } = await supabase.from("period_counts").delete().eq("client_id", clientId);
+    if (e5) results.push("period_counts skipped: " + e5.message);
+    else results.push("period_counts");
+
+    // 6. Delete vault entries
+    let { error: e6 } = await supabase.from("vault_entries").delete().eq("client_id", clientId);
+    if (e6) results.push("vault_entries skipped: " + e6.message);
+    else results.push("vault_entries");
+
+    // 7. Delete the client itself
+    let { error: e7 } = await supabase.from("clients").delete().eq("id", clientId);
+    if (e7) return NextResponse.json({ error: "clients: " + e7.message, cascaded: results }, { status: 500 });
+    results.push("clients");
+
+    return NextResponse.json({ success: true, cascaded: results });
+  } catch (e: any) {
+    return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
+  }
+}

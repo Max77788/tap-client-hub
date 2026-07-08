@@ -134,7 +134,10 @@ export default function ClientsPage() {
     }, 400);
   }, [updateClient]);
 
-  const handleSlideoverDelete = useCallback((clientId: string) => {
+  const handleSlideoverDelete = useCallback(async (clientId: string) => {
+    try {
+      await fetch(`/api/clients?id=${clientId}`, { method: "DELETE" });
+    } catch {}
     deleteFromState(clientId);
     setSelectedClientId(null);
     try {
