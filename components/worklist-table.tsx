@@ -362,7 +362,8 @@ export default function WorklistTable({
             // Normalize yearly/annual → same bucket
             return raw === filter
               || (raw === "yearly" && filter === "annual")
-              || (raw === "annual" && filter === "yearly");
+              || (raw === "annual" && filter === "yearly")
+              || (raw === "annually" && filter === "annual");
           });
         }
       }
@@ -1317,10 +1318,10 @@ export default function WorklistTable({
                         ? (stxItem.frequency || svc.frequency || "Monthly")
                         : (svc.frequency || "Monthly");
                       // Normalize to display labels matching the slideover dropdowns
-                      const norm = (raw || "").trim();
+                      const norm = (raw || "").trim().toLowerCase();
                       if (norm === "yearly" || norm === "annual") return "Annual";
                       if (norm === "annually") return "Annually";
-                      return norm || "Monthly";
+                      return (raw || "").trim() || "Monthly";
                     })()}
                   </td>
                   )}
