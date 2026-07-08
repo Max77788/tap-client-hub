@@ -970,7 +970,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Expected Annual</label>
                   <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                     type="number" value={svc.expectedAnnual || 0}
-                    onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))}
+ onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))}
                     placeholder="0"
                   />
                 </div>
@@ -1985,7 +1985,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
                       type={showPrEftps ? "text" : "password"} value={prEftps || ""}
-                      onChange={e => { setPrEftps(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, eftps: e.target.value } : s)); }} placeholder="—" />
+                      onChange={e => setPrEftps(e.target.value)} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrEftps(!showPrEftps)}
                       style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}>
@@ -2002,7 +2002,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
                       type={showPrPin ? "text" : "password"} value={prPin || ""}
-                      onChange={e => { setPrPin(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payrollPassword: e.target.value } : s)); }} placeholder="—" />
+                      onChange={e => setPrPin(e.target.value)} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrPin(!showPrPin)}
                       style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}>
@@ -2045,7 +2045,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Reporting Notes</span>
                   <textarea style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", minHeight: 50, resize: "vertical" }}
                     value={prReportingNotes}
-                    onChange={e => { setPrReportingNotes(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, reportingNotes: e.target.value } : s)); }}
+                    onChange={e => setPrReportingNotes(e.target.value)}
                     placeholder="Add notes about payroll filing/reporting..." />
                 </div>
               </>
