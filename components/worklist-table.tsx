@@ -1430,8 +1430,9 @@ export default function WorklistTable({
                             })()}
                           </div>
                         )}
-                        {/* ── Comment marker blue dot — always clickable to add/view comments ── */}
-                        <button
+                        {/* ── Comment marker blue dot ── */}
+                        {hasCmt && (
+                          <button
                           onClick={(e) => {
                             e.stopPropagation();
                             const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -1445,7 +1446,8 @@ export default function WorklistTable({
                             style={{ all: "unset", cursor: "pointer", position: "absolute", top: 1, right: 1, zIndex: 3, width: 6, height: 6, borderRadius: "50%", background: "var(--blue)", boxShadow: "0 0 0 1.5px #fff" }}
                             title={`Comments for ${MONTHS_SHORT[i]}`}
                             />
-                            {activeCommentClientId === client.id && activeCommentMonth === i && commentPanelPos && (
+                        )}
+                        {activeCommentClientId === client.id && activeCommentMonth === i && commentPanelPos && (
                           <div
                             className="comment-panel-wl"
                             style={{
