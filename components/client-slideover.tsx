@@ -2261,6 +2261,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const prSvc = localSvcs.find((s: any) => s.key === "payroll");
 
     function handleSave() {
+      setSaving(true);
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
@@ -2282,7 +2283,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         assignedStaff: eAssigned,
         services: updatedSvcs,
       } as Client);
-      setEditing(false);
+      setToast("Changes saved");
+      setTimeout(() => { setToast(null); setSaving(false); }, 2000);
     }
 
     return (
@@ -2423,11 +2425,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             }}>
               Done
             </button>
-            <button onClick={handleSave} style={{
-              all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
+            <button onClick={handleSave} disabled={saving} style={{
+              all: "unset", cursor: saving ? "default" : "pointer",
+              background: saving ? "var(--muted)" : "var(--ink)", color: "#fff",
               padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
+              opacity: saving ? 0.7 : 1,
+              transition: "all 0.2s ease",
             }}>
-              Save changes
+              {saving ? "Saving…" : "Save changes"}
             </button>
           </div>
         </div>
