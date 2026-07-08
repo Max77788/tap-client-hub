@@ -312,6 +312,7 @@ export default function TimePage() {
 
   // Filters + filtered entries
   const [filterPerson, setFilterPerson] = useState("");
+  const [filterClient, setFilterClient] = useState("");
   const [filterTask, setFilterTask] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
@@ -319,6 +320,7 @@ export default function TimePage() {
   const filteredEntries = useMemo(() => {
     let list = [...entries];
     if (filterPerson) list = list.filter((e) => e.personId === filterPerson);
+    if (filterClient) list = list.filter((e) => e.clientId === filterClient);
     if (filterTask) list = list.filter((e) => e.task === filterTask || taskKeyFromLabel(e.taskLabel) === filterTask);
     if (filterDateFrom) list = list.filter((e) => e.date.slice(0, 10) >= filterDateFrom);
     if (filterDateTo) list = list.filter((e) => e.date.slice(0, 10) <= filterDateTo);
@@ -330,7 +332,7 @@ export default function TimePage() {
       if (!a.isRunning && b.isRunning) return 1;
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  }, [entries, filterPerson, filterTask, filterDateFrom, filterDateTo, today, viewingAs, effectiveIsStaff, impersonatingAs, currentUser]);
+  }, [entries, filterPerson, filterClient, filterTask, filterDateFrom, filterDateTo, today, viewingAs, effectiveIsStaff, impersonatingAs, currentUser]);
 
   const totalFiltered = filteredEntries.reduce((s, e) =>
     s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
@@ -486,6 +488,10 @@ export default function TimePage() {
             <option value="">All staff</option>
             {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
+          <select className="pick" value={filterClient} onChange={e => setFilterClient(e.target.value)} style={{ minWidth: 130, fontSize: 12, padding: "4px 6px" }}>
+            <option value="">All clients</option>
+            {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
           <select className="pick" value={filterTask} onChange={e => setFilterTask(e.target.value)} style={{ minWidth: 110, fontSize: 12, padding: "4px 6px" }}>
             <option value="">All tasks</option>
             {TASK_KEYS.map((k) => <option key={k} value={k}>{TASK_LABEL[k]}</option>)}
@@ -495,8 +501,8 @@ export default function TimePage() {
           <span style={{ color: "var(--muted)", fontSize: 12 }}>—</span>
           <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
             style={{ padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, font: "inherit" }} />
-          {(filterPerson || filterTask || filterDateFrom || filterDateTo) && (
-            <button onClick={() => { setFilterPerson(""); setFilterTask(""); setFilterDateFrom(""); setFilterDateTo(""); }}
+          {(filterPerson || filterClient || filterTask || filterDateFrom || filterDateTo) && (
+            <button onClick={() => { setFilterPerson(""); setFilterClient(""); setFilterTask(""); setFilterDateFrom(""); setFilterDateTo(""); }}
               style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: 12 }}>✕ Clear</button>
           )}
         </div>
