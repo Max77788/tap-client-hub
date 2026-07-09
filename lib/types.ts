@@ -82,6 +82,12 @@ export interface ClientService {
   filingState?: string;
   filingMonth?: string;
   filingType?: string; // "C Corp." | "S Corp." | "Partnership" | "SMLLC" | "Trust" | "Non Profit" | "Retirem Plan"
+  // State renewal
+  stateRenewal?: boolean;
+  renewalState?: string;
+  renewalDueMonth?: string;
+  renewalDueDay?: string;
+  renewalIdentifiers?: string;
   payEmails?: string[];
   comments?: CommentEntry[];
   svcNotes?: string;

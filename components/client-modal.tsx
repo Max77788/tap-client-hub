@@ -13,6 +13,8 @@ interface ClientModalProps {
 
 const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
 
+const FILING_TYPES = ["Business", "1040", "1065", "1120", "1120-S", "990"];
+
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
 
@@ -67,6 +69,12 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [taxType, setTaxType] = useState("Business");
   const [taxFilingMonth, setTaxFilingMonth] = useState("");
   const [taxFilingState, setTaxFilingState] = useState("");
+  const [taxFilingType, setTaxFilingType] = useState("Business");
+  const [taxStateRenewal, setTaxStateRenewal] = useState(false);
+  const [taxRenewalState, setTaxRenewalState] = useState("TX");
+  const [taxRenewalDueMonth, setTaxRenewalDueMonth] = useState("");
+  const [taxRenewalDueDay, setTaxRenewalDueDay] = useState("");
+  const [taxRenewalIds, setTaxRenewalIds] = useState("");
 
   // Per-service assigned staff
   const [finAssigned, setFinAssigned] = useState("Unassigned");
@@ -109,7 +117,16 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       const stxSvc = svcs.find(s => s.key === "sales_tax");
       if (stxSvc) setStxLineItems(stxSvc.salesTaxLineItems || []);
       const trSvc = svcs.find(s => s.key === "tax_returns");
-      if (trSvc) { setTaxFilingMonth(trSvc.filingMonth || ""); setTaxFilingState(trSvc.filingState || ""); }
+      if (trSvc) {
+        setTaxFilingMonth(trSvc.filingMonth || "");
+        setTaxFilingState(trSvc.filingState || "");
+        setTaxFilingType(trSvc.filingType || "Business");
+        setTaxStateRenewal(trSvc.stateRenewal || false);
+        setTaxRenewalState(trSvc.renewalState || "TX");
+        setTaxRenewalDueMonth(trSvc.renewalDueMonth || "");
+        setTaxRenewalDueDay(trSvc.renewalDueDay || "");
+        setTaxRenewalIds(trSvc.renewalIdentifiers || "");
+      }
     } else {
       setName(""); setType("Business"); setGroup(""); setAssigned("Unassigned");
       setEmail(""); setAddEmail(""); setPhone(""); setAddPhone("");
@@ -118,6 +135,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
       setTaxFilingMonth(""); setTaxFilingState("");
+      setTaxFilingType("Business"); setTaxStateRenewal(false);
+      setTaxRenewalState("TX"); setTaxRenewalDueMonth(""); setTaxRenewalDueDay(""); setTaxRenewalIds("");
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
@@ -171,6 +190,12 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       processor: taxType,
       filingMonth: taxFilingMonth || undefined,
       filingState: taxFilingState || undefined,
+      filingType: taxFilingType || undefined,
+      stateRenewal: taxStateRenewal || undefined,
+      renewalState: taxStateRenewal ? taxRenewalState : undefined,
+      renewalDueMonth: taxStateRenewal ? taxRenewalDueMonth : undefined,
+      renewalDueDay: taxStateRenewal ? taxRenewalDueDay : undefined,
+      renewalIdentifiers: taxStateRenewal ? taxRenewalIds : undefined,
     });
 
     onSave({
@@ -519,6 +544,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <select style={inputStyle} value={taxType} onChange={e => setTaxType(e.target.value)}>
               <option>Business</option><option>1040</option><option>1065</option><option>1120</option><option>1120-S</option><option>990</option>
             </select>
+            <label style={{ ...labelStyle, marginTop: 8 }}>Filing type</label>
+            <select style={inputStyle} value={taxFilingType} onChange={e => setTaxFilingType(e.target.value)}>
+              {FILING_TYPES.map(t => <option key={t}>{t}</option>)}
+            </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
               {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
@@ -539,6 +568,37 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 </select>
               </div>
             </div>
+            {/* State renewal */}
+            <label style={{ ...labelStyle, marginTop: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <input type="checkbox" checked={taxStateRenewal} onChange={e => setTaxStateRenewal(e.target.checked)} style={{ width: "auto" }} />
+              State renewal
+            </label>
+            {taxStateRenewal && (
+              <>
+                <div className="two" style={{ display: "flex", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ ...labelStyle, marginTop: 8 }}>STATE</label>
+                    <select style={inputStyle} value={taxRenewalState} onChange={e => setTaxRenewalState(e.target.value)}>
+                      <option value="">—</option>
+                      {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ ...labelStyle, marginTop: 8 }}>Due Month</label>
+                    <select style={inputStyle} value={taxRenewalDueMonth} onChange={e => setTaxRenewalDueMonth(e.target.value)}>
+                      <option value="">—</option>
+                      {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ ...labelStyle, marginTop: 8 }}>Due Day</label>
+                    <input style={inputStyle} type="number" value={taxRenewalDueDay} onChange={e => setTaxRenewalDueDay(e.target.value)} placeholder="1-31" min="1" max="31" />
+                  </div>
+                </div>
+                <label style={{ ...labelStyle, marginTop: 8 }}>Identifying Numbers</label>
+                <input style={inputStyle} value={taxRenewalIds} onChange={e => setTaxRenewalIds(e.target.value)} placeholder="e.g. EIN, state IDs" />
+              </>
+            )}
           </ServiceCard>
         </div>
 

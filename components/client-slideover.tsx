@@ -198,6 +198,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [filingState, setFilingState] = useState(trSvcInit?.filingState || "");
   const [filingMonth, setFilingMonth] = useState(trSvcInit?.filingMonth ? String(trSvcInit.filingMonth) : "");
   const [filingType, setFilingType] = useState(trSvcInit?.filingType || "");
+  const [stateRenewal, setStateRenewal] = useState(trSvcInit?.stateRenewal || false);
+  const [renewalState, setRenewalState] = useState(trSvcInit?.renewalState || "TX");
+  const [renewalDueMonth, setRenewalDueMonth] = useState(trSvcInit?.renewalDueMonth || "");
+  const [renewalDueDay, setRenewalDueDay] = useState(trSvcInit?.renewalDueDay || "");
+  const [renewalIds, setRenewalIds] = useState(trSvcInit?.renewalIdentifiers || "");
 
   // ── 1099s count state ──
   const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
@@ -352,6 +357,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setFilingState(trSvc?.filingState || "");
     setFilingMonth(trSvc?.filingMonth ? String(trSvc.filingMonth) : "");
     setFilingType(trSvc?.filingType || "");
+    setStateRenewal(trSvc?.stateRenewal || false);
+    setRenewalState(trSvc?.renewalState || "TX");
+    setRenewalDueMonth(trSvc?.renewalDueMonth || "");
+    setRenewalDueDay(trSvc?.renewalDueDay || "");
+    setRenewalIds(trSvc?.renewalIdentifiers || "");
     // Auto-open the add form when sales tax is enabled with no line items
     if (stxSvc?.enabled && items.length === 0 && !editing) {
       setAddingStx(true);
@@ -1073,6 +1083,64 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                   </select>
                 </div>
+                {/* State renewal */}
+                <div style={{ width: "100%", marginTop: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input type="checkbox" checked={stateRenewal} onChange={e => {
+                      setStateRenewal(e.target.checked);
+                      saveServiceField("tax_returns", "stateRenewal", e.target.checked);
+                    }} style={{ width: "auto" }} />
+                    State renewal
+                  </label>
+                  {stateRenewal && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                      <div style={{ flex: "1 0 80px" }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>STATE</label>
+                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                          value={renewalState}
+                          onChange={e => {
+                            setRenewalState(e.target.value);
+                            saveServiceField("tax_returns", "renewalState", e.target.value);
+                          }}>
+                          <option value="">—</option>
+                          {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: "1 0 80px" }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Month</label>
+                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                          value={renewalDueMonth}
+                          onChange={e => {
+                            setRenewalDueMonth(e.target.value);
+                            saveServiceField("tax_returns", "renewalDueMonth", e.target.value);
+                          }}>
+                          <option value="">—</option>
+                          {MONTH_NAMES.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: "1 0 60px" }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Day</label>
+                        <input type="number" min="1" max="31" placeholder="1-31"
+                          style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                          value={renewalDueDay}
+                          onChange={e => {
+                            setRenewalDueDay(e.target.value);
+                            saveServiceField("tax_returns", "renewalDueDay", e.target.value);
+                          }} />
+                      </div>
+                      <div style={{ flex: "2 0 140px" }}>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
+                        <input placeholder="e.g. EIN, state IDs"
+                          style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                          value={renewalIds}
+                          onChange={e => {
+                            setRenewalIds(e.target.value);
+                            saveServiceField("tax_returns", "renewalIdentifiers", e.target.value);
+                          }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1415,7 +1483,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           };
         }
         if (s.key === "tax_returns") {
-          return { ...s, filingState, filingMonth, filingType };
+          return { ...s, filingState, filingMonth, filingType, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers: renewalIds };
         }
         return s;
       });
@@ -2139,6 +2207,56 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                   </select>
                 </div>
+                <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>State renewal</span>
+                  <input type="checkbox" checked={stateRenewal} onChange={e => {
+                    setStateRenewal(e.target.checked);
+                    autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, stateRenewal: e.target.checked } : s));
+                  }} style={{ width: "auto" }} />
+                </div>
+                {stateRenewal && (
+                  <>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>STATE</span>
+                      <select value={renewalState} onChange={e => {
+                        setRenewalState(e.target.value);
+                        autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, renewalState: e.target.value } : s));
+                      }}
+                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
+                        <option value="">—</option>
+                        {US_STATES.map(st => <option key={st}>{st}</option>)}
+                      </select>
+                    </div>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>Due Month</span>
+                      <select value={renewalDueMonth} onChange={e => {
+                        setRenewalDueMonth(e.target.value);
+                        autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, renewalDueMonth: e.target.value } : s));
+                      }}
+                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
+                        <option value="">—</option>
+                        {MONTH_NAMES.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>Due Day</span>
+                      <input type="number" min="1" max="31" value={renewalDueDay} onChange={e => {
+                        setRenewalDueDay(e.target.value);
+                        autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, renewalDueDay: e.target.value } : s));
+                      }}
+                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }} />
+                    </div>
+                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                      <span className="k" style={{ color: "var(--muted)" }}>Identifying Numbers</span>
+                      <input value={renewalIds} onChange={e => {
+                        setRenewalIds(e.target.value);
+                        autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, renewalIdentifiers: e.target.value } : s));
+                      }}
+                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                        placeholder="e.g. EIN, state IDs" />
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -2318,7 +2436,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPinRef.current?.value ?? prPin, eftps: prEftpsRef.current?.value ?? prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
         }
         if (s.key === "tax_returns") {
-          updated = { ...updated, filingState, filingMonth, filingType };
+          updated = { ...updated, filingState, filingMonth, filingType, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers: renewalIds };
         }
         return updated;
       });
