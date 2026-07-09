@@ -13,7 +13,7 @@ interface ClientModalProps {
 
 const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
 
-const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Trust", "Non Profit", "Retirem Plan", "State Renewal"];
+const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Trust", "Non Profit", "Retirem Plan"];
 
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
@@ -540,10 +540,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
           {/* Tax Return (last) */}
           <ServiceCard icon="📋" label="Tax Return" checked={tax} onChange={setTax}>
-            <label style={{ ...labelStyle, marginTop: 8 }}>Return type</label>
-            <select style={inputStyle} value={taxType} onChange={e => setTaxType(e.target.value)}>
-              <option>Business</option><option>1040</option><option>1065</option><option>1120</option><option>1120-S</option><option>990</option>
-            </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Filing type</label>
             <select style={inputStyle} value={taxFilingType} onChange={e => setTaxFilingType(e.target.value)}>
               {FILING_TYPES.map(t => <option key={t}>{t}</option>)}
