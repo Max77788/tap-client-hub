@@ -56,25 +56,6 @@ export async function GET(request: Request) {
 
     const ids = dbClients.map((c: any) => c.id);
 
-    // ── Batch contacts query (replaces broken embedded contacts(*) join) ──
-    let dbContacts: any[] = [];
-    const CONTACTS_BATCH = 200;
-    for (let i = 0; i < ids.length; i += CONTACTS_BATCH) {
-      const batch = ids.slice(i, i + CONTACTS_BATCH);
-      const { data: batchData, error: ctErr } = await supabase
-        .from("contacts")
-        .select("client_id, email, phone")
-        .in("client_id", batch);
-      if (ctErr) console.error("contacts query error:", ctErr);
-      if (batchData) dbContacts = dbContacts.concat(batchData);
-    }
-    const contactByClient: Record<string, { emails: string[]; phones: string[] }> = {};
-    for (const ct of dbContacts) {
-      if (!contactByClient[ct.client_id]) contactByClient[ct.client_id] = { emails: [], phones: [] };
-      if (ct.email) contactByClient[ct.client_id].emails.push(ct.email);
-      if (ct.phone) contactByClient[ct.client_id].phones.push(ct.phone);
-    }
-
     // Batch IN queries — keep under ~200 UUIDs to stay below Supabase's ~16KB URL header limit
     const BATCH_SIZE = 200;
     let dbServices: any[] = [];
@@ -147,12 +128,7 @@ export async function GET(request: Request) {
     const staffNames: Record<string, string> = {};
     for (const s of staffRows || []) staffNames[s.id] = s.full_name;
 
-    // Fetch EINs from client_tax_ids
-    const { data: taxRows } = await supabase.from("client_tax_ids").select("client_id, ein");
-    const einMap: Record<string, string> = {};
-    for (const t of taxRows || []) {
-      if (t.ein) einMap[t.client_id] = String(t.ein).replace(/\.0$/, "");
-    }
+    // EIN is now stored directly on clients table — no need for client_tax_ids lookup
 
     // ── v7 normalized tables: sales_tax_registration + service_comments ──
     const normStxByCsId: Record<string, any[]> = {};
@@ -279,12 +255,12 @@ export async function GET(request: Request) {
         group: db.group_owner || "Unassigned",
         groupName: db.group_name || db.group_owner || "", status: db.status || "active",
         city: db.city || "", state: db.state || "TX",
-        emails: [...new Set((contactByClient[db.id]?.emails || []))],
-        phones: contactByClient[db.id]?.phones || [],
+        emails: db.emails ? (() => { try { const p = JSON.parse(db.emails); return Array.isArray(p) ? p : [db.emails]; } catch { return [db.emails]; } })() : [],
+        phones: db.phones ? (() => { try { const p = JSON.parse(db.phones); return Array.isArray(p) ? p : [db.phones]; } catch { return [db.phones]; } })() : [],
         address: db.address || "",
         assignedStaff: staffNames[svcs[0]?.assigned_to || ""] || svcs[0]?.assigned_to || "Unassigned",
         notes: db.notes || "",
-        ein: einMap[db.id] || "",
+        ein: db.ein || "",
         services: mergedSvcs,
       };
     });
@@ -319,30 +295,6 @@ export async function PUT(request: Request) {
 
     if (Object.keys(clientUpdates).length > 0) {
       await supabase.from("clients").update(clientUpdates).eq("id", clientId);
-    }
-
-    // Update contact info if provided
-    if (emails || phones) {
-      const { data: existingContact } = await supabase
-        .from("contacts").select("id").eq("client_id", clientId).maybeSingle();
-      if (existingContact) {
-        const contactUpdates: Record<string, any> = {};
-        if (emails && emails.length > 0) contactUpdates.email = emails[0];
-        if (phones && phones.length > 0) contactUpdates.phone = phones[0];
-        if (Object.keys(contactUpdates).length > 0) {
-          await supabase.from("contacts").update(contactUpdates).eq("id", existingContact.id);
-        }
-      } else {
-        // No contact row yet — insert one (name is NOT NULL, use client name)
-        const contactInsert: Record<string, any> = { id: randomUUID(), client_id: clientId, name: name || "Contact" };
-        if (emails && emails.length > 0) contactInsert.email = emails[0];
-        if (phones && phones.length > 0) contactInsert.phone = phones[0];
-        const { error: insertErr } = await supabase.from("contacts").insert(contactInsert);
-        if (insertErr) {
-          console.error("contacts insert failed:", insertErr);
-          return NextResponse.json({ success: false, error: "contacts insert: " + insertErr.message }, { status: 500 });
-        }
-      }
     }
 
     // Reverse map: frontend key -> service code
@@ -677,12 +629,7 @@ export async function DELETE(request: Request) {
     if (e1) return NextResponse.json({ error: "client_services: " + e1.message }, { status: 500 });
     results.push("client_services");
 
-    // 2. Delete contacts
-    let { error: e2 } = await supabase.from("contacts").delete().eq("client_id", clientId);
-    if (e2) results.push("contacts skipped: " + e2.message);
-    else results.push("contacts");
-
-    // 3. Delete credentials
+    // 2. Delete credentials
     let { error: e3 } = await supabase.from("credentials").delete().eq("client_id", clientId);
     if (e3) results.push("credentials skipped: " + e3.message);
     else results.push("credentials");
@@ -697,12 +644,7 @@ export async function DELETE(request: Request) {
     if (e5) results.push("period_counts skipped: " + e5.message);
     else results.push("period_counts");
 
-    // 6. Delete vault entries
-    let { error: e6 } = await supabase.from("vault_entries").delete().eq("client_id", clientId);
-    if (e6) results.push("vault_entries skipped: " + e6.message);
-    else results.push("vault_entries");
-
-    // 7. Delete the client itself
+    // 6. Delete the client itself
     let { error: e7 } = await supabase.from("clients").delete().eq("id", clientId);
     if (e7) return NextResponse.json({ error: "clients: " + e7.message, cascaded: results }, { status: 500 });
     results.push("clients");
