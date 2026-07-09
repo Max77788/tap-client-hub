@@ -559,19 +559,27 @@ export default function TimePage() {
           <button
             onClick={() => {
               const headers = ["Who","Client","Task","Minutes","Date","Note"];
-              const rows = filteredEntries.map((e: any) => [
-                e.personName || "",
-                e.clientName || "",
-                e.taskLabel || e.task || "",
-                String(Math.round((e.duration || 0) / 60)),
-                e.date ? new Date(e.date).toLocaleDateString() : "",
-                (e.note || "").replace(/"/g, '""'),
-              ]);
-              const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
-              const blob = new Blob([csv], { type: "text/csv" });
+              const rows = filteredEntries.map((e: TimeEntry) => {
+                const dur = e.isRunning
+                  ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000)
+                  : (e.duration || 0);
+                const mins = (dur / 60).toFixed(1); // decimal minutes for accuracy
+                return [
+                  e.personName || "",
+                  e.clientName || "",
+                  e.taskLabel || e.task || "",
+                  mins,
+                  e.date ? new Date(e.date).toLocaleDateString("en-US") : "",
+                  (e.note || "").replace(/"/g, '""'),
+                ];
+              });
+              const csv = [headers, ...rows]
+                .map(r => r.map(c => `"${c}"`).join(","))
+                .join("\n");
+              const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
               const a = document.createElement("a");
               a.href = URL.createObjectURL(blob);
-              a.download = "timesheet_export.csv";
+              a.download = `timesheet_${new Date().toISOString().slice(0,10)}.csv`;
               a.click();
             }}
             style={{ all: "unset", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--teal)", padding: "2px 8px", borderRadius: 4 }}

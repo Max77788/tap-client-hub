@@ -40,7 +40,7 @@ export async function GET() {
     personId: e.who,
     personName: profileMap[e.who] || "Unknown",
     clientId: e.client_id,
-    clientName: clientMap[e.client_id] || "",
+    clientName: clientMap[e.client_id] || e.client_id || "",
     serviceLabel: e.task || "",
     duration: e.seconds || 0,
     date: e.started_at,
