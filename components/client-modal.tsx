@@ -13,7 +13,7 @@ interface ClientModalProps {
 
 const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
 
-const FILING_TYPES = ["Business", "1040", "1065", "1120", "1120-S", "990"];
+const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Trust", "Non Profit", "Retirem Plan", "State Renewal"];
 
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
@@ -69,7 +69,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [taxType, setTaxType] = useState("Business");
   const [taxFilingMonth, setTaxFilingMonth] = useState("");
   const [taxFilingState, setTaxFilingState] = useState("");
-  const [taxFilingType, setTaxFilingType] = useState("Business");
+  const [taxFilingType, setTaxFilingType] = useState("");
   const [taxStateRenewal, setTaxStateRenewal] = useState(false);
   const [taxRenewalState, setTaxRenewalState] = useState("TX");
   const [taxRenewalDueMonth, setTaxRenewalDueMonth] = useState("");
@@ -120,7 +120,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       if (trSvc) {
         setTaxFilingMonth(trSvc.filingMonth || "");
         setTaxFilingState(trSvc.filingState || "");
-        setTaxFilingType(trSvc.filingType || "Business");
+        setTaxFilingType(trSvc.filingType || "");
         setTaxStateRenewal(trSvc.stateRenewal || false);
         setTaxRenewalState(trSvc.renewalState || "TX");
         setTaxRenewalDueMonth(trSvc.renewalDueMonth || "");
@@ -135,7 +135,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
       setTaxFilingMonth(""); setTaxFilingState("");
-      setTaxFilingType("Business"); setTaxStateRenewal(false);
+      setTaxFilingType(""); setTaxStateRenewal(false);
       setTaxRenewalState("TX"); setTaxRenewalDueMonth(""); setTaxRenewalDueDay(""); setTaxRenewalIds("");
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
