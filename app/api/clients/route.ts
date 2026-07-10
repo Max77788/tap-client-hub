@@ -314,7 +314,8 @@ export async function PUT(request: Request) {
     };
 
     // Build unique codes we need
-    const codes = [...new Set(services
+    const safeServices = Array.isArray(services) ? services : [];
+    const codes = [...new Set(safeServices
       .filter((s: any) => KEY_TO_CODE[s.key])
       .map((s: any) => KEY_TO_CODE[s.key])
     )];
@@ -345,7 +346,7 @@ export async function PUT(request: Request) {
 
     const results: { key: string; action: string }[] = [];
 
-    for (const svc of services) {
+    for (const svc of safeServices) {
       const code = KEY_TO_CODE[svc.key];
       if (!code) continue;
       const serviceId = svcCodeToId[code];
