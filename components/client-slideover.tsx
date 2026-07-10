@@ -2399,7 +2399,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             }}>
               {saving ? "Saved" : "Save"}
             </button>
-            <button className="btn alt" onClick={onClose} style={{
+            <button className="btn alt" onClick={() => { handleSaveModule(); onClose(); }} style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
               border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
               fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
@@ -2448,7 +2448,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
     return (
       <>
-        <div className="scrim show" onClick={() => { if (editing) handleSave(); onClose(); }} />
+        <div className="scrim show" onClick={() => { handleSave(); onClose(); }} />
         <div className="over show" style={{
           background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
         }}>
@@ -2468,7 +2468,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
               <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
-              <button className="ox" onClick={() => { if (editing) handleSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
+              <button className="ox" onClick={() => { handleSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
           </div>
 
