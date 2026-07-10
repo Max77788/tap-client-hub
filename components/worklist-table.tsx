@@ -1126,7 +1126,7 @@ export default function WorklistTable({
               const isStxItem = serviceKey === "sales_tax" && client._stxItem;
               const stxItem = client._stxItem;
               const stxIdx = client._stxIdx;
-              const displayName = isStxItem ? client._stxName : client.name;
+              const displayName = isStxItem ? (client._stxName || "—") : client.name;
               const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
               const key = `${client.id}:${serviceKey}`;
               const stages = worklistState[key] ?? Array(12).fill("");
@@ -1305,7 +1305,14 @@ export default function WorklistTable({
 
                   {/* Assigned — read-only text for payroll, inline editable dropdown for others */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
-                    <span className="text-[var(--ink)]">{toShortName(isStxItem ? (stxItem.assignedTo || svc.assignedTo || svc.processor || "—") : (svc.assignedTo || svc.processor || "—"))}</span>
+                    {isStxItem ? (
+                      <button onClick={() => onClientClick?.(client.id)}
+                        className="text-[11px] text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
+                        title={`Open ${displayName} details`}
+                      >{toShortName(stxItem.assignedTo || svc.assignedTo || svc.processor || "—")}</button>
+                    ) : (
+                      <span className="text-[var(--ink)]">{toShortName(svc.assignedTo || svc.processor || "—")}</span>
+                    )}
                   </td>
 
                   {/* Cadence — read-only text */}
@@ -1319,9 +1326,16 @@ export default function WorklistTable({
                         : (svc.frequency || "Monthly");
                       // Normalize to display labels matching the slideover dropdowns
                       const norm = (raw || "").trim().toLowerCase();
-                      if (norm === "yearly" || norm === "annual") return "Annual";
-                      if (norm === "annually") return "Annually";
-                      return (raw || "").trim() || "Monthly";
+                      let label = "Monthly";
+                      if (norm === "yearly" || norm === "annual") label = "Annual";
+                      else if (norm === "annually") label = "Annually";
+                      else label = (raw || "").trim() || "Monthly";
+                      return isStxItem ? (
+                        <button onClick={() => onClientClick?.(client.id)}
+                          className="text-[11px] text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
+                          title={`Open ${displayName} details`}
+                        >{label}</button>
+                      ) : label;
                     })()}
                   </td>
                   )}

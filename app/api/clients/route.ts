@@ -213,6 +213,11 @@ export async function GET(request: Request) {
           }),
           periodCounts: countByCsId[cs.id] || Array(12).fill(0),
           svcNotes: cs.notes || "",
+          stateRenewal: cs.state_renewal ?? null,
+          renewalState: cs.renewal_state || null,
+          renewalDueMonth: cs.renewal_due_month || null,
+          renewalDueDay: cs.renewal_due_day || null,
+          renewalIdentifiers: cs.renewal_identifiers || null,
         };
       });
       const seen = new Set(services.map((s: any) => s.key));
@@ -233,7 +238,8 @@ export async function GET(request: Request) {
             "assignedTo","expectedAnnual","financialsMonth","paydate","payrollPassword",
             "eftps","biweeklyCode","payStartDate","payPeriodFrequency","reportingMethod",
             "payrollCategory","qbLicense","reportingNotes","filingState","filingMonth",
-            "filingType","currentStage"];
+            "filingType","currentStage","stateRenewal","renewalState","renewalDueMonth",
+            "renewalDueDay","renewalIdentifiers"];
           for (const f of copyFields) {
             if (svc[f] && !existing[f]) existing[f] = svc[f];
           }
@@ -246,7 +252,7 @@ export async function GET(request: Request) {
         }
       }
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
+        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -373,6 +379,11 @@ export async function PUT(request: Request) {
                 pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
                 comments: svc.comments ?? existing.comments ?? null,
                 sales_tax_line_items: svc.salesTaxLineItems || null,
+                state_renewal: svc.stateRenewal ?? existing.state_renewal ?? null,
+                renewal_state: svc.renewalState ?? existing.renewal_state ?? null,
+                renewal_due_month: svc.renewalDueMonth ?? existing.renewal_due_month ?? null,
+                renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
+                renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
@@ -399,6 +410,11 @@ export async function PUT(request: Request) {
                 pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
                 comments: svc.comments ?? existing.comments ?? null,
                 sales_tax_line_items: svc.salesTaxLineItems || null,
+                state_renewal: svc.stateRenewal ?? existing.state_renewal ?? null,
+                renewal_state: svc.renewalState ?? existing.renewal_state ?? null,
+                renewal_due_month: svc.renewalDueMonth ?? existing.renewal_due_month ?? null,
+                renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
+                renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
@@ -430,6 +446,11 @@ export async function PUT(request: Request) {
               pay_emails: svc.payEmails || null,
               comments: svc.comments || null,
               sales_tax_line_items: svc.salesTaxLineItems || null,
+              state_renewal: svc.stateRenewal ?? null,
+              renewal_state: svc.renewalState || null,
+              renewal_due_month: svc.renewalDueMonth || null,
+              renewal_due_day: svc.renewalDueDay || null,
+              renewal_identifiers: svc.renewalIdentifiers || null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
@@ -462,7 +483,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems, biweeklyCode, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, filingState, filingMonth, filingType, payEmails, comments } = body;
+    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems, biweeklyCode, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, filingState, filingMonth, filingType, payEmails, comments, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -543,6 +564,26 @@ export async function PATCH(request: Request) {
 
     if (salesTaxLineItems !== undefined) {
       updates.sales_tax_line_items = salesTaxLineItems;
+    }
+
+    if (stateRenewal !== undefined) {
+      updates.state_renewal = stateRenewal ?? null;
+    }
+
+    if (renewalState !== undefined) {
+      updates.renewal_state = renewalState || null;
+    }
+
+    if (renewalDueMonth !== undefined) {
+      updates.renewal_due_month = renewalDueMonth || null;
+    }
+
+    if (renewalDueDay !== undefined) {
+      updates.renewal_due_day = renewalDueDay || null;
+    }
+
+    if (renewalIdentifiers !== undefined) {
+      updates.renewal_identifiers = renewalIdentifiers || null;
     }
 
     if (Object.keys(updates).length === 0) {
