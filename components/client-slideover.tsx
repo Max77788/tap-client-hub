@@ -1477,7 +1477,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           };
         }
         if (s.key === "tax_returns") {
-          return { ...s, filingState, filingMonth, filingType };
+          return { ...s, filingState, filingMonth, filingType, stateRenewal: undefined, renewalState: undefined, renewalDueMonth: undefined, renewalDueDay: undefined, renewalIdentifiers: undefined };
         }
         return s;
       });
@@ -2426,7 +2426,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPinRef.current?.value ?? prPin, eftps: prEftpsRef.current?.value ?? prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
         }
         if (s.key === "tax_returns") {
-          updated = { ...updated, filingState, filingMonth, filingType };
+          updated = { ...updated, filingState, filingMonth, filingType, stateRenewal: undefined, renewalState: undefined, renewalDueMonth: undefined, renewalDueDay: undefined, renewalIdentifiers: undefined };
         }
         return updated;
       });
