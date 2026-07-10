@@ -314,7 +314,10 @@ export async function PUT(request: Request) {
     if (ein !== undefined) clientUpdates.ein = ein;
 
     if (Object.keys(clientUpdates).length > 0) {
-      await supabase.from("clients").update(clientUpdates).eq("id", clientId);
+      const { error: updateErr } = await supabase.from("clients").update(clientUpdates).eq("id", clientId);
+      if (updateErr) {
+        return NextResponse.json({ error: "DB update failed: " + updateErr.message }, { status: 500 });
+      }
     }
 
     // Reverse map: frontend key -> service code
