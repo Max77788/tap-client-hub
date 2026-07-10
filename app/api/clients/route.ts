@@ -297,21 +297,53 @@ export async function PUT(request: Request) {
     const clientUpdates: Record<string, any> = {};
     if (name !== undefined) clientUpdates.name = name;
     if (type !== undefined) clientUpdates.type = type;
-    if (group !== undefined) clientUpdates.group_owner = group;
+    if (group !== undefined) clientUpdates.group_name = group;
     if (address !== undefined) clientUpdates.address = address;
     if (city !== undefined) clientUpdates.city = city;
     if (state !== undefined) clientUpdates.state = state;
     if (zip !== undefined) clientUpdates.zip = zip;
     if (notes !== undefined) clientUpdates.notes = notes;
-    if (emails !== undefined) clientUpdates.emails = Array.isArray(emails) ? emails : [emails].filter(Boolean);
-    if (phones !== undefined) clientUpdates.phones = Array.isArray(phones) ? phones : [phones].filter(Boolean);
-    if (assignedStaff !== undefined) clientUpdates.assigned_staff = assignedStaff;
+    if (emails !== undefined) {
+      // Store as comma-separated string (matches GET handler parsing)
+      const arr = Array.isArray(emails) ? emails : [emails];
+      clientUpdates.emails = JSON.stringify(arr.filter(Boolean));
+    }
+    if (phones !== undefined) {
+      const arr = Array.isArray(phones) ? phones : [phones];
+      clientUpdates.phones = JSON.stringify(arr.filter(Boolean));
+    }
+    if (assignedStaff !== undefined) {
+      // assigned_staff is derived from first service's assigned_to in GET handler.
+      // Update the first service's assigned_to in client_services.
+      // We'll set a flag to handle this in the service processing loop.
+      clientUpdates._assignedStaff = assignedStaff;
+    }
     if (ein !== undefined) clientUpdates.ein = ein;
 
     if (Object.keys(clientUpdates).length > 0) {
-      const { error: updateErr } = await supabase.from("clients").update(clientUpdates).eq("id", clientId);
-      if (updateErr) {
-        return NextResponse.json({ error: "DB update failed: " + updateErr.message }, { status: 500 });
+      // Strip _assignedStaff before DB write — handled separately
+      const assignedStaffVal = clientUpdates._assignedStaff;
+      delete clientUpdates._assignedStaff;
+      
+      if (Object.keys(clientUpdates).length > 0) {
+        const { error: updateErr } = await supabase.from("clients").update(clientUpdates).eq("id", clientId);
+        if (updateErr) {
+          return NextResponse.json({ error: "DB update failed: " + updateErr.message }, { status: 500 });
+        }
+      }
+
+      // Handle assignedStaff: update first active service's assigned_to
+      if (assignedStaffVal !== undefined) {
+        // Find staff ID from name
+        let staffId = assignedStaffVal; // Could be a name or ID
+        // Update first service for this client
+        const { data: firstSvc } = await supabase.from("client_services")
+          .select("id").eq("client_id", clientId).limit(1).single();
+        if (firstSvc) {
+          const { error: svcErr } = await supabase.from("client_services")
+            .update({ assigned_to: assignedStaffVal }).eq("id", firstSvc.id);
+          if (svcErr) console.error("Failed to update assigned_to:", svcErr.message);
+        }
       }
     }
 
