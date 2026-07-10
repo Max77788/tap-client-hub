@@ -364,26 +364,11 @@ export async function PUT(request: Request) {
                 frequency: svc.frequency || existing.frequency || "Monthly",
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
                 processor: svc.processor || existing.processor || null,
-                financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
-                paydate: svc.paydate ?? existing.paydate ?? null,
-                payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
-                eftps: svc.eftps ?? existing.eftps ?? null,
-                biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
-                pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
-                reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
-                pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
-                comments: svc.comments ?? existing.comments ?? null,
-                sales_tax_line_items: svc.salesTaxLineItems || null,
-                state_renewal: svc.stateRenewal ?? existing.state_renewal ?? null,
-                renewal_state: svc.renewalState ?? existing.renewal_state ?? null,
-                renewal_due_month: svc.renewalDueMonth ?? existing.renewal_due_month ?? null,
-                renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
-                renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
@@ -395,26 +380,11 @@ export async function PUT(request: Request) {
                 frequency: svc.frequency ?? existing.frequency ?? null,
                 assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
-                financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
-                paydate: svc.paydate ?? existing.paydate ?? null,
-                payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
-                eftps: svc.eftps ?? existing.eftps ?? null,
-                biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
-                pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
-                reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
-                pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
-                comments: svc.comments ?? existing.comments ?? null,
-                sales_tax_line_items: svc.salesTaxLineItems || null,
-                state_renewal: svc.stateRenewal ?? existing.state_renewal ?? null,
-                renewal_state: svc.renewalState ?? existing.renewal_state ?? null,
-                renewal_due_month: svc.renewalDueMonth ?? existing.renewal_due_month ?? null,
-                renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
-                renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
@@ -431,26 +401,11 @@ export async function PUT(request: Request) {
               frequency: svc.frequency || "Monthly",
               assigned_to: svc.assignedTo || null,
               processor: svc.processor || null,
-              financials_month: svc.financialsMonth ?? null,
-              expected_annual: svc.expectedAnnual ?? null,
-              paydate: svc.paydate || null,
-              payroll_password: svc.payrollPassword || null,
-              eftps: svc.eftps || null,
-              biweekly_code: svc.biweeklyCode || null,
-              pay_start_date: svc.payStartDate || null,
-              reporting_notes: svc.reportingNotes || null,
+              expected_annual: svc.expectedAnnual || null,
               notes: svc.svcNotes || null,
               filing_state: svc.filingState || null,
               due_month: svc.filingMonth || null,
               return_type: svc.filingType || null,
-              pay_emails: svc.payEmails || null,
-              comments: svc.comments || null,
-              sales_tax_line_items: svc.salesTaxLineItems || null,
-              state_renewal: svc.stateRenewal ?? null,
-              renewal_state: svc.renewalState || null,
-              renewal_due_month: svc.renewalDueMonth || null,
-              renewal_due_day: svc.renewalDueDay || null,
-              renewal_identifiers: svc.renewalIdentifiers || null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
@@ -483,7 +438,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, paydate, payrollPassword, eftps, salesTaxLineItems, biweeklyCode, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, filingState, filingMonth, filingType, payEmails, comments, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
+    const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -518,30 +473,6 @@ export async function PATCH(request: Request) {
       updates.frequency = frequency || null;
     }
 
-    if (paydate !== undefined) {
-      updates.paydate = paydate || null;
-    }
-
-    if (payrollPassword !== undefined) {
-      updates.payroll_password = payrollPassword || null;
-    }
-
-    if (eftps !== undefined) {
-      updates.eftps = eftps || null;
-    }
-
-    if (biweeklyCode !== undefined) {
-      updates.biweekly_code = biweeklyCode || null;
-    }
-
-    if (payStartDate !== undefined) {
-      updates.pay_start_date = payStartDate || null;
-    }
-
-    if (reportingNotes !== undefined) {
-      updates.reporting_notes = reportingNotes || null;
-    }
-
     if (filingState !== undefined) {
       updates.filing_state = filingState || null;
     }
@@ -552,38 +483,6 @@ export async function PATCH(request: Request) {
 
     if (filingType !== undefined) {
       updates.return_type = filingType || null;
-    }
-
-    if (payEmails !== undefined) {
-      updates.pay_emails = payEmails;
-    }
-
-    if (comments !== undefined) {
-      updates.comments = comments;
-    }
-
-    if (salesTaxLineItems !== undefined) {
-      updates.sales_tax_line_items = salesTaxLineItems;
-    }
-
-    if (stateRenewal !== undefined) {
-      updates.state_renewal = stateRenewal ?? null;
-    }
-
-    if (renewalState !== undefined) {
-      updates.renewal_state = renewalState || null;
-    }
-
-    if (renewalDueMonth !== undefined) {
-      updates.renewal_due_month = renewalDueMonth || null;
-    }
-
-    if (renewalDueDay !== undefined) {
-      updates.renewal_due_day = renewalDueDay || null;
-    }
-
-    if (renewalIdentifiers !== undefined) {
-      updates.renewal_identifiers = renewalIdentifiers || null;
     }
 
     if (Object.keys(updates).length === 0) {
