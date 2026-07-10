@@ -298,6 +298,10 @@ export async function PUT(request: Request) {
     if (state !== undefined) clientUpdates.state = state;
     if (zip !== undefined) clientUpdates.zip = zip;
     if (notes !== undefined) clientUpdates.notes = notes;
+    if (emails !== undefined) clientUpdates.emails = Array.isArray(emails) ? emails : [emails].filter(Boolean);
+    if (phones !== undefined) clientUpdates.phones = Array.isArray(phones) ? phones : [phones].filter(Boolean);
+    if (assignedStaff !== undefined) clientUpdates.assigned_staff = assignedStaff;
+    if (ein !== undefined) clientUpdates.ein = ein;
 
     if (Object.keys(clientUpdates).length > 0) {
       await supabase.from("clients").update(clientUpdates).eq("id", clientId);
