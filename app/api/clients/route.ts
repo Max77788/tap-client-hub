@@ -223,6 +223,7 @@ export async function GET(request: Request) {
           renewalDueMonth: cs.renewal_due_month || null,
           renewalDueDay: cs.renewal_due_day || null,
           renewalIdentifiers: cs.renewal_identifiers || null,
+          serviceName: cs.service_name || "",
         };
       });
       const seen = new Set(services.map((s: any) => s.key));
@@ -244,7 +245,7 @@ export async function GET(request: Request) {
             "eftps","biweeklyCode","payStartDate","payPeriodFrequency","reportingMethod",
             "payrollCategory","qbLicense","reportingNotes","filingState","filingMonth",
             "filingType","currentStage","stateRenewal","renewalState","renewalDueMonth",
-            "renewalDueDay","renewalIdentifiers"];
+            "renewalDueDay","renewalIdentifiers","serviceName"];
           for (const f of copyFields) {
             if (svc[f] && !existing[f]) existing[f] = svc[f];
           }
@@ -257,7 +258,7 @@ export async function GET(request: Request) {
         }
       }
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
+        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, serviceName: "", currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -416,6 +417,7 @@ export async function PUT(request: Request) {
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
+                service_name: svc.serviceName ?? existing.service_name ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
@@ -432,6 +434,7 @@ export async function PUT(request: Request) {
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
+                service_name: svc.serviceName ?? existing.service_name ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
@@ -453,6 +456,7 @@ export async function PUT(request: Request) {
               filing_state: svc.filingState || null,
               due_month: svc.filingMonth || null,
               return_type: svc.filingType || null,
+              service_name: svc.serviceName || null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
@@ -485,7 +489,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType } = body;
+    const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -530,6 +534,10 @@ export async function PATCH(request: Request) {
 
     if (filingType !== undefined) {
       updates.return_type = filingType || null;
+
+    if (serviceName !== undefined) {
+      updates.service_name = serviceName || null;
+    }
     }
 
     if (Object.keys(updates).length === 0) {
