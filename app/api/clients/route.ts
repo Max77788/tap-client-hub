@@ -276,7 +276,9 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount } });
+    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount } }, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' }
+    });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }
