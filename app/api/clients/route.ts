@@ -32,12 +32,7 @@ export const dynamic = "force-dynamic"; // Never cache — data changes frequent
 
 export async function GET(request: Request) {
   try {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { db: { schema: "tap_hub_project" } }
-    );
+    const supabase = await getSupabase();
 
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get("type")?.toLowerCase();
