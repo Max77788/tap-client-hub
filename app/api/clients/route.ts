@@ -8,6 +8,16 @@ async function getSupabase() {
   const { createClient } = await import("@supabase/supabase-js");
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
+}
+
+// Separate reader client for unauthenticated GETs
+async function getSupabaseAnon() {
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { db: { schema: "tap_hub_project" } }
   );

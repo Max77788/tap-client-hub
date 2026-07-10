@@ -87,22 +87,28 @@ def test_details():
         return "NOT_FOUND"
 
     def set_input_by_label(panel, label: str, value: str):
-        """Find input/select by label, set value."""
+        """Find input/select by label, set value, trigger blur."""
+        from selenium.webdriver.common.keys import Keys
         fields = panel.find_elements(By.XPATH, f".//*[contains(text(), '{label}')]")
         for f in fields:
             try:
                 parent = f.find_element(By.XPATH, "..")
-                # Try select first
                 for sel in parent.find_elements(By.TAG_NAME, "select"):
                     if sel.is_displayed():
                         for o in sel.find_elements(By.TAG_NAME, "option"):
                             if value.lower() in o.text.lower():
                                 Select(sel).select_by_visible_text(o.text)
+                                sel.send_keys(Keys.TAB)  # trigger onBlur
+                                driver.execute_script("arguments[0].dispatchEvent(new Event('change', {bubbles: true}))", sel)
+                                dwait(0.5)  # React state update
                                 return
-                # Try input
                 for inp in parent.find_elements(By.TAG_NAME, "input"):
                     if inp.is_displayed() and not inp.get_attribute("readonly"):
-                        inp.clear(); inp.send_keys(value); return
+                        inp.clear(); inp.send_keys(value)
+                        inp.send_keys(Keys.TAB)  # trigger onBlur
+                        driver.execute_script("arguments[0].dispatchEvent(new Event('change', {bubbles: true}))", inp)
+                        dwait(0.5)  # React state update
+                        return
             except: pass
 
     def save():
