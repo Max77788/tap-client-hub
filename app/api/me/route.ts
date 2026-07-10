@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         });
       }
       // Last resort: return basic info from the cookie so the page loads
-      const displayName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+      const displayName = email.split('@')[0];
       return NextResponse.json({
         id: "",
         email: email,
