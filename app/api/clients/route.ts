@@ -304,13 +304,13 @@ export async function PUT(request: Request) {
     if (zip !== undefined) clientUpdates.zip = zip;
     if (notes !== undefined) clientUpdates.notes = notes;
     if (emails !== undefined) {
-      // Store as comma-separated string (matches GET handler parsing)
+      // Store as comma-separated string (GET handler splits by comma)
       const arr = Array.isArray(emails) ? emails : [emails];
-      clientUpdates.emails = JSON.stringify(arr.filter(Boolean));
+      clientUpdates.emails = arr.filter(Boolean).join(", ");
     }
     if (phones !== undefined) {
       const arr = Array.isArray(phones) ? phones : [phones];
-      clientUpdates.phones = JSON.stringify(arr.filter(Boolean));
+      clientUpdates.phones = arr.filter(Boolean).join(", ");
     }
     if (assignedStaff !== undefined) {
       // assigned_staff is derived from first service's assigned_to in GET handler.
