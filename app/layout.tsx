@@ -174,7 +174,7 @@ export default function RootLayout({
         if (!res.ok) return;
         const users = await res.json();
         if (!Array.isArray(users)) return;
-        // Read current user's name from cookie (profiles has no email column)
+        // Read current user's name from cookie
         const cookieMatch = document.cookie.match(/(?:^|;\\s*)tap_demo_user=([^;]*)/);
         const userName = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
         if (!userName) return;

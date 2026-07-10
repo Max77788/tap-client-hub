@@ -87,12 +87,11 @@ export async function GET(request: Request) {
     const emailMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
     if (emailMatch) {
       const email = decodeURIComponent(emailMatch[1]);
-      // Try to look up by name derived from email (since profiles table has no email column)
-      const nameFromEmail = email.split('@')[0];
+      // Look up by email now that profiles table has an email column
       let { data: profile } = await supabase
         .from("profiles")
         .select("*")
-        .or(`full_name.ilike.%${nameFromEmail}%,full_name.eq.${nameFromEmail}`)
+        .eq("email", email)
         .maybeSingle();
       if (profile) {
         return NextResponse.json({

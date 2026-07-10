@@ -188,8 +188,8 @@ export async function GET(request: Request) {
           qbLicense: cs.qb_license || "",
           reportingNotes: cs.reporting_notes || "",
           filingState: cs.filing_state || "",
-          filingMonth: cs.filing_month ? String(cs.filing_month) : "",
-          filingType: cs.filing_type || "",
+          filingMonth: cs.due_month ? String(cs.due_month) : "",
+          filingType: cs.return_type || "",
           payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
           comments: lite ? [] : (() => {
             const oldCmts = Array.isArray(cs.comments) ? cs.comments : [];
@@ -374,8 +374,8 @@ export async function PUT(request: Request) {
                 reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
-                filing_month: svc.filingMonth ?? existing.filing_month ?? null,
-                filing_type: svc.filingType ?? existing.filing_type ?? null,
+                due_month: svc.filingMonth ?? existing.due_month ?? null,
+                return_type: svc.filingType ?? existing.return_type ?? null,
                 pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
                 comments: svc.comments ?? existing.comments ?? null,
                 sales_tax_line_items: svc.salesTaxLineItems || null,
@@ -405,8 +405,8 @@ export async function PUT(request: Request) {
                 reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
-                filing_month: svc.filingMonth ?? existing.filing_month ?? null,
-                filing_type: svc.filingType ?? existing.filing_type ?? null,
+                due_month: svc.filingMonth ?? existing.due_month ?? null,
+                return_type: svc.filingType ?? existing.return_type ?? null,
                 pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
                 comments: svc.comments ?? existing.comments ?? null,
                 sales_tax_line_items: svc.salesTaxLineItems || null,
@@ -441,8 +441,8 @@ export async function PUT(request: Request) {
               reporting_notes: svc.reportingNotes || null,
               notes: svc.svcNotes || null,
               filing_state: svc.filingState || null,
-              filing_month: svc.filingMonth || null,
-              filing_type: svc.filingType || null,
+              due_month: svc.filingMonth || null,
+              return_type: svc.filingType || null,
               pay_emails: svc.payEmails || null,
               comments: svc.comments || null,
               sales_tax_line_items: svc.salesTaxLineItems || null,
@@ -547,11 +547,11 @@ export async function PATCH(request: Request) {
     }
 
     if (filingMonth !== undefined) {
-      updates.filing_month = filingMonth || null;
+      updates.due_month = filingMonth || null;
     }
 
     if (filingType !== undefined) {
-      updates.filing_type = filingType || null;
+      updates.return_type = filingType || null;
     }
 
     if (payEmails !== undefined) {

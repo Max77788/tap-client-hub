@@ -55,8 +55,8 @@ export async function GET() {
     ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS biweekly_code TEXT DEFAULT NULL;
     ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS pay_start_date TEXT DEFAULT NULL;
     ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS filing_state TEXT DEFAULT NULL;
-    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS filing_month TEXT DEFAULT NULL;
-    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS filing_type TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS due_month TEXT DEFAULT NULL;
+    ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS return_type TEXT DEFAULT NULL;
     ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS pay_emails TEXT[] DEFAULT NULL;
   `;

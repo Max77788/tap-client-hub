@@ -20,8 +20,7 @@ export function getSupabaseClientDefault() {
 
 /**
  * Extract email from tap_demo_email cookie fallback.
- * The profiles table has no email column, so we rely on this cookie
- * set during login for demo users.
+ * The profiles table now has an email column for direct lookup.
  */
 function getEmailFromCookie(cookieHeader: string): string {
   const match = cookieHeader.match(/(?:^|;\\s*)tap_demo_email=([^;]*)/);

@@ -11,7 +11,7 @@ export async function GET() {
     .from("credentials")
     .select("*")
     .order("group_label", { ascending: true })
-    .order("portal", { ascending: true });
+    .order("site", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -24,8 +24,8 @@ export async function GET() {
   // ── DB → VaultEntry mapping ──
   const entries = credentials.map((c: any) => ({
     id: c.id,
-    site: c.portal || "",
-    url: c.link_url || "",
+    site: c.site || "",
+    url: c.url || "",
     email: c.username || "",
     password: c.vault_ref || "",
     notes: c.notes || "",
@@ -33,8 +33,8 @@ export async function GET() {
     isBank: c.is_bank || false,
     groupLabel: c.group_label || "",
     purpose: c.purpose || "",
-    additionalInfo01: c.additional_info_01 || "",
-    additionalInfo02: c.additional_info_02 || "",
+    additionalInfo01: c.additional_info_1 || "",
+    additionalInfo02: c.additional_info_2 || "",
   }));
 
   return NextResponse.json(entries);
@@ -63,15 +63,15 @@ export async function POST(request: NextRequest) {
     .insert({
       client_id: body.clientId || null,
       group_label: body.groupLabel || null,
-      portal: body.site.trim(),
+      site: body.site.trim(),
       username: body.email?.trim() || null,
       vault_ref: body.password?.trim() || null,
       is_bank: body.isBank || false,
-      link_url: body.url?.trim() || null,
+      url: body.url?.trim() || null,
       notes: body.notes?.trim() || null,
       purpose: body.purpose?.trim() || null,
-      additional_info_01: body.additionalInfo01?.trim() || null,
-      additional_info_02: body.additionalInfo02?.trim() || null,
+      additional_info_1: body.additionalInfo01?.trim() || null,
+      additional_info_2: body.additionalInfo02?.trim() || null,
     })
     .select()
     .single();
@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
   // Map back to VaultEntry shape
   const entry = {
     id: created.id,
-    site: created.portal || "",
-    url: created.link_url || "",
+    site: created.site || "",
+    url: created.url || "",
     email: created.username || "",
     password: created.vault_ref || "",
     notes: created.notes || "",
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
     isBank: created.is_bank || false,
     groupLabel: created.group_label || "",
     purpose: created.purpose || "",
-    additionalInfo01: created.additional_info_01 || "",
-    additionalInfo02: created.additional_info_02 || "",
+    additionalInfo01: created.additional_info_1 || "",
+    additionalInfo02: created.additional_info_2 || "",
   };
 
   return NextResponse.json(entry, { status: 201 });
@@ -126,15 +126,15 @@ export async function PUT(request: NextRequest) {
     .update({
       client_id: body.clientId || null,
       group_label: body.groupLabel || null,
-      portal: body.site.trim(),
+      site: body.site.trim(),
       username: body.email?.trim() || null,
       vault_ref: body.password?.trim() || null,
       is_bank: body.isBank || false,
-      link_url: body.url?.trim() || null,
+      url: body.url?.trim() || null,
       notes: body.notes?.trim() || null,
       purpose: body.purpose?.trim() || null,
-      additional_info_01: body.additionalInfo01?.trim() || null,
-      additional_info_02: body.additionalInfo02?.trim() || null,
+      additional_info_1: body.additionalInfo01?.trim() || null,
+      additional_info_2: body.additionalInfo02?.trim() || null,
     })
     .eq("id", id)
     .select()
@@ -150,8 +150,8 @@ export async function PUT(request: NextRequest) {
 
   const entry = {
     id: updated.id,
-    site: updated.portal || "",
-    url: updated.link_url || "",
+    site: updated.site || "",
+    url: updated.url || "",
     email: updated.username || "",
     password: updated.vault_ref || "",
     notes: updated.notes || "",
@@ -159,8 +159,8 @@ export async function PUT(request: NextRequest) {
     isBank: updated.is_bank || false,
     groupLabel: updated.group_label || "",
     purpose: updated.purpose || "",
-    additionalInfo01: updated.additional_info_01 || "",
-    additionalInfo02: updated.additional_info_02 || "",
+    additionalInfo01: updated.additional_info_1 || "",
+    additionalInfo02: updated.additional_info_2 || "",
   };
 
   return NextResponse.json(entry);
