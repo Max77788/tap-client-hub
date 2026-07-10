@@ -1123,20 +1123,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <input type="number" min="1" max="31" placeholder="1-31"
                           style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                           value={renewalDueDay}
-                          onChange={e => {
-                            setRenewalDueDay(e.target.value);
-                            saveServiceField("tax_returns", "renewalDueDay", e.target.value);
-                          }} />
+                          onChange={e => setRenewalDueDay(e.target.value)} />
                       </div>
                       <div style={{ flex: "2 0 140px" }}>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
                         <input placeholder="e.g. EIN, state IDs"
                           style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                           value={renewalIds}
-                          onChange={e => {
-                            setRenewalIds(e.target.value);
-                            saveServiceField("tax_returns", "renewalIdentifiers", e.target.value);
-                          }} />
+                          onChange={e => setRenewalIds(e.target.value)} />
                       </div>
                     </div>
                   )}
@@ -1483,7 +1477,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           };
         }
         if (s.key === "tax_returns") {
-          return { ...s, filingState, filingMonth, filingType, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers: renewalIds };
+          return { ...s, filingState, filingMonth, filingType };
         }
         return s;
       });
@@ -2240,18 +2234,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                       <span className="k" style={{ color: "var(--muted)" }}>Due Day</span>
-                      <input type="number" min="1" max="31" value={renewalDueDay} onChange={e => {
-                        setRenewalDueDay(e.target.value);
-                        autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, renewalDueDay: e.target.value } : s));
-                      }}
+                      <input type="number" min="1" max="31" value={renewalDueDay} onChange={e => setRenewalDueDay(e.target.value)}
                         style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }} />
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                       <span className="k" style={{ color: "var(--muted)" }}>Identifying Numbers</span>
-                      <input value={renewalIds} onChange={e => {
-                        setRenewalIds(e.target.value);
-                        autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, renewalIdentifiers: e.target.value } : s));
-                      }}
+                      <input value={renewalIds} onChange={e => setRenewalIds(e.target.value)}
                         style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                         placeholder="e.g. EIN, state IDs" />
                     </div>
@@ -2438,7 +2426,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPinRef.current?.value ?? prPin, eftps: prEftpsRef.current?.value ?? prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
         }
         if (s.key === "tax_returns") {
-          updated = { ...updated, filingState, filingMonth, filingType, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers: renewalIds };
+          updated = { ...updated, filingState, filingMonth, filingType };
         }
         return updated;
       });
