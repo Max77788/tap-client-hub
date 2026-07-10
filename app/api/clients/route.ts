@@ -474,7 +474,7 @@ export async function PUT(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, results });
+    return NextResponse.json({ success: true, results, clientUpdates: { ...clientUpdates, _assignedStaff: undefined } });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }
