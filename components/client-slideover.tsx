@@ -1250,7 +1250,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           }];
                           setStxLineItems(upd);
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                          throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                          // Save STX via PATCH (handles sales_tax_registration sync)
+                          const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                           [stxNameRef, stxRtRef, stxTaxIdRef, stxBankRef, stxRoutingRef, stxAccountRef].forEach(r => { if (r.current) r.current.value = ''; });
                           setNewStxFreq("Monthly"); setNewStxAssigned("");
                           setAddingStx(false);
@@ -1328,7 +1330,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   };
                                   setStxLineItems(upd);
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                                  throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                                  // Save STX via PATCH (handles sales_tax_registration sync)
+                          const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                                   setEditingStxIdx(-1);
                                 }}>
                                 Save
@@ -1372,7 +1376,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   const upd = stxLineItems.filter((_, j) => j !== i);
                                   setStxLineItems(upd);
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                                  throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                                  // Save STX via PATCH (handles sales_tax_registration sync)
+                          const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                                 }}
                               >✕</button>
                             </div>
@@ -1724,7 +1730,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     }];
                     setStxLineItems(upd);
                     setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-                    throttledOnSave({ ...client, services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s) } as Client);
+                    // Save STX via PATCH (handles sales_tax_registration sync)
+                          const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                     [stxNameRef, stxRtRef, stxTaxIdRef, stxBankRef, stxRoutingRef, stxAccountRef].forEach(r => { if (r.current) r.current.value = ''; });
                     setNewStxFreq("Monthly"); setNewStxAssigned("");
                     setAddingStx(false);
