@@ -9,13 +9,13 @@ interface NavItem {
   label: string;
   href: string;
   icon?: string;
-  role?: "owner" | "all";
+  role?: "owner" | "admin" | "manager" | "all";
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Clients", href: "/", icon: "👥" },
-  { label: "Team Workload", href: "/workload", icon: "⚖️" },
-  { label: "Timesheet", href: "/time", icon: "⏱️" },
+  { label: "Team Workload", href: "/workload", icon: "⚖️", role: "manager" },
+  { label: "Timesheet", href: "/time", icon: "⏱️", role: "manager" },
   { label: "---", href: "" },
   { label: "Financials", href: "/fin", icon: "📊" },
   { label: "Payroll", href: "/pr", icon: "💵" },
@@ -24,9 +24,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Tax Returns", href: "/tax", icon: "📋" },
   { label: "Renditions", href: "/rend", icon: "🏠" },
   { label: "---", href: "" },
-  { label: "Password Vault", href: "/vault", icon: "🔒" },
-  { label: "Users & Access", href: "/users", icon: "🪪", role: "owner" },
-  { label: "Settings", href: "/settings", icon: "⚙️" },
+  { label: "Password Vault", href: "/vault", icon: "🔒", role: "admin" },
+  { label: "Users & Access", href: "/users", icon: "🪪", role: "admin" },
+  { label: "Settings", href: "/settings", icon: "⚙️", role: "admin" },
   { label: "Help & Support", href: "/support", icon: "🛟" },
 ];
 
@@ -153,6 +153,17 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const [role, setRole] = useState("admin");
+
+  // Read role from cookie set by /api/me after login
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
+    if (match) {
+      const cookieRole = decodeURIComponent(match[1]);
+      // Map to our role values
+      const validRoles = ["admin", "manager", "staff", "offshore", "owner"];
+      setRole(validRoles.includes(cookieRole) ? cookieRole : "staff");
+    }
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
@@ -202,8 +213,13 @@ export default function RootLayout({
   }, []);
 
   const visibleNav = NAV_ITEMS.filter((item) => {
-    if (item.role === "owner" && role !== "owner" && role !== "admin") return false;
-    if (userModules.length > 0 && role !== "owner" && role !== "admin") {
+    // Generic role filter: if item has a role requirement, check it
+    if (item.role) {
+      if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
+      if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
+    }
+    // Module-based filtering (for staff/offshore with limited modules)
+    if (userModules.length > 0 && role !== "owner" && role !== "admin" && role !== "manager") {
       return userModules.includes(item.label);
     }
     return true;

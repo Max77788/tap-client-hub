@@ -35,6 +35,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // ── Role-based access control ──
+  // Extract role from cookie
+  const roleMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
+  const userRole = roleMatch ? decodeURIComponent(roleMatch[1]) : "staff";
+
+  // Pages restricted to admin/owner only
+  const adminOnlyPages = ["/users", "/vault", "/settings"];
+  // Pages restricted to admin/manager only
+  const managerPlusPages = ["/workload", "/time"];
+
+  if (adminOnlyPages.some(p => pathname.startsWith(p))) {
+    if (userRole !== "admin" && userRole !== "owner") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
+  if (managerPlusPages.some(p => pathname.startsWith(p))) {
+    if (userRole !== "admin" && userRole !== "owner" && userRole !== "manager") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   // Redirect authenticated users away from login
   if ((hasDemoCookie || hasAuthToken) && pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/", request.url));

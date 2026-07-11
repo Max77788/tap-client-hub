@@ -64,6 +64,7 @@ function LoginContent() {
         // If 2FA check fails, proceed with login
       }
 
+      fetch("/api/me", { credentials: "include" }).catch(() => {});
       router.push(next);
       router.refresh();
       return;
@@ -101,6 +102,7 @@ function LoginContent() {
         // No 2FA - proceed
         document.cookie = `tap_demo_user=${encodeURIComponent(demo?.name || email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
         document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+        fetch("/api/me", { credentials: "include" }).catch(() => {});
         router.push(next);
         router.refresh();
       }
@@ -135,6 +137,7 @@ function LoginContent() {
 
       document.cookie = `tap_demo_user=${encodeURIComponent(data.name || email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+      fetch("/api/me", { credentials: "include" }).catch(() => {});
 
       router.push(next);
       router.refresh();

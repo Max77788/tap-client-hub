@@ -1,122 +1,68 @@
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
-function reverseName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length < 2) return name;
-  const last = parts.pop()!;
-  return `${last}, ${parts.join(" ")}`;
-}
+/**
+ * GET /api/me
+ * Reads the current user's role from profiles table and sets it as a cookie.
+ * Called after successful login.
+ */
+export async function GET() {
+  const cookieStore = await cookies();
+  const demoEmail = cookieStore.get("tap_demo_email")?.value || "";
+  // Check for Supabase auth token cookies
+  const allCookies = cookieStore.getAll();
+  const demoTokens = allCookies.filter(c => c.name.includes("auth-token"));
 
-export async function GET(request: Request) {
-  try {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { db: { schema: "tap_hub_project" } }
-    );
+  // Determine user identity
+  let profileId = "";
+  let profileEmail = demoEmail;
 
-    // Strategy 1: Read tap_demo_user cookie (demo logins)
-    const nameMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
-    if (nameMatch) {
-      const demoName = decodeURIComponent(nameMatch[1]);
-      // Try raw name first (e.g. "Max Matronin"), then reversed ("Matronin, Max")
-      let { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("full_name", demoName)
-        .maybeSingle();
-      if (!profile) {
-        const { data: rev } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("full_name", reverseName(demoName))
-          .maybeSingle();
-        profile = rev;
-      }
-      if (profile) {
-        return NextResponse.json({
-          id: profile.id,
-          email: profile.email || "",
-          name: profile.full_name || "",
-          role: profile.role || "",
-          location: profile.location || "",
-          email_2fa_enabled: profile.email_2fa_enabled ?? false,
-        });
-      }
-    }
-
-    // Strategy 2: Read Supabase auth token from cookies (real auth)
-    const authCookieMatch = cookieHeader.match(/sb-[^-]+-auth-token=([^;]+)/);
-    if (authCookieMatch) {
-      try {
-        const token = JSON.parse(decodeURIComponent(authCookieMatch[1]));
-        const accessToken = token.access_token;
-        if (accessToken) {
-          const supabaseAuth = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-          );
-          const { data: { user } } = await supabaseAuth.auth.getUser(accessToken);
-          if (user) {
-            // Also try to set tap_demo_user for future requests
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", user.id)
-              .maybeSingle();
-            if (profile) {
-              return NextResponse.json({
-                id: profile.id,
-                email: user.email || "",
-                name: profile.full_name || "",
-                role: profile.role || "",
-                location: profile.location || "",
-                email_2fa_enabled: profile.email_2fa_enabled ?? false,
-              });
-            }
-          }
-        }
-      } catch {}
-    }
-
-    // Strategy 3: Try tap_demo_email cookie (fallback)
-    const emailMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
-    if (emailMatch) {
-      const email = decodeURIComponent(emailMatch[1]);
-      // Look up by email now that profiles table has an email column
-      let { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
-      if (profile) {
-        return NextResponse.json({
-          id: profile.id,
-          email: email,
-          name: profile.full_name || "",
-          role: profile.role || "",
-          location: profile.location || "",
-          email_2fa_enabled: profile.email_2fa_enabled ?? false,
-        });
-      }
-      // Last resort: return basic info from the cookie so the page loads
-      const displayName = email.split('@')[0];
-      return NextResponse.json({
-        id: "",
-        email: email,
-        name: displayName,
-        role: "staff",
-        location: "",
-        email_2fa_enabled: false,
-      });
-    }
-
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  } catch (e: any) {
-    return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
+  if (demoTokens.length > 0) {
+    // Supabase auth — decode JWT to get user ID
+    try {
+      const token = demoTokens[0].value;
+      const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
+      profileId = payload.sub || "";
+      profileEmail = payload.email || demoEmail;
+    } catch {}
   }
+
+  // Try to find profile by email or ID
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { db: { schema: "tap_hub_project" } }
+  );
+
+  let profile = null;
+  if (profileId) {
+    const { data } = await supabase.from("profiles").select("role, full_name").eq("id", profileId).single();
+    profile = data;
+  }
+  if (!profile && profileEmail) {
+    // Look up by derived email
+    const { data: all } = await supabase.from("profiles").select("id, role, full_name");
+    if (all) {
+      profile = all.find((p: any) => {
+        const parts = (p.full_name || "").trim().split(/\s+/);
+        const derived = `${(parts[0] || "").toLowerCase()}.${(parts[parts.length - 1] || "").toLowerCase()}@tapallc.com`;
+        return derived === profileEmail;
+      }) || null;
+    }
+  }
+
+  const role = profile?.role || "staff"; // Default to staff if not found
+
+  const response = NextResponse.json({ role });
+  response.cookies.set("tap_demo_role", role, {
+    path: "/",
+    maxAge: 86400,
+    sameSite: "lax",
+    httpOnly: false, // Allow JS to read for sidebar filtering
+  });
+
+  return response;
 }
