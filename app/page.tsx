@@ -145,7 +145,27 @@ export default function ClientsPage() {
     } catch {}
   }, [deleteFromState]);
 
-  const handleModalSave = useCallback((data: Omit<Client, "id" | "cid">) => {
+  const handleModalSave = useCallback(async (data: Omit<Client, "id" | "cid">) => {
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const { client } = await res.json();
+        const newClient: Client = {
+          ...data,
+          id: client.id || "c" + Date.now(),
+          cid: client.cid || "CID-" + Math.floor(1000 + Math.random() * 9000),
+          status: "active",
+        } as Client;
+        addClient(newClient);
+        return;
+      }
+    } catch (e) {
+      console.error("POST /api/clients failed:", e);
+    }
     const newClient: Client = {
       ...data,
       id: "c" + Date.now(),

@@ -487,6 +487,63 @@ export async function PUT(request: Request) {
 // ── PATCH /api/clients — update a client service field (assigned_to, processor, frequency) ──
 export async function PATCH(request: Request) {
   try {
+
+// ── POST /api/clients — create a new client ──
+export async function POST(request: Request) {
+  try {
+    const supabase = await getSupabase();
+    const body = await request.json();
+    const { name, type, group, emails, phones, address, city, state, zip, ein, assignedStaff, services } = body;
+
+    if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
+
+    // Generate UUID and client code
+    // crypto.randomUUID() is built-in (Node 19+)
+    const clientId = crypto.randomUUID();
+    const clientCode = String(Math.floor(1000 + Math.random() * 90000));
+
+    // Build client record
+    const clientRecord: Record<string, any> = {
+      id: clientId,
+      name,
+      type: type || "Business",
+      group_name: group || "",
+      status: "active",
+      city: city || "",
+      state: state || "",
+      zip: zip || "",
+      address: address || "",
+      ein: ein || "",
+      notes: "",
+      client_code: clientCode,
+    };
+
+    if (emails !== undefined) {
+      const arr = Array.isArray(emails) ? emails : [emails];
+      clientRecord.emails = arr.filter(Boolean).join(", ");
+    }
+    if (phones !== undefined) {
+      const arr = Array.isArray(phones) ? phones : [phones];
+      clientRecord.phones = arr.filter(Boolean).join(", ");
+    }
+
+    const { error: insErr } = await supabase.from("clients").insert(clientRecord);
+    if (insErr) return NextResponse.json({ error: "INSERT failed: " + insErr.message }, { status: 500 });
+
+    // If assignedStaff provided, update first service
+    if (assignedStaff) {
+      // Deferred — needs service row to exist first
+    }
+
+    return NextResponse.json({
+      success: true,
+      client: { id: clientId, cid: "CID-" + clientCode, clientCode, ...clientRecord },
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
+  }
+}
+
     const supabase = await getSupabase();
     const body = await request.json();
     const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName } = body;

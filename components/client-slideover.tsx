@@ -542,11 +542,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }
 
   function saveServiceField(key: string, field: string, value: any) {
-    setLocalSvcs(prev =>
-      prev.map((s: any) =>
-        s.key === key ? { ...s, [field]: value } : s
-      )
+    const updated = localSvcs.map((s: any) =>
+      s.key === key ? { ...s, [field]: value } : s
     );
+    setLocalSvcs(updated);
+    throttledOnSave({ ...c, services: updated } as Client);
   }
 
   function freqLabel(key: string, svc: any) {
@@ -1482,7 +1482,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           };
         }
         if (s.key === "tax_returns") {
-          return { ...s, filingState, filingMonth, filingType, stateRenewal: undefined, renewalState: undefined, renewalDueMonth: undefined, renewalDueDay: undefined, renewalIdentifiers: undefined };
+          return { ...s, filingState, filingMonth, filingType };
         }
         return s;
       });
@@ -2433,10 +2433,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
-          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPinRef.current?.value ?? prPin, eftps: prEftpsRef.current?.value ?? prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq };
+          updated = { ...updated, paydate: prPaydate, pay_start_date: prStartDate, payrollPassword: prPinRef.current?.value ?? prPin, eftps: prEftpsRef.current?.value ?? prEftps, payEmails: prEmails, payPeriodFrequency: prPeriodFreq, frequency: prPeriodFreq, reportingMethod: prReportingMethod, payrollCategory: prPayrollCategory, qbLicense: prQbLicense, reportingNotes: reportingRef.current?.value ?? prReportingNotes };
         }
         if (s.key === "tax_returns") {
-          updated = { ...updated, filingState, filingMonth, filingType, stateRenewal: undefined, renewalState: undefined, renewalDueMonth: undefined, renewalDueDay: undefined, renewalIdentifiers: undefined };
+          updated = { ...updated, filingState, filingMonth, filingType };
         }
         return updated;
       });
