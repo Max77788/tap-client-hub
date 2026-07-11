@@ -416,7 +416,7 @@ export async function PUT(request: Request) {
         if (existing) {
               // Already exists — activate if inactive
           if (!existing.active) {
-            const actBase: Record<string,any> = {
+            const allActFields: Record<string,any> = {
                 active: true,
                 frequency: svc.frequency || existing.frequency || "Monthly",
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
@@ -427,8 +427,6 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
-            };
-            const actPayroll: Record<string,any> = {
                 paydate: svc.paydate || null,
                 payroll_password: svc.payrollPassword || null,
                 eftps: svc.eftps || null,
@@ -441,12 +439,12 @@ export async function PUT(request: Request) {
                 pay_emails: svc.payEmails || null,
                 biweekly_code: svc.biweeklyCode || null,
             };
-            await supabase.from("client_services").update(actBase).eq("id", existing.id);
-            await supabase.from("client_services").update(actPayroll).eq("id", existing.id);
+            Object.keys(allActFields).forEach(k => { if (allActFields[k] === undefined) delete allActFields[k]; });
+            await supabase.from("client_services").update(allActFields).eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
           } else {
-            // Build separate updates: base fields + payroll fields (separate calls to avoid silent failures)
-            const baseFields: Record<string,any> = {
+            // Single update with all fields merged
+            const allFields: Record<string,any> = {
                 frequency: svc.frequency ?? existing.frequency ?? null,
                 assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
@@ -456,8 +454,6 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
-            };
-            const payrollFields: Record<string,any> = {
                 paydate: svc.paydate || null,
                 payroll_password: svc.payrollPassword || null,
                 eftps: svc.eftps || null,
@@ -470,9 +466,10 @@ export async function PUT(request: Request) {
                 pay_emails: svc.payEmails || null,
                 biweekly_code: svc.biweeklyCode || null,
             };
-            await supabase.from("client_services").update(baseFields).eq("id", existing.id);
-            const { error: prErr } = await supabase.from("client_services").update(payrollFields).eq("id", existing.id);
-            if (prErr) console.error("Payroll update error:", prErr.message);
+            // Remove undefined values that might confuse Supabase
+            Object.keys(allFields).forEach(k => { if (allFields[k] === undefined) delete allFields[k]; });
+            const { error: updErr } = await supabase.from("client_services").update(allFields).eq("id", existing.id);
+            if (updErr) console.error("Update error:", updErr.message);
             results.push({ key: svc.key, action: "already_active" } as any);
           }
         } else {
