@@ -472,10 +472,10 @@ export async function PUT(request: Request) {
                 biweekly_code: svc.biweeklyCode || null,
               })
               .eq("id", existing.id);
-            // Direct test: update ONLY payroll_password to verify update works at all
-            const { error: testErr } = await supabase.from("client_services").update({ payroll_password: svc.payrollPassword || "TEST_DIRECT" }).eq("id", existing.id);
-            console.log("DIRECT UPDATE test:", testErr ? testErr.message : "OK");
-            results.push({ key: svc.key, action: "already_active", _debug: { pw: svc.payrollPassword || null, ef: svc.eftps || null, pd: svc.paydate || null, pe: svc.payEmails || null, rn: svc.reportingNotes || null }, _direct: testErr ? testErr.message : "OK" } as any);
+            // Direct test: update ONLY payroll_password to verify update works
+            const { data: testData, error: testErr } = await supabase.from("client_services").update({ payroll_password: svc.payrollPassword || "TEST_DIRECT" }).eq("id", existing.id).select("payroll_password");
+            console.log("DIRECT UPDATE:", { err: testErr?.message, data: testData, id: existing.id });
+            results.push({ key: svc.key, action: "already_active", _debug: { pw: svc.payrollPassword || null, ef: svc.eftps || null, pd: svc.paydate || null, pe: svc.payEmails || null, rn: svc.reportingNotes || null }, _direct: testErr ? testErr.message : (testData?.[0]?.payroll_password || "no_data") } as any);
           }
         } else {
           // No row — create one
