@@ -515,6 +515,28 @@ export async function PUT(request: Request) {
             results.push({ key: svc.key, action: "created" });
           }
         }
+      // ── Sync salesTaxLineItems → sales_tax_registration ──
+      if (svc.key === "sales_tax" && Array.isArray(svc.salesTaxLineItems)) {
+        const csRowId = existing?.id || svc.csId;
+        if (csRowId) {
+          // Delete old line items for this client_service
+          await supabase.from("sales_tax_registration").delete().eq("client_service_id", csRowId);
+          // Insert new line items
+          for (const item of svc.salesTaxLineItems) {
+            await supabase.from("sales_tax_registration").insert({
+              client_service_id: csRowId,
+              rt_number: item.serviceName || item.rt_number || item.rt || "",
+              tax_reg_id: item.taxId || item.tax_reg_id || "",
+              frequency: item.frequency || null,
+              assigned_to: item.assignedTo || null,
+              bank_name: item.bankName || "",
+              bank_account_ref: item.bankAccount || "",
+              bank_routing_ref: item.bankRouting || "",
+              notes: item.notes || "",
+            });
+          }
+        }
+      }
       } else {
         // Want disabled
         if (existing && existing.active) {
@@ -580,7 +602,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName } = body;
+    const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -629,6 +651,26 @@ export async function PATCH(request: Request) {
     if (serviceName !== undefined) {
       updates.service_name = serviceName || null;
     }
+
+    // Payroll-specific fields
+    if (payrollPassword !== undefined) updates.payroll_password = payrollPassword || null;
+    if (eftps !== undefined) updates.eftps = eftps || null;
+    if (paydate !== undefined) updates.paydate = paydate || null;
+    if (payStartDate !== undefined) updates.pay_start_date = payStartDate || null;
+    if (payPeriodFrequency !== undefined) updates.pay_period_frequency = payPeriodFrequency || null;
+    if (reportingMethod !== undefined) updates.reporting_method = reportingMethod || null;
+    if (payrollCategory !== undefined) updates.payroll_category = payrollCategory || null;
+    if (qbLicense !== undefined) updates.qb_license = qbLicense || null;
+    if (reportingNotes !== undefined) updates.reporting_notes = reportingNotes || null;
+    if (payEmails !== undefined) updates.pay_emails = payEmails || null;
+    if (biweeklyCode !== undefined) updates.biweekly_code = biweeklyCode || null;
+
+    // State renewal fields
+    if (stateRenewal !== undefined) updates.state_renewal = stateRenewal;
+    if (renewalState !== undefined) updates.renewal_state = renewalState || null;
+    if (renewalDueMonth !== undefined) updates.renewal_due_month = renewalDueMonth || null;
+    if (renewalDueDay !== undefined) updates.renewal_due_day = renewalDueDay || null;
+    if (renewalIdentifiers !== undefined) updates.renewal_identifiers = renewalIdentifiers || null;
     }
 
     if (Object.keys(updates).length === 0) {
