@@ -484,10 +484,6 @@ export async function PUT(request: Request) {
   }
 }
 
-// ── PATCH /api/clients — update a client service field (assigned_to, processor, frequency) ──
-export async function PATCH(request: Request) {
-  try {
-
 // ── POST /api/clients — create a new client ──
 export async function POST(request: Request) {
   try {
@@ -553,6 +549,10 @@ export async function POST(request: Request) {
     }
 
     const updates: Record<string, any> = {};
+// ── PATCH /api/clients — update a client service field (assigned_to, processor, frequency) ──
+export async function PATCH(request: Request) {
+  try {
+
 
     // If assignedTo is provided, resolve display name to profile UUID
     if (assignedTo !== undefined) {
