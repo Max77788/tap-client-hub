@@ -471,7 +471,7 @@ export async function PUT(request: Request) {
                 biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
               })
               .eq("id", existing.id);
-            results.push({ key: svc.key, action: "already_active" } as any);
+            results.push({ key: svc.key, action: "already_active", _debug: { pw: svc.payrollPassword || null, ef: svc.eftps || null, pd: svc.paydate || null, pe: svc.payEmails || null, rn: svc.reportingNotes || null } } as any);
           }
         } else {
           // No row — create one
