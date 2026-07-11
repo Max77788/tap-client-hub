@@ -326,11 +326,13 @@ export default function WorklistTable({
           // For sales tax, also search within line item names
           if (serviceKey === "sales_tax") {
             // Check pre-expanded data first (from stx/page.tsx)
-            if (c._stxName && c._stxName.toLowerCase().includes(q)) return true;
+            const stxName = (c._stxName || "").toLowerCase();
+            if (stxName && stxName.includes(q)) return true;
             if (c._stxItem?.serviceName && c._stxItem.serviceName.toLowerCase().includes(q)) return true;
-            if (c._mergedLineItems?.some((item: any) =>
-              (item.serviceName || "").toLowerCase().includes(q)
-            )) return true;
+            if (c._mergedLineItems?.some((item: any) => {
+              const n = (item.serviceName || "").toLowerCase();
+              return n && n.includes(q);
+            })) return true;
             // Fallback: check service line items
             const svc = c.services?.find((s: any) => s.key === "sales_tax");
             const items = svc?.salesTaxLineItems || [];
@@ -1088,7 +1090,10 @@ export default function WorklistTable({
                         return row.name.toLowerCase().includes(q);
                       }
                       const itemName = (row._stxName || "").toLowerCase();
-                      return itemName.includes(q) || row.name.toLowerCase().includes(q);
+                      const clientName = (row.name || "").toLowerCase();
+                      // Both must be checked — if neither contains the search term, exclude
+                      if (!itemName && !clientName) return false;
+                      return itemName.includes(q) || clientName.includes(q);
                     });
                   }
                   const regCounts = new Map<string, number>();
