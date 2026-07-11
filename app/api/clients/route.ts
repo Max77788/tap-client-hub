@@ -277,7 +277,7 @@ export async function GET(request: Request) {
         name: db.name, type: (db.type || "").toLowerCase() === "business" ? "Business" : "Personal",
         group: db.group_owner || "Unassigned",
         groupName: db.group_name || db.group_owner || "", status: db.status || "active",
-        city: db.city || "", state: db.state || "TX",
+        city: db.city || "", state: db.state || "TX", zip: db.zip || "",
         emails: db.emails ? db.emails.replace(/[{}"]/g,'').split(',').filter(Boolean) : [],
         phones: db.phones ? db.phones.replace(/[{}"]/g,'').split(',').filter(Boolean) : [],
         address: db.address || "",
