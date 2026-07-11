@@ -445,7 +445,8 @@ export async function PUT(request: Request) {
             results.push({ key: svc.key, action: "activated" });
           } else {
             // Always update fields even if already active
-            console.log("PUT payroll update:", JSON.stringify({ csId: existing.id, pw: svc.payrollPassword, ef: svc.eftps, pd: svc.paydate, rn: svc.reportingNotes }));
+            const updatePayload = { payroll_password: svc.payrollPassword, eftps: svc.eftps, paydate: svc.paydate, reporting_notes: svc.reportingNotes, pay_emails: svc.payEmails };
+            console.log("PUT update payload for", existing.id, ":", JSON.stringify(updatePayload));
             await supabase
               .from("client_services")
               .update({
@@ -471,7 +472,10 @@ export async function PUT(request: Request) {
                 biweekly_code: svc.biweeklyCode || null,
               })
               .eq("id", existing.id);
-            results.push({ key: svc.key, action: "already_active", _debug: { pw: svc.payrollPassword || null, ef: svc.eftps || null, pd: svc.paydate || null, pe: svc.payEmails || null, rn: svc.reportingNotes || null } } as any);
+            // Direct test: update ONLY payroll_password to verify update works at all
+            const { error: testErr } = await supabase.from("client_services").update({ payroll_password: svc.payrollPassword || "TEST_DIRECT" }).eq("id", existing.id);
+            console.log("DIRECT UPDATE test:", testErr ? testErr.message : "OK");
+            results.push({ key: svc.key, action: "already_active", _debug: { pw: svc.payrollPassword || null, ef: svc.eftps || null, pd: svc.paydate || null, pe: svc.payEmails || null, rn: svc.reportingNotes || null }, _direct: testErr ? testErr.message : "OK" } as any);
           }
         } else {
           // No row — create one
