@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     if (typeFilter === "business" || typeFilter === "personal") {
       query = query.filter("type", "ilike", typeFilter);
     }
-    const { data: dbClients } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+    const { data: dbClients } = await query.order("name").range(offset, offset + limit - 1);
     if (!dbClients || dbClients.length === 0) return NextResponse.json({ clients: [], stats: { total: totalCount || 0, business: bizCount, personal: persCount } });
 
     const ids = dbClients.map((c: any) => c.id);
