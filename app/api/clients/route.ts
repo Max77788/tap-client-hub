@@ -445,6 +445,7 @@ export async function PUT(request: Request) {
             results.push({ key: svc.key, action: "activated" });
           } else {
             // Always update fields even if already active
+            console.log("PUT payroll update:", JSON.stringify({ csId: existing.id, pw: svc.payrollPassword, ef: svc.eftps, pd: svc.paydate, rn: svc.reportingNotes }));
             await supabase
               .from("client_services")
               .update({
