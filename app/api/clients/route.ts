@@ -429,6 +429,17 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
+                paydate: svc.paydate ?? existing.paydate ?? null,
+                payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
+                eftps: svc.eftps ?? existing.eftps ?? null,
+                pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
+                pay_period_frequency: svc.payPeriodFrequency ?? existing.pay_period_frequency ?? null,
+                reporting_method: svc.reportingMethod ?? existing.reporting_method ?? null,
+                payroll_category: svc.payrollCategory ?? existing.payroll_category ?? null,
+                qb_license: svc.qbLicense ?? existing.qb_license ?? null,
+                reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
+                pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
+                biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
@@ -446,6 +457,17 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
+                paydate: svc.paydate ?? existing.paydate ?? null,
+                payroll_password: svc.payrollPassword ?? existing.payroll_password ?? null,
+                eftps: svc.eftps ?? existing.eftps ?? null,
+                pay_start_date: svc.payStartDate ?? existing.pay_start_date ?? null,
+                pay_period_frequency: svc.payPeriodFrequency ?? existing.pay_period_frequency ?? null,
+                reporting_method: svc.reportingMethod ?? existing.reporting_method ?? null,
+                payroll_category: svc.payrollCategory ?? existing.payroll_category ?? null,
+                qb_license: svc.qbLicense ?? existing.qb_license ?? null,
+                reporting_notes: svc.reportingNotes ?? existing.reporting_notes ?? null,
+                pay_emails: svc.payEmails ?? existing.pay_emails ?? null,
+                biweekly_code: svc.biweeklyCode ?? existing.biweekly_code ?? null,
               })
               .eq("id", existing.id);
             results.push({ key: svc.key, action: "already_active" });
@@ -468,6 +490,17 @@ export async function PUT(request: Request) {
               due_month: svc.filingMonth || null,
               return_type: svc.filingType || null,
               service_name: svc.serviceName || null,
+              paydate: svc.paydate || null,
+              payroll_password: svc.payrollPassword || null,
+              eftps: svc.eftps || null,
+              pay_start_date: svc.payStartDate || null,
+              pay_period_frequency: svc.payPeriodFrequency || null,
+              reporting_method: svc.reportingMethod || null,
+              payroll_category: svc.payrollCategory || null,
+              qb_license: svc.qbLicense || null,
+              reporting_notes: svc.reportingNotes || null,
+              pay_emails: svc.payEmails || null,
+              biweekly_code: svc.biweeklyCode || null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
