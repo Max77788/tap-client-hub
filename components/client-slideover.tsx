@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Client, ServiceKey, CommentEntry, SalesTaxLineItem } from "@/lib/types";
 import { SERVICE_META, STAFF } from "@/lib/data";
 
@@ -397,7 +397,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }, [open, onClose]);
 
   // ── Preserve scroll position across re-renders ──
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (bodyRef.current && scrollPosRef.current > 0) {
       bodyRef.current.scrollTop = scrollPosRef.current;
     }
