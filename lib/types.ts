@@ -83,6 +83,8 @@ export interface ClientService {
   filingMonth?: string;
   filingType?: string; // "C Corp." | "S Corp." | "Partnership" | "SMLLC" | "Trust" | "Non Profit" | "Retirem Plan"
   // State renewal
+  serviceName?: string;
+  // Sales tax service name (from spreadsheet column E)
   stateRenewal?: boolean;
   renewalState?: string;
   renewalDueMonth?: string;
