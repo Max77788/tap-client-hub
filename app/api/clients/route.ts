@@ -402,9 +402,10 @@ export async function PUT(request: Request) {
 // Helper to sync sales tax line items
     async function syncStxLineItems(csId: string, items: any[]) {
       if (!items || !Array.isArray(items)) return;
-      await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
+      const { error: delErr } = await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
+      if (delErr) { console.error("STX delete error:", delErr.message); return; }
       for (const item of items) {
-        await supabase.from("sales_tax_registration").insert({
+        const { error: insErr } = await supabase.from("sales_tax_registration").insert({
           client_service_id: csId,
           rt_number: item.serviceName || item.rt_number || item.rt || "",
           tax_reg_id: item.taxId || item.tax_reg_id || "",
@@ -415,6 +416,7 @@ export async function PUT(request: Request) {
           bank_routing_ref: item.bankRouting || "",
           notes: item.notes || "",
         });
+        if (insErr) console.error("STX insert error:", insErr.message);
       }
     }
 
@@ -497,8 +499,11 @@ export async function PUT(request: Request) {
                     await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
                 }
             }
-            results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1 } as any);
-            if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
+            let stxSyncErr = null;
+            if (svc.key === "sales_tax" && svc.salesTaxLineItems) {
+              try { await syncStxLineItems(existing.id, svc.salesTaxLineItems); } catch(e: any) { stxSyncErr = e.message || String(e); }
+            }
+            results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1, _stxSyncErr: stxSyncErr, _csId: existing.id } as any);
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
           }
         } else {
@@ -724,6 +729,7 @@ export async function PATCH(request: Request) {
           bank_routing_ref: item.bankRouting || "",
           notes: item.notes || "",
         });
+        if (insErr) console.error("STX insert error:", insErr.message);
       }
     }
 
