@@ -1071,7 +1071,7 @@ export default function WorklistTable({
                             ...client,
                             _stxItem: item,
                             _stxIdx: idx,
-                            _stxName: item.serviceName,
+                            _stxName: svc?.serviceName || item.serviceName,
                           });
                         });
                       } else {
@@ -1087,7 +1087,7 @@ export default function WorklistTable({
                       if (row._stxItem == null) {
                         return row.name.toLowerCase().includes(q);
                       }
-                      const itemName = (row._stxItem.serviceName || row._stxName || "").toLowerCase();
+                      const itemName = (row._stxName || "" || "").toLowerCase();
                       return itemName.includes(q) || row.name.toLowerCase().includes(q);
                     });
                   }

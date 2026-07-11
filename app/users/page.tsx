@@ -13,7 +13,7 @@ interface CurrentUser {
   id: string; name: string; role: string;
 }
 
-const MODULES_LIST = ["Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions", "Timesheet", "Vault", "Workload", "Users & Access"];
+const MODULES_LIST = ["Tax Returns", "Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions", "Timesheet", "Vault", "Workload", "Users & Access"];
 const ROLE_OPTIONS = ["Owner / Admin", "Manager", "Staff", "Offshore"];
 
 export default function UsersPage() {

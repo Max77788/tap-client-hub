@@ -33,7 +33,7 @@ export default function StxPage() {
       for (const svc of stxServices) {
         if (svc.salesTaxLineItems?.length) {
           for (const item of svc.salesTaxLineItems) {
-            allLineItems.push({ ...item, _csId: svc.csId });
+            allLineItems.push({ ...item, _csId: svc.csId, _svcName: svc.serviceName });
           }
         }
       }
@@ -48,7 +48,7 @@ export default function StxPage() {
             services: [stxServices[0]],
             _mergedLineItems: allLineItems,
             _stxItem: item,
-            _stxName: item.serviceName,
+            _stxName: item._svcName || item.serviceName,
           });
         }
       } else {

@@ -178,7 +178,16 @@ export async function GET(request: Request) {
         const key = CODE_TO_KEY[cs.service?.code || ""] || "financials";
         return {
           csId: cs.id, key, label: SERVICE_META[key]?.label,
-          enabled: true, frequency: cs.frequency || "Monthly",
+          enabled: true, frequency: (() => {
+            const f = cs.frequency || "Monthly";
+            if (f === "weekly" || f === "Weekly") return "Weekly";
+            if (f === "Bi-Weekly") return "Bi-Weekly A";
+            if (f === "Bi-weekly" || f === "bi-weekly" || f === "Biweekly" || f === "biweekly") return "Bi-Weekly A";
+            if (f === "monthly" || f === "Monthly") return "Monthly";
+            if (f === "semi-monthly" || f === "Semi-Monthly") return "Semi-Monthly";
+            if (f === "yearly" || f === "Yearly" || f === "annual" || f === "Annual") return "Monthly";
+            return f;
+          })(),
           processor: cs.processor || "", assignedTo: staffNames[cs.assigned_to || ""] || cs.assigned_to || "",
           expectedAnnual: cs.expected_annual ? Number(cs.expected_annual) || 0 : 0,
           financialsMonth: cs.financials_month ?? 0,
