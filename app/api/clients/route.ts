@@ -416,7 +416,6 @@ export async function PUT(request: Request) {
           bank_routing_ref: item.bankRouting || "",
           notes: item.notes || "",
         });
-        if (insErr) console.error("STX insert error:", insErr.message);
       }
     }
 
@@ -729,7 +728,6 @@ export async function PATCH(request: Request) {
           bank_routing_ref: item.bankRouting || "",
           notes: item.notes || "",
         });
-        if (insErr) console.error("STX insert error:", insErr.message);
       }
     }
 
