@@ -2262,11 +2262,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Sales Tax: line items section — only on Sales Tax tab */}
-            {/* Service Name */}
+            {/* Service Name — only show in full client view, not on worklist tabs */}
+            {!moduleKey && (
             <div style={{ marginBottom: 12, padding: "10px 12px", background: "var(--grey-soft,#f5f5f5)", borderRadius: 8 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase" }}>Service Name</span>
               <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", marginTop: 3 }}>{targetSvc.serviceName || targetSvc.label}</div>
             </div>
+            )}
             {targetSvc.key === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
 
             {/* Service notes from DB */}
