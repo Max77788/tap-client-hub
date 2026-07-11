@@ -416,9 +416,7 @@ export async function PUT(request: Request) {
         if (existing) {
               // Already exists — activate if inactive
           if (!existing.active) {
-            await supabase
-              .from("client_services")
-              .update({
+            const actBase: Record<string,any> = {
                 active: true,
                 frequency: svc.frequency || existing.frequency || "Monthly",
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
@@ -429,6 +427,8 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
+            };
+            const actPayroll: Record<string,any> = {
                 paydate: svc.paydate || null,
                 payroll_password: svc.payrollPassword || null,
                 eftps: svc.eftps || null,
@@ -440,16 +440,13 @@ export async function PUT(request: Request) {
                 reporting_notes: svc.reportingNotes || null,
                 pay_emails: svc.payEmails || null,
                 biweekly_code: svc.biweeklyCode || null,
-              })
-              .eq("id", existing.id);
+            };
+            await supabase.from("client_services").update(actBase).eq("id", existing.id);
+            await supabase.from("client_services").update(actPayroll).eq("id", existing.id);
             results.push({ key: svc.key, action: "activated" });
           } else {
-            // Always update fields even if already active
-            const updatePayload = { payroll_password: svc.payrollPassword, eftps: svc.eftps, paydate: svc.paydate, reporting_notes: svc.reportingNotes, pay_emails: svc.payEmails };
-            console.log("PUT update payload for", existing.id, ":", JSON.stringify(updatePayload));
-            await supabase
-              .from("client_services")
-              .update({
+            // Build separate updates: base fields + payroll fields (separate calls to avoid silent failures)
+            const baseFields: Record<string,any> = {
                 frequency: svc.frequency ?? existing.frequency ?? null,
                 assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
@@ -459,6 +456,8 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
+            };
+            const payrollFields: Record<string,any> = {
                 paydate: svc.paydate || null,
                 payroll_password: svc.payrollPassword || null,
                 eftps: svc.eftps || null,
@@ -470,12 +469,11 @@ export async function PUT(request: Request) {
                 reporting_notes: svc.reportingNotes || null,
                 pay_emails: svc.payEmails || null,
                 biweekly_code: svc.biweeklyCode || null,
-              })
-              .eq("id", existing.id);
-            // Direct test: update ONLY payroll_password to verify update works
-            const { data: testData, error: testErr } = await supabase.from("client_services").update({ payroll_password: svc.payrollPassword || "TEST_DIRECT" }).eq("id", existing.id).select("payroll_password");
-            console.log("DIRECT UPDATE:", { err: testErr?.message, data: testData, id: existing.id });
-            results.push({ key: svc.key, action: "already_active", _debug: { pw: svc.payrollPassword || null, ef: svc.eftps || null, pd: svc.paydate || null, pe: svc.payEmails || null, rn: svc.reportingNotes || null }, _direct: testErr ? testErr.message : (testData?.[0]?.payroll_password || "no_data") } as any);
+            };
+            await supabase.from("client_services").update(baseFields).eq("id", existing.id);
+            const { error: prErr } = await supabase.from("client_services").update(payrollFields).eq("id", existing.id);
+            if (prErr) console.error("Payroll update error:", prErr.message);
+            results.push({ key: svc.key, action: "already_active" } as any);
           }
         } else {
           // No row — create one
