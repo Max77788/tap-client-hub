@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     if (typeFilter === "business" || typeFilter === "personal") {
       query = query.filter("type", "ilike", typeFilter);
     }
-    const { data: dbClients } = await query.order("name").range(offset, offset + limit - 1);
+    const { data: dbClients } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
     if (!dbClients || dbClients.length === 0) return NextResponse.json({ clients: [], stats: { total: totalCount || 0, business: bizCount, personal: persCount } });
 
     const ids = dbClients.map((c: any) => c.id);
@@ -181,11 +181,13 @@ export async function GET(request: Request) {
           enabled: true, frequency: (() => {
             const f = cs.frequency || "Monthly";
             if (f === "weekly" || f === "Weekly") return "Weekly";
-            if (f === "Bi-Weekly") return "Bi-Weekly A";
+            if (f === "Bi-Weekly" || f === "bi_weekly-A" || f === "bi-weekly-a") return "Bi-Weekly A";
+            if (f === "Bi-Weekly B" || f === "bi_weekly-B" || f === "bi-weekly-b") return "Bi-Weekly B";
             if (f === "Bi-weekly" || f === "bi-weekly" || f === "Biweekly" || f === "biweekly") return "Bi-Weekly A";
             if (f === "monthly" || f === "Monthly") return "Monthly";
             if (f === "semi-monthly" || f === "Semi-Monthly") return "Semi-Monthly";
-            if (f === "yearly" || f === "Yearly" || f === "annual" || f === "Annual") return "Monthly";
+            if (f === "quarterly" || f === "Quarterly") return "Quarterly";
+            if (f === "yearly" || f === "Yearly" || f === "annual" || f === "Annual") return "Yearly";
             return f;
           })(),
           processor: cs.processor || "", assignedTo: staffNames[cs.assigned_to || ""] || cs.assigned_to || "",
