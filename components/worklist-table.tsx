@@ -1113,10 +1113,24 @@ export default function WorklistTable({
                     }
                     rows.push(row);
                   }
-                  return rows;
+                  // If final rows are empty (all filtered out), show fallback
+                if (rows.length === 0 && search) {
+                  return [{ _isGroupHeader: false, _noResults: true }];
+                }
+                return rows;
                 })()
               : filteredClients
             ).map((client: any, _mapIdx: number) => {
+              // ── No results fallback ──
+              if (client._noResults) {
+                return (
+                  <tr key="no-results">
+                    <td colSpan={colCount} className="text-center py-8 text-sm text-[var(--muted)]">
+                      No clients found.
+                    </td>
+                  </tr>
+                );
+              }
               // ── Group header row (sales tax only) ──
               if (client._isGroupHeader) {
                 return (
