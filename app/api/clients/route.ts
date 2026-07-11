@@ -416,7 +416,7 @@ export async function PUT(request: Request) {
         if (existing) {
               // Already exists — activate if inactive
           if (!existing.active) {
-            const allActFields: Record<string,any> = {
+            await supabase.from("client_services").update({
                 active: true,
                 frequency: svc.frequency || existing.frequency || "Monthly",
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
@@ -427,24 +427,28 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
-                paydate: svc.paydate || null,
-                payroll_password: svc.payrollPassword || null,
-                eftps: svc.eftps || null,
-                pay_start_date: svc.payStartDate || null,
-                pay_period_frequency: svc.payPeriodFrequency || null,
-                reporting_method: svc.reportingMethod || null,
-                payroll_category: svc.payrollCategory || null,
-                qb_license: svc.qbLicense || null,
-                reporting_notes: svc.reportingNotes || null,
-                pay_emails: svc.payEmails || null,
-                biweekly_code: svc.biweeklyCode || null,
-            };
-            Object.keys(allActFields).forEach(k => { if (allActFields[k] === undefined) delete allActFields[k]; });
-            await supabase.from("client_services").update(allActFields).eq("id", existing.id);
+            }).eq("id", existing.id);
+            if (svc.key === "payroll") {
+                const prUpdate: Record<string,any> = {};
+                if (svc.paydate !== undefined) prUpdate.paydate = svc.paydate || null;
+                if (svc.payrollPassword !== undefined) prUpdate.payroll_password = svc.payrollPassword || null;
+                if (svc.eftps !== undefined) prUpdate.eftps = svc.eftps || null;
+                if (svc.payStartDate !== undefined) prUpdate.pay_start_date = svc.payStartDate || null;
+                if (svc.payPeriodFrequency !== undefined) prUpdate.pay_period_frequency = svc.payPeriodFrequency || null;
+                if (svc.reportingMethod !== undefined) prUpdate.reporting_method = svc.reportingMethod || null;
+                if (svc.payrollCategory !== undefined) prUpdate.payroll_category = svc.payrollCategory || null;
+                if (svc.qbLicense !== undefined) prUpdate.qb_license = svc.qbLicense || null;
+                if (svc.reportingNotes !== undefined) prUpdate.reporting_notes = svc.reportingNotes || null;
+                if (svc.payEmails !== undefined) prUpdate.pay_emails = svc.payEmails || null;
+                if (svc.biweeklyCode !== undefined) prUpdate.biweekly_code = svc.biweeklyCode || null;
+                if (Object.keys(prUpdate).length > 0) {
+                    await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
+                }
+            }
             results.push({ key: svc.key, action: "activated" });
           } else {
-            // Single update with all fields merged
-            const allFields: Record<string,any> = {
+            // Base fields update
+            await supabase.from("client_services").update({
                 frequency: svc.frequency ?? existing.frequency ?? null,
                 assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
@@ -454,22 +458,25 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
-                paydate: svc.paydate || null,
-                payroll_password: svc.payrollPassword || null,
-                eftps: svc.eftps || null,
-                pay_start_date: svc.payStartDate || null,
-                pay_period_frequency: svc.payPeriodFrequency || null,
-                reporting_method: svc.reportingMethod || null,
-                payroll_category: svc.payrollCategory || null,
-                qb_license: svc.qbLicense || null,
-                reporting_notes: svc.reportingNotes || null,
-                pay_emails: svc.payEmails || null,
-                biweekly_code: svc.biweeklyCode || null,
-            };
-            // Remove undefined values that might confuse Supabase
-            Object.keys(allFields).forEach(k => { if (allFields[k] === undefined) delete allFields[k]; });
-            const { error: updErr } = await supabase.from("client_services").update(allFields).eq("id", existing.id);
-            if (updErr) console.error("Update error:", updErr.message);
+            }).eq("id", existing.id);
+            // Payroll fields update (separate call — proven to work)
+            if (svc.key === "payroll") {
+                const prUpdate: Record<string,any> = {};
+                if (svc.paydate !== undefined) prUpdate.paydate = svc.paydate || null;
+                if (svc.payrollPassword !== undefined) prUpdate.payroll_password = svc.payrollPassword || null;
+                if (svc.eftps !== undefined) prUpdate.eftps = svc.eftps || null;
+                if (svc.payStartDate !== undefined) prUpdate.pay_start_date = svc.payStartDate || null;
+                if (svc.payPeriodFrequency !== undefined) prUpdate.pay_period_frequency = svc.payPeriodFrequency || null;
+                if (svc.reportingMethod !== undefined) prUpdate.reporting_method = svc.reportingMethod || null;
+                if (svc.payrollCategory !== undefined) prUpdate.payroll_category = svc.payrollCategory || null;
+                if (svc.qbLicense !== undefined) prUpdate.qb_license = svc.qbLicense || null;
+                if (svc.reportingNotes !== undefined) prUpdate.reporting_notes = svc.reportingNotes || null;
+                if (svc.payEmails !== undefined) prUpdate.pay_emails = svc.payEmails || null;
+                if (svc.biweeklyCode !== undefined) prUpdate.biweekly_code = svc.biweeklyCode || null;
+                if (Object.keys(prUpdate).length > 0) {
+                    await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
+                }
+            }
             results.push({ key: svc.key, action: "already_active" } as any);
           }
         } else {
