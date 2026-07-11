@@ -1421,15 +1421,7 @@ export default function WorklistTable({
                             {(() => {
                               const freq = svc?.frequency || "";
                               const pd = svc?.paydate || "";
-                              const colorMap: Record<string, string> = {
-                                "Weekly": "#22c55e",
-                                "Bi-Weekly": "#3b82f6",
-                                "Bi-Weekly A": "#3b82f6",
-                                "Bi-Weekly B": "#a855f7",
-                                "Semi-Monthly": "#f97316",
-                                "Monthly": "#14b8a6",
-                              };
-                              const dateColor = colorMap[freq] || "var(--muted)";
+                              const dateColor = "var(--ink)";
 
                               // Smart paydate parsing
                               const today = new Date();
