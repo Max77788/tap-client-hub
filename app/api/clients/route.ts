@@ -497,7 +497,8 @@ export async function PUT(request: Request) {
                     await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
                 }
             }
-            results.push({ key: svc.key, action: "already_active" } as any);
+            results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1 } as any);
+            if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
           }
         } else {
