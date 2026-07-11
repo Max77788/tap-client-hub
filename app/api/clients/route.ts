@@ -399,6 +399,25 @@ export async function PUT(request: Request) {
     }
 
     const results: { key: string; action: string }[] = [];
+// Helper to sync sales tax line items
+    async function syncStxLineItems(csId: string, items: any[]) {
+      if (!items || !Array.isArray(items)) return;
+      await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
+      for (const item of items) {
+        await supabase.from("sales_tax_registration").insert({
+          client_service_id: csId,
+          rt_number: item.serviceName || item.rt_number || item.rt || "",
+          tax_reg_id: item.taxId || item.tax_reg_id || "",
+          frequency: item.frequency || null,
+          assigned_to: item.assignedTo || null,
+          bank_name: item.bankName || "",
+          bank_account_ref: item.bankAccount || "",
+          bank_routing_ref: item.bankRouting || "",
+          notes: item.notes || "",
+        });
+      }
+    }
+
 
     for (const svc of safeServices) {
       const code = KEY_TO_CODE[svc.key];
@@ -446,6 +465,7 @@ export async function PUT(request: Request) {
                 }
             }
             results.push({ key: svc.key, action: "activated" });
+            if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
           } else {
             // Base fields update
             await supabase.from("client_services").update({
@@ -478,13 +498,15 @@ export async function PUT(request: Request) {
                 }
             }
             results.push({ key: svc.key, action: "already_active" } as any);
+            if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
           }
         } else {
           // No row — create one
+          const newCsId = randomUUID();
           const { error: insErr } = await supabase
             .from("client_services")
             .insert({
-              id: randomUUID(),
+              id: newCsId,
               client_id: clientId,
               service_id: serviceId,
               active: true,
@@ -513,30 +535,9 @@ export async function PUT(request: Request) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
           } else {
             results.push({ key: svc.key, action: "created" });
+            if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(newCsId as string, svc.salesTaxLineItems);
           }
         }
-      // ── Sync salesTaxLineItems → sales_tax_registration ──
-      if (svc.key === "sales_tax" && Array.isArray(svc.salesTaxLineItems)) {
-        const csRowId = existing?.id || svc.csId;
-        if (csRowId) {
-          // Delete old line items for this client_service
-          await supabase.from("sales_tax_registration").delete().eq("client_service_id", csRowId);
-          // Insert new line items
-          for (const item of svc.salesTaxLineItems) {
-            await supabase.from("sales_tax_registration").insert({
-              client_service_id: csRowId,
-              rt_number: item.serviceName || item.rt_number || item.rt || "",
-              tax_reg_id: item.taxId || item.tax_reg_id || "",
-              frequency: item.frequency || null,
-              assigned_to: item.assignedTo || null,
-              bank_name: item.bankName || "",
-              bank_account_ref: item.bankAccount || "",
-              bank_routing_ref: item.bankRouting || "",
-              notes: item.notes || "",
-            });
-          }
-        }
-      }
       } else {
         // Want disabled
         if (existing && existing.active) {
