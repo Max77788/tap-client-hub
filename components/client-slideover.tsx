@@ -547,6 +547,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     );
     setLocalSvcs(updated);
     throttledOnSave({ ...c, services: updated } as Client);
+    // Also call PATCH for immediate persistence of individual field changes
+    const svc = localSvcs.find((s: any) => s.key === key);
+    if (svc?.csId) {
+      fetch("/api/clients", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csId: svc.csId, [field]: value }),
+      }).catch(() => {});
+    }
   }
 
   function freqLabel(key: string, svc: any) {
