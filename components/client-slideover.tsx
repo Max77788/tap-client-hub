@@ -561,8 +561,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     // Also call PATCH for immediate persistence of individual field changes
     const svc = localSvcs.find((s: any) => s.key === key);
     if (!svc?.csId || svc.csId === "") {
-      // No DB row yet — fire PUT immediately to create it
-      fetch("/api/clients", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...c, services: updated }) }).catch(() => {});
+      // No DB row yet — enable it and fire PUT immediately to create it
+      const enabled = updated.map((s: any) => s.key === key ? { ...s, enabled: true } : s);
+      fetch("/api/clients", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...c, services: enabled }) }).catch(() => {});
     }
     if (svc?.csId && svc.csId !== "") {
       fetch("/api/clients", {
