@@ -399,6 +399,23 @@ export async function PUT(request: Request) {
     }
 
     const results: { key: string; action: string }[] = [];
+// Helper to sync comments
+    async function syncComments(csId: string, comments: any[]) {
+      if (!comments || !Array.isArray(comments)) return;
+      const { error: delErr } = await supabase.from("service_comments").delete().eq("client_service_id", csId);
+      if (delErr) { console.error("Comments delete error:", delErr.message); return; }
+      for (const cm of comments) {
+        if (cm.text || cm.body) {
+          await supabase.from("service_comments").insert({
+            client_service_id: csId,
+            month: cm.month ?? null,
+            body: cm.text || cm.body || "",
+            author_label: cm.author || "",
+            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+          });
+        }
+      }
+    }
 // Helper to sync sales tax line items
     async function syncStxLineItems(csId: string, items: any[]) {
       if (!items || !Array.isArray(items)) return;
@@ -474,6 +491,7 @@ export async function PUT(request: Request) {
             }
             results.push({ key: svc.key, action: "activated" });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
+            if (svc.comments) await syncComments(existing.id, svc.comments);
           } else {
             // Base fields update
             await supabase.from("client_services").update({
@@ -516,6 +534,7 @@ export async function PUT(request: Request) {
             }
             results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1, _stxSyncErr: stxSyncErr, _csId: existing.id } as any);
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
+            if (svc.comments) await syncComments(existing.id, svc.comments);
           }
         } else {
           // No row — create one
@@ -558,6 +577,7 @@ export async function PUT(request: Request) {
           } else {
             results.push({ key: svc.key, action: "created" });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(newCsId as string, svc.salesTaxLineItems);
+            if (svc.comments) await syncComments(newCsId as string, svc.comments);
           }
         }
       } else {
