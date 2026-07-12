@@ -694,8 +694,18 @@ export async function PATCH(request: Request) {
     const hasNewColumns = stateRenewal !== undefined || renewalState !== undefined || renewalDueMonth !== undefined || renewalDueDay !== undefined || renewalIdentifiers !== undefined;
     if (hasNewColumns) {
       try {
-        const { createClient: createPg } = await import("@/lib/supabase/direct-db");
-        const pgClient = createPg();
+        const { Pool } = require("pg");
+        const pool = new Pool({
+          host: "db.rqxscydyvrvbdkqagemy.supabase.co",
+          port: 5432,
+          database: "postgres",
+          user: "postgres",
+          password: "BIvtIZP9RHIrcZRg",
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 5000,
+          max: 1,
+        });
+        const client = await pool.connect();
         const set: string[] = [];
         const vals: any[] = [];
         let idx = 1;
@@ -706,8 +716,10 @@ export async function PATCH(request: Request) {
         if (renewalIdentifiers !== undefined) { set.push(`renewal_identifiers = $${idx++}`); vals.push(renewalIdentifiers); }
         if (set.length > 0) {
           vals.push(csId);
-          await pgClient.query(`UPDATE tap_hub_project.client_services SET ${set.join(", ")} WHERE id = $${idx}`, vals);
+          await client.query(`UPDATE tap_hub_project.client_services SET ${set.join(", ")} WHERE id = $${idx}`, vals);
         }
+        client.release();
+        await pool.end();
       } catch(e) { _pgError = (e as any).message || String(e); }
     }
 
