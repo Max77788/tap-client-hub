@@ -448,6 +448,11 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
+                state_renewal: svc.stateRenewal ?? existing.state_renewal ?? null,
+                renewal_state: svc.renewalState ?? existing.renewal_state ?? null,
+                renewal_due_month: svc.renewalDueMonth ?? existing.renewal_due_month ?? null,
+                renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
+                renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
             }).eq("id", existing.id);
             if (svc.key === "payroll") {
                 const prUpdate: Record<string,any> = {};
@@ -480,6 +485,11 @@ export async function PUT(request: Request) {
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
                 return_type: svc.filingType ?? existing.return_type ?? null,
                 service_name: svc.serviceName ?? existing.service_name ?? null,
+                state_renewal: svc.stateRenewal ?? existing.state_renewal ?? null,
+                renewal_state: svc.renewalState ?? existing.renewal_state ?? null,
+                renewal_due_month: svc.renewalDueMonth ?? existing.renewal_due_month ?? null,
+                renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
+                renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
             }).eq("id", existing.id);
             // Payroll fields update (separate call — proven to work)
             if (svc.key === "payroll") {
@@ -536,6 +546,11 @@ export async function PUT(request: Request) {
               reporting_notes: svc.reportingNotes || null,
               pay_emails: svc.payEmails || null,
               biweekly_code: svc.biweeklyCode || null,
+              state_renewal: svc.stateRenewal ?? null,
+              renewal_state: svc.renewalState ?? null,
+              renewal_due_month: svc.renewalDueMonth ?? null,
+              renewal_due_day: svc.renewalDueDay ?? null,
+              renewal_identifiers: svc.renewalIdentifiers ?? null,
             });
           if (insErr) {
             results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
