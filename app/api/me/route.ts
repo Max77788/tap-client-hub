@@ -43,14 +43,37 @@ export async function GET() {
     profile = data;
   }
   if (!profile && profileEmail) {
-    // Look up by derived email
+    // Try matching by name from tap_demo_user cookie
+    const userName = cookieStore.get("tap_demo_user")?.value || "";
     const { data: all } = await supabase.from("profiles").select("id, role, full_name");
     if (all) {
       profile = all.find((p: any) => {
-        const parts = (p.full_name || "").trim().split(/\s+/);
-        const derived = `${(parts[0] || "").toLowerCase()}.${(parts[parts.length - 1] || "").toLowerCase()}@tapallc.com`;
-        return derived === profileEmail;
+        const dbName = (p.full_name || "").trim().toLowerCase();
+        const userLower = decodeURIComponent(userName).trim().toLowerCase();
+        if (!userLower) return false;
+        // Direct match
+        if (dbName === userLower) return true;
+        // "lastname, firstname" vs "firstname lastname"
+        if (dbName.includes(",")) {
+          const [last, first] = dbName.split(",").map((s: string) => s.trim());
+          return `${first} ${last}` === userLower;
+        }
+        return false;
       }) || null;
+
+      // Fallback: try email prefix match
+      if (!profile) {
+        const emailPrefix = profileEmail.split("@")[0].toLowerCase();
+        profile = all.find((p: any) => {
+          const dbName = (p.full_name || "").trim().toLowerCase();
+          if (dbName.includes(",")) {
+            const first = dbName.split(",")[1]?.trim() || "";
+            return first === emailPrefix;
+          }
+          const parts = dbName.split(/\s+/);
+          return (parts[0] || "") === emailPrefix;
+        }) || null;
+      }
     }
   }
 
