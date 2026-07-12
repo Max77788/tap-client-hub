@@ -707,7 +707,7 @@ export async function PATCH(request: Request) {
           vals.push(csId);
           await pgClient.query(`UPDATE tap_hub_project.client_services SET ${set.join(", ")} WHERE id = $${idx}`, vals);
         }
-      } catch(e) {}
+      } catch(e) { console.error("Pg fallback error:", (e as any).message || e); }
     }
 
     // ── Dual-write to normalized v7 tables ──
