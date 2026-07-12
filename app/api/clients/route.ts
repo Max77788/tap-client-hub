@@ -693,6 +693,8 @@ export async function PATCH(request: Request) {
         "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
         "Content-Type": "application/json",
         "Prefer": "return=minimal",
+        "Accept-Profile": "tap_hub_project",
+        "Content-Profile": "tap_hub_project",
       },
       body: JSON.stringify(updates),
     }).then(r => r.ok ? { error: null } : r.json().then(j => ({ error: j })));
