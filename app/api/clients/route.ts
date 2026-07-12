@@ -609,6 +609,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
+    let _pgError: string | null = null;
     const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
 
     if (!csId) {
@@ -707,7 +708,7 @@ export async function PATCH(request: Request) {
           vals.push(csId);
           await pgClient.query(`UPDATE tap_hub_project.client_services SET ${set.join(", ")} WHERE id = $${idx}`, vals);
         }
-      } catch(e) { console.error("Pg fallback error:", (e as any).message || e); }
+      } catch(e) { _pgError = (e as any).message || String(e); }
     }
 
     // ── Dual-write to normalized v7 tables ──
