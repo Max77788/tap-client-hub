@@ -549,7 +549,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     throttledOnSave({ ...c, services: updated } as Client);
     // Also call PATCH for immediate persistence of individual field changes
     const svc = localSvcs.find((s: any) => s.key === key);
-    if (svc?.csId) {
+    if (svc?.csId && svc.csId !== "") {
       fetch("/api/clients", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1132,14 +1132,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <input type="number" min="1" max="31" placeholder="1-31"
                           style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                           value={renewalDueDay}
-                          onChange={e => setRenewalDueDay(e.target.value)} />
+                          onChange={e => { setRenewalDueDay(e.target.value); saveServiceField("tax_returns", "renewalDueDay", e.target.value); }} />
                       </div>
                       <div style={{ flex: "2 0 140px" }}>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
                         <input placeholder="e.g. EIN, state IDs"
                           style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                           defaultValue={renewalIds}
-                          onBlur={e => setRenewalIds(e.target.value)} />
+                          onBlur={e => { setRenewalIds(e.target.value); saveServiceField("tax_returns", "renewalIdentifiers", e.target.value); }} />
                       </div>
                     </div>
                   )}
