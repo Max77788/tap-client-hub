@@ -697,7 +697,7 @@ export async function PATCH(request: Request) {
         "Content-Profile": "tap_hub_project",
       },
       body: JSON.stringify(updates),
-    }).then(r => r.ok ? { error: null } : r.json().then(j => ({ error: j })));
+    }).then(async r => { const txt = await r.text(); return r.ok ? { error: null } : { error: { message: txt, status: r.status } }; });
 
     // ── Dual-write to normalized v7 tables ──
     if (error) {
