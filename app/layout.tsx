@@ -387,8 +387,8 @@ export default function RootLayout({
                     </select>
                   </div>
                 )}
-                {(role === "admin" || role === "owner") && (
-                <div className="flex items-center gap-2">
+                  {/* Viewing as — always visible so no one gets stuck */}
+              <div className="flex items-center gap-2">
                   <span className="text-[12px] text-[var(--muted)]">Viewing as</span>
                   <select
                     value={role}
@@ -406,7 +406,6 @@ export default function RootLayout({
                   <option value="offshore">India (Offshore)</option>
                 </select>
               </div>
-                )}
             </div>
             </header>
           )}
