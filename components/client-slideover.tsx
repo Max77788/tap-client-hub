@@ -1131,8 +1131,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Day</label>
                         <input type="number" min="1" max="31" placeholder="1-31"
                           style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                          value={renewalDueDay}
-                          onChange={e => { setRenewalDueDay(e.target.value); saveServiceField("tax_returns", "renewalDueDay", e.target.value); }} />
+                          defaultValue={renewalDueDay}
+                          onBlur={e => { setRenewalDueDay(e.target.value); saveServiceField("tax_returns", "renewalDueDay", e.target.value); }} />
                       </div>
                       <div style={{ flex: "2 0 140px" }}>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
@@ -2256,12 +2256,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                       <span className="k" style={{ color: "var(--muted)" }}>Due Day</span>
-                      <input type="number" min="1" max="31" value={renewalDueDay} onChange={e => setRenewalDueDay(e.target.value)}
+                      <input type="number" min="1" max="31" defaultValue={renewalDueDay} onBlur={e => { setRenewalDueDay(e.target.value); saveServiceField("tax_returns", "renewalDueDay", e.target.value); }}
                         style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }} />
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                       <span className="k" style={{ color: "var(--muted)" }}>Identifying Numbers</span>
-                      <input defaultValue={renewalIds} onBlur={e => setRenewalIds(e.target.value)}
+                      <input defaultValue={renewalIds} onBlur={e => { setRenewalIds(e.target.value); saveServiceField("tax_returns", "renewalIdentifiers", e.target.value); }}
                         style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                         placeholder="e.g. EIN, state IDs" />
                     </div>
