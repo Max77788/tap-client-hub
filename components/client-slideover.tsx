@@ -2006,7 +2006,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Frequency/Cadence for non-payroll services */}
-            {moduleKey !== "payroll" && targetSvc.enabled && (
+            {moduleKey !== "payroll" && moduleKey !== "renditions" && targetSvc.enabled && (
               <div style={{ marginBottom: 12 }}>
                 <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                   Details
