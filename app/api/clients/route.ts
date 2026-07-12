@@ -95,9 +95,10 @@ export async function GET(request: Request) {
         if (batchPeriods) allPeriods = allPeriods.concat(batchPeriods);
       }
       for (const wp of allPeriods) {
-        const m = wp.period?.match(/^\d{4}-(\d{2})$/);
+        const s = String(wp.period ?? "");
+        const m = s.match(/^(\d{4})-?(\d{2})$/);
         if (!m) continue;
-        const mi = parseInt(m[1]) - 1;
+        const mi = parseInt(m[2]) - 1;
         if (mi >= 0 && mi < 12) {
           if (!periodByCsId[wp.client_service_id]) periodByCsId[wp.client_service_id] = {};
           periodByCsId[wp.client_service_id][mi] = wp.stage;
@@ -119,9 +120,10 @@ export async function GET(request: Request) {
         if (batchCounts) allCounts = allCounts.concat(batchCounts);
       }
       for (const pc of allCounts) {
-        const m = pc.period?.match(/^\d{4}-(\d{2})$/);
+        const s = String(pc.period ?? "");
+        const m = s.match(/^(\d{4})-?(\d{2})$/);
         if (!m) continue;
-        const mi = parseInt(m[1]) - 1;
+        const mi = parseInt(m[2]) - 1;
         if (mi >= 0 && mi < 12) {
           if (!countByCsId[pc.client_service_id]) countByCsId[pc.client_service_id] = Array(12).fill(0);
           countByCsId[pc.client_service_id][mi] = Math.max(0, pc.processed || 0);
