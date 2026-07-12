@@ -183,10 +183,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // ── Pay Day options (fetched from DB) ──
   const [payDayOptions, setPayDayOptions] = useState<string[]>([]);
+  const [payDayByFreq, setPayDayByFreq] = useState<Record<string,string[]>>({});
   useEffect(() => {
     fetch("/api/payroll/paydays")
       .then(r => r.json())
-      .then(data => { if (data.paydays) setPayDayOptions(data.paydays); })
+      .then(data => { 
+        if (data.paydaysByFreq) { 
+          setPayDayByFreq(data.paydaysByFreq); 
+          // Also populate flat list for non-module view
+          const all = new Set<string>();
+          Object.values(data.paydaysByFreq).forEach((arr: string[]) => arr.forEach(v => all.add(v)));
+          setPayDayOptions([...all]);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -880,14 +889,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Pay date / day</label>
-                    <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
+                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prPaydate}
                       onChange={e => {
                         setPrPaydate(e.target.value);
                         setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s));
-                      }}
-                      placeholder="e.g. Friday"
-                    />
+                      }}>
+                      <option value="">—</option>
+                      {(payDayByFreq[prPeriodFreq || ""] || []).map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </div>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll PIN</label>

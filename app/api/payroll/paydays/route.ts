@@ -1,32 +1,20 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
+/**
+ * GET /api/payroll/paydays
+ * Returns payday options grouped by frequency from the payroll spreadsheet.
+ */
 export async function GET() {
-  try {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { db: { schema: "tap_hub_project" } }
-    );
+  // Payday options by frequency (from PAYROLL SPREADSHEET - Janeth)
+  const FREQ_PAYDAYS: Record<string, string[]> = {
+    "Weekly":       ["Fridays", "Saturdays"],
+    "Bi-Weekly":    ["Thursdays", "Fridays"],
+    "Semi-Monthly": ["5th/20th", "15th & EOM", "15th/EOM", "16th/EOM"],
+    "Monthly":      ["EOM", "25th", "Fridays"],
+    "Quarterly":    ["EOM"],
+  };
 
-    const { data, error } = await supabase
-      .from("client_services")
-      .select("paydate")
-      .not("paydate", "is", null)
-      .neq("paydate", "");
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const unique = Array.from(new Set(data.map((r: any) => r.paydate)))
-      .filter(Boolean)
-      .filter((v: string) => !v.includes("@"))  // exclude emails
-      .sort();
-    return NextResponse.json({ paydays: unique });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
+  return NextResponse.json({ paydaysByFreq: FREQ_PAYDAYS });
 }
