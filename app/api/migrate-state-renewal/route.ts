@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { db: { schema: "tap_hub_project" } }
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  const results: string[] = [];
-
-  // Run each ALTER TABLE individually via raw SQL
   const migrations = [
     'ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS state_renewal boolean DEFAULT false',
     'ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS renewal_state text',
@@ -19,36 +12,26 @@ export async function GET() {
     'ALTER TABLE tap_hub_project.client_services ADD COLUMN IF NOT EXISTS renewal_identifiers text',
   ];
 
-  for (const sql of migrations) {
-    const { error } = await supabase.rpc("exec_sql", { sql_stmt: sql }).single();
-    if (error) {
-      // Try the query endpoint if rpc fails
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`,
-          {
-            method: "POST",
-            headers: {
-              apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-              Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-              "Content-Type": "application/json",
-              "Content-Profile": "pgrst",
-              Prefer: "resolution=merge-duplicates",
-            },
-            body: JSON.stringify({}),
-          }
-        );
-      } catch {}
-      results.push(`${sql.substring(52, 80)}: ${error?.message || "unknown error"}`);
-    } else {
-      results.push(`${sql.substring(52, 80)}: OK`);
-    }
-  }
+  const results: string[] = [];
 
-  // Fallback: try using the manage API with query
-  // Last resort: write to notes column
-  if (results.every(r => r.includes("error") || r.includes("unknown"))) {
-    results.push("All direct SQL failed. Columns likely don't exist. See migrations/add_state_renewal_columns.sql");
+  for (const sql of migrations) {
+    // Try direct PostgreSQL via Supabase API
+    const res = await fetch(`${url}/rest/v1/`, {
+      method: "POST",
+      headers: {
+        "apikey": key,
+        "Authorization": `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Prefer": "tx=commit",
+        "Content-Profile": "pgrst",
+      },
+      body: JSON.stringify({
+        query: sql
+      }),
+    });
+    
+    const body = await res.text();
+    results.push(`${res.status}: ${sql.substring(52, 80)} → ${body.substring(0, 80)}`);
   }
 
   return NextResponse.json({ results });
