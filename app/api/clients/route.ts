@@ -609,7 +609,6 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    let _pgError: string | null = null;
     const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
 
     if (!csId) {
@@ -689,39 +688,6 @@ export async function PATCH(request: Request) {
       .from("client_services")
       .update(updates)
       .eq("id", csId);
-
-    // Raw SQL fallback for newly-added columns (bypasses PostgREST schema cache)
-    const hasNewColumns = stateRenewal !== undefined || renewalState !== undefined || renewalDueMonth !== undefined || renewalDueDay !== undefined || renewalIdentifiers !== undefined;
-    if (hasNewColumns) {
-      try {
-        const { Pool } = require("pg");
-        const pool = new Pool({
-          host: "db.rqxscydyvrvbdkqagemy.supabase.co",
-          port: 5432,
-          database: "postgres",
-          user: "postgres",
-          password: "BIvtIZP9RHIrcZRg",
-          ssl: { rejectUnauthorized: false },
-          connectionTimeoutMillis: 5000,
-          max: 1,
-        });
-        const client = await pool.connect();
-        const set: string[] = [];
-        const vals: any[] = [];
-        let idx = 1;
-        if (stateRenewal !== undefined) { set.push(`state_renewal = $${idx++}`); vals.push(stateRenewal); }
-        if (renewalState !== undefined) { set.push(`renewal_state = $${idx++}`); vals.push(renewalState); }
-        if (renewalDueMonth !== undefined) { set.push(`renewal_due_month = $${idx++}`); vals.push(renewalDueMonth); }
-        if (renewalDueDay !== undefined) { set.push(`renewal_due_day = $${idx++}`); vals.push(renewalDueDay); }
-        if (renewalIdentifiers !== undefined) { set.push(`renewal_identifiers = $${idx++}`); vals.push(renewalIdentifiers); }
-        if (set.length > 0) {
-          vals.push(csId);
-          await client.query(`UPDATE tap_hub_project.client_services SET ${set.join(", ")} WHERE id = $${idx}`, vals);
-        }
-        client.release();
-        await pool.end();
-      } catch(e) { _pgError = (e as any).message || String(e); }
-    }
 
     // ── Dual-write to normalized v7 tables ──
     if (error) {
