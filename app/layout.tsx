@@ -170,11 +170,17 @@ export default function RootLayout({
   // ── Real role from database (for permission checks like dropdown visibility) ──
   const [realRole, setRealRole] = useState<string>("admin");
 
-  // Fetch real role from /api/me on mount
+  // Fetch real role from /api/me on mount — also syncs role state
   useEffect(() => {
     fetch("/api/me", { credentials: "include" })
       .then(r => r.json())
-      .then(d => { if (d.role) setRealRole(d.role.toLowerCase().includes("owner") ? "owner" : d.role.toLowerCase().includes("admin") ? "admin" : d.role); })
+      .then(d => {
+        if (d.role) {
+          const rl = d.role.toLowerCase();
+          const resolved = rl.includes("owner") ? "owner" : rl.includes("admin") ? "admin" : d.role;
+          setRealRole(resolved);
+        }
+      })
       .catch(() => {});
   }, []);
 
