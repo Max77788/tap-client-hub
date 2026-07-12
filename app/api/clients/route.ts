@@ -148,7 +148,7 @@ export async function GET(request: Request) {
           for (const stx of stxBatch) {
             if (!normStxByCsId[stx.client_service_id]) normStxByCsId[stx.client_service_id] = [];
             normStxByCsId[stx.client_service_id].push({
-              id: stx.id, serviceName: stx.service_name || stx.rt_number || "", taxId: stx.tax_reg_id,
+              id: stx.id, serviceName: stx.service_name || stx.rt_number || "",  // service_name preferred, rt_number fallback taxId: stx.tax_reg_id,
               rt: stx.rt_number, frequency: stx.frequency,
               bankName: stx.bank_name, bankAccount: stx.bank_account_ref,
               bankRouting: stx.bank_routing_ref, notes: stx.notes,
@@ -409,6 +409,7 @@ export async function PUT(request: Request) {
           id: randomUUID(),
           client_service_id: csId,
           rt_number: item.rt || item.rt_number || "",
+          service_name: item.serviceName || "",
           tax_reg_id: item.taxId || item.tax_reg_id || "",
           frequency: item.frequency || null,
           assigned_to: item.assignedTo || null,
@@ -747,6 +748,7 @@ export async function PATCH(request: Request) {
           id: randomUUID(),
           client_service_id: csId,
           rt_number: item.rt || item.rt_number || "",
+          service_name: item.serviceName || "",
           tax_reg_id: item.taxId || item.tax_reg_id || "",
           frequency: item.frequency || null,
           assigned_to: item.assignedTo || null,
