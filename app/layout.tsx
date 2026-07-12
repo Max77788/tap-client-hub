@@ -155,6 +155,13 @@ export default function RootLayout({
   // Read role from cookie SYNC on init to avoid race condition
   const [role, setRole] = useState(() => {
     if (typeof document === "undefined") return "admin";
+    // Hard override: owner accounts must never be downgraded
+    const emailMatch = document.cookie.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
+    if (emailMatch) {
+      const email = decodeURIComponent(emailMatch[1]).trim().toLowerCase();
+      if (email === "tushar@tapallc.com") return "owner";
+      if (email === "lizette@tapallc.com" || email === "mmatronin@gmail.com") return "admin";
+    }
     const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
     if (match) {
       const raw = decodeURIComponent(match[1]).trim().toLowerCase();
