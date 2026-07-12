@@ -101,7 +101,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (newPrEmailRef.current) newPrEmailRef.current.value = "";
     const p4 = localSvcs.find((s: any) => s.key === "payroll");
     if (p4?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:p4.csId,payEmails:upd})}).catch(()=>{});
-    setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
   };
   // ── STX line item focus ref for auto-scroll ──
   useEffect(() => {
@@ -897,6 +896,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       onChange={e => {
                         setPrPaydate(e.target.value);
                         setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s));
+                        const px = localSvcs.find((s: any) => s.key === "payroll");
+                        if (px?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:px.csId,paydate:e.target.value})}).catch(()=>{});
                       }}>
                       <option value="">—</option>
                       {(payDayByFreq[prPeriodFreq || ""] || []).map(opt => (
@@ -955,6 +956,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         setPrPeriodFreq(e.target.value);
                         const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s);
                         setLocalSvcs(updated);
+                        throttledOnSave({ ...c, services: updated } as Client);
                       }}
                     >
                       <option value="">—</option>
@@ -1037,8 +1039,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div style={{ flex: "1 0 100px" }}>
                   <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Expected Annual</label>
                   <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                    type="number" value={svc.expectedAnnual || 0}
- onChange={e => setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))}
+                    type="number" defaultValue={svc.expectedAnnual || 0}
+ onBlur={e => { setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s)); if (svc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:svc.csId,expectedAnnual:Number(e.target.value)})}).catch(()=>{}); }}
                     placeholder="0"
                   />
                 </div>
@@ -2014,7 +2016,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span className="k" style={{ color: "var(--muted)" }}>Expected Annual</span>
                     <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      type="number" value={targetSvc.expectedAnnual || 0} onChange={e => setLocalSvcs(prev => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s))} placeholder="0" />
+                      type="number" defaultValue={targetSvc.expectedAnnual || 0} onBlur={e => { setLocalSvcs(prev => prev.map((s: any) => s.key === "1099s" ? { ...s, expectedAnnual: Number(e.target.value) } : s)); if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,expectedAnnual:Number(e.target.value)})}).catch(()=>{}); }} placeholder="0" />
                   </div>
                 )}
               </div>
@@ -2030,7 +2032,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={prPeriodFreq} onChange={e => {
                       const val = e.target.value;
                       setPrPeriodFreq(val);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val } : s));
+                      setLocalSvcs(prev => { const up = prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val } : s); return up; });
+                      if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,payPeriodFrequency:val,frequency:val})}).catch(()=>{});
                       // Auto-set start date based on cadence
                       if (val) {
                         const today = new Date();
@@ -2409,7 +2412,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Assigned To</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); }}>
+                      value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,assignedTo:e.target.value})}).catch(()=>{}); }}>
                       {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
                       <option>Unassigned</option>
                     </select>
