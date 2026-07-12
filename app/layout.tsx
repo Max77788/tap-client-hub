@@ -377,11 +377,15 @@ export default function RootLayout({
                     </select>
                   </div>
                 )}
-                <div className="rolepick hidden sm:flex items-center gap-2">
+                {(role === "admin" || role === "owner") && (
+                <div className="flex items-center gap-2">
                   <span className="text-[12px] text-[var(--muted)]">Viewing as</span>
                   <select
                     value={role}
-                    onChange={(e) => setRole(e.target.value)}
+                    onChange={(e) => {
+                      setRole(e.target.value);
+                      document.cookie = `tap_demo_role=${e.target.value}; path=/; max-age=86400; SameSite=Lax`;
+                    }}
                     className="text-[13px] rounded-[10px] px-3 py-[9px] border border-[var(--line)] bg-white text-[var(--ink)] cursor-pointer"
                     style={{ appearance: "none", paddingRight: 30 }}
                   >
@@ -389,9 +393,10 @@ export default function RootLayout({
                   <option value="admin">Admin</option>
                   <option value="manager">Manager</option>
                   <option value="staff">Staff</option>
-                  <option value="india">India (Offshore)</option>
+                  <option value="offshore">India (Offshore)</option>
                 </select>
               </div>
+                )}
             </div>
             </header>
           )}
