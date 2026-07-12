@@ -155,24 +155,15 @@ export default function RootLayout({
   // Read role from cookie SYNC on init to avoid race condition
   const [role, setRole] = useState(() => {
     if (typeof document === "undefined") return "admin";
-    // Hard override: owner accounts must never be downgraded
-    const emailMatch = document.cookie.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
-    if (emailMatch) {
-      const email = decodeURIComponent(emailMatch[1]).trim().toLowerCase();
-      if (email === "tushar@tapallc.com") return "owner";
-      if (email === "lizette@tapallc.com" || email === "mmatronin@gmail.com") return "admin";
-    }
     const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
-    if (match) {
-      const raw = decodeURIComponent(match[1]).trim().toLowerCase();
-      // Map common variants to canonical roles
-      if (raw.includes("owner") || raw.includes("admin")) return raw.includes("owner") ? "owner" : "admin";
-      if (raw === "manager") return "manager";
-      if (raw === "staff") return "staff";
-      if (raw.includes("offshore") || raw.includes("india")) return "offshore";
-      return "staff";
-    }
-    return "admin";
+    if (!match) return "admin";
+    const raw = decodeURIComponent(match[1]).trim().toLowerCase();
+    if (raw.includes("owner")) return "owner";
+    if (raw.includes("admin")) return "admin";
+    if (raw === "manager") return "manager";
+    if (raw === "staff") return "staff";
+    if (raw.includes("offshore") || raw.includes("india")) return "offshore";
+    return "staff";
   });
 
   // Keep cookie in sync on future changes
@@ -238,16 +229,9 @@ export default function RootLayout({
   }, []);
 
   const visibleNav = NAV_ITEMS.filter((item) => {
-    // Generic role filter: if item has a role requirement, check it
-    if (item.role) {
-      if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
-      if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
-    }
-    // Module-based filtering: only apply when modules are loaded (not null) and role is restricted
-    // During loading (null), show everything that passes role check — no empty nav
-    if (userModules !== null && userModules.length > 0 && role !== "owner" && role !== "admin" && role !== "manager") {
-      return userModules.includes(item.label);
-    }
+    // Role-based filter only
+    if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
+    if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
     return true;
   });
 
