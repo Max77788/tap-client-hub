@@ -1043,13 +1043,14 @@ export default function WorklistTable({
           </tr>
         </thead>
         <tbody>
-          {filteredClients.length === 0 ? (
+          {filteredClients.length === 0 && (
             <tr>
               <td colSpan={colCount} className="text-center py-8 text-sm text-[var(--muted)]">
                 No clients found.
               </td>
             </tr>
-          ) : (
+          )}
+          {filteredClients.length > 0 && (
             (serviceKey === "sales_tax"
               ? // ── Sales Tax: group by client, add group header rows ──
                 // Flat clients may already be pre-expanded with _stxItem / _stxName from stx/page.tsx
