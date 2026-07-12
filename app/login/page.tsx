@@ -50,6 +50,11 @@ function LoginContent() {
       // Set temporary cookie so 2FA endpoints can identify this user
       document.cookie = `tap_demo_user=${encodeURIComponent(demo.name)}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
+      (() => {
+        const e = email.toLowerCase();
+        if (e === "tushar@tapallc.com") document.cookie = "tap_demo_role=owner; path=/; max-age=86400; SameSite=Lax";
+        else if (e === "lizette@tapallc.com" || e === "mmatronin@gmail.com") document.cookie = "tap_demo_role=admin; path=/; max-age=86400; SameSite=Lax";
+      })();
 
       // Check if 2FA is enabled for this user
       try {
