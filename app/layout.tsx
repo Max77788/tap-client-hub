@@ -152,16 +152,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [role, setRole] = useState("admin");
+  // Read role from cookie SYNC on init to avoid race condition
+  const [role, setRole] = useState(() => {
+    if (typeof document === "undefined") return "admin";
+    const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
+    if (match) {
+      const cookieRole = decodeURIComponent(match[1]);
+      const validRoles = ["admin", "manager", "staff", "offshore", "owner"];
+      return validRoles.includes(cookieRole) ? cookieRole : "staff";
+    }
+    return "admin";
+  });
 
-  // Read role from cookie set by /api/me after login
+  // Keep cookie in sync on future changes
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
     if (match) {
       const cookieRole = decodeURIComponent(match[1]);
-      // Map to our role values
       const validRoles = ["admin", "manager", "staff", "offshore", "owner"];
-      setRole(validRoles.includes(cookieRole) ? cookieRole : "staff");
+      const resolved = validRoles.includes(cookieRole) ? cookieRole : "staff";
+      if (resolved !== role) setRole(resolved);
     }
   }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
