@@ -32,6 +32,11 @@ function LoginContent() {
     "mmatronin@gmail.com": { password: "MaxHub2025!", name: "Max Matronin" },
     "ben@aifusioniqlabs.com": { password: "TapHub2024!", name: "Ben" },
     "staff@tapallc.com": { password: "TapHub2024!", name: "Staff Test" },
+    "janeth@tapallc.com": { password: "TapHub2024!", name: "Janeth Noguera" },
+    "alvaro@tapallc.com": { password: "TapHub2024!", name: "Alvaro Ortega" },
+    "bonnie@tapallc.com": { password: "TapHub2024!", name: "Bonnie Edwards" },
+    "shilpa@tapallc.com": { password: "TapHub2024!", name: "Shilpa Kulkarni" },
+    "sam@tapallc.com": { password: "TapHub2024!", name: "Sam Patil" },
   };
 
   async function handlePasswordSubmit(e: React.FormEvent) {
