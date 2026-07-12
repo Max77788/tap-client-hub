@@ -303,11 +303,15 @@ export async function PUT(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { id: clientId, services, name, type, group, emails, phones, address, city, state, zip, assignedStaff, ein, notes } = body;
+    const { id: clientId, services, name, type, group, emails, phones, email, phone, address, city, state, zip, assignedStaff, ein, notes } = body;
 
     if (!clientId) {
       return NextResponse.json({ error: "client id is required" }, { status: 400 });
     }
+
+    // Normalize: accept both singular and plural forms
+    const normEmails = emails ?? (email !== undefined ? [email] : undefined);
+    const normPhones = phones ?? (phone !== undefined ? [phone] : undefined);
 
     // Update client-level fields if provided
     const clientUpdates: Record<string, any> = {};
@@ -319,13 +323,12 @@ export async function PUT(request: Request) {
     if (state !== undefined) clientUpdates.state = state;
     if (zip !== undefined) clientUpdates.zip = zip;
     if (notes !== undefined) clientUpdates.notes = notes;
-    if (emails !== undefined) {
-      // Store as comma-separated string (GET handler splits by comma)
-      const arr = Array.isArray(emails) ? emails : [emails];
+    if (normEmails !== undefined) {
+      const arr = Array.isArray(normEmails) ? normEmails : [normEmails];
       clientUpdates.emails = arr.filter(Boolean).join(", ");
     }
-    if (phones !== undefined) {
-      const arr = Array.isArray(phones) ? phones : [phones];
+    if (normPhones !== undefined) {
+      const arr = Array.isArray(normPhones) ? normPhones : [normPhones];
       clientUpdates.phones = arr.filter(Boolean).join(", ");
     }
     if (assignedStaff !== undefined) {
