@@ -1154,7 +1154,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <input type="number" min="1" max="31" placeholder="1-31"
                           style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
                           defaultValue={renewalDueDay}
-                          onBlur={e => { setRenewalDueDay(e.target.value); saveServiceField("tax_returns", "renewalDueDay", e.target.value); }} />
+                          onBlur={e => { const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1)); e.target.value = String(v); setRenewalDueDay(String(v)); saveServiceField("tax_returns", "renewalDueDay", String(v)); }} />
                       </div>
                       <div style={{ flex: "2 0 140px" }}>
                         <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
@@ -2279,7 +2279,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                       <span className="k" style={{ color: "var(--muted)" }}>Due Day</span>
-                      <input type="number" min="1" max="31" defaultValue={renewalDueDay} onBlur={e => { setRenewalDueDay(e.target.value); saveServiceField("tax_returns", "renewalDueDay", e.target.value); }}
+                      <input type="number" min="1" max="31" defaultValue={renewalDueDay} onBlur={e => { const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1)); e.target.value = String(v); setRenewalDueDay(String(v)); saveServiceField("tax_returns", "renewalDueDay", String(v)); }}
                         style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }} />
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
