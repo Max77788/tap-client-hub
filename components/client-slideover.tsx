@@ -2117,6 +2117,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       autoSave(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s));
                     }}>
                     <option value="">—</option>
+                    {payDayOptions.includes(prPaydate) || !prPaydate ? null : <option value={prPaydate}>{prPaydate}</option>}
                     {payDayOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 </div>
