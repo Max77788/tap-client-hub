@@ -215,7 +215,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         .filter((u: any) => u.status === "Active")
         .filter((u: any) => !["Max Matronin", "Staff Test"].includes(u.name))
         .map((u: any) => ({ id: u.id, name: u.name })));
-    }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+    }).catch(() => {});
   }, []);
 
   // ── Helper: extract first name (handles "Last, First" and "First Last" formats) ──
@@ -554,7 +554,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csId: svc.csId, [field]: value }),
-      }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+      }).then(r => { if (!r.ok) console.warn("saveServiceField PATCH failed:", r.status, field); }).catch((e: any) => console.warn("saveServiceField PATCH error:", e.message, field));
     }
   }
 
@@ -711,7 +711,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ client_service_id: svc.csId, period, processed: newCounts[i] }),
-                        }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+                        }).catch(() => {});
                       }
                     }}
                     onContextMenu={(e) => {
@@ -727,7 +727,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ client_service_id: svc.csId, period, processed: newCounts[i] }),
-                        }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+                        }).catch(() => {});
                       }
                     }}
                     style={{
@@ -1261,7 +1261,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                           // Save STX via PATCH (handles sales_tax_registration sync)
                           const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
-                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                           [stxNameRef, stxRtRef, stxTaxIdRef, stxBankRef, stxRoutingRef, stxAccountRef].forEach(r => { if (r.current) r.current.value = ''; });
                           setNewStxFreq("Monthly"); setNewStxAssigned("");
                           setAddingStx(false);
@@ -1341,7 +1341,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                                   // Save STX via PATCH (handles sales_tax_registration sync)
                           const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
-                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                                   setEditingStxIdx(-1);
                                 }}>
                                 Save
@@ -1387,7 +1387,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                                   // Save STX via PATCH (handles sales_tax_registration sync)
                           const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
-                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                                 }}
                               >✕</button>
                             </div>
@@ -1741,7 +1741,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
                     // Save STX via PATCH (handles sales_tax_registration sync)
                           const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
-                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).then(r => { if (!r.ok) console.error("PATCH failed:", r.status, "field:", field); }).catch((e: any) => console.error("PATCH error:", e.message, "field:", field));
+                          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                     [stxNameRef, stxRtRef, stxTaxIdRef, stxBankRef, stxRoutingRef, stxAccountRef].forEach(r => { if (r.current) r.current.value = ''; });
                     setNewStxFreq("Monthly"); setNewStxAssigned("");
                     setAddingStx(false);
