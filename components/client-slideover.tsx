@@ -96,8 +96,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (!val) return;
     const upd = [...prEmails, val];
     setPrEmails(upd);
+    setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
     setNewPrEmail("");
     if (newPrEmailRef.current) newPrEmailRef.current.value = "";
+    const p4 = localSvcs.find((s: any) => s.key === "payroll");
+    if (p4?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:p4.csId,payEmails:upd})}).catch(()=>{});
     setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s));
   };
   // ── STX line item focus ref for auto-scroll ──
@@ -906,7 +909,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div style={{ position: "relative" }}>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
                         type={showPrPin ? "text" : "password"} ref={prPinRef} defaultValue={prPin}
-                        onBlur={e => setPrPin(e.target.value)}
+                        onBlur={e => { setPrPin(e.target.value); const p = localSvcs.find((s: any) => s.key === 'payroll'); if (p?.csId) fetch('/api/clients',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csId:p.csId,payrollPassword:e.target.value})}).catch(()=>{}); }}
                         placeholder="EFT pin"
                       />
                       <button type="button" tabIndex={-1}
@@ -926,7 +929,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div style={{ position: "relative" }}>
                       <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", paddingRight: 30 }}
                         type={showPrEftps ? "text" : "password"} ref={prEftpsRef} defaultValue={prEftps}
-                        onBlur={e => setPrEftps(e.target.value)}
+                        onBlur={e => { setPrEftps(e.target.value); const p = localSvcs.find((s: any) => s.key === 'payroll'); if (p?.csId) fetch('/api/clients',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csId:p.csId,eftps:e.target.value})}).catch(()=>{}); }}
                         placeholder="EFTPS password"
                       />
                       <button type="button" tabIndex={-1}
@@ -968,7 +971,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <textarea style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", minHeight: 50, resize: "vertical" }}
                     ref={reportingRef}
                     defaultValue={prReportingNotes}
-                    onBlur={e => setPrReportingNotes(e.target.value)}
+                    onBlur={e => { setPrReportingNotes(e.target.value); const p = localSvcs.find((s: any) => s.key === "payroll"); if (p?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:p.csId,reportingNotes:e.target.value})}).catch(()=>{}); }}
                     placeholder="Add notes about payroll filing/reporting..."
                   />
                 </div>
@@ -979,7 +982,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {prEmails.map((em, i) => (
                       <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--blue-soft)", borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 500 }}>
                         {em}
-                        <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); }}
+                        <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); const p2 = localSvcs.find((s: any) => s.key === "payroll"); if (p2?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:p2.csId,payEmails:upd})}).catch(()=>{}); }}
                           style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 12, lineHeight: 1 }}>×</button>
                       </span>
                     ))}
@@ -2132,7 +2135,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
                       type={showPrEftps ? "text" : "password"} ref={prEftpsRef} defaultValue={prEftps || ""}
-                      onBlur={e => setPrEftps(e.target.value)} placeholder="—" />
+                      onBlur={e => { setPrEftps(e.target.value); const p = localSvcs.find((s: any) => s.key === 'payroll'); if (p?.csId) fetch('/api/clients',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csId:p.csId,eftps:e.target.value})}).catch(()=>{}); }} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrEftps(!showPrEftps)}
                       style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}>
@@ -2149,7 +2152,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ flex: 1, position: "relative" }}>
                     <input style={{ width: "100%", textAlign: "left", padding: "4px 30px 4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
                       type={showPrPin ? "text" : "password"} ref={prPinRef} defaultValue={prPin || ""}
-                      onBlur={e => setPrPin(e.target.value)} placeholder="—" />
+                      onBlur={e => { setPrPin(e.target.value); const p = localSvcs.find((s: any) => s.key === 'payroll'); if (p?.csId) fetch('/api/clients',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csId:p.csId,payrollPassword:e.target.value})}).catch(()=>{}); }} placeholder="—" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowPrPin(!showPrPin)}
                       style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted)", fontSize: 15, lineHeight: 1 }}>
@@ -2168,7 +2171,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       {prEmails.filter(Boolean).map((em, i) => (
                         <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "var(--blue-soft)", borderRadius: 6, padding: "2px 8px", fontSize: 12, fontWeight: 500 }}>
                           {em}
-                          <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); }}
+                          <button onClick={() => { const upd = prEmails.filter((_, j) => j !== i); setPrEmails(upd); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, payEmails: upd } : s)); const p2 = localSvcs.find((s: any) => s.key === "payroll"); if (p2?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:p2.csId,payEmails:upd})}).catch(()=>{}); }}
                             style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 12, lineHeight: 1 }}>×</button>
                         </span>
                       ))}
@@ -2192,7 +2195,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <textarea style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", minHeight: 50, resize: "vertical" }}
                     ref={reportingRef}
                     defaultValue={prReportingNotes}
-                    onBlur={e => setPrReportingNotes(e.target.value)}
+                    onBlur={e => { setPrReportingNotes(e.target.value); const p = localSvcs.find((s: any) => s.key === "payroll"); if (p?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:p.csId,reportingNotes:e.target.value})}).catch(()=>{}); }}
                     placeholder="Add notes about payroll filing/reporting..." />
                 </div>
               </>
