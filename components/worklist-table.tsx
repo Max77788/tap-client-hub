@@ -1042,7 +1042,7 @@ export default function WorklistTable({
             )}
           </tr>
         </thead>
-        <tbody>
+        <tbody key={filteredClients.length}>
           {filteredClients.length === 0 && (
             <tr>
               <td colSpan={colCount} className="text-center py-8 text-sm text-[var(--muted)]">
