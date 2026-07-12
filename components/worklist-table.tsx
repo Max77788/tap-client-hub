@@ -538,9 +538,9 @@ export default function WorklistTable({
         if (!data.counts || !Array.isArray(data.counts)) return;
         const countsByCsId: Record<string, number[]> = {};
         for (const c of data.counts) {
-          const parts = c.period?.split("-");
-          if (!parts || parts.length < 2) continue;
-          const monthIdx = parseInt(parts[1]) - 1;
+          const periodNum = typeof c.period === "number" ? c.period : parseInt(c.period);
+          if (!periodNum) continue;
+          const monthIdx = (periodNum % 100) - 1;
           if (monthIdx < 0 || monthIdx >= 12) continue;
           if (!countsByCsId[c.client_service_id]) countsByCsId[c.client_service_id] = Array(12).fill(0);
           countsByCsId[c.client_service_id][monthIdx] = Math.max(0, c.processed || 0);
@@ -569,9 +569,9 @@ export default function WorklistTable({
         if (!data.counts || !Array.isArray(data.counts)) return;
         const countsByCsId: Record<string, number[]> = {};
         for (const c of data.counts) {
-          const parts = c.period?.split("-");
-          if (!parts || parts.length < 2) continue;
-          const monthIdx = parseInt(parts[1]) - 1;
+          const periodNum = typeof c.period === "number" ? c.period : parseInt(c.period);
+          if (!periodNum) continue;
+          const monthIdx = (periodNum % 100) - 1;
           if (monthIdx < 0 || monthIdx >= 12) continue;
           if (!countsByCsId[c.client_service_id]) countsByCsId[c.client_service_id] = Array(12).fill(0);
           countsByCsId[c.client_service_id][monthIdx] = Math.max(0, c.processed || 0);

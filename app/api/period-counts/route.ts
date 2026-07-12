@@ -11,15 +11,32 @@ export async function GET(request: Request) {
 
   let query = supabase.from("period_counts").select("*");
   if (csId) query = query.eq("client_service_id", csId);
-  if (year) query = query.like("period", `${year}-%`);
+  if (year) {
+    const yearInt = parseInt(year) * 100;
+    query = query.gte("period", yearInt + 1).lte("period", yearInt + 12);
+  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ counts: data || [] });
 }
 
+// Helper: convert "YYYY-MM" string to integer YYYYMM for the DB column
+function periodToInt(period: string): number {
+  const parts = period.split("-");
+  if (parts.length === 2) return parseInt(parts[0]) * 100 + parseInt(parts[1]);
+  return parseInt(period) || 0;
+}
+
+// Helper: convert integer YYYYMM back to "YYYY-MM" string
+function intToPeriod(n: number): string {
+  const year = Math.floor(n / 100);
+  const month = n % 100;
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
 // POST /api/period-counts — upsert a count for a month
-// Body: { client_service_id, period, processed }
+// Body: { client_service_id, period: "YYYY-MM", processed }
 export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
@@ -29,11 +46,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing client_service_id, period, or processed" }, { status: 400 });
   }
 
+  const periodInt = periodToInt(period);
+
   const { data: existing } = await supabase
     .from("period_counts")
     .select("client_service_id, period")
     .eq("client_service_id", client_service_id)
-    .eq("period", period)
+    .eq("period", periodInt)
     .maybeSingle();
 
   let result;
@@ -42,13 +61,13 @@ export async function POST(request: Request) {
       .from("period_counts")
       .update({ processed: Math.max(0, processed), updated_at: new Date().toISOString() })
       .eq("client_service_id", client_service_id)
-      .eq("period", period)
+      .eq("period", periodInt)
       .select()
       .single();
   } else {
     result = await supabase
       .from("period_counts")
-      .insert({ client_service_id, period, processed: Math.max(0, processed) })
+      .insert({ client_service_id, period: periodInt, processed: Math.max(0, processed) })
       .select()
       .single();
   }
