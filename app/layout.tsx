@@ -152,7 +152,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  // Read role from cookie SYNC on init to avoid race condition
+
+  // ── Role from cookie (for nav filtering, user-switchable via dropdown) ──
   const [role, setRole] = useState(() => {
     if (typeof document === "undefined") return "admin";
     const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
@@ -165,6 +166,17 @@ export default function RootLayout({
     if (raw.includes("offshore") || raw.includes("india")) return "offshore";
     return "staff";
   });
+
+  // ── Real role from database (for permission checks like dropdown visibility) ──
+  const [realRole, setRealRole] = useState<string>("admin");
+
+  // Fetch real role from /api/me on mount
+  useEffect(() => {
+    fetch("/api/me", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => { if (d.role) setRealRole(d.role.toLowerCase().includes("owner") ? "owner" : d.role.toLowerCase().includes("admin") ? "admin" : d.role); })
+      .catch(() => {});
+  }, []);
 
   // Keep cookie in sync on future changes
   useEffect(() => {
@@ -387,7 +399,8 @@ export default function RootLayout({
                     </select>
                   </div>
                 )}
-                  {/* Viewing as — always visible so no one gets stuck */}
+                {/* Viewing as — visible only for real admin/owner users */}
+                {(realRole === "admin" || realRole === "owner") && (
               <div className="flex items-center gap-2">
                   <span className="text-[12px] text-[var(--muted)]">Viewing as</span>
                   <select
@@ -406,6 +419,7 @@ export default function RootLayout({
                   <option value="offshore">India (Offshore)</option>
                 </select>
               </div>
+                )}
             </div>
             </header>
           )}
