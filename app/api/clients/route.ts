@@ -206,7 +206,7 @@ export async function GET(request: Request) {
           filingState: cs.filing_state || "",
           filingMonth: cs.due_month ? String(cs.due_month) : "",
           filingType: cs.return_type || "",
-          payEmails: Array.isArray(cs.pay_emails) ? cs.pay_emails : [],
+          payEmails: (() => { const pe = cs.pay_emails; if (!pe) return []; if (Array.isArray(pe)) return pe; try { const p = JSON.parse(pe); return Array.isArray(p) ? p : pe ? [String(pe)] : []; } catch { return pe ? [String(pe)] : []; } })(),
           comments: lite ? [] : (() => {
             const oldCmts = Array.isArray(cs.comments) ? cs.comments : [];
             const newCmts = normCommentsByCsId[cs.id] || [];
@@ -465,7 +465,7 @@ export async function PUT(request: Request) {
                 if (svc.payrollCategory !== undefined) prUpdate.payroll_category = svc.payrollCategory || null;
                 if (svc.qbLicense !== undefined) prUpdate.qb_license = svc.qbLicense || null;
                 if (svc.reportingNotes !== undefined) prUpdate.reporting_notes = svc.reportingNotes || null;
-                if (svc.payEmails !== undefined) prUpdate.pay_emails = svc.payEmails || null;
+                if (svc.payEmails !== undefined) prUpdate.pay_emails = Array.isArray(svc.payEmails) ? JSON.stringify(svc.payEmails) : (svc.payEmails || null);
                 if (svc.biweeklyCode !== undefined) prUpdate.biweekly_code = svc.biweeklyCode || null;
                 if (Object.keys(prUpdate).length > 0) {
                     await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
@@ -503,7 +503,7 @@ export async function PUT(request: Request) {
                 if (svc.payrollCategory !== undefined) prUpdate.payroll_category = svc.payrollCategory || null;
                 if (svc.qbLicense !== undefined) prUpdate.qb_license = svc.qbLicense || null;
                 if (svc.reportingNotes !== undefined) prUpdate.reporting_notes = svc.reportingNotes || null;
-                if (svc.payEmails !== undefined) prUpdate.pay_emails = svc.payEmails || null;
+                if (svc.payEmails !== undefined) prUpdate.pay_emails = Array.isArray(svc.payEmails) ? JSON.stringify(svc.payEmails) : (svc.payEmails || null);
                 if (svc.biweeklyCode !== undefined) prUpdate.biweekly_code = svc.biweeklyCode || null;
                 if (Object.keys(prUpdate).length > 0) {
                     await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
@@ -544,7 +544,7 @@ export async function PUT(request: Request) {
               payroll_category: svc.payrollCategory || null,
               qb_license: svc.qbLicense || null,
               reporting_notes: svc.reportingNotes || null,
-              pay_emails: svc.payEmails || null,
+              pay_emails: Array.isArray(svc.payEmails) ? JSON.stringify(svc.payEmails) : (svc.payEmails || null),
               biweekly_code: svc.biweeklyCode || null,
               state_renewal: svc.stateRenewal ?? null,
               renewal_state: svc.renewalState ?? null,
@@ -685,7 +685,7 @@ export async function PATCH(request: Request) {
     if (payrollCategory !== undefined) updates.payroll_category = payrollCategory || null;
     if (qbLicense !== undefined) updates.qb_license = qbLicense || null;
     if (reportingNotes !== undefined) updates.reporting_notes = reportingNotes || null;
-    if (payEmails !== undefined) updates.pay_emails = payEmails || null;
+    if (payEmails !== undefined) updates.pay_emails = Array.isArray(payEmails) ? JSON.stringify(payEmails) : (payEmails || null);
     if (biweeklyCode !== undefined) updates.biweekly_code = biweeklyCode || null;
 
     // State renewal fields
