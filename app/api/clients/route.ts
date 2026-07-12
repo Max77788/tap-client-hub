@@ -654,6 +654,7 @@ export async function PATCH(request: Request) {
 
     if (filingType !== undefined) {
       updates.return_type = filingType || null;
+    }
 
     if (serviceName !== undefined) {
       updates.service_name = serviceName || null;
@@ -678,7 +679,6 @@ export async function PATCH(request: Request) {
     if (renewalDueMonth !== undefined) updates.renewal_due_month = renewalDueMonth || null;
     if (renewalDueDay !== undefined) updates.renewal_due_day = renewalDueDay || null;
     if (renewalIdentifiers !== undefined) updates.renewal_identifiers = renewalIdentifiers || null;
-    }
 
     if (Object.keys(updates).length === 0 && salesTaxLineItems === undefined && comments === undefined && stateRenewal === undefined) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
