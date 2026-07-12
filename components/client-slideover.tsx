@@ -2303,13 +2303,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
             {targetSvc.key === "sales_tax" && targetSvc.enabled && <SalesTaxLineItemsSection />}
 
-            {/* Service notes from DB */}
-            {targetSvc.svcNotes && (
-              <div style={{ marginTop: 16, padding: "10px 12px", background: "var(--amber-soft)", borderRadius: 10, fontSize: 12, lineHeight: 1.5, color: "var(--ink)" }}>
-                <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 4 }}>Service Notes (DB)</div>
-                {targetSvc.svcNotes}
-              </div>
-            )}
+            {/* Service notes from DB — hidden */}
 
             {/* Notes section — hide for Sales Tax (notes live on line items instead) */}
             {moduleKey !== "sales_tax" && (
