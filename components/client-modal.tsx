@@ -200,10 +200,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
     onSave({
       name: nm, type: type as "Business" | "Personal", status: "active",
-      group, assignedStaff: assigned,
+      group,
       emails: [email, addEmail].filter(Boolean),
       phones: [phone, addPhone].filter(Boolean),
-      address, city, state: st,
+      address, city, state: st, zip,
       ein: clientEin || undefined,
       services: svcs.length ? svcs : [],
     } as any);
@@ -253,10 +253,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <input style={inputStyle} value={group} onChange={e => setGroup(e.target.value)} placeholder="e.g. Gambhir" />
             </div>
           </div>
-          <label style={labelStyle}>Assigned to</label>
-          <select style={inputStyle} value={assigned} onChange={e => setAssigned(e.target.value)}>
-            {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
-          </select>
 
           {/* ── Contact section ── */}
           <div className="fsect" style={fsectStyle}>Contact</div>

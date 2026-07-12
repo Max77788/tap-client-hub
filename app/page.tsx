@@ -146,6 +146,7 @@ export default function ClientsPage() {
   }, [deleteFromState]);
 
   const handleModalSave = useCallback(async (data: Omit<Client, "id" | "cid">) => {
+    const services = (data as any).services || [];
     try {
       const res = await fetch("/api/clients", {
         method: "POST",
@@ -161,6 +162,14 @@ export default function ClientsPage() {
           status: "active",
         } as Client;
         addClient(newClient);
+        // Persist services via PUT after client creation
+        if (services.length > 0) {
+          fetch("/api/clients", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: newClient.id, services }),
+          }).catch(() => {});
+        }
         return;
       }
     } catch (e) {
