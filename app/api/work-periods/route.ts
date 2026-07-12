@@ -67,7 +67,8 @@ export async function GET(request: Request) {
   }
 
   if (year) {
-    query = query.like("period", `${year}-%`);
+    const yearInt = parseInt(year) * 100;
+    query = query.gte("period", yearInt + 1).lte("period", yearInt + 12);
   }
 
   const { data, error } = await query;
@@ -121,12 +122,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // Convert "2026-07" to integer 202607 for DB compatibility
+  const periodInt = typeof period === "string" && period.includes("-")
+    ? parseInt(period.replace("-", ""))
+    : parseInt(String(period));
+
   // Check if a row already exists for this client_service_id + period
   const { data: existing } = await supabase
     .from("work_periods")
     .select("id")
     .eq("client_service_id", client_service_id)
-    .eq("period", period)
+    .eq("period", periodInt)
     .maybeSingle();
 
   let result;
@@ -148,7 +154,7 @@ export async function POST(request: Request) {
       .from("work_periods")
       .insert({
         client_service_id,
-        period,
+        period: periodInt,
         stage,
         done_by: done_by || null,
         done_at: stage === "done" ? new Date().toISOString() : null,
