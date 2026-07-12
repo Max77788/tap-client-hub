@@ -685,7 +685,7 @@ export async function PATCH(request: Request) {
     }
 
     // Use direct PostgREST call to bypass schema cache for new columns
-    const pgrestUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/client_services?id=eq.${csId}`;
+    const pgrestUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/client_services?select=*&id=eq.${csId}`;
     const { error } = await fetch(pgrestUrl, {
       method: "PATCH",
       headers: {
