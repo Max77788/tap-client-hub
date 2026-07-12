@@ -228,12 +228,9 @@ export default function RootLayout({
       if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
       if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
     }
-    // While modules are loading, show nothing for restricted roles (avoid flashing all items)
-    if (userModules === null && role !== "owner" && role !== "admin" && role !== "manager") {
-      return false;
-    }
-    // Module-based filtering (for staff/offshore with limited modules)
-    if (userModules && userModules.length > 0 && role !== "owner" && role !== "admin" && role !== "manager") {
+    // Module-based filtering: only apply when modules are loaded (not null) and role is restricted
+    // During loading (null), show everything that passes role check — no empty nav
+    if (userModules !== null && userModules.length > 0 && role !== "owner" && role !== "admin" && role !== "manager") {
       return userModules.includes(item.label);
     }
     return true;
