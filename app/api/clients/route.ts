@@ -684,10 +684,18 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from("client_services")
-      .update(updates)
-      .eq("id", csId);
+    // Use direct PostgREST call to bypass schema cache for new columns
+    const pgrestUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/client_services?id=eq.${csId}`;
+    const { error } = await fetch(pgrestUrl, {
+      method: "PATCH",
+      headers: {
+        "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify(updates),
+    }).then(r => r.ok ? { error: null } : r.json().then(j => ({ error: j })));
 
     // ── Dual-write to normalized v7 tables ──
     if (error) {
