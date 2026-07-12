@@ -900,7 +900,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         if (px?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:px.csId,paydate:e.target.value})}).catch(()=>{});
                       }}>
                       <option value="">—</option>
-                      {(payDayByFreq[prPeriodFreq || ""] || []).map(opt => (
+                      {(payDayByFreq[prPeriodFreq || ""] || payDayByFreq[(prPeriodFreq || "").replace(/ [AB]$/, "")] || []).map(opt => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
