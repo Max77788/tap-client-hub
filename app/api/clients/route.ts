@@ -277,7 +277,7 @@ export async function GET(request: Request) {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
         clientCode: db.client_code || db.cid || "",
         name: db.name, type: (db.type || "").toLowerCase() === "business" ? "Business" : "Personal",
-        group: db.group_owner || "Unassigned",
+        group: db.group_name || db.group_owner || "Unassigned",
         groupName: db.group_name || db.group_owner || "", status: db.status || "active",
         city: db.city || "", state: db.state || "TX", zip: db.zip || "",
         emails: db.emails ? db.emails.replace(/[{}"]/g,'').split(',').filter(Boolean) : [],
