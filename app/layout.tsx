@@ -157,9 +157,13 @@ export default function RootLayout({
     if (typeof document === "undefined") return "admin";
     const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
     if (match) {
-      const cookieRole = decodeURIComponent(match[1]);
-      const validRoles = ["admin", "manager", "staff", "offshore", "owner"];
-      return validRoles.includes(cookieRole) ? cookieRole : "staff";
+      const raw = decodeURIComponent(match[1]).trim().toLowerCase();
+      // Map common variants to canonical roles
+      if (raw.includes("owner") || raw.includes("admin")) return raw.includes("owner") ? "owner" : "admin";
+      if (raw === "manager") return "manager";
+      if (raw === "staff") return "staff";
+      if (raw.includes("offshore") || raw.includes("india")) return "offshore";
+      return "staff";
     }
     return "admin";
   });
@@ -168,9 +172,13 @@ export default function RootLayout({
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
     if (match) {
-      const cookieRole = decodeURIComponent(match[1]);
-      const validRoles = ["admin", "manager", "staff", "offshore", "owner"];
-      const resolved = validRoles.includes(cookieRole) ? cookieRole : "staff";
+      const raw = decodeURIComponent(match[1]).trim().toLowerCase();
+      let resolved = "staff";
+      if (raw.includes("owner")) resolved = "owner";
+      else if (raw.includes("admin")) resolved = "admin";
+      else if (raw === "manager") resolved = "manager";
+      else if (raw === "staff") resolved = "staff";
+      else if (raw.includes("offshore") || raw.includes("india")) resolved = "offshore";
       if (resolved !== role) setRole(resolved);
     }
   }, []);
