@@ -689,6 +689,27 @@ export async function PATCH(request: Request) {
       .update(updates)
       .eq("id", csId);
 
+    // Raw SQL fallback for newly-added columns (bypasses PostgREST schema cache)
+    const hasNewColumns = stateRenewal !== undefined || renewalState !== undefined || renewalDueMonth !== undefined || renewalDueDay !== undefined || renewalIdentifiers !== undefined;
+    if (hasNewColumns) {
+      try {
+        const { createClient: createPg } = await import("@/lib/supabase/direct-db");
+        const pgClient = createPg();
+        const set: string[] = [];
+        const vals: any[] = [];
+        let idx = 1;
+        if (stateRenewal !== undefined) { set.push(`state_renewal = $${idx++}`); vals.push(stateRenewal); }
+        if (renewalState !== undefined) { set.push(`renewal_state = $${idx++}`); vals.push(renewalState); }
+        if (renewalDueMonth !== undefined) { set.push(`renewal_due_month = $${idx++}`); vals.push(renewalDueMonth); }
+        if (renewalDueDay !== undefined) { set.push(`renewal_due_day = $${idx++}`); vals.push(renewalDueDay); }
+        if (renewalIdentifiers !== undefined) { set.push(`renewal_identifiers = $${idx++}`); vals.push(renewalIdentifiers); }
+        if (set.length > 0) {
+          vals.push(csId);
+          await pgClient.query(`UPDATE tap_hub_project.client_services SET ${set.join(", ")} WHERE id = $${idx}`, vals);
+        }
+      } catch(e) {}
+    }
+
     // ── Dual-write to normalized v7 tables ──
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
