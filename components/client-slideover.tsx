@@ -299,15 +299,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const today = new Date();
       let d = new Date(today);
       d.setDate(d.getDate() + 1);
+      let finalDate = "";
       if (freq === "Weekly") {
         while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
-        setPrStartDate(d.toISOString().slice(0, 10));
+        finalDate = d.toISOString().slice(0, 10);
       } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
         while (true) {
           if (d.getDay() === 5) {
             const dom = d.getDate();
             if ((dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31)) {
-              setPrStartDate(d.toISOString().slice(0, 10));
+              finalDate = d.toISOString().slice(0, 10);
               break;
             }
           }
@@ -318,7 +319,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           if (d.getDay() === 5) {
             const dom = d.getDate();
             if ((dom >= 8 && dom <= 14) || (dom >= 23 && dom <= 28)) {
-              setPrStartDate(d.toISOString().slice(0, 10));
+              finalDate = d.toISOString().slice(0, 10);
               break;
             }
           }
@@ -328,7 +329,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         while (true) {
           const dom = d.getDate();
           if (dom === 1 || dom === 15) {
-            setPrStartDate(d.toISOString().slice(0, 10));
+            finalDate = d.toISOString().slice(0, 10);
             break;
           }
           d.setDate(d.getDate() + 1);
@@ -336,11 +337,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       } else if (freq === "Monthly") {
         while (true) {
           if (d.getDate() === 1) {
-            setPrStartDate(d.toISOString().slice(0, 10));
+            finalDate = d.toISOString().slice(0, 10);
             break;
           }
           d.setDate(d.getDate() + 1);
         }
+      }
+      if (finalDate) {
+        setPrStartDate(finalDate);
+        if (prSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:prSvc.csId,payStartDate:finalDate})}).catch(()=>{});
       }
     }
     setPrReportingMethod(prSvc?.reportingMethod || "");
@@ -909,6 +914,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
+                  </div>
+                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Start Date</label>
+                    <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", color: "var(--ink)" }}
+                      value={prStartDate} readOnly placeholder="mm/dd/yyyy" />
                   </div>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll PIN</label>
