@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Client, ServiceKey } from "@/lib/types";
 import { SERVICE_META, STAFF } from "@/lib/data";
 
@@ -54,6 +54,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [showEftps, setShowEftps] = useState(false);
   const [prProcessorOther, setPrProcessorOther] = useState("");
   const [prEmails, setPrEmails] = useState<string[]>([]);
+  const prEmailInputRef = useRef<HTMLInputElement>(null);
   const [stxFreq, setStxFreq] = useState("Monthly");
   // Sales tax line items
   const [stxLineItems, setStxLineItems] = useState<any[]>([]);
@@ -387,18 +388,31 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                       <button type="button" onClick={() => setPrEmails(prev => prev.filter((_, j) => j !== i))} style={{ all: "unset", cursor: "pointer", lineHeight: 1, fontSize: 13, marginLeft: 1, opacity: 0.7 }}>×</button>
                     </span>
                   ))}
-                  <input
-                    style={{ border: "none", outline: "none", fontSize: 12, flex: 1, minWidth: 100, background: "transparent" }}
-                    placeholder="Type email and press Enter"
-                    onKeyDown={e => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const val = (e.target as HTMLInputElement).value.trim();
+                  <div style={{ display: "flex", flex: 1, minWidth: 100, alignItems: "center", gap: 4 }}>
+                    <input
+                      ref={prEmailInputRef}
+                      style={{ border: "none", outline: "none", fontSize: 12, flex: 1, background: "transparent" }}
+                      placeholder="Type email + Enter"
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const val = (e.target as HTMLInputElement).value.trim();
+                          if (val && !prEmails.includes(val)) setPrEmails(prev => [...prev, val]);
+                          (e.target as HTMLInputElement).value = "";
+                        }
+                      }}
+                    />
+                    <button type="button"
+                      onClick={() => {
+                        const inp = prEmailInputRef.current as HTMLInputElement | null;
+                        if (!inp) return;
+                        const val = inp.value.trim();
                         if (val && !prEmails.includes(val)) setPrEmails(prev => [...prev, val]);
-                        (e.target as HTMLInputElement).value = "";
-                      }
-                    }}
-                  />
+                        inp.value = "";
+                        inp.focus();
+                      }}
+                      style={{ all: "unset", cursor: "pointer", padding: "2px 8px", background: "var(--ink)", color: "#fff", borderRadius: 6, fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</button>
+                  </div>
               </div>
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
