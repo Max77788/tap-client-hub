@@ -173,9 +173,9 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     });
     addSvc("payroll", pr, prFreq, prAssigned, {
       paydate: prPaydate || undefined,
-      payrollPassword: prPin || undefined,
-      eftps: prEftps || undefined,
-      processor: prProcessor === "Other" ? (prProcessorOther || "Other") : (prProcessor || undefined),
+      payrollPassword: prPin || null,
+      eftps: prEftps || null,
+      processor: prProcessor || undefined,
       payEmails: prEmails.length > 0 ? prEmails : undefined,
       financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
     });
@@ -372,20 +372,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <label style={labelStyle}>Processor</label>
               <select style={inputStyle} value={prProcessor} onChange={e => setPrProcessor(e.target.value)}>
                 <option value="">— Select —</option>
-                <option>ADP</option>
-                <option>Paychex</option>
-                <option>Gusto</option>
-                <option>QuickBooks</option>
-                <option>Paylocity</option>
-                <option>OnPay</option>
-                <option>Other</option>
+                <option value="Quickbooks Desktop 24">Quickbooks Desktop 24</option>
+                <option value="Quickbooks Desktop">Quickbooks Desktop</option>
+                <option value="ADP">ADP</option>
+                <option value="QBO">QBO</option>
               </select>
-              {prProcessor === "Other" && (
-                <div style={{ marginTop: 6 }}>
-                  <label style={labelStyle}>Custom processor name</label>
-                  <input style={inputStyle} value={prProcessorOther} onChange={e => setPrProcessorOther(e.target.value)} placeholder="e.g. MyPayrollPro" />
-                </div>
-              )}
             </div>
             <div style={{ marginTop: 8 }}>
               <label style={labelStyle}>Payroll Emails</label>
