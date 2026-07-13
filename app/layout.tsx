@@ -222,33 +222,28 @@ export default function RootLayout({
     // Role-based restrictions (Workload/Timesheet = manager+)
     if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
     if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
-    // Module-based restrictions: if item has a module and user has modules, must be in list
-    // If userModules is empty (owner/admin with no explicit list), show everything
-    if (item.module && userModules.length > 0 && !userModules.includes(item.module)) return false;
+    // Module-based restrictions: hide items not in user's module list
+    // Admins/owners see everything even without explicit modules
+    const isPowerUser = role === "admin" || role === "owner";
+    if (item.module && !isPowerUser && !userModules.includes(item.module)) return false;
     return true;
   });
 
   // ── Page-level module guard: redirect if user tries to access forbidden page ──
   useEffect(() => {
-    if (userModules.length === 0) return; // admin/owner see everything
+    const isPowerUser = role === "admin" || role === "owner";
+    if (isPowerUser) return;
     const pageModule: Record<string, string> = {
       "/fin": "Financials", "/pr": "Payroll", "/stx": "Sales Tax",
-      "/t9": "1099s", "/tax": "Business Taxes", "/rend": "Renditions",
+      "/t9": "1099s", "/tax": "Tax Returns", "/rend": "Renditions",
       "/vault": "Vault", "/workload": "Workload", "/time": "Timesheet",
       "/users": "Users & Access", "/support": "Support",
     };
     const reqModule = pageModule[pathname];
     if (reqModule && !userModules.includes(reqModule)) {
-      // Also check alternate: /tax could be Business or Personal
-      if (pathname === "/tax") {
-        if (!userModules.includes("Personal Taxes")) {
-          window.location.href = "/";
-        }
-      } else {
-        window.location.href = "/";
-      }
+      window.location.href = "/";
     }
-  }, [pathname, userModules]);
+  }, [pathname, userModules, role]);
 
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
