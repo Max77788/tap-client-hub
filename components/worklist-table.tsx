@@ -393,7 +393,6 @@ export default function WorklistTable({
 
   const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxIdx?: number) => {
     if (!text.trim()) return;
-    // Find the client and service to get csId
     const cl = clients.find((c: any) => c.id === clientId);
     if (!cl) return;
     const svc = cl.services.find((s: any) => s.key === serviceKey);
@@ -408,8 +407,33 @@ export default function WorklistTable({
     };
     if (stxIdx != null) newComment.stxIdx = stxIdx;
 
+    // ── Sales tax line item: store comment on the line item itself ──
+    if (stxIdx != null && svc.salesTaxLineItems) {
+      const items = [...(svc.salesTaxLineItems || [])];
+      if (!items[stxIdx]) { console.error("stxIdx out of range"); return; }
+      items[stxIdx] = {
+        ...items[stxIdx],
+        comments: [...(items[stxIdx].comments || []), newComment],
+      };
+      svc.salesTaxLineItems = items;
+      try {
+        const res = await fetch("/api/clients", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: items }),
+        });
+        if (res.ok) {
+          setCommentText("");
+          setCommentRefreshKey(k => k + 1);
+        }
+      } catch (e) {
+        console.error("Failed to add line item comment:", e);
+      }
+      return;
+    }
+
+    // ── Service-level comment (non-STX) ──
     const updatedComments = [...(svc.comments || []), newComment];
-    // Update local state directly for instant UI feedback
     svc.comments = updatedComments;
     try {
       const res = await fetch("/api/clients", {
@@ -429,14 +453,34 @@ export default function WorklistTable({
     }
   }, [clients, serviceKey]);
 
-  const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string) => {
+  const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string, stxIdx?: number) => {
     const cl = clients.find((c: any) => c.id === clientId);
     if (!cl) return;
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) return;
 
+    // ── Sales tax line item: delete from line item comments ──
+    if (stxIdx != null && svc.salesTaxLineItems) {
+      const items = [...(svc.salesTaxLineItems || [])];
+      if (!items[stxIdx]) return;
+      items[stxIdx] = {
+        ...items[stxIdx],
+        comments: (items[stxIdx].comments || []).filter((c: any) => c.id !== commentId),
+      };
+      svc.salesTaxLineItems = items;
+      try {
+        const res = await fetch("/api/clients", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: items }),
+        });
+        if (res.ok) setCommentRefreshKey(k => k + 1);
+      } catch (e) { console.error("Failed to delete line item comment:", e); }
+      return;
+    }
+
+    // ── Service-level comment ──
     const updatedComments = (svc.comments || []).filter((c: any) => c.id !== commentId);
-    // Update local state directly for instant UI feedback
     svc.comments = updatedComments;
     try {
       const res = await fetch("/api/clients", {
@@ -1170,6 +1214,7 @@ export default function WorklistTable({
                       const cellEditKey = `${client.id}:${i}`;
                       const isEditing = editingT9 === cellEditKey;
                       const hasT9Cmt = (svc.comments || []).some((c: any) => c.month === i);
+                      const t9MonthComments = (svc.comments || []).filter((c: any) => c.month === i);
                       return (
                         <td key={mo} className={`mtd${isCM ? " mtd-now" : ""}`} style={{ position: "relative", width: 44, minWidth: 44, maxWidth: 44 }}>
                           {isEditing ? (
@@ -1234,16 +1279,16 @@ export default function WorklistTable({
                               <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
                                 Comments — {mo}
                               </div>
-                              {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).length > 0 && (
+                              {t9MonthComments.length > 0 && (
                                 <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                  {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).map((cm: any) => (
+                                  {t9MonthComments.map((cm: any) => (
                                     <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
                                       <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
                                         <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
                                       </div>
                                       <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
                                       <button
-                                        onClick={() => deleteComment(client.id, i, cm.id)}
+                                        onClick={() => deleteComment(client.id, i, cm.id, activeStxIdx ?? undefined)}
                                         style={{ all: "unset", cursor: "pointer", position: "absolute", top: 4, right: 6, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
                                         title="Delete comment"
                                       >×</button>
@@ -1376,9 +1421,9 @@ export default function WorklistTable({
                       : stage === "na" ? "–" : "";
                     const lockHist = isHistorical && isActive;
                     // ── Comment marker: check stxItem comments for sales tax line items ──
-                    const hasCmt = isStxItem
-                      ? (stxItem?.comments || []).some((c: any) => c.month === i)
-                      : (svc.comments || []).some((c: any) => c.month === i);
+                    const commentSource = isStxItem ? (stxItem?.comments || []) : (svc.comments || []);
+                    const hasCmt = commentSource.some((c: any) => c.month === i);
+                    const monthComments = commentSource.filter((c: any) => c.month === i);
                     return (
                       <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
                         {/* ── Filing month corner indicator ── */}
@@ -1553,23 +1598,23 @@ export default function WorklistTable({
                             <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
                               Comments — {MONTHS_SHORT[i]}
                             </div>
-                            {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).length > 0 && (
-                                <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                  {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).map((cm: any) => (
+                            {monthComments.length > 0 && (
+                              <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                                {monthComments.map((cm: any) => (
                                   <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
                                     <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
                                       <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
                                     </div>
                                     <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
                                     <button
-                                      onClick={() => deleteComment(client.id, i, cm.id)}
+                                      onClick={() => deleteComment(client.id, i, cm.id, activeStxIdx ?? undefined)}
                                       style={{ all: "unset", cursor: "pointer", position: "absolute", top: 4, right: 6, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
                                       title="Delete comment"
                                     >×</button>
                                   </div>
                                 ))}
                               </div>
-                            )}
+                              )}
                             <div style={{ display: "flex", gap: 6 }}>
                               <input
                                 style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
