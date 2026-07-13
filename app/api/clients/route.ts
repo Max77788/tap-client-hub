@@ -133,7 +133,17 @@ export async function GET(request: Request) {
 
     const { data: staffRows } = await supabase.from("profiles").select("id, full_name");
     const staffNames: Record<string, string> = {};
-    for (const s of staffRows || []) staffNames[s.id] = s.full_name;
+    for (const s of staffRows || []) {
+      staffNames[s.id] = s.full_name;
+      // Also map "First Last" format back to "Last, First" — some older rows
+      // store names directly instead of UUIDs in the assigned_to column.
+      const fn = s.full_name || "";
+      const parts = fn.split(",").map(x => x.trim()).filter(Boolean);
+      if (parts.length === 2) {
+        const alt = parts[1] + " " + parts[0]; // "Lizette Esparza" → "Esparza, Lizette"
+        if (alt !== fn) staffNames[alt] = fn;
+      }
+    }
 
     // EIN is now stored directly on clients table — no need for client_tax_ids lookup
 
