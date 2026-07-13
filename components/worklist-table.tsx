@@ -792,12 +792,15 @@ export default function WorklistTable({
     setEditT9Value(String(currentVal || 0));
   }, [isHistorical]);
 
-  const t9CommitEdit = useCallback((clientId: string, monthIdx: number) => {
+  const t9CommitEdit = useCallback((clientId: string, monthIdx: number, expectedVal?: number) => {
     const val = parseInt(editT9Value) || 0;
     const key = `${clientId}:1099s`;
     setT9Counts((prev) => {
       const counts = [...(prev[key] ?? Array(12).fill(0))];
-      counts[monthIdx] = Math.max(0, val);
+      // Cap at expected — allow this cell up to (expected - sum of other months)
+      const otherSum = counts.reduce((s, c, i) => s + (i === monthIdx ? 0 : c), 0);
+      const maxAllowable = expectedVal ? Math.max(0, expectedVal - otherSum) : Infinity;
+      counts[monthIdx] = Math.max(0, Math.min(val, maxAllowable));
       const svc = clients.find((c) => c.id === clientId)?.services.find((s: any) => s.key === "1099s");
       if (svc?.csId) {
         const period = `${year}-${String(monthIdx + 1).padStart(2, "0")}`;
@@ -1221,11 +1224,12 @@ export default function WorklistTable({
                             <input
                               type="number"
                               min="0"
+                              max={exp || undefined}
                               value={editT9Value}
                               onChange={(e) => setEditT9Value(e.target.value)}
-                              onBlur={() => t9CommitEdit(client.id, i)}
+                              onBlur={() => t9CommitEdit(client.id, i, exp)}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") t9CommitEdit(client.id, i);
+                                if (e.key === "Enter") t9CommitEdit(client.id, i, exp);
                                 if (e.key === "Escape") setEditingT9(null);
                               }}
                               autoFocus
