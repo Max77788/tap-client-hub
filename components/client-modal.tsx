@@ -79,7 +79,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   // Per-service assigned staff
   const [finAssigned, setFinAssigned] = useState("Unassigned");
   const [prAssigned, setPrAssigned] = useState("Unassigned");
-  const [stxAssigned, setStxAssigned] = useState("Unassigned");
   const [t9Assigned, setT9Assigned] = useState("Unassigned");
   const [rendAssigned, setRendAssigned] = useState("Unassigned");
   const [taxAssigned, setTaxAssigned] = useState("Unassigned");
@@ -137,7 +136,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setTaxFilingType(""); setTaxStateRenewal(false);
       setTaxRenewalState("TX"); setTaxRenewalDueMonth(""); setTaxRenewalDueDay(""); setTaxRenewalIds("");
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
-      setFinAssigned("Unassigned"); setPrAssigned("Unassigned"); setStxAssigned("Unassigned");
+      setFinAssigned("Unassigned"); setPrAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
     }
   }, [client, open]);
@@ -178,7 +177,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       payEmails: prEmails.length > 0 ? prEmails : undefined,
       financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
     });
-    addSvc("sales_tax", stx, stxFreq, stxAssigned, {
+    addSvc("sales_tax", stx, stxFreq, "Unassigned", {
       salesTaxLineItems: stxLineItems.length > 0 ? stxLineItems : undefined,
     });
     addSvc("1099s", t9, "Yearly", t9Assigned, {
@@ -420,10 +419,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <label style={{ ...labelStyle, marginTop: 8 }}>Cadence</label>
             <select style={inputStyle} value={stxFreq} onChange={e => setStxFreq(e.target.value)}>
               <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
-            </select>
-            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
-            <select style={inputStyle} value={stxAssigned} onChange={e => setStxAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
 
             {/* Sales tax line items — always visible when Sales Tax is checked */}
