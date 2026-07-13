@@ -172,10 +172,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
     });
     addSvc("payroll", pr, prFreq, prAssigned, {
-      paydate: prPaydate || undefined,
+      paydate: prPaydate || null,
       payrollPassword: prPin || null,
       eftps: prEftps || null,
-      processor: prProcessor || undefined,
+      processor: prProcessor || null,
       payEmails: prEmails.length > 0 ? prEmails : undefined,
       financialsMonth: finFreq === "Yearly" ? parseInt(finMonth) || 1 : undefined,
     });
@@ -188,10 +188,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     addSvc("renditions", rend, "Yearly", rendAssigned);
     addSvc("tax_returns", tax, "Yearly", taxAssigned, {
       processor: taxType,
-      filingMonth: taxFilingMonth || undefined,
-      filingState: taxFilingState || undefined,
-      filingType: taxFilingType || undefined,
-      stateRenewal: taxStateRenewal || undefined,
+      filingMonth: taxFilingMonth || null,
+      filingState: taxFilingState || null,
+      filingType: taxFilingType || null,
+      stateRenewal: taxStateRenewal || null,
       renewalState: taxStateRenewal ? taxRenewalState : undefined,
       renewalDueMonth: taxStateRenewal ? taxRenewalDueMonth : undefined,
       renewalDueDay: taxStateRenewal ? taxRenewalDueDay : undefined,
@@ -204,7 +204,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       emails: [email, addEmail].filter(Boolean),
       phones: [phone, addPhone].filter(Boolean),
       address, city, state: st, zip,
-      ein: clientEin || undefined,
+      ein: clientEin || null,
       services: svcs.length ? svcs : [],
     } as any);
     onClose();
