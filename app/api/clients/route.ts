@@ -812,29 +812,38 @@ export async function DELETE(request: Request) {
 
     const results: string[] = [];
 
-    // 1. Delete client_services
+    // 0. Collect all client_service IDs to cascade manually
+    const { data: svcs } = await supabase.from("client_services").select("id").eq("client_id", clientId);
+    const csIds = (svcs || []).map((s: any) => s.id);
+
+    if (csIds.length > 0) {
+      // Delete all child records linked to these services
+      let { error: e } = await supabase.from("period_counts").delete().in("client_service_id", csIds);
+      if (e) results.push("period_counts: " + e.message); else results.push("period_counts");
+
+      e = (await supabase.from("work_periods").delete().in("client_service_id", csIds)).error;
+      if (e) results.push("work_periods: " + e.message); else results.push("work_periods");
+
+      e = (await supabase.from("service_comments").delete().in("client_service_id", csIds)).error;
+      if (e) results.push("service_comments: " + e.message); else results.push("service_comments");
+
+      e = (await supabase.from("sales_tax_registration").delete().in("client_service_id", csIds)).error;
+      if (e) results.push("sales_tax_registration: " + e.message); else results.push("sales_tax_registration");
+    }
+
+    // Delete client_services
     let { error: e1 } = await supabase.from("client_services").delete().eq("client_id", clientId);
     if (e1) return NextResponse.json({ error: "client_services: " + e1.message }, { status: 500 });
     results.push("client_services");
 
-    // 2. Delete credentials
-    let { error: e3 } = await supabase.from("credentials").delete().eq("client_id", clientId);
-    if (e3) results.push("credentials skipped: " + e3.message);
+    // Delete credentials
+    let { error: e2 } = await supabase.from("credentials").delete().eq("client_id", clientId);
+    if (e2) results.push("credentials skipped: " + e2.message);
     else results.push("credentials");
 
-    // 4. Delete work_periods
-    let { error: e4 } = await supabase.from("work_periods").delete().eq("client_id", clientId);
-    if (e4) results.push("work_periods skipped: " + e4.message);
-    else results.push("work_periods");
-
-    // 5. Delete period_counts
-    let { error: e5 } = await supabase.from("period_counts").delete().eq("client_id", clientId);
-    if (e5) results.push("period_counts skipped: " + e5.message);
-    else results.push("period_counts");
-
-    // 6. Delete the client itself
-    let { error: e7 } = await supabase.from("clients").delete().eq("id", clientId);
-    if (e7) return NextResponse.json({ error: "clients: " + e7.message, cascaded: results }, { status: 500 });
+    // Delete the client itself
+    let { error: e3 } = await supabase.from("clients").delete().eq("id", clientId);
+    if (e3) return NextResponse.json({ error: "clients: " + e3.message, cascaded: results }, { status: 500 });
     results.push("clients");
 
     return NextResponse.json({ success: true, cascaded: results });
