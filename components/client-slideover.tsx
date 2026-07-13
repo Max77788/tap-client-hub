@@ -1101,7 +1101,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     }}
                   >
                     <option value="">Select month…</option>
-                    {MONTH_NAMES.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                    {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: "1 0 100px" }}>
@@ -1159,7 +1159,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             saveServiceField("tax_returns", "renewalDueMonth", e.target.value);
                           }}>
                           <option value="">—</option>
-                          {MONTH_NAMES.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                          {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                         </select>
                       </div>
                       <div style={{ flex: "1 0 60px" }}>
@@ -2300,7 +2300,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       }}
                         style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                         <option value="">—</option>
-                        {MONTH_NAMES.map((m, i) => <option key={i} value={m}>{m}</option>)}
+                        {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                       </select>
                     </div>
                     <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>

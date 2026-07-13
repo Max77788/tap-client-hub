@@ -556,7 +556,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <ServiceCard icon="📋" label="Tax Return" checked={tax} onChange={setTax}>
             <label style={{ ...labelStyle, marginTop: 8 }}>Filing type</label>
             <select style={inputStyle} value={taxFilingType} onChange={e => setTaxFilingType(e.target.value)}>
-              {FILING_TYPES.map(t => <option key={t}>{t}</option>)}
+              {FILING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
