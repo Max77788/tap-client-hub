@@ -384,14 +384,14 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <div style={{ marginTop: 8 }}>
               <label style={labelStyle}>Payroll Emails</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", minHeight: 30 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", minHeight: 30 }}>
                   {prEmails.map((em, i) => (
-                    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", color: "var(--blue)", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 600 }}>
+                    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--blue-soft)", color: "var(--blue)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, justifyContent: "space-between" }}>
                       {em}
-                      <button type="button" onClick={() => setPrEmails(prev => prev.filter((_, j) => j !== i))} style={{ all: "unset", cursor: "pointer", lineHeight: 1, fontSize: 13, marginLeft: 1, opacity: 0.7 }}>×</button>
+                      <button type="button" onClick={() => setPrEmails(prev => prev.filter((_, j) => j !== i))} style={{ all: "unset", cursor: "pointer", lineHeight: 1, fontSize: 13, marginLeft: 4, opacity: 0.7 }}>×</button>
                     </span>
                   ))}
-                  <div style={{ display: "flex", flex: 1, minWidth: 100, alignItems: "center", gap: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <input
                       ref={prEmailInputRef}
                       style={{ border: "none", outline: "none", fontSize: 12, flex: 1, background: "transparent" }}
