@@ -476,7 +476,6 @@ export async function PUT(request: Request) {
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
                 processor: svc.processor || existing.processor || null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
-                financials_month: typeof svc.financialsMonth === 'number' ? svc.financialsMonth : (typeof existing.financials_month === 'number' ? existing.financials_month : null),
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
@@ -515,7 +514,6 @@ export async function PUT(request: Request) {
                 assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
-                financials_month: typeof svc.financialsMonth === 'number' ? svc.financialsMonth : (typeof existing.financials_month === 'number' ? existing.financials_month : null),
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
                 due_month: svc.filingMonth ?? existing.due_month ?? null,
@@ -567,7 +565,6 @@ export async function PUT(request: Request) {
               assigned_to: svc.assignedTo || null,
               processor: svc.processor || null,
               expected_annual: svc.expectedAnnual || null,
-              financials_month: typeof svc.financialsMonth === 'number' ? svc.financialsMonth : null,
               notes: svc.svcNotes || null,
               filing_state: svc.filingState || null,
               due_month: svc.filingMonth || null,
@@ -696,10 +693,6 @@ export async function PATCH(request: Request) {
 
     if (frequency !== undefined) {
       updates.frequency = frequency || null;
-    }
-
-    if (financialsMonth !== undefined) {
-      updates.financials_month = typeof financialsMonth === 'number' ? financialsMonth : null;
     }
 
     if (filingState !== undefined) {
