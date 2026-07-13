@@ -26,7 +26,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault", icon: "🔒", role: "admin" },
   { label: "Users & Access", href: "/users", icon: "🪪", role: "admin" },
-  { label: "Settings", href: "/settings", icon: "⚙️", role: "admin" },
   { label: "Help & Support", href: "/support", icon: "🛟" },
 ];
 
