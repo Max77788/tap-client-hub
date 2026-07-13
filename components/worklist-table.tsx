@@ -1404,8 +1404,8 @@ export default function WorklistTable({
                   {MONTHS_SHORT.map((_m, i) => {
                     const isActive = activeMonths.has(i);
                     const isCurrentMonth = i === currentMonth && !isHistorical;
-                    // Lock current & future months from status changes (only past months are editable)
-                    const cellReadOnly = readOnly || isHistorical || i >= currentMonth;
+                    // Lock future months from status changes (current + past months are editable)
+                    const cellReadOnly = readOnly || isHistorical || i > currentMonth;
 
                     // ── Default variant: mcell squares (demo v7 style) ──
                     const stage = (stages[i] || "") as WorklistStage;
