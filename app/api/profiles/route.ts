@@ -101,10 +101,12 @@ export async function GET() {
         // Normalize: short codes → display names
         const map: Record<string,string> = {
           "clients":"Clients","fin":"Financials","pr":"Payroll","stx":"Sales Tax",
-          "btax":"Business Taxes","ptax":"Personal Taxes","t9":"1099s",
-          "rend":"Renditions","annual":"Annual Reports","timesheet":"Timesheet",
+          "btax":"Tax Returns","ptax":"Tax Returns","t9":"1099s","tax_returns":"Tax Returns",
+          "rend":"Renditions","annual":"Renditions","timesheet":"Timesheet",
           "workload":"Workload","vault":"Vault","users":"Users & Access",
-          "support":"Support","billing":"Billing","Tax Returns":"Business Taxes",
+          "support":"Support","billing":"Billing","Tax Returns":"Tax Returns",
+          "Business Taxes":"Tax Returns","Personal Taxes":"Tax Returns",
+          "Annual Reports":"Renditions",
         };
         return map[m] || m;
       }) : [],
