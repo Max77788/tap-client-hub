@@ -390,6 +390,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eName, setEName] = useState(client.name);
   const [eType, setEType] = useState(client.type);
   const [eGroup, setEGroup] = useState(client.group);
+  const [eContact, setEContact] = useState(client.contact || "");
   const [eEmail, setEEmail] = useState((client.emails || [""])[0] || "");
   const [eAddEmail, setEAddEmail] = useState((client.emails || [])[1] || "");
   const [ePhone, setEPhone] = useState((client.phones || [""])[0] || "");
@@ -2409,6 +2410,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: 0 }}>Client Info</div>
                   </div>
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span style={{ color: "var(--muted)" }}>Group</span>
+                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                      value={eGroup} onChange={e => setEGroup(e.target.value)} placeholder="—" />
+                  </div>
+                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
+                    <span style={{ color: "var(--muted)" }}>Contact</span>
+                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                      value={eContact} onChange={e => setEContact(e.target.value)} placeholder="—" />
+                  </div>
+                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Email</span>
                     <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                       ref={eEmailRef} defaultValue={eEmail} onBlur={e => setEEmail(e.target.value)} placeholder="—" />
@@ -2525,6 +2536,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         name: eName,
         type: eType as "Business" | "Personal",
         group: eGroup,
+        contact: eContact,
         emails: [...new Set([eEmailRef.current?.value ?? eEmail, eAddEmailRef.current?.value ?? eAddEmail].filter(Boolean))],
         phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
         address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,

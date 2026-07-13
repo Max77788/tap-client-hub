@@ -303,7 +303,8 @@ export async function GET(request: Request) {
         clientCode: db.client_code || db.cid || "",
         name: db.name, type: (db.type || "").toLowerCase() === "business" ? "Business" : "Personal",
         group: db.group_name || db.group_owner || "Unassigned",
-        groupName: db.group_name || db.group_owner || "", status: db.status || "active",
+        groupName: db.group_name || db.group_owner || "",
+        contact: db.key_name || "", status: db.status || "active",
         city: db.city || "", state: db.state || "TX", zip: db.zip || "",
         emails: db.emails ? db.emails.replace(/[{}"]/g,'').split(',').filter(Boolean) : [],
         phones: db.phones ? db.phones.replace(/[{}"]/g,'').split(',').filter(Boolean) : [],
@@ -328,7 +329,7 @@ export async function PUT(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { id: clientId, services, name, type, group, emails, phones, email, phone, address, city, state, zip, assignedStaff, ein, notes } = body;
+    const { id: clientId, services, name, type, group, contact, emails, phones, email, phone, address, city, state, zip, assignedStaff, ein, notes } = body;
 
     if (!clientId) {
       return NextResponse.json({ error: "client id is required" }, { status: 400 });
@@ -343,6 +344,7 @@ export async function PUT(request: Request) {
     if (name !== undefined) clientUpdates.name = name;
     if (type !== undefined) clientUpdates.type = type;
     if (group !== undefined) clientUpdates.group_name = group;
+    if (contact !== undefined) clientUpdates.key_name = contact;
     if (address !== undefined) clientUpdates.address = address;
     if (city !== undefined) clientUpdates.city = city;
     if (state !== undefined) clientUpdates.state = state;
@@ -641,7 +643,7 @@ export async function POST(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { name, type, group, emails, phones, address, city, state, zip, ein, assignedStaff } = body;
+    const { name, type, group, contact, emails, phones, address, city, state, zip, ein, assignedStaff } = body;
 
     if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
 
@@ -650,7 +652,7 @@ export async function POST(request: Request) {
 
     const clientRecord: Record<string, any> = {
       id: clientId, name, type: type || "Business",
-      group_name: group || "", status: "active",
+      group_name: group || "", key_name: contact || "", status: "active",
       city: city || "", state: state || "", zip: zip || "",
       address: address || "", ein: ein || "", notes: "",
       client_code: clientCode,

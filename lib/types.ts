@@ -102,6 +102,8 @@ export interface Client {
   type: ClientType;
   entityType?: string;
   group?: string;
+  groupName?: string;
+  contact?: string;
   status: string;
   city: string;
   state: string;
