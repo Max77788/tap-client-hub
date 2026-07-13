@@ -2595,6 +2595,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             </div>
 
+            {/* Group */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Group</span>
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eGroup} onChange={e => setEGroup(e.target.value)} placeholder="—" />
+            </div>
+            {/* Contact */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>Contact</span>
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                value={eContact} onChange={e => setEContact(e.target.value)} placeholder="—" />
+            </div>
+
             {/* Email */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Email</span>
