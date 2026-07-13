@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 /**
  * Auth proxy — replaces middleware.ts in Next.js 16.
  * Checks for demo cookie or Supabase session cookie.
  * Protects all routes except /login and /auth/callback.
+ * Role-based access is handled by sidebar + per-page logic.
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
@@ -33,28 +33,6 @@ export async function proxy(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // ── Role-based access control ──
-  // Extract role from cookie
-  const roleMatch = cookieHeader.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
-  const userRole = roleMatch ? decodeURIComponent(roleMatch[1]) : "staff";
-
-  // Pages restricted to admin/owner only
-  const adminOnlyPages = ["/users", "/vault", "/settings"];
-  // Pages restricted to admin/manager only
-  const managerPlusPages = ["/workload", "/time"];
-
-  if (adminOnlyPages.some(p => pathname.startsWith(p))) {
-    if (userRole !== "admin" && userRole !== "owner") {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-  }
-
-  if (managerPlusPages.some(p => pathname.startsWith(p))) {
-    if (userRole !== "admin" && userRole !== "owner" && userRole !== "manager") {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
   }
 
   // Redirect authenticated users away from login
