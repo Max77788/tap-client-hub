@@ -580,10 +580,10 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         </span>
       </div>
 
-      {/* Meta row: CID · group · city, state */}
+      {/* Meta row: CID · city, state */}
       <div className="meta" style={{ color: "var(--muted)", fontSize: "12.5px", marginTop: 3 }}>
         <span className="mono" style={{ color: "#9a9484" }}>{client.cid || `TP|BS|${String(client.id).padStart(4,"0")}`}</span>
-        {" · "}{client.group || "—"}{" · "}{client.city}, {client.state}
+        {" · "}{client.city}, {client.state}
       </div>
 
       {/* Service pills */}
