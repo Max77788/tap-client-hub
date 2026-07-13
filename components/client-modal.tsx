@@ -246,7 +246,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Type</label>
               <select style={inputStyle} value={type} onChange={e => setType(e.target.value)}>
-                <option>Business</option><option>Personal</option>
+                <option value="Business">Business</option><option value="Personal">Personal</option>
               </select>
             </div>
             <div style={{ flex: 1 }}>
@@ -295,7 +295,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>
                 <select style={inputStyle} value={finFreq} onChange={e => setFinFreq(e.target.value)}>
-                  <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                  <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
                 </select>
               </div>
             </div>
@@ -312,7 +312,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             )}
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={finAssigned} onChange={e => setFinAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -322,7 +322,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>
                 <select style={inputStyle} value={prFreq} onChange={e => setPrFreq(e.target.value)}>
-                  <option>Weekly</option><option>Bi-Weekly A</option><option>Bi-Weekly B</option><option>Semi-Monthly</option><option>Monthly</option><option>Quarterly</option>
+                  <option value="Weekly">Weekly</option><option value="Bi-Weekly A">Bi-Weekly A</option><option value="Bi-Weekly B">Bi-Weekly B</option><option value="Semi-Monthly">Semi-Monthly</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
@@ -417,7 +417,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={prAssigned} onChange={e => setPrAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -425,11 +425,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <ServiceCard icon="🧾" label="Sales Tax" checked={stx} onChange={setStx}>
             <label style={{ ...labelStyle, marginTop: 8 }}>Cadence</label>
             <select style={inputStyle} value={stxFreq} onChange={e => setStxFreq(e.target.value)}>
-              <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+              <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
             </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={stxAssigned} onChange={e => setStxAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
 
             {/* Sales tax line items — always visible when Sales Tax is checked */}
@@ -448,7 +448,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                   <div>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
                     <select style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} value={newStxFreq} onChange={e => setNewStxFreq(e.target.value)}>
-                      <option>Monthly</option><option>Quarterly</option><option>Yearly</option>
+                      <option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option>
                     </select>
                   </div>
                   <div>
@@ -476,7 +476,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                     <select style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }}
                       value={newStxAssigned} onChange={e => setNewStxAssigned(e.target.value)}>
                       <option value="">—</option>
-                      {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+                      {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                 </div>
@@ -540,7 +540,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={t9Assigned} onChange={e => setT9Assigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -548,7 +548,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <ServiceCard icon="🏠" label="Renditions (property tax)" checked={rend} onChange={setRend}>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </ServiceCard>
 
@@ -560,7 +560,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </select>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={taxAssigned} onChange={e => setTaxAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s}>{s}</option>)}
+              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <div className="two" style={{ display: "flex", gap: 12 }}>
               <div style={{ flex: 1 }}>

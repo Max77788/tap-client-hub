@@ -4,15 +4,15 @@ import type { Client, ClientStats, ClientType, MonthStatus, ServiceConfig, Servi
 
 // ── Staff pool ──
 export const STAFF = [
-  { id: "s1", name: "Tushar Patil", initials: "TP", role: "Owner/Admin" },
-  { id: "s2", name: "Lizette Esparza", initials: "LE", role: "Manager" },
-  { id: "s3", name: "Janeth Noguera", initials: "JN", role: "Staff" },
-  { id: "s4", name: "Sam Patil", initials: "SP", role: "Offshore/India" },
-  { id: "s5", name: "Shilpa Kulkarni", initials: "SK", role: "Staff" },
-  { id: "s6", name: "Bonnie Edwards", initials: "BE", role: "Staff" },
-  { id: "s7", name: "Amruta Patil", initials: "AP", role: "Offshore/India" },
-  { id: "s8", name: "Alvaro Ortega", initials: "AO", role: "Staff" },
-  { id: "s9", name: "Sanket Panchasara", initials: "SP2", role: "Offshore/India" },
+  { id: "s1", name: "Patil, Tushar", initials: "TP", role: "Owner/Admin" },
+  { id: "s2", name: "Esparza, Lizette", initials: "LE", role: "Manager" },
+  { id: "s3", name: "Noguera,Janeth", initials: "JN", role: "Staff" },
+  { id: "s4", name: "Patil,Sam", initials: "SP", role: "Offshore/India" },
+  { id: "s5", name: "Kulkarni,Shilpa", initials: "SK", role: "Staff" },
+  { id: "s6", name: "Edwards,Bonnie", initials: "BE", role: "Staff" },
+  { id: "s7", name: "Patil,Amruta", initials: "AP", role: "Offshore/India" },
+  { id: "s8", name: "Ortega,Alvaro", initials: "AO", role: "Staff" },
+  { id: "s9", name: "Panchasara,Sanket", initials: "SP2", role: "Offshore/India" },
 ] as const;
 
 // ── Month labels ──
