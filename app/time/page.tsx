@@ -20,7 +20,7 @@ interface TimeEntry {
   manual?: boolean;
 }
 
-interface StaffMember { id: string; name: string; role: string; }
+interface StaffMember { id: string; name: string; role: string; firstName: string; }
 
 const TASK_LABEL: Record<string, string> = {
   fin: "Financials",
@@ -95,7 +95,14 @@ export default function TimePage() {
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {
-          const active = data.filter((u: any) => u.status === "Active").map((u: any) => ({ id: u.id, name: u.name, role: u.role }));
+          const active = data.filter((u: any) => u.status === "Active").map((u: any) => {
+            const fullName = u.name || "";
+            // Extract first name from "Patil, Tushar" → "Tushar" or "Tushar Patil" → "Tushar"
+            const firstName = fullName.includes(",")
+              ? (fullName.split(",")[1] || "").trim()
+              : (fullName.split(" ")[0] || "").trim();
+            return { id: u.id, name: fullName, role: u.role, firstName: firstName || fullName };
+          });
           setStaff(active);
           // Identify current user from cookie
           const cookieMatch = document.cookie.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
@@ -404,7 +411,7 @@ export default function TimePage() {
             <label>Who</label>
             <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} disabled={effectiveIsStaff}>
               <option value="">— choose —</option>
-              {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.firstName}</option>)}
             </select>
           </div>
           <div className="fld">
@@ -436,7 +443,7 @@ export default function TimePage() {
             <label>Who</label>
             <select value={manualPerson} onChange={(e) => setManualPerson(e.target.value)}>
               <option value="">— choose —</option>
-              {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.firstName}</option>)}
             </select>
           </div>
           <div className="fld">
@@ -482,7 +489,7 @@ export default function TimePage() {
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
           <select className="pick" value={filterPerson} onChange={e => setFilterPerson(e.target.value)} style={{ minWidth: 130, fontSize: 12, padding: "4px 6px" }}>
             <option value="">All staff</option>
-            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.firstName}</option>)}
           </select>
           <select className="pick" value={filterClient} onChange={e => setFilterClient(e.target.value)} style={{ minWidth: 130, fontSize: 12, padding: "4px 6px" }}>
             <option value="">All clients</option>
@@ -539,7 +546,7 @@ export default function TimePage() {
             style={{ minWidth: 180 }}
           >
             <option value="">— Admin view —</option>
-            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {whoOpts.map((s) => <option key={s.id} value={s.id}>{s.firstName}</option>)}
           </select>
           {impersonatingAs && (
             <button
@@ -638,7 +645,7 @@ export default function TimePage() {
                       <tr key={entry.id}>
                         <td><select className="edit-sel" value={entry.personName}
                           onChange={(e) => handleEdit(idx, "personName", e.target.value)}>
-                          {whoOpts.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                          {whoOpts.map((s) => <option key={s.id} value={s.name}>{s.firstName}</option>)}
                         </select></td>
                         <td><select className="edit-sel" value={entry.clientName}
                           onChange={(e) => handleEdit(idx, "clientName", e.target.value)} style={{ maxWidth: 220 }}>
