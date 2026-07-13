@@ -85,7 +85,13 @@ export async function GET() {
     path: "/",
     maxAge: 86400,
     sameSite: "lax",
-    httpOnly: false, // Allow JS to read for sidebar filtering
+    httpOnly: false,
+  });
+  response.cookies.set("tap_modules", modules.join(","), {
+    path: "/",
+    maxAge: 86400,
+    sameSite: "lax",
+    httpOnly: false,
   });
 
   return response;

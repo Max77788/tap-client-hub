@@ -230,6 +230,28 @@ export default function RootLayout({
     return true;
   });
 
+  // ── Page-level module guard: redirect if user tries to access forbidden page ──
+  useEffect(() => {
+    if (userModules.length === 0) return; // admin/owner see everything
+    const pageModule: Record<string, string> = {
+      "/fin": "Financials", "/pr": "Payroll", "/stx": "Sales Tax",
+      "/t9": "1099s", "/tax": "Business Taxes", "/rend": "Renditions",
+      "/vault": "Vault", "/workload": "Workload", "/time": "Timesheet",
+      "/users": "Users & Access", "/support": "Support",
+    };
+    const reqModule = pageModule[pathname];
+    if (reqModule && !userModules.includes(reqModule)) {
+      // Also check alternate: /tax could be Business or Personal
+      if (pathname === "/tax") {
+        if (!userModules.includes("Personal Taxes")) {
+          window.location.href = "/";
+        }
+      } else {
+        window.location.href = "/";
+      }
+    }
+  }, [pathname, userModules]);
+
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
