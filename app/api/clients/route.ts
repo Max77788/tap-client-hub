@@ -801,13 +801,20 @@ export async function PATCH(request: Request) {
   }
 }
 
-// ── DELETE /api/clients?id=... — cascade-delete client + all associated records ──
+// ── DELETE /api/clients?id=... or ?ids=a,b,c — cascade-delete client(s) + all associated records ──
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get("id");
-    if (!clientId) {
-      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    const idsParam = searchParams.get("ids");
+    
+    const clientIds: string[] = clientId
+      ? [clientId]
+      : idsParam ? idsParam.split(",").map((s: string) => s.trim()).filter(Boolean)
+      : [];
+    
+    if (clientIds.length === 0) {
+      return NextResponse.json({ error: "id or ids is required" }, { status: 400 });
     }
 
     // Use service_role for cascade deletes (RLS may block anon key)
@@ -820,43 +827,54 @@ export async function DELETE(request: Request) {
       { db: { schema: "tap_hub_project" } }
     );
 
-    const results: string[] = [];
+    let totalResults: string[] = [];
+    let errors: string[] = [];
 
-    // 0. Collect all client_service IDs to cascade manually
-    const { data: svcs } = await supabase.from("client_services").select("id").eq("client_id", clientId);
-    const csIds = (svcs || []).map((s: any) => s.id);
+    for (const cid of clientIds) {
+      const results: string[] = [];
 
-    if (csIds.length > 0) {
-      // Delete all child records linked to these services
-      let { error: e } = await supabase.from("period_counts").delete().in("client_service_id", csIds);
-      if (e) results.push("period_counts: " + e.message); else results.push("period_counts");
+      // 0. Collect all client_service IDs to cascade manually
+      const { data: svcs } = await supabase.from("client_services").select("id").eq("client_id", cid);
+      const csIds = (svcs || []).map((s: any) => s.id);
 
-      e = (await supabase.from("work_periods").delete().in("client_service_id", csIds)).error;
-      if (e) results.push("work_periods: " + e.message); else results.push("work_periods");
+      if (csIds.length > 0) {
+        let { error: e } = await supabase.from("period_counts").delete().in("client_service_id", csIds);
+        if (e) results.push("period_counts: " + e.message);
 
-      e = (await supabase.from("service_comments").delete().in("client_service_id", csIds)).error;
-      if (e) results.push("service_comments: " + e.message); else results.push("service_comments");
+        e = (await supabase.from("work_periods").delete().in("client_service_id", csIds)).error;
+        if (e) results.push("work_periods: " + e.message);
 
-      e = (await supabase.from("sales_tax_registration").delete().in("client_service_id", csIds)).error;
-      if (e) results.push("sales_tax_registration: " + e.message); else results.push("sales_tax_registration");
+        e = (await supabase.from("service_comments").delete().in("client_service_id", csIds)).error;
+        if (e) results.push("service_comments: " + e.message);
+
+        e = (await supabase.from("sales_tax_registration").delete().in("client_service_id", csIds)).error;
+        if (e) results.push("sales_tax_registration: " + e.message);
+      }
+
+      let { error: e1 } = await supabase.from("client_services").delete().eq("client_id", cid);
+      if (e1) { errors.push(cid + ": " + e1.message); continue; }
+      results.push("client_services");
+
+      let { error: e2 } = await supabase.from("credentials").delete().eq("client_id", cid);
+      if (!e2) results.push("credentials");
+
+      let { error: e3 } = await supabase.from("clients").delete().eq("id", cid);
+      if (e3) { errors.push(cid + ": " + e3.message); continue; }
+      results.push("clients");
+
+      totalResults = totalResults.concat(results);
     }
 
-    // Delete client_services
-    let { error: e1 } = await supabase.from("client_services").delete().eq("client_id", clientId);
-    if (e1) return NextResponse.json({ error: "client_services: " + e1.message }, { status: 500 });
-    results.push("client_services");
+    if (errors.length > 0 && totalResults.length === 0) {
+      return NextResponse.json({ error: errors.join("; "), cascaded: [] }, { status: 500 });
+    }
 
-    // Delete credentials
-    let { error: e2 } = await supabase.from("credentials").delete().eq("client_id", clientId);
-    if (e2) results.push("credentials skipped: " + e2.message);
-    else results.push("credentials");
-
-    // Delete the client itself
-    let { error: e3 } = await supabase.from("clients").delete().eq("id", clientId);
-    if (e3) return NextResponse.json({ error: "clients: " + e3.message, cascaded: results }, { status: 500 });
-    results.push("clients");
-
-    return NextResponse.json({ success: true, cascaded: results });
+    return NextResponse.json({
+      success: true,
+      deleted: clientIds.length,
+      errors: errors,
+      cascaded: totalResults,
+    });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }

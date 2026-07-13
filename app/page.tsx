@@ -26,12 +26,40 @@ export default function ClientsPage() {
   const [staffFilter, setStaffFilter] = useState<string>("");
   const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const debounceRef = useRef<Record<string, any>>({});
 
   // Compute stats from full client data
   const computedStats = useMemo(() => getStats(clients), [clients]);
+
+  // ── Bulk selection helpers ──
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const selectAll = () => {
+    const allIds = new Set(filteredClients.map((c: any) => c.id));
+    setSelectedIds(prev => prev.size === allIds.size ? new Set() : allIds);
+  };
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} selected client(s)? This cannot be undone.`)) return;
+    const ids = Array.from(selectedIds).join(",");
+    const r = await fetch(`/api/clients?ids=${ids}`, { method: "DELETE" });
+    const json = await r.json();
+    if (json.success) {
+      setSelectedIds(new Set());
+      // Remove from local state
+      setClients((prev: any[]) => prev.filter((c: any) => !selectedIds.has(c.id)));
+    } else {
+      alert("Delete failed: " + (json.error || "unknown error"));
+    }
+  };
 
   const groups = useMemo(() => getGroups(clients), [clients]);
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
@@ -272,6 +300,34 @@ export default function ClientsPage() {
             {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} shown
           </div>
 
+          {/* ── Bulk action bar ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 6px", minHeight: 30 }}>
+            <button
+              onClick={selectAll}
+              style={{
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+                background: "none", border: "none", color: "var(--muted)",
+                padding: "4px 8px", borderRadius: 6,
+              }}
+            >
+              {selectedIds.size === filteredClients.length && filteredClients.length > 0
+                ? "Deselect all"
+                : `Select all (${filteredClients.length})`}
+            </button>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={bulkDelete}
+                style={{
+                  fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  background: "var(--red)", border: "none", color: "#fff",
+                  padding: "4px 12px", borderRadius: 6,
+                }}
+              >
+                Delete {selectedIds.size} selected
+              </button>
+            )}
+          </div>
+
           {/* ── Client cards grid ── */}
           {displayItems.length > 0 ? (
             <div className="grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 12 }}>
@@ -282,12 +338,16 @@ export default function ClientsPage() {
                     groupName={item.name}
                     clients={item.clients}
                     onClientClick={(id) => openSlideover(id)}
+                    selectedIds={selectedIds}
+                    toggleSelect={toggleSelect}
                   />
                 ) : (
                   <ClientCard
                     key={item.client.id}
                     client={item.client}
                     onClick={() => openSlideover(item.client.id)}
+                    selected={selectedIds.has(item.client.id)}
+                    onToggleSelect={toggleSelect}
                   />
                 )
               )}
@@ -374,10 +434,14 @@ function GroupCard({
   groupName,
   clients,
   onClientClick,
+  selectedIds,
+  toggleSelect,
 }: {
   groupName: string;
   clients: Client[];
   onClientClick: (id: string) => void;
+  selectedIds?: Set<string>;
+  toggleSelect?: (id: string) => void;
 }) {
   const [popupOpen, setPopupOpen] = useState(false);
   const locations = [...new Set(clients.map((c) => `${c.city}, ${c.state}`).filter(Boolean))];
@@ -482,8 +546,27 @@ function GroupCard({
                 const enabledSvcs = c.services.filter((s) => s.enabled && s.key).map((s) => SERVICE_META[s.key as ServiceKey]).filter(Boolean);
                 return (
                 <div key={c.id}
-                  onClick={() => { setPopupOpen(false); onClientClick(c.id); }}
-                  className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]">
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest?.("button")) return;
+                    setPopupOpen(false); onClientClick(c.id);
+                  }}
+                  className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-[var(--teal-soft)]/30 transition-colors border border-[var(--line)]"
+                  style={{ backgroundColor: selectedIds?.has(c.id) ? "var(--teal-soft)" : undefined }}
+                >
+                  {toggleSelect && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(c.id); }}
+                      style={{
+                        width: 18, height: 18, borderRadius: 4, flexShrink: 0, marginRight: 10,
+                        border: selectedIds?.has(c.id) ? "1.5px solid var(--teal)" : "1.5px solid var(--line)",
+                        background: selectedIds?.has(c.id) ? "var(--teal)" : "transparent",
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 10, color: "#fff", lineHeight: 1,
+                      }}
+                    >
+                      {selectedIds?.has(c.id) && "✓"}
+                    </button>
+                  )}
                   <div className="min-w-0 flex-1 pr-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
                     <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
@@ -523,7 +606,7 @@ function GroupCard({
 // ══════════════════════════════════════════════
 // ── Client Card ──
 // ══════════════════════════════════════════════
-function ClientCard({ client, onClick }: { client: Client; onClick: () => void }) {
+function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Client; onClick: () => void; selected?: boolean; onToggleSelect?: (id: string) => void }) {
   const enabledServices = client.services.filter((s) => s.enabled && s.key);
 
   // Get unique assignees across all enabled services
@@ -562,14 +645,31 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
 
   return (
     <div onClick={onClick} className="ccard" style={{
-      backgroundColor: "var(--card)",
-      border: "1px solid var(--line)",
+      backgroundColor: selected ? "var(--teal-soft)" : "var(--card)",
+      border: selected ? "2px solid var(--teal)" : "1px solid var(--line)",
       borderRadius: 14,
       padding: "15px 16px",
       boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
       transition: ".14s",
       cursor: "pointer",
+      position: "relative",
     }}>
+      {/* Selection checkbox */}
+      {onToggleSelect && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleSelect(client.id); }}
+          style={{
+            position: "absolute", top: 8, right: 8,
+            width: 20, height: 20, borderRadius: 4,
+            border: selected ? "1.5px solid var(--teal)" : "1.5px solid var(--line)",
+            background: selected ? "var(--teal)" : "transparent",
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, color: "#fff", lineHeight: 1,
+          }}
+        >
+          {selected && "✓"}
+        </button>
+      )}
       {/* Name + Type badge */}
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: "16.5px", lineHeight: 1.2 }}>
