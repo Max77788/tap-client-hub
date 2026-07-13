@@ -653,7 +653,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
+    const { csId, assignedTo, processor, frequency, financialsMonth, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -686,6 +686,10 @@ export async function PATCH(request: Request) {
 
     if (frequency !== undefined) {
       updates.frequency = frequency || null;
+    }
+
+    if (financialsMonth !== undefined) {
+      updates.financials_month = typeof financialsMonth === 'number' ? financialsMonth : null;
     }
 
     if (filingState !== undefined) {

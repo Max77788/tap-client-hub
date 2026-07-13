@@ -1047,6 +1047,16 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                   </select>
                 </div>
+                <div style={{ flex: "1 0 100px", minWidth: 100 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Fin Month</label>
+                  <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                    value={svc.financialsMonth || ""}
+                    onChange={e => saveServiceField("financials", "financialsMonth", Number(e.target.value))}
+                  >
+                    <option value="">—</option>
+                    {MONTH_NAMES.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+                  </select>
+                </div>
               </div>
             )}
 
