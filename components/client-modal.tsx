@@ -22,8 +22,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
   // ── Form fields ──
   const [name, setName] = useState("");
-  const [type, setType] = useState("Business");
-  const [group, setGroup] = useState("");
+  const [type, setType] = useState<"Business" | "Personal">("Business");
   const [assigned, setAssigned] = useState("Unassigned");
   const [email, setEmail] = useState("");
   const [addEmail, setAddEmail] = useState("");
@@ -89,7 +88,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     if (client) {
       setName(client.name);
       setType(client.type);
-      setGroup(client.group || "");
       setAssigned(client.assignedStaff || "Unassigned");
       setEmail((client.emails || [""])[0] || "");
       setAddEmail((client.emails || [])[1] || "");
@@ -129,7 +127,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         setTaxRenewalIds(trSvc.renewalIdentifiers || "");
       }
     } else {
-      setName(""); setType("Business"); setGroup(""); setAssigned("Unassigned");
+      setName(""); setType("Business"); setAssigned("Unassigned");
       setEmail(""); setAddEmail(""); setPhone(""); setAddPhone("");
       setAddress(""); setCity(""); setSt("TX"); setZip("");
       setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
@@ -201,7 +199,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
     onSave({
       name: nm, type: type as "Business" | "Personal", status: "active",
-      group,
+      group: "",
       emails: [email, addEmail].filter(Boolean),
       phones: [phone, addPhone].filter(Boolean),
       address, city, state: st, zip,
@@ -248,10 +246,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <select style={inputStyle} value={type} onChange={e => setType(e.target.value)}>
                 <option value="Business">Business</option><option value="Personal">Personal</option>
               </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Group name</label>
-              <input style={inputStyle} value={group} onChange={e => setGroup(e.target.value)} placeholder="e.g. Gambhir" />
             </div>
           </div>
 
