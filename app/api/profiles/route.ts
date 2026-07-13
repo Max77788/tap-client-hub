@@ -97,7 +97,17 @@ export async function GET() {
       role: ROLE_MAP[p.role] || p.role || "Staff",
       location: p.location || "",
       mgr: mgrName,
-      modules: Array.isArray(p.modules) ? p.modules : [],
+      modules: Array.isArray(p.modules) ? p.modules.map((m: string) => {
+        // Normalize: short codes → display names
+        const map: Record<string,string> = {
+          "clients":"Clients","fin":"Financials","pr":"Payroll","stx":"Sales Tax",
+          "btax":"Business Taxes","ptax":"Personal Taxes","t9":"1099s",
+          "rend":"Renditions","annual":"Annual Reports","timesheet":"Timesheet",
+          "workload":"Workload","vault":"Vault","users":"Users & Access",
+          "support":"Support","billing":"Billing","Tax Returns":"Business Taxes",
+        };
+        return map[m] || m;
+      }) : [],
       status: STATUS_MAP[p.invite_status] ||
         (p.active ? "Active" : "Inactive"),
       email_2fa_enabled: p.email_2fa_enabled ?? false,

@@ -39,7 +39,7 @@ export async function GET() {
 
   let profile = null;
   if (profileId) {
-    const { data } = await supabase.from("profiles").select("role, full_name").eq("id", profileId).single();
+    const { data } = await supabase.from("profiles").select("role, full_name, modules").eq("id", profileId).single();
     profile = data;
   }
   if (!profile && profileEmail) {
@@ -77,9 +77,10 @@ export async function GET() {
     }
   }
 
-  const role = profile?.role || "staff"; // Default to staff if not found
+  const role = profile?.role || "staff";
+  const modules = Array.isArray(profile?.modules) ? profile.modules : [];
 
-  const response = NextResponse.json({ role });
+  const response = NextResponse.json({ role, modules });
   response.cookies.set("tap_demo_role", role, {
     path: "/",
     maxAge: 86400,

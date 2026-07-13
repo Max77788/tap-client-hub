@@ -10,23 +10,26 @@ interface NavItem {
   href: string;
   icon?: string;
   role?: "owner" | "admin" | "manager" | "all";
+  module?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Clients", href: "/", icon: "👥" },
-  { label: "Team Workload", href: "/workload", icon: "⚖️", role: "manager" },
-  { label: "Timesheet", href: "/time", icon: "⏱️", role: "manager" },
+  { label: "Clients", href: "/", icon: "👥", module: "Clients" },
+  { label: "Team Workload", href: "/workload", icon: "⚖️", role: "manager", module: "Workload" },
+  { label: "Timesheet", href: "/time", icon: "⏱️", role: "manager", module: "Timesheet" },
   { label: "---", href: "" },
-  { label: "Financials", href: "/fin", icon: "📊" },
-  { label: "Payroll", href: "/pr", icon: "💵" },
-  { label: "Sales Tax", href: "/stx", icon: "🧾" },
-  { label: "1099s", href: "/t9", icon: "📄" },
-  { label: "Tax Returns", href: "/tax", icon: "📋" },
-  { label: "Renditions", href: "/rend", icon: "🏠" },
+  { label: "Financials", href: "/fin", icon: "📊", module: "Financials" },
+  { label: "Payroll", href: "/pr", icon: "💵", module: "Payroll" },
+  { label: "Sales Tax", href: "/stx", icon: "🧾", module: "Sales Tax" },
+  { label: "1099s", href: "/t9", icon: "📄", module: "1099s" },
+  { label: "Business Taxes", href: "/tax?type=business", icon: "📋", module: "Business Taxes" },
+  { label: "Personal Taxes", href: "/tax?type=personal", icon: "📑", module: "Personal Taxes" },
+  { label: "Renditions", href: "/rend", icon: "🏠", module: "Renditions" },
+  { label: "Annual Reports", href: "/rend?type=annual", icon: "📄", module: "Annual Reports" },
   { label: "---", href: "" },
-  { label: "Password Vault", href: "/vault", icon: "🔒", role: "admin" },
-  { label: "Users & Access", href: "/users", icon: "🪪", role: "admin" },
-  { label: "Help & Support", href: "/support", icon: "🛟" },
+  { label: "Password Vault", href: "/vault", icon: "🔒", module: "Vault" },
+  { label: "Users & Access", href: "/users", icon: "🪪", module: "Users & Access" },
+  { label: "Help & Support", href: "/support", icon: "🛟", module: "Support" },
 ];
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -166,10 +169,11 @@ export default function RootLayout({
     return "staff";
   });
 
-  // ── Real role from database (for permission checks like dropdown visibility) ──
+  // ── Real role + modules from database ──
   const [realRole, setRealRole] = useState<string>("admin");
+  const [userModules, setUserModules] = useState<string[]>([]);
 
-  // Fetch real role from /api/me on mount — also syncs role state
+  // Fetch real role + modules from /api/me on mount
   useEffect(() => {
     fetch("/api/me", { credentials: "include" })
       .then(r => r.json())
@@ -178,6 +182,12 @@ export default function RootLayout({
           const rl = d.role.toLowerCase();
           const resolved = rl.includes("owner") ? "owner" : rl.includes("admin") ? "admin" : d.role;
           setRealRole(resolved);
+        }
+        if (Array.isArray(d.modules)) {
+          setUserModules(d.modules.filter((m: string) => m !== "All"));
+        } else if (["owner", "admin"].includes(d.role?.toLowerCase() || "")) {
+          // Admins/owners see everything if no modules list
+          setUserModules([]);
         }
       })
       .catch(() => {});
@@ -210,45 +220,13 @@ export default function RootLayout({
     }
   }, []);
 
-  const [userModules, setUserModules] = useState<string[] | null>(null);
-  useEffect(() => {
-    async function loadUserModules() {
-      try {
-        const res = await fetch("/api/profiles");
-        if (!res.ok) return;
-        const users = await res.json();
-        if (!Array.isArray(users)) return;
-        // Read current user's name from cookie
-        const cookieMatch = document.cookie.match(/(?:^|;\\s*)tap_demo_user=([^;]*)/);
-        const userName = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
-        if (!userName) return;
-        const currentUser = users.find((u: any) => {
-          const dbName = (u.name || "").trim().toLowerCase();
-          // Try exact match and comma-separated format match
-          if (dbName === userName.toLowerCase()) return true;
-          const nameParts = userName.trim().split(/\s+/);
-          const commaForm = nameParts.filter(Boolean).reverse().join(", ").toLowerCase();
-          if (dbName === commaForm) return true;
-          // Surname match — only if unique
-          const surname = nameParts[nameParts.length - 1]?.toLowerCase() || "";
-          if (surname) {
-            const sameSurname = users.filter((u2: any) => (u2.name || "").trim().toLowerCase().startsWith(surname));
-            if (sameSurname.length === 1) return dbName.startsWith(surname);
-          }
-          return false;
-        });
-        if (currentUser?.modules) {
-          setUserModules(currentUser.modules as string[]);
-        }
-      } catch {}
-    }
-    loadUserModules();
-  }, []);
-
   const visibleNav = NAV_ITEMS.filter((item) => {
-    // Role-based filter only
+    // Role-based restrictions (Workload/Timesheet = manager+)
     if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
     if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
+    // Module-based restrictions: if item has a module and user has modules, must be in list
+    // If userModules is empty (owner/admin with no explicit list), show everything
+    if (item.module && userModules.length > 0 && !userModules.includes(item.module)) return false;
     return true;
   });
 
