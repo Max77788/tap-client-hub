@@ -15,8 +15,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Clients", href: "/", icon: "👥", module: "Clients" },
-  { label: "Team Workload", href: "/workload", icon: "⚖️", role: "manager", module: "Workload" },
-  { label: "Timesheet", href: "/time", icon: "⏱️", role: "manager", module: "Timesheet" },
+  { label: "Team Workload", href: "/workload", icon: "⚖️", module: "Workload" },
+  { label: "Timesheet", href: "/time", icon: "⏱️", module: "Timesheet" },
   { label: "---", href: "" },
   { label: "Financials", href: "/fin", icon: "📊", module: "Financials" },
   { label: "Payroll", href: "/pr", icon: "💵", module: "Payroll" },
