@@ -273,7 +273,9 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>State</label>
-              <input style={inputStyle} value={st} onChange={e => setSt(e.target.value)} />
+              <select style={inputStyle} value={st} onChange={e => setSt(e.target.value)}>
+                {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>ZIP</label>
