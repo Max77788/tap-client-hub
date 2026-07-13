@@ -175,7 +175,11 @@ export default function RootLayout({
     if (!match) return [];
     return decodeURIComponent(match[1]).split(",").filter(Boolean);
   });
-  const [modulesLoaded, setModulesLoaded] = useState(false);
+  const [modulesLoaded, setModulesLoaded] = useState(() => {
+    if (typeof document === "undefined") return false;
+    // If we have a tap_modules cookie, trust it immediately to avoid tab flash
+    return /(?:^|;\s*)tap_modules=/.test(document.cookie);
+  });
 
   // Fetch real role + modules from /api/me on mount
   useEffect(() => {
