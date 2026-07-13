@@ -75,6 +75,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [editing, setEditing] = useState(false);
   const [showFullRecord, setShowFullRecord] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
@@ -409,6 +410,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
     if (open) { document.addEventListener("keydown", onKey); document.body.style.overflow = "hidden"; }
+    else { setConfirmDelete(false); }
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [open, onClose]);
 
@@ -2439,13 +2441,31 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           </div>
 
           {/* Footer */}
-          <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10 }}>
-            <button className="danger" onClick={() => { onDelete?.(c.id); onClose(); }} style={{
-              all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
-              padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
-            }}>
-              Remove client
-            </button>
+          <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10, alignItems: "center" }}>
+            {confirmDelete ? (
+              <>
+                <span style={{ color: "var(--red)", fontWeight: 600, fontSize: 13 }}>Are you sure?</span>
+                <button onClick={() => { onDelete?.(c.id); setConfirmDelete(false); onClose(); }} style={{
+                  all: "unset", cursor: "pointer", color: "#fff", fontWeight: 600, fontSize: "12.5px",
+                  padding: "8px 16px", borderRadius: 9, background: "var(--red)",
+                }}>
+                  Delete
+                </button>
+                <button onClick={() => setConfirmDelete(false)} style={{
+                  all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: "12.5px",
+                  padding: "8px 16px", borderRadius: 9, border: "1px solid var(--line)",
+                }}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="danger" onClick={() => setConfirmDelete(true)} style={{
+                all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
+                padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
+              }}>
+                Remove client
+              </button>
+            )}
             <div style={{ flex: 1 }}></div>
             <button className="btn" onClick={handleSaveModule} disabled={saving} style={{
               all: "unset", cursor: saving ? "default" : "pointer",
@@ -2619,13 +2639,31 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           </div>
 
           {/* Footer */}
-          <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10 }}>
-            <button className="danger" onClick={() => { onDelete?.(c.id); onClose(); }} style={{
-              all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
-              padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
-            }}>
-              Remove client
-            </button>
+          <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10, alignItems: "center" }}>
+            {confirmDelete ? (
+              <>
+                <span style={{ color: "var(--red)", fontWeight: 600, fontSize: 13 }}>Are you sure?</span>
+                <button onClick={() => { onDelete?.(c.id); setConfirmDelete(false); onClose(); }} style={{
+                  all: "unset", cursor: "pointer", color: "#fff", fontWeight: 600, fontSize: "12.5px",
+                  padding: "8px 16px", borderRadius: 9, background: "var(--red)",
+                }}>
+                  Delete
+                </button>
+                <button onClick={() => setConfirmDelete(false)} style={{
+                  all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: "12.5px",
+                  padding: "8px 16px", borderRadius: 9, border: "1px solid var(--line)",
+                }}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="danger" onClick={() => setConfirmDelete(true)} style={{
+                all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
+                padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
+              }}>
+                Remove client
+              </button>
+            )}
             <div style={{ flex: 1 }}></div>
             <button onClick={onClose} style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
