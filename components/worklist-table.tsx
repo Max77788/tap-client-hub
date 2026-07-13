@@ -266,6 +266,7 @@ export default function WorklistTable({
   // ── Comment panel state ──
   const [activeCommentClientId, setActiveCommentClientId] = useState<string | null>(null);
   const [activeCommentMonth, setActiveCommentMonth] = useState<number>(-1);
+  const [activeStxIdx, setActiveStxIdx] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentPanelPos, setCommentPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -278,6 +279,7 @@ export default function WorklistTable({
       if (!target.closest(".comment-panel-wl") && !target.closest(".cdot")) {
         setActiveCommentClientId(null);
         setActiveCommentMonth(-1);
+        setActiveStxIdx(null);
         setCommentPanelPos(null);
       }
     }
@@ -389,7 +391,7 @@ export default function WorklistTable({
     return "You";
   };
 
-  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string) => {
+  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxIdx?: number) => {
     if (!text.trim()) return;
     // Find the client and service to get csId
     const cl = clients.find((c: any) => c.id === clientId);
@@ -397,13 +399,14 @@ export default function WorklistTable({
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) return;
 
-    const newComment = {
+    const newComment: any = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       month: monthIdx,
       text: text.trim(),
       author: getAuthorName(),
       createdAt: new Date().toISOString(),
     };
+    if (stxIdx != null) newComment.stxIdx = stxIdx;
 
     const updatedComments = [...(svc.comments || []), newComment];
     // Update local state directly for instant UI feedback
@@ -1209,6 +1212,7 @@ export default function WorklistTable({
                                 const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                                 setActiveCommentClientId(isOpen ? null : client.id);
                                 setActiveCommentMonth(isOpen ? -1 : i);
+                                setActiveStxIdx(isOpen ? null : (isStxItem ? (stxIdx ?? null) : null));
                                 if (!isOpen) setCommentText("");
                               }}
                               className="cdot"
@@ -1230,9 +1234,9 @@ export default function WorklistTable({
                               <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
                                 Comments — {mo}
                               </div>
-                              {(svc.comments || []).filter((c: any) => c.month === i).length > 0 && (
+                              {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).length > 0 && (
                                 <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                  {(svc.comments || []).filter((c: any) => c.month === i).map((cm: any) => (
+                                  {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).map((cm: any) => (
                                     <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
                                       <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
                                         <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
@@ -1252,11 +1256,11 @@ export default function WorklistTable({
                                   style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
                                   value={commentText}
                                   onChange={e => setCommentText(e.target.value)}
-                                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText); } }}
+                                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxIdx ?? undefined); } }}
                                   placeholder="Add a comment…"
                                 />
                                 <button
-                                  onClick={() => addComment(client.id, i, commentText)}
+                                  onClick={() => addComment(client.id, i, commentText, activeStxIdx ?? undefined)}
                                   style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
                                 >Send</button>
                               </div>
@@ -1371,8 +1375,10 @@ export default function WorklistTable({
                       : stage === "dn" ? "✓"
                       : stage === "na" ? "–" : "";
                     const lockHist = isHistorical && isActive;
-                    // ── Comment marker: check if any comment exists for this month ──
-                    const hasCmt = (svc.comments || []).some((c: any) => c.month === i);
+                    // ── Comment marker: check stxItem comments for sales tax line items ──
+                    const hasCmt = isStxItem
+                      ? (stxItem?.comments || []).some((c: any) => c.month === i)
+                      : (svc.comments || []).some((c: any) => c.month === i);
                     return (
                       <td key={i} className={`mtd${isCurrentMonth ? " mtd-now" : ""}`} style={{ position: "relative" }}>
                         {/* ── Filing month corner indicator ── */}
@@ -1525,6 +1531,7 @@ export default function WorklistTable({
                             const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                             setActiveCommentClientId(isOpen ? null : client.id);
                             setActiveCommentMonth(isOpen ? -1 : i);
+                            setActiveStxIdx(isOpen ? null : (isStxItem ? (stxIdx ?? null) : null));
                             if (!isOpen) setCommentText("");
                             }}
                             className="cdot"
@@ -1546,9 +1553,9 @@ export default function WorklistTable({
                             <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
                               Comments — {MONTHS_SHORT[i]}
                             </div>
-                            {(svc.comments || []).filter((c: any) => c.month === i).length > 0 && (
-                              <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                                {(svc.comments || []).filter((c: any) => c.month === i).map((cm: any) => (
+                            {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).length > 0 && (
+                                <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                                  {(svc.comments || []).filter((c: any) => c.month === i && (c.stxIdx == null || c.stxIdx === activeStxIdx)).map((cm: any) => (
                                   <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
                                     <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
                                       <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
@@ -1568,11 +1575,11 @@ export default function WorklistTable({
                                 style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
                                 value={commentText}
                                 onChange={e => setCommentText(e.target.value)}
-                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText); } }}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxIdx ?? undefined); } }}
                                 placeholder="Add a comment…"
                               />
                               <button
-                                onClick={() => addComment(client.id, i, commentText)}
+                                onClick={() => addComment(client.id, i, commentText, activeStxIdx ?? undefined)}
                                 style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
                               >Send</button>
                             </div>
