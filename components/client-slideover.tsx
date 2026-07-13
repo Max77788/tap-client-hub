@@ -2433,7 +2433,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       </div>
                     </div>
                   </div>
-                  {moduleKey !== "sales_tax" && (
+                  {false && moduleKey !== "sales_tax" && (
                   <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
                     <span style={{ color: "var(--muted)" }}>Assigned To</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
@@ -2594,16 +2594,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                 ref={eAddPhoneRef} defaultValue={eAddPhone} onBlur={e => setEAddPhone(e.target.value)} placeholder="—" />
-            </div>
-
-            {/* Assigned */}
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>Assigned To</span>
-              <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
-                value={eAssigned} onChange={e => setEAssigned(e.target.value)}>
-                {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
-                <option>Unassigned</option>
-              </select>
             </div>
 
             {/* Address */}
