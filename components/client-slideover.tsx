@@ -1983,10 +1983,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div>
                 <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {(c.groupName || c.group) && (c.groupName || c.group).toLowerCase() !== "unassigned" && (
-                    <span>📁 {(c.groupName || c.group)}</span>
-                  )}
-                  {c.contact && <span>👤 {c.contact}</span>}
+                  <span>📁 {(c.groupName || c.group) && (c.groupName || c.group).toLowerCase() !== "unassigned" ? (c.groupName || c.group) : "—"}</span>
+                  <span>👤 {c.contact || "—"}</span>
                 </div>
               </div>
               <button className="ox" onClick={onClose} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
@@ -2580,10 +2578,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div>
                 <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {(c.groupName || c.group) && (c.groupName || c.group).toLowerCase() !== "unassigned" && (
-                    <span>📁 {(c.groupName || c.group)}</span>
-                  )}
-                  {c.contact && <span>👤 {c.contact}</span>}
+                  <span>📁 {(c.groupName || c.group) && (c.groupName || c.group).toLowerCase() !== "unassigned" ? (c.groupName || c.group) : "—"}</span>
+                  <span>👤 {c.contact || "—"}</span>
                 </div>
               </div>
               <button className="ox" onClick={() => { handleSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
@@ -2643,7 +2639,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="—" />
               </div>
-              <div className="field" style={{ ...fieldStyle, flex: "0 0 75px" }}>
+              <div className="field" style={{ ...fieldStyle, flex: "0 0 85px" }}>
                 <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>ZIP</span>
                 <input style={{ width: "100%", minWidth: 0, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="—" />
