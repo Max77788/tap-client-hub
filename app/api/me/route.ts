@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/me
- * Reads the current user's role from profiles table and sets it as a cookie.
+ * Reads the current user's role and modules from profiles table and sets cookies.
  * Called after successful login.
  */
 export async function GET() {
@@ -30,7 +30,6 @@ export async function GET() {
     } catch {}
   }
 
-  // Try to find profile by email or ID
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -38,41 +37,49 @@ export async function GET() {
   );
 
   let profile = null;
+
+  // 1. Try by profile ID (from JWT sub)
   if (profileId) {
     const { data } = await supabase.from("profiles").select("role, full_name, modules").eq("id", profileId).single();
     profile = data;
   }
-  if (!profile && profileEmail) {
-    // Try matching by name from tap_demo_user cookie
-    const userName = cookieStore.get("tap_demo_user")?.value || "";
-    const { data: all } = await supabase.from("profiles").select("id, role, full_name");
-    if (all) {
-      profile = all.find((p: any) => {
-        const dbName = (p.full_name || "").trim().toLowerCase();
-        const userLower = decodeURIComponent(userName).trim().toLowerCase();
-        if (!userLower) return false;
-        // Direct match
-        if (dbName === userLower) return true;
-        // "lastname, firstname" vs "firstname lastname"
-        if (dbName.includes(",")) {
-          const [last, first] = dbName.split(",").map((s: string) => s.trim());
-          return `${first} ${last}` === userLower;
-        }
-        return false;
-      }) || null;
 
-      // Fallback: try email prefix match
-      if (!profile) {
-        const emailPrefix = profileEmail.split("@")[0].toLowerCase();
+  // 2. Try direct email match
+  if (!profile && profileEmail) {
+    const { data: byEmail } = await supabase.from("profiles").select("role, full_name, modules").eq("email", profileEmail).maybeSingle();
+    profile = byEmail;
+  }
+
+  // 3. Try name matching from tap_demo_user cookie
+  if (!profile && profileEmail) {
+    const userName = cookieStore.get("tap_demo_user")?.value || "";
+    if (userName) {
+      const { data: all } = await supabase.from("profiles").select("id, role, full_name, modules");
+      if (all) {
+        const userLower = decodeURIComponent(userName).trim().toLowerCase();
         profile = all.find((p: any) => {
           const dbName = (p.full_name || "").trim().toLowerCase();
+          if (dbName === userLower) return true;
           if (dbName.includes(",")) {
-            const first = dbName.split(",")[1]?.trim() || "";
-            return first === emailPrefix;
+            const [last, first] = dbName.split(",").map((s: string) => s.trim());
+            return `${first} ${last}` === userLower;
           }
-          const parts = dbName.split(/\s+/);
-          return (parts[0] || "") === emailPrefix;
+          return false;
         }) || null;
+
+        // Fallback: email prefix match
+        if (!profile) {
+          const emailPrefix = profileEmail.split("@")[0].toLowerCase();
+          profile = all.find((p: any) => {
+            const dbName = (p.full_name || "").trim().toLowerCase();
+            if (dbName.includes(",")) {
+              const first = dbName.split(",")[1]?.trim() || "";
+              return first === emailPrefix;
+            }
+            const parts = dbName.split(/\s+/);
+            return (parts[0] || "") === emailPrefix;
+          }) || null;
+        }
       }
     }
   }

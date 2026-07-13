@@ -170,6 +170,7 @@ export default function RootLayout({
   // ── Real role + modules from database ──
   const [realRole, setRealRole] = useState<string>("admin");
   const [userModules, setUserModules] = useState<string[]>([]);
+  const [modulesLoaded, setModulesLoaded] = useState(false);
 
   // Fetch real role + modules from /api/me on mount
   useEffect(() => {
@@ -187,8 +188,9 @@ export default function RootLayout({
           // Admins/owners see everything if no modules list
           setUserModules([]);
         }
+        setModulesLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setModulesLoaded(true); });
   }, []);
 
   // Keep cookie in sync on future changes
@@ -224,15 +226,16 @@ export default function RootLayout({
     if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
     // Module-based restrictions: hide items not in user's module list
     // Admins/owners see everything even without explicit modules
+    // Don't filter until modules have actually loaded (prevent blank screen)
     const isPowerUser = role === "admin" || role === "owner";
-    if (item.module && !isPowerUser && !userModules.includes(item.module)) return false;
+    if (item.module && modulesLoaded && !isPowerUser && !userModules.includes(item.module)) return false;
     return true;
   });
 
   // ── Page-level module guard: redirect if user tries to access forbidden page ──
   useEffect(() => {
     const isPowerUser = role === "admin" || role === "owner";
-    if (isPowerUser) return;
+    if (isPowerUser || !modulesLoaded) return;
     const pageModule: Record<string, string> = {
       "/fin": "Financials", "/pr": "Payroll", "/stx": "Sales Tax",
       "/t9": "1099s", "/tax": "Tax Returns", "/rend": "Renditions",
