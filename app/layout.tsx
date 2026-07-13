@@ -175,10 +175,7 @@ export default function RootLayout({
     if (!match) return [];
     return decodeURIComponent(match[1]).split(",").filter(Boolean);
   });
-  const [modulesLoaded, setModulesLoaded] = useState(() => {
-    if (typeof document === "undefined") return false;
-    return document.cookie.includes("tap_modules=");
-  });
+  const [modulesLoaded, setModulesLoaded] = useState(false);
 
   // Fetch real role + modules from /api/me on mount
   useEffect(() => {
@@ -233,11 +230,12 @@ export default function RootLayout({
     if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
     if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
     // Module-based restrictions: hide items not in user's module list
-    // Admins/owners see everything even without explicit modules
-    // Don't filter until modules have actually loaded (prevent blank screen)
     const isPowerUser = role === "admin" || role === "owner";
     if (!modulesLoaded) {
-      // While loading, only show Clients + separator to prevent flash of all tabs
+      // While loading, use cookie-based modules if available, else show only Clients
+      if (isPowerUser) return true;
+      // If we have cookie modules, use them to avoid flash
+      if (userModules.length > 0) return item.module ? userModules.includes(item.module) : true;
       return item.label === "Clients" || item.label === "---";
     }
     if (item.module && !isPowerUser && !userModules.includes(item.module)) return false;
