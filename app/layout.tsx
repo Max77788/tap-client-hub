@@ -236,9 +236,13 @@ export default function RootLayout({
     // Admins/owners see everything even without explicit modules
     // Don't filter until modules have actually loaded (prevent blank screen)
     const isPowerUser = role === "admin" || role === "owner";
-    if (item.module && modulesLoaded && !isPowerUser && !userModules.includes(item.module)) return false;
+    if (!modulesLoaded) {
+      // While loading, only show Clients + separator to prevent flash of all tabs
+      return item.label === "Clients" || item.label === "---";
+    }
+    if (item.module && !isPowerUser && !userModules.includes(item.module)) return false;
     // Safety net: if staff with empty modules after load, at minimum show Clients
-    if (item.module === "Clients" && modulesLoaded && !isPowerUser && userModules.length === 0) return true;
+    if (item.module === "Clients" && !isPowerUser && userModules.length === 0) return true;
     return true;
   });
 
