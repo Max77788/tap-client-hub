@@ -90,7 +90,8 @@ export async function GET() {
 
     return {
       id: p.id,
-      name: displayName,
+      name: p.full_name || "",           // DB value for PATCH lookups
+      displayName,                        // "First Last" for display
       email,
       username: email.split("@")[0],
       role: ROLE_MAP[p.role] || p.role || "Staff",

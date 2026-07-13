@@ -275,7 +275,7 @@ export default function UsersPage() {
           <tbody>
             {users.map(u => (
               <tr key={u.id} onClick={() => openModal(u)} style={{ cursor: "pointer" }}>
-                <td className="lname">{u.name}</td>
+                <td className="lname">{u.displayName || u.name}</td>
                 <td>{u.location}</td>
                 <td>
                   <span className="urole" style={{
