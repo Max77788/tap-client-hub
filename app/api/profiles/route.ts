@@ -63,10 +63,16 @@ export async function GET() {
   }
 
   const users = profiles.map((p: any) => {
+    // ── Normalize name: DB stores "Last,First" but UI should show "First Last" ──
+    const rawName = p.full_name || "";
+    const displayName = rawName.includes(",")
+      ? rawName.split(",").map((s: string) => s.trim()).reverse().join(" ")
+      : rawName;
+
     // Use real email from auth.users if available, otherwise derive
     let email = emailMap[p.id] || "";
     if (!email) {
-      const nameParts = (p.full_name || "").trim().split(/\s+/);
+      const nameParts = displayName.trim().split(/\s+/);
       const first = (nameParts[0] || "").toLowerCase();
       const last = nameParts.length > 1
         ? nameParts[nameParts.length - 1].toLowerCase()
@@ -74,14 +80,17 @@ export async function GET() {
       email = `${first}.${last}@tapallc.com`;
     }
 
-    // Resolve reporting_manager UUID to display name
-    const mgrName = p.reporting_manager
+    // Resolve reporting_manager UUID to display name (also normalize)
+    const mgrRaw = p.reporting_manager
       ? (nameMap[p.reporting_manager] || p.reporting_manager)
       : "—";
+    const mgrName = typeof mgrRaw === "string" && mgrRaw.includes(",")
+      ? mgrRaw.split(",").map((s: string) => s.trim()).reverse().join(" ")
+      : mgrRaw;
 
     return {
       id: p.id,
-      name: p.full_name || "",
+      name: displayName,
       email,
       username: email.split("@")[0],
       role: ROLE_MAP[p.role] || p.role || "Staff",
