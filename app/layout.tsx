@@ -169,8 +169,16 @@ export default function RootLayout({
 
   // ── Real role + modules from database ──
   const [realRole, setRealRole] = useState<string>("admin");
-  const [userModules, setUserModules] = useState<string[]>([]);
-  const [modulesLoaded, setModulesLoaded] = useState(false);
+  const [userModules, setUserModules] = useState<string[]>(() => {
+    if (typeof document === "undefined") return [];
+    const match = document.cookie.match(/(?:^|;\s*)tap_modules=([^;]*)/);
+    if (!match) return [];
+    return decodeURIComponent(match[1]).split(",").filter(Boolean);
+  });
+  const [modulesLoaded, setModulesLoaded] = useState(() => {
+    if (typeof document === "undefined") return false;
+    return document.cookie.includes("tap_modules=");
+  });
 
   // Fetch real role + modules from /api/me on mount
   useEffect(() => {

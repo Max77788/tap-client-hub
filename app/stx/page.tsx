@@ -40,12 +40,14 @@ export default function StxPage() {
 
       if (allLineItems.length > 0) {
         for (const item of allLineItems) {
+          // Deep clone service so each line item has independent months/salesTaxLineItems
+          const svcClone = JSON.parse(JSON.stringify(stxServices[0]));
           result.push({
             ...client,
             id: `${client.id}::${item._csId}::${item.serviceName}`,
             _originalClientId: client.id,
             _csId: item._csId,
-            services: [stxServices[0]],
+            services: [svcClone],
             _mergedLineItems: allLineItems,
             _stxItem: item,
             _stxName: item._svcName || item.serviceName,
@@ -53,12 +55,13 @@ export default function StxPage() {
         }
       } else {
         for (const svc of stxServices) {
+          const svcClone = JSON.parse(JSON.stringify(svc));
           result.push({
             ...client,
-            id: `${client.id}::${svc.csId || ""}`,
+            id: `${client.id}::${svcClone.csId || ""}`,
             _originalClientId: client.id,
-            _csId: svc.csId,
-            services: [svc],
+            _csId: svcClone.csId,
+            services: [svcClone],
             _mergedLineItems: svc.salesTaxLineItems || [],
           });
         }
