@@ -626,6 +626,11 @@ function GroupCard({
 function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Client; onClick: () => void; selected?: boolean; onToggleSelect?: (id: string) => void }) {
   const enabledServices = client.services.filter((s) => s.enabled && s.key);
 
+  // Check for state renewal on tax returns
+  const taxSvc = client.services.find(s => s.key === "tax_returns" && s.enabled);
+  const hasStateRenewal = taxSvc?.stateRenewal || false;
+  const renewalState = taxSvc?.renewalState || taxSvc?.filingState || "";
+
   // Get unique assignees across all enabled services
   const assignees = useMemo(() => {
     const set = new Set<string>();
@@ -715,6 +720,16 @@ function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Cli
           {enabledServices.length === 0 && (
             <span className="pill" style={{ fontSize: "10.5px", fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: "#eee", color: "#888" }}>
               No services
+            </span>
+          )}
+          {hasStateRenewal && (
+            <span style={{
+              fontSize: "9.5px", fontWeight: 700, letterSpacing: "0.03em",
+              padding: "3px 8px", borderRadius: 20,
+              background: "#fef3c7", color: "#92400e",
+              whiteSpace: "nowrap",
+            }}>
+              STATE RENEWAL{renewalState ? ` · ${renewalState}` : ""}
             </span>
           )}
         </div>
