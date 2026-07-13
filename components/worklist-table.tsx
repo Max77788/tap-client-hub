@@ -1602,7 +1602,7 @@ export default function WorklistTable({
                             onClick={e => e.stopPropagation()}
                           >
                             <div style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)", marginBottom: 8 }}>
-                              Comments — {MONTHS_SHORT[i]}
+                              Comments — {MONTHS_SHORT[i]}{isStxItem ? ` — ${displayName}` : ""}
                             </div>
                             {monthComments.length > 0 && (
                               <div style={{ marginBottom: 8, maxHeight: 120, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
