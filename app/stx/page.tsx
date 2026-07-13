@@ -15,7 +15,7 @@ export default function StxPage() {
     }
     return currentYear;
   });
-  const { clients, loading, updateServiceMonth, updateClient } = useClients();
+  const { clients, loading, updateClient } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [stxLineItemFocus, setStxLineItemFocus] = useState<string | null>(null);
@@ -98,11 +98,28 @@ export default function StxPage() {
   const handleStageChange = useCallback(
     (flatId: string, monthIdx: number, stage: any, csId?: string) => {
       const parts = flatId.split("::");
-      const origId = parts[0];
       const entryCsId = csId || parts[1] || undefined;
-      updateServiceMonth(origId, "sales_tax", monthIdx, stage, entryCsId);
+      // Persist directly — don't use updateServiceMonth (mutates shared source, duplicates across line items)
+      const now = new Date();
+      const period = `${now.getFullYear()}-${String(monthIdx + 1).padStart(2, "0")}`;
+      const wStage = (() => {
+        switch (stage) {
+          case "ip": return "in_progress";
+          case "wc": return "waiting_client";
+          case "pp": return "pending_payment";
+          case "dn": return "done";
+          case "dl": return "delayed";
+          case "na": return "not_applicable";
+          default: return "not_started";
+        }
+      })();
+      fetch("/api/clients/service-month", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csId: entryCsId, period, stage: wStage }),
+      }).catch(() => {});
     },
-    [updateServiceMonth],
+    [],
   );
 
   const handleSlideoverSave = useCallback((updated: any) => {
