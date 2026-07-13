@@ -175,12 +175,6 @@ export default function RootLayout({
     if (!match) return [];
     return decodeURIComponent(match[1]).split(",").filter(Boolean);
   });
-  const [modulesLoaded, setModulesLoaded] = useState(() => {
-    if (typeof document === "undefined") return false;
-    // If we have a tap_modules cookie, trust it immediately to avoid tab flash
-    return /(?:^|;\s*)tap_modules=/.test(document.cookie);
-  });
-
   // Fetch real role + modules from /api/me on mount
   useEffect(() => {
     fetch("/api/me", { credentials: "include" })
@@ -197,9 +191,8 @@ export default function RootLayout({
           // Admins/owners see everything if no modules list
           setUserModules([]);
         }
-        setModulesLoaded(true);
       })
-      .catch(() => { setModulesLoaded(true); });
+      .catch(() => {});
   }, []);
 
   // Keep cookie in sync on future changes
@@ -235,10 +228,10 @@ export default function RootLayout({
     // Admins/owners see everything
     const isPowerUser = role === "admin" || role === "owner";
     if (isPowerUser) return true;
-    // Staff: if modules haven't loaded yet, show everything (better than blank screen)
-    if (!modulesLoaded) return true;
-    // Staff with loaded modules: hide items not in their list
-    return userModules.includes(item.module);
+    // Staff: filter by what we have right now — cookie modules on first render, API modules after
+    if (userModules.length > 0) return userModules.includes(item.module);
+    // No modules available at all — show only Clients (the universal base tab)
+    return item.module === "Clients";
   });
 
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
