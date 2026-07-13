@@ -252,7 +252,7 @@ export default function RootLayout({
     if (reqModule && userModules.length > 0 && !userModules.includes(reqModule)) {
       window.location.href = "/";
     }
-  }, [pathname, userModules, role]);
+  }, [pathname, userModules, role, modulesLoaded]);
 
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
