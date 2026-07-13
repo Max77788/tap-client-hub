@@ -146,6 +146,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [editStxAccount, setEditStxAccount] = useState("");
   const [editStxFreq, setEditStxFreq] = useState("Monthly");
   const [editStxAssigned, setEditStxAssigned] = useState("");
+  const [editStxNotes, setEditStxNotes] = useState("");
 
   // ── Payroll details state ──
   const prSvcInit = client.services.find((s: any) => s.key === "payroll");
@@ -1356,6 +1357,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                 </select>
                               </div>
                             </div>
+                            <div style={{ marginTop: 6 }}>
+                              <label style={{ fontSize: 9, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Notes</label>
+                              <textarea
+                                style={{ width: "100%", padding: "5px 7px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, resize: "vertical", minHeight: 40 }}
+                                defaultValue={editStxNotes}
+                                onBlur={e => setEditStxNotes(e.target.value)}
+                                placeholder="Add notes about this registration..."
+                              />
+                            </div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                               <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: 11, padding: "4px 8px" }}
                                 onClick={() => setEditingStxIdx(-1)}>Cancel</button>
@@ -1370,6 +1380,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                     bankName: stxBankRef.current?.value.trim() || '', bankRouting: stxRoutingRef.current?.value.trim() || '', bankAccount: stxAccountRef.current?.value.trim() || '',
                                     assignedTo: editStxAssigned.trim(),
                                     frequency: editStxFreq,
+                                    notes: editStxNotes.trim(),
                                   };
                                   setStxLineItems(upd);
                                   setLocalSvcs(prev => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
@@ -1399,6 +1410,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                 {item.frequency && <span>{item.frequency}</span>}
                                 {item.bankName && <span>{item.bankName} {item.bankRouting && `· ${item.bankRouting}`} {item.bankAccount && `· ${item.bankAccount}`}</span>}
                               </div>
+                              {item.notes && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, fontStyle: "italic" }}>{item.notes}</div>}
                             </div>
                             <div style={{ display: "flex", gap: 4 }}>
                               <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: 11 }}
@@ -1412,6 +1424,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                                   setEditStxAccount(item.bankAccount || "");
                                   setEditStxFreq(item.frequency || "Monthly");
                                   setEditStxAssigned(item.assignedTo || "");
+                                  setEditStxNotes(item.notes || "");
                                 }}
                               >Edit</button>
                               <button className="reveal" style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: 11 }}
