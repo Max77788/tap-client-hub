@@ -219,6 +219,7 @@ export default function VaultPage() {
                     <th>Portal</th>
                     <th>Username</th>
                     <th>Password</th>
+                    {canEdit && <th style={{ width: 80, textAlign: "center" }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -250,6 +251,16 @@ export default function VaultPage() {
                               </button>
                             </td>
                           </>
+                        )}
+                        {canEdit && (
+                          <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                            <button onClick={() => handleEdit(entry)}
+                              style={{ all: "unset", cursor: "pointer", color: "var(--teal)", fontWeight: 600, fontSize: 11, marginRight: 8 }}
+                              title="Edit">✏️</button>
+                            <button onClick={() => handleDelete(entry)}
+                              style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11 }}
+                              title="Delete">🗑️</button>
+                          </td>
                         )}
                       </tr>
                     );
