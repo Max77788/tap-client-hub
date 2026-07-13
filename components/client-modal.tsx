@@ -326,7 +326,17 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Pay date / day</label>
-                <input style={inputStyle} value={prPaydate} onChange={e => setPrPaydate(e.target.value)} placeholder="e.g. Friday" />
+                <select style={inputStyle} value={prPaydate} onChange={e => setPrPaydate(e.target.value)}>
+                  <option value="">Select…</option>
+                  <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option>
+                  <option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option>
+                  <option value="Friday">Friday</option>
+                  <option disabled>──────────</option>
+                  <option value="1st">1st</option><option value="5th">5th</option>
+                  <option value="10th">10th</option><option value="15th">15th</option>
+                  <option value="20th">20th</option><option value="25th">25th</option>
+                  <option value="Last day">Last day of month</option>
+                </select>
               </div>
             </div>
             <div className="two" style={{ display: "flex", gap: 12 }}>
