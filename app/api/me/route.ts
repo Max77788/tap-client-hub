@@ -50,8 +50,8 @@ export async function GET() {
     profile = byEmail;
   }
 
-  // 3. Try name matching from tap_demo_user cookie
-  if (!profile && profileEmail) {
+  // 3. Try name matching from tap_demo_user cookie (runs regardless of email)
+  if (!profile) {
     const userName = cookieStore.get("tap_demo_user")?.value || "";
     if (userName) {
       const { data: all } = await supabase.from("profiles").select("id, role, full_name, modules");
