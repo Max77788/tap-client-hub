@@ -153,7 +153,7 @@ export default function WorkloadPage() {
     }
 
     // Sort: real staff by total touchpoints descending, then unassigned at end
-    const realStaff = Object.values(byStaff).filter(s => s.name !== "Unassigned");
+    const realStaff = Object.values(byStaff).filter(s => s.name !== "Unassigned" && s.name !== "Boss");
     realStaff.sort((a, b) => b.totalTouchpoints - a.totalTouchpoints);
 
     const unassigned = byStaff["Unassigned"];
@@ -165,13 +165,13 @@ export default function WorkloadPage() {
 
   const maxLoad = useMemo(() => Math.max(1, ...staffLoads.map(s => s.totalTouchpoints)), [staffLoads]);
   const avgLoad = useMemo(() => {
-    const real = staffLoads.filter(s => s.name !== "Unassigned").length;
+    const real = staffLoads.filter(s => s.name !== "Unassigned" && s.name !== "Boss").length;
     if (!real) return 0;
-    const total = staffLoads.filter(s => s.name !== "Unassigned").reduce((a, s) => a + s.totalTouchpoints, 0);
+    const total = staffLoads.filter(s => s.name !== "Unassigned" && s.name !== "Boss").reduce((a, s) => a + s.totalTouchpoints, 0);
     return Math.round(total / real);
   }, [staffLoads]);
 
-  const realStaff = staffLoads.filter(s => s.name !== "Unassigned");
+  const realStaff = staffLoads.filter(s => s.name !== "Unassigned" && s.name !== "Boss");
   const busiest = realStaff[0];
   const lightest = realStaff[realStaff.length - 1];
   const unassigned = staffLoads.find(s => s.name === "Unassigned");
@@ -206,7 +206,7 @@ export default function WorkloadPage() {
     for (const [manager, memberNames] of Object.entries(mgrToStaff)) {
       const members = memberNames
         .map(n => staffLoads.find(s => s.name === n))
-        .filter((s): s is StaffSummary => !!s && s.name !== "Unassigned");
+        .filter((s): s is StaffSummary => !!s && s.name !== "Unassigned" && s.name !== "Boss");
       if (members.length === 0) continue;
       const totalEffort = members.reduce((a, m) => a + m.totalTouchpoints, 0);
       teams.push({ manager, members, totalEffort });
