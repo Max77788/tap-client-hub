@@ -255,7 +255,8 @@ export default function RootLayout({
       "/users": "Users & Access", "/support": "Support",
     };
     const reqModule = pageModule[pathname];
-    if (reqModule && !userModules.includes(reqModule)) {
+    // Only redirect if we actually have modules loaded AND the module is explicitly missing
+    if (reqModule && userModules.length > 0 && !userModules.includes(reqModule)) {
       window.location.href = "/";
     }
   }, [pathname, userModules, role]);
