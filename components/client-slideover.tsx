@@ -1980,7 +1980,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-              <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
+              <div>
+                <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {(c.groupName || c.group) && (c.groupName || c.group).toLowerCase() !== "unassigned" && (
+                    <span>📁 {(c.groupName || c.group)}</span>
+                  )}
+                  {c.contact && <span>👤 {c.contact}</span>}
+                </div>
+              </div>
               <button className="ox" onClick={onClose} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
             <div className="sub" style={{ color: "var(--muted)", fontSize: 13, marginTop: 5 }}>
@@ -2569,7 +2577,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-              <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
+              <div>
+                <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 23, lineHeight: 1.12 }}>{c.name}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {(c.groupName || c.group) && (c.groupName || c.group).toLowerCase() !== "unassigned" && (
+                    <span>📁 {(c.groupName || c.group)}</span>
+                  )}
+                  {c.contact && <span>👤 {c.contact}</span>}
+                </div>
+              </div>
               <button className="ox" onClick={() => { handleSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
           </div>
