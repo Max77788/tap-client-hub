@@ -6,6 +6,7 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 interface User {
   id: string; name: string; email: string; username: string;
   role: string; location: string; mgr: string; modules: string[]; status: string;
+  displayName?: string;
   email_2fa_enabled?: boolean;
 }
 
