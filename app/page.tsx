@@ -27,6 +27,7 @@ export default function ClientsPage() {
   const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const debounceRef = useRef<Record<string, any>>({});
@@ -303,28 +304,44 @@ export default function ClientsPage() {
           {/* ── Bulk action bar ── */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 6px", minHeight: 30 }}>
             <button
-              onClick={selectAll}
+              onClick={() => { setBulkMode(!bulkMode); setSelectedIds(new Set()); }}
               style={{
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
-                background: "none", border: "none", color: "var(--muted)",
-                padding: "4px 8px", borderRadius: 6,
+                background: bulkMode ? "var(--teal)" : "none",
+                border: bulkMode ? "1px solid var(--teal)" : "1px solid var(--line)",
+                color: bulkMode ? "#fff" : "var(--muted)",
+                padding: "4px 12px", borderRadius: 6,
               }}
             >
-              {selectedIds.size === filteredClients.length && filteredClients.length > 0
-                ? "Deselect all"
-                : `Select all (${filteredClients.length})`}
+              {bulkMode ? "✓ Bulk Mode On" : "Bulk Actions"}
             </button>
-            {selectedIds.size > 0 && (
-              <button
-                onClick={bulkDelete}
-                style={{
-                  fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  background: "var(--red)", border: "none", color: "#fff",
-                  padding: "4px 12px", borderRadius: 6,
-                }}
-              >
-                Delete {selectedIds.size} selected
-              </button>
+            {bulkMode && (
+              <>
+                <button
+                  onClick={selectAll}
+                  style={{
+                    fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    background: "none", border: "none", color: "var(--muted)",
+                    padding: "4px 8px", borderRadius: 6,
+                  }}
+                >
+                  {selectedIds.size === filteredClients.length && filteredClients.length > 0
+                    ? "Deselect all"
+                    : `Select all (${filteredClients.length})`}
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={bulkDelete}
+                    style={{
+                      fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      background: "var(--red)", border: "none", color: "#fff",
+                      padding: "4px 12px", borderRadius: 6,
+                    }}
+                  >
+                    Delete {selectedIds.size} selected
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -338,16 +355,16 @@ export default function ClientsPage() {
                     groupName={item.name}
                     clients={item.clients}
                     onClientClick={(id) => openSlideover(id)}
-                    selectedIds={selectedIds}
-                    toggleSelect={toggleSelect}
+                    selectedIds={bulkMode ? selectedIds : undefined}
+                    toggleSelect={bulkMode ? toggleSelect : undefined}
                   />
                 ) : (
                   <ClientCard
                     key={item.client.id}
                     client={item.client}
                     onClick={() => openSlideover(item.client.id)}
-                    selected={selectedIds.has(item.client.id)}
-                    onToggleSelect={toggleSelect}
+                    selected={bulkMode ? selectedIds.has(item.client.id) : undefined}
+                    onToggleSelect={bulkMode ? toggleSelect : undefined}
                   />
                 )
               )}
@@ -670,40 +687,40 @@ function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Cli
           {selected && "✓"}
         </button>
       )}
-      {/* Name + Type badge */}
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-        <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: "16.5px", lineHeight: 1.2 }}>
-          {client.name}
-        </div>
-        <span className={`badge ${client.type === "Business" ? "b-biz" : "b-per"}`}>
-          {client.type === "Business" ? "BIZ" : "PERS"}
-        </span>
+      {/* Name only */}
+      <div className="nm" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: "16.5px", lineHeight: 1.2, marginBottom: 3 }}>
+        {client.name}
       </div>
 
       {/* Meta row: CID · city, state */}
-      <div className="meta" style={{ color: "var(--muted)", fontSize: "12.5px", marginTop: 3 }}>
+      <div className="meta" style={{ color: "var(--muted)", fontSize: "12.5px" }}>
         <span className="mono" style={{ color: "#9a9484" }}>{client.cid || `TP|BS|${String(client.id).padStart(4,"0")}`}</span>
         {" · "}{client.city}, {client.state}
       </div>
 
-      {/* Service pills */}
-      <div className="pills" style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 10 }}>
-        {enabledServices.map((svc) => {
-          const key = svc.key!;
-          const pc = pillClass(key);
-          return (
-            <span key={key} className={`pill ${pc}`} style={{
-              fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.02em", padding: "3px 8px", borderRadius: 20,
-            }}>
-              {pillLabel(key)}
+      {/* Service pills + type badge at bottom-right */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 10 }}>
+        <div className="pills" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+          {enabledServices.map((svc) => {
+            const key = svc.key!;
+            const pc = pillClass(key);
+            return (
+              <span key={key} className={`pill ${pc}`} style={{
+                fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.02em", padding: "3px 8px", borderRadius: 20,
+              }}>
+                {pillLabel(key)}
+              </span>
+            );
+          })}
+          {enabledServices.length === 0 && (
+            <span className="pill" style={{ fontSize: "10.5px", fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: "#eee", color: "#888" }}>
+              No services
             </span>
-          );
-        })}
-        {enabledServices.length === 0 && (
-          <span className="pill" style={{ fontSize: "10.5px", fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: "#eee", color: "#888" }}>
-            No services
-          </span>
-        )}
+          )}
+        </div>
+        <span className={`badge ${client.type === "Business" ? "b-biz" : "b-per"}`} style={{ flexShrink: 0 }}>
+          {client.type === "Business" ? "BIZ" : "PERS"}
+        </span>
       </div>
     </div>
   );
