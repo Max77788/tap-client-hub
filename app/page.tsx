@@ -605,13 +605,6 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
           </span>
         )}
       </div>
-
-      {/* Handled by */}
-      <div className="row2" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 11 }}>
-        <span className="assignee" style={{ fontSize: 12, color: "var(--muted)" }}>
-          Handled by <b style={{ color: "var(--ink)", fontWeight: 600 }}>{assignees.length ? assignees.join(", ") : "—"}</b>
-        </span>
-      </div>
     </div>
   );
 }
