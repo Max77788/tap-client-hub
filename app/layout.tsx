@@ -226,22 +226,15 @@ export default function RootLayout({
   }, []);
 
   const visibleNav = NAV_ITEMS.filter((item) => {
-    // Role-based restrictions (Workload/Timesheet = manager+)
-    if (item.role === "admin" && role !== "admin" && role !== "owner") return false;
-    if (item.role === "manager" && role !== "admin" && role !== "owner" && role !== "manager") return false;
-    // Module-based restrictions: hide items not in user's module list
+    // Separators always pass
+    if (!item.module) return true;
+    // Admins/owners see everything
     const isPowerUser = role === "admin" || role === "owner";
-    if (!modulesLoaded) {
-      // While loading, use cookie-based modules if available, else show only Clients
-      if (isPowerUser) return true;
-      // If we have cookie modules, use them to avoid flash
-      if (userModules.length > 0) return item.module ? userModules.includes(item.module) : true;
-      return item.label === "Clients" || item.label === "---";
-    }
-    if (item.module && !isPowerUser && !userModules.includes(item.module)) return false;
-    // Safety net: if staff with empty modules after load, at minimum show Clients
-    if (item.module === "Clients" && !isPowerUser && userModules.length === 0) return true;
-    return true;
+    if (isPowerUser) return true;
+    // Staff: if modules haven't loaded yet, show everything (better than blank screen)
+    if (!modulesLoaded) return true;
+    // Staff with loaded modules: hide items not in their list
+    return userModules.includes(item.module);
   });
 
   // ── Page-level module guard: redirect if user tries to access forbidden page ──
