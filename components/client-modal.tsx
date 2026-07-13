@@ -243,7 +243,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <div className="two" style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Type</label>
-              <select style={inputStyle} value={type} onChange={e => setType(e.target.value)}>
+              <select style={inputStyle} value={type} onChange={e => { const v = e.target.value; if (v === "Business" || v === "Personal") setType(v); }}>
                 <option value="Business">Business</option><option value="Personal">Personal</option>
               </select>
             </div>
