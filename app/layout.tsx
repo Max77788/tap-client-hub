@@ -237,23 +237,6 @@ export default function RootLayout({
     return userModules.includes(item.module);
   });
 
-  // ── Page-level module guard: redirect if user tries to access forbidden page ──
-  useEffect(() => {
-    const isPowerUser = role === "admin" || role === "owner";
-    if (isPowerUser || !modulesLoaded) return;
-    const pageModule: Record<string, string> = {
-      "/fin": "Financials", "/pr": "Payroll", "/stx": "Sales Tax",
-      "/t9": "1099s", "/tax": "Tax Returns", "/rend": "Renditions",
-      "/vault": "Vault", "/workload": "Workload", "/time": "Timesheet",
-      "/users": "Users & Access", "/support": "Support",
-    };
-    const reqModule = pageModule[pathname];
-    // Only redirect if we actually have modules loaded AND the module is explicitly missing
-    if (reqModule && userModules.length > 0 && !userModules.includes(reqModule)) {
-      window.location.href = "/";
-    }
-  }, [pathname, userModules, role, modulesLoaded]);
-
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
