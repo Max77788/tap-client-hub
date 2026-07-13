@@ -1424,8 +1424,10 @@ export default function WorklistTable({
                       : stage === "dn" ? "✓"
                       : stage === "na" ? "–" : "";
                     const lockHist = isHistorical && isActive;
-                    // ── Comment marker: check stxItem comments for sales tax line items ──
-                    const commentSource = isStxItem ? (stxItem?.comments || []) : (svc.comments || []);
+                    // ── Comment marker: use live salesTaxLineItems (updated by addComment) ──
+                    const commentSource = isStxItem && stxIdx != null && stxIdx >= 0
+                      ? (svc.salesTaxLineItems?.[stxIdx]?.comments || [])
+                      : (svc.comments || []);
                     const hasCmt = commentSource.some((c: any) => c.month === i);
                     const monthComments = commentSource.filter((c: any) => c.month === i);
                     return (

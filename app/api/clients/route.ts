@@ -160,10 +160,25 @@ export async function GET(request: Request) {
           for (const stx of stxBatch) {
             if (!normStxByCsId[stx.client_service_id]) normStxByCsId[stx.client_service_id] = [];
             normStxByCsId[stx.client_service_id].push({
-              id: stx.id, serviceName: stx.service_name || stx.rt_number || "",  // service_name preferred, rt_number fallback taxId: stx.tax_reg_id,
+              id: stx.id, serviceName: stx.service_name || stx.rt_number || "",
+              taxId: stx.tax_reg_id,
               rt: stx.rt_number, frequency: stx.frequency,
               bankName: stx.bank_name, bankAccount: stx.bank_account_ref,
-              bankRouting: stx.bank_routing_ref, notes: stx.notes,
+              bankRouting: stx.bank_routing_ref, notes: (() => {
+                const raw = stx.notes || "";
+                const marker = "\n__STX_CMTS__";
+                const idx = raw.lastIndexOf(marker);
+                return idx > -1 ? raw.slice(0, idx) : raw;
+              })(),
+              comments: (() => {
+                const raw = stx.notes || "";
+                const marker = "\n__STX_CMTS__";
+                const idx = raw.lastIndexOf(marker);
+                if (idx > -1) {
+                  try { return JSON.parse(raw.slice(idx + marker.length)); } catch {}
+                }
+                return [];
+              })(),
               assignedTo: staffNames[stx.assigned_to || ""] || stx.assigned_to || "",
             });
           }
@@ -448,7 +463,12 @@ export async function PUT(request: Request) {
           bank_name: item.bankName || "",
           bank_account_ref: item.bankAccount || "",
           bank_routing_ref: item.bankRouting || "",
-          notes: item.notes || "",
+          notes: (() => {
+            const base = item.notes || "";
+            const cmts = Array.isArray(item.comments) ? item.comments : [];
+            if (cmts.length > 0) return base + "\n__STX_CMTS__" + JSON.stringify(cmts);
+            return base;
+          })(),
         });
       }
     }
@@ -790,7 +810,12 @@ export async function PATCH(request: Request) {
           bank_name: item.bankName || "",
           bank_account_ref: item.bankAccount || "",
           bank_routing_ref: item.bankRouting || "",
-          notes: item.notes || "",
+          notes: (() => {
+            const base = item.notes || "";
+            const cmts = Array.isArray(item.comments) ? item.comments : [];
+            if (cmts.length > 0) return base + "\n__STX_CMTS__" + JSON.stringify(cmts);
+            return base;
+          })(),
         });
       }
     }
