@@ -39,7 +39,7 @@ export default function StxPage() {
       }
 
       if (allLineItems.length > 0) {
-        for (const item of allLineItems) {
+        allLineItems.forEach((item, idx) => {
           // Deep clone service so each line item has independent months/salesTaxLineItems
           const svcClone = JSON.parse(JSON.stringify(stxServices[0]));
           result.push({
@@ -50,9 +50,10 @@ export default function StxPage() {
             services: [svcClone],
             _mergedLineItems: allLineItems,
             _stxItem: item,
+            _stxIdx: idx,
             _stxName: item._svcName || item.serviceName,
           });
-        }
+        });
       } else {
         for (const svc of stxServices) {
           const svcClone = JSON.parse(JSON.stringify(svc));
