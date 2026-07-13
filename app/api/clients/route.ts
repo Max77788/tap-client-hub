@@ -175,7 +175,7 @@ export async function GET(request: Request) {
           for (const cmt of cmtBatch) {
             if (!normCommentsByCsId[cmt.client_service_id]) normCommentsByCsId[cmt.client_service_id] = [];
             normCommentsByCsId[cmt.client_service_id].push({
-              id: cmt.id, month: cmt.month, body: cmt.body || cmt.body,
+              id: cmt.id, month: typeof cmt.month === 'string' ? parseInt(cmt.month, 10) : cmt.month, body: cmt.body,
               text: cmt.body, author: cmt.author_label || "",
               createdAt: cmt.created_at,
             });
