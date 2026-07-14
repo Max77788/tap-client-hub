@@ -626,10 +626,10 @@ function GroupCard({
 function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Client; onClick: () => void; selected?: boolean; onToggleSelect?: (id: string) => void }) {
   const enabledServices = client.services.filter((s) => s.enabled && s.key);
 
-  // Check for state renewal on tax returns
-  const taxSvc = client.services.find(s => s.key === "tax_returns" && s.enabled);
-  const hasStateRenewal = taxSvc?.stateRenewal || false;
-  const renewalState = taxSvc?.renewalState || taxSvc?.filingState || "";
+  // Check for state renewal on annual reports (renditions)
+  const rendSvc = client.services.find(s => s.key === "renditions" && s.enabled);
+  const hasStateRenewal = rendSvc?.stateRenewal || false;
+  const renewalState = rendSvc?.renewalState || rendSvc?.filingState || "";
 
   // Get unique assignees across all enabled services
   const assignees = useMemo(() => {
