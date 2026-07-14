@@ -1127,7 +1127,7 @@ export default function WorklistTable({
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Filing Type</th>
             </>
             )}
-            {serviceKey === "renditions" && (
+            {serviceKey === "renditions" && showRenewalColumns && (
             <>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 50, maxWidth: 60 }}>State</th>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Due</th>
