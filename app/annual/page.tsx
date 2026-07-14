@@ -53,7 +53,7 @@ export default function AnnualPage() {
 
   return (
     <div className="space-y-4">
-      <WorklistTable serviceKey="renditions" clients={filteredClients} year={year} loading={loading}
+      <WorklistTable serviceKey="renditions" clients={filteredClients} year={year} loading={loading} showRenewalColumns
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "renditions", monthIdx, stage)}
         onClientClick={handleClientClick} />
       {selectedClient && (

@@ -209,6 +209,7 @@ export interface WorklistTableProps {
   variant?: "default" | "payroll" | "t9" | "tax_returns";
   readOnly?: boolean;
   loading?: boolean;
+  showRenewalColumns?: boolean;
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => void;
   onClientClick?: (clientId: string) => void;
   onPayrollMissingRuns?: (count: number) => void;
@@ -242,6 +243,7 @@ export default function WorklistTable({
   variant = "default",
   readOnly = false,
   loading = false,
+  showRenewalColumns = false,
   onStageChange,
   onClientClick,
   onPayrollMissingRuns,
@@ -261,16 +263,7 @@ export default function WorklistTable({
     [clients, serviceKey],
   );
 
-  // Show STATE + DUE columns on renditions only when all clients have state renewal
-  const showRenditionColumns = useMemo(
-    () => serviceKey === "renditions" && serviceClients.length > 0 && serviceClients.every(c => {
-      const svc = c.services?.find((s: any) => s.key === "renditions");
-      return svc?.stateRenewal || svc?.renewalState;
-    }),
-    [serviceKey, serviceClients],
-  );
-
-  // ── Search state ──
+  // ── Filter clients with this service enabled ──
   const [search, setSearch] = useState("");
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
   const [filingTypeFilter, setFilingTypeFilter] = useState<string>("All");
