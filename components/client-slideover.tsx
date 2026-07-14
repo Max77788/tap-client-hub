@@ -261,9 +261,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     }
   }, [client]);
   useEffect(() => {
-    // Only sync local state when switching to a different client (not on data updates)
+    // Sync local state when switching clients OR when underlying data changes
     const currentId = clientRef.current;
-    if (currentId === client.id) return;
+    const stxItemsChanged = (() => {
+      if (currentId !== client.id) return true;
+      const newStx = client.services.find((s: any) => s.key === "sales_tax");
+      const oldStx = localSvcs.find((s: any) => s.key === "sales_tax");
+      return JSON.stringify(newStx?.salesTaxLineItems) !== JSON.stringify(oldStx?.salesTaxLineItems);
+    })();
+    if (currentId === client.id && !stxItemsChanged) return;
     clientRef.current = client.id;
     setLocalSvcs(client.services);
     setEditing(false);
