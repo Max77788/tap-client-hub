@@ -50,7 +50,8 @@ const svcMeta: Record<string, { label: string; ic: string; bg: string }> = {
   sales_tax:   { label: "Sales Tax", ic: "🧾", bg: "var(--amber-soft)" },
   tax_returns: { label: "Tax Return", ic: "📋", bg: "#ece7f3" },
   "1099s":     { label: "1099 Filing", ic: "📄", bg: "#f0e8e2" },
-  renditions:  { label: "Annual Reports", ic: "📄", bg: "#e7eee8" },
+  renditions:       { label: "Renditions", ic: "🏠", bg: "#e7eee8" },
+  annual_reports:   { label: "Annual Reports", ic: "📄", bg: "#e7eee8" },
 };
 const svcLabel = (k: string) => svcMeta[k]?.label || k;
 const svcIc = (k: string) => svcMeta[k]?.ic || "📋";
@@ -63,12 +64,15 @@ interface ClientSlideoverProps {
   onSave?: (client: Client) => void;
   onDelete?: (clientId: string) => void;
   onStageChange?: (clientId: string, serviceKey: string, monthIdx: number, stage: string) => void;
-  moduleKey?: ServiceKey;
+  moduleKey?: ServiceKey | "annual_reports";
   currentUser?: string;
   stxLineItemFocus?: string | null;
 }
 
 export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser, stxLineItemFocus }: ClientSlideoverProps) {
+  // Resolve virtual module keys to real service keys
+  const resolvedKey = moduleKey === "annual_reports" ? "renditions" : moduleKey;
+  const isWorklistTab = !!moduleKey;
   const bodyRef = useRef<HTMLDivElement>(null);
   const scrollPosRef = useRef(0);
   const clientRef = useRef(client.id);
@@ -301,7 +305,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setStxLineItems(items);
     // Auto-select the month with the earliest comment for the active module
     if (moduleKey) {
-      const svc = client.services.find((s: any) => s.key === moduleKey);
+      // Map virtual module keys to real service keys
+      const resolvedKey = moduleKey === "annual_reports" ? "renditions" : moduleKey;
+      const svc = client.services.find((s: any) => s.key === resolvedKey);
       const comments = svc?.comments || [];
       if (comments.length > 0) {
         const months = [...new Set(comments.map((c: any) => c.month))].sort((a: number, b: number) => a - b);
@@ -937,6 +943,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const isFin = svc.key === "financials";
     const isT9 = svc.key === "1099s";
     const isRend = svc.key === "renditions";
+    const isAnnualReports = svc.key === "renditions" && moduleKey === "annual_reports";
 
     return (
       <div style={{ marginBottom: 12, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
@@ -1237,8 +1244,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
-            {/* Renditions / Annual Reports: Assigned To + State Renewal */}
-            {isRend && svc.enabled && (
+            {/* Renditions: Assigned To only */}
+            {(isRend || isAnnualReports) && svc.enabled && (
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
@@ -1253,7 +1260,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   </div>
                 </div>
 
-                {/* State renewal */}
+                {/* State renewal — only in Annual Reports tab */}
+                {isAnnualReports && (
                 <div style={{ width: "100%", marginTop: 6 }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                     <input type="checkbox" checked={stateRenewal} onChange={e => {
@@ -1305,6 +1313,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                   )}
                 </div>
+                )}
               </div>
             )}
 
