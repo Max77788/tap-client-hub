@@ -237,7 +237,8 @@ export async function GET(request: Request) {
           payEmails: (() => { const pe = cs.pay_emails; if (!pe) return []; if (Array.isArray(pe)) return pe; try { const p = JSON.parse(pe); return Array.isArray(p) ? p : pe ? [String(pe)] : []; } catch { return pe ? [String(pe)] : []; } })(),
           comments: lite ? [] : (() => {
             const oldCmts = Array.isArray(cs.comments) ? cs.comments : [];
-            const newCmts = normCommentsByCsId[cs.id] || [];
+            const newCmts = (normCommentsByCsId[cs.id] || [])
+              .filter((cm: any) => cm.stx_item_idx === undefined || cm.stx_item_idx === null);
             return [...oldCmts, ...newCmts];
           })(),
           salesTaxLineItems: lite ? [] : (() => {
@@ -247,7 +248,13 @@ export async function GET(request: Request) {
                   assignedTo: staffNames[item.assignedTo || ""] || item.assignedTo || "",
                 }))
               : [];
-            const newStx = (normStxByCsId[cs.id] || []);
+            const newStx = (normStxByCsId[cs.id] || []).map((item: any, idx: number) => {
+              // Merge per-line-item comments from service_comments
+              const itemCmts = (normCommentsByCsId[cs.id] || [])
+                .filter((cm: any) => cm.stx_item_idx !== undefined && cm.stx_item_idx !== null && cm.stx_item_idx === idx);
+              const existingCmts = Array.isArray(item.comments) ? item.comments : [];
+              return { ...item, comments: [...existingCmts, ...itemCmts] };
+            });
             return [...oldStx, ...newStx];
           })(),
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
