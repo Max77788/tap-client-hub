@@ -15,7 +15,7 @@ export default function StxPage() {
     }
     return currentYear;
   });
-  const { clients, loading, updateClient } = useClients();
+  const { clients, loading, updateClient, refresh } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
   const [stxLineItemFocus, setStxLineItemFocus] = useState<string | null>(null);
@@ -146,7 +146,8 @@ export default function StxPage() {
     <div className="space-y-4">
       <WorklistTable serviceKey="sales_tax" clients={flatClients} year={year} loading={loading}
         onStageChange={handleStageChange}
-        onClientClick={handleClientClick} />
+        onClientClick={handleClientClick}
+        onDataChange={refresh} />
       {selectedClient && (
         <ClientSlideover
           client={selectedClient}

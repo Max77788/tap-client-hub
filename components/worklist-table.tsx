@@ -212,6 +212,7 @@ export interface WorklistTableProps {
   onStageChange?: (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => void;
   onClientClick?: (clientId: string) => void;
   onPayrollMissingRuns?: (count: number) => void;
+  onDataChange?: () => void;
 }
 
 // ── Build initial worklist state from clients ──
@@ -244,6 +245,7 @@ export default function WorklistTable({
   onStageChange,
   onClientClick,
   onPayrollMissingRuns,
+  onDataChange,
 }: WorklistTableProps) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -421,7 +423,7 @@ export default function WorklistTable({
     if (!text.trim()) return;
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
-    const cl = clients.find((c: any) => c.id === origId);
+    const cl = clients.find((c: any) => (c._originalClientId || c.id) === origId);
     if (!cl) return;
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) return;
@@ -453,6 +455,7 @@ export default function WorklistTable({
         if (res.ok) {
           setCommentText("");
           setCommentRefreshKey(k => k + 1);
+          onDataChange?.();
         }
       } catch (e) {
         console.error("Failed to add line item comment:", e);
@@ -484,7 +487,7 @@ export default function WorklistTable({
   const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string, stxIdx?: number) => {
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
-    const cl = clients.find((c: any) => c.id === origId);
+    const cl = clients.find((c: any) => (c._originalClientId || c.id) === origId);
     if (!cl) return;
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) return;
