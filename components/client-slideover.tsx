@@ -15,7 +15,7 @@ function maskNum(val: string | undefined | null): string {
 // ── Constants ──
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Individual", "Personal", "Trust", "Non Profit", "Retirem Plan"];
+const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Personal", "Trust", "Non Profit", "Retirem Plan"];
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
   "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",

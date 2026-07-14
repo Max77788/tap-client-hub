@@ -13,7 +13,7 @@ interface ClientModalProps {
 
 const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
 
-const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Individual", "Personal", "Trust", "Non Profit", "Retirem Plan"];
+const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Personal", "Trust", "Non Profit", "Retirem Plan"];
 
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
   const isEdit = !!client;
