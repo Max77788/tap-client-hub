@@ -419,7 +419,9 @@ export default function WorklistTable({
 
   const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxIdx?: number) => {
     if (!text.trim()) return;
-    const cl = clients.find((c: any) => c.id === clientId);
+    // Handle composite IDs from STX page (clientId::csId::serviceName)
+    const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
+    const cl = clients.find((c: any) => c.id === origId);
     if (!cl) return;
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) return;
@@ -480,7 +482,9 @@ export default function WorklistTable({
   }, [clients, serviceKey]);
 
   const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string, stxIdx?: number) => {
-    const cl = clients.find((c: any) => c.id === clientId);
+    // Handle composite IDs from STX page (clientId::csId::serviceName)
+    const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
+    const cl = clients.find((c: any) => c.id === origId);
     if (!cl) return;
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) return;
