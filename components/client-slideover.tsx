@@ -216,7 +216,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [renewalDueDay, setRenewalDueDay] = useState(rendSvcInit?.renewalDueDay || "");
   const [renewalIds, setRenewalIds] = useState(rendSvcInit?.renewalIdentifiers || "");
 
-  // ── Active / Inactive toggle ──
+  // ── State renewal line items (multi-state, Annual Reports tab) ──
+  const [renewalItems, setRenewalItems] = useState<any[]>(rendSvcInit?.stateRenewalItems || []);
+  const [addingRenewal, setAddingRenewal] = useState(false);
+  const renewalAddStateRef = useRef<HTMLSelectElement>(null);
+  const renewalAddMonthRef = useRef<HTMLSelectElement>(null);
+  const renewalAddDayRef = useRef<HTMLInputElement>(null);
+  const renewalAddIdsRef = useRef<HTMLInputElement>(null);
+
+  // ── State: being edited → show full record ──
   const [isActive, setIsActive] = useState(client.active !== false);
   const toggleActive = async () => {
     const newVal = !isActive;
@@ -403,6 +411,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setRenewalDueMonth(rendSvc?.renewalDueMonth || "");
     setRenewalDueDay(rendSvc?.renewalDueDay || "");
     setRenewalIds(rendSvc?.renewalIdentifiers || "");
+    setRenewalItems(rendSvc?.stateRenewalItems || []);
     // Auto-open the add form when sales tax is enabled with no line items
     if (stxSvc?.enabled && items.length === 0 && !editing) {
       setAddingStx(true);
@@ -2069,51 +2078,109 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Module tag badge */}
             <span className="modtag" style={{ marginBottom: 12 }}>{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
 
-            {/* State Renewal details — top-level in Annual Reports tab */}
+            {/* State Renewal — multi-state support in Annual Reports tab */}
             {moduleKey === "annual_reports" && (
             <div className="card" style={{ marginBottom: 16, padding: 14, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: stateRenewal ? 10 : 0 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: stateRenewal || renewalItems.length > 0 ? 10 : 0 }}>
                 <input type="checkbox" checked={stateRenewal} onChange={e => {
                   setStateRenewal(e.target.checked);
                   saveServiceField("renditions", "stateRenewal", e.target.checked);
                 }} style={{ width: "auto" }} />
                 State renewal
               </label>
-              {stateRenewal && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 0 80px" }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>STATE</label>
-                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                      value={renewalState}
-                      onChange={e => { setRenewalState(e.target.value); saveServiceField("renditions", "renewalState", e.target.value); }}>
-                      <option value="">—</option>
-                      {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-                    </select>
+
+              {/* Existing state renewal items */}
+              {renewalItems.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+                  {renewalItems.map((item: any, idx: number) => (
+                    <div key={item.id || idx} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
+                      background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12
+                    }}>
+                      <span style={{ fontWeight: 600, minWidth: 30, color: "var(--teal)" }}>{item.state}</span>
+                      <span style={{ color: "var(--muted)" }}>
+                        Due: {item.dueMonth ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Math.max(0,Math.min(11,parseInt(item.dueMonth||"1")-1))] || item.dueMonth}${item.dueDay ? ` ${item.dueDay}` : ""}` : "—"}
+                      </span>
+                      {item.identifiers && <span style={{ color: "var(--muted)", fontSize: 10 }}>{item.identifiers}</span>}
+                      <div style={{ flex: 1 }} />
+                      <button
+                        onClick={() => {
+                          const updated = renewalItems.filter((_: any, i: number) => i !== idx);
+                          setRenewalItems(updated);
+                          const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+                          const csId = rendSvc?.csId || targetSvc?.csId;
+                          fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                          setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
+                        }}
+                        style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, fontWeight: 600 }}
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add form */}
+              {addingRenewal ? (
+                <div style={{ background: "var(--paper)", border: "1px solid var(--teal)", borderRadius: 8, padding: 10, marginBottom: 8 }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" }}>
+                    <div style={{ flex: "1 0 70px" }}>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>State</label>
+                      <select ref={renewalAddStateRef} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                        {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex: "1 0 70px" }}>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Month</label>
+                      <select ref={renewalAddMonthRef} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                        {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex: "0 0 50px" }}>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Day</label>
+                      <input ref={renewalAddDayRef} type="number" min="1" max="31" defaultValue="1" style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
+                    </div>
+                    <div style={{ flex: "2 0 100px" }}>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>IDs</label>
+                      <input ref={renewalAddIdsRef} placeholder="e.g. EIN" style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
+                    </div>
                   </div>
-                  <div style={{ flex: "1 0 80px" }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Month</label>
-                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                      value={renewalDueMonth}
-                      onChange={e => { setRenewalDueMonth(e.target.value); saveServiceField("renditions", "renewalDueMonth", e.target.value); }}>
-                      <option value="">—</option>
-                      {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ flex: "1 0 60px" }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Day</label>
-                    <input type="number" min="1" max="31" placeholder="1-31"
-                      style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                      defaultValue={renewalDueDay}
-                      onBlur={e => { const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1)); e.target.value = String(v); setRenewalDueDay(String(v)); saveServiceField("renditions", "renewalDueDay", String(v)); }} />
-                  </div>
-                  <div style={{ flex: "2 0 140px" }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
-                    <input placeholder="e.g. EIN, state IDs"
-                      style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                      defaultValue={renewalIds}
-                      onBlur={e => { setRenewalIds(e.target.value); saveServiceField("renditions", "renewalIdentifiers", e.target.value); }} />
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button onClick={() => setAddingRenewal(false)}
+                      style={{ all: "unset", cursor: "pointer", padding: "5px 10px", borderRadius: 6, fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>Cancel</button>
+                    <button onClick={() => {
+                      const st = renewalAddStateRef.current?.value || "TX";
+                      const mo = renewalAddMonthRef.current?.value || String(new Date().getMonth() + 1);
+                      const dy = renewalAddDayRef.current?.value || "1";
+                      const ids = renewalAddIdsRef.current?.value || "";
+                      const newItem = { id: `sr-${Date.now()}`, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, frequency: "Yearly" };
+                      const updated = [...renewalItems, newItem];
+                      setRenewalItems(updated);
+                      setStateRenewal(true);
+                      setAddingRenewal(false);
+                      const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+                      const csId = rendSvc?.csId || targetSvc?.csId;
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated, stateRenewal: true } : s));
+                      fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                    }}
+                      style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Add</button>
                   </div>
                 </div>
+              ) : (
+                <button
+                  onClick={() => setAddingRenewal(true)}
+                  style={{
+                    all: "unset", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 12px",
+                    border: "1px dashed var(--line)", borderRadius: 8,
+                    fontSize: 12, fontWeight: 600, color: "var(--teal)",
+                    width: "100%", boxSizing: "border-box",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--teal)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
+                >
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Add state
+                </button>
               )}
             </div>
             )}
