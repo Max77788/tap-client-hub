@@ -1437,7 +1437,9 @@ export default function WorklistTable({
                     </td>
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 70, maxWidth: 80 }}
                       onClick={() => onClientClick?.(client.id)}>
-                      {svc.renewalDueMonth && svc.renewalDueDay ? `${svc.renewalDueMonth.substring(0,3)} ${svc.renewalDueDay}` : svc.renewalDueMonth || "—"}
+                      {svc.renewalDueMonth
+                        ? `${MONTHS_SHORT[Math.max(0, Math.min(11, parseInt(svc.renewalDueMonth || "1") - 1))] || svc.renewalDueMonth.substring(0,3)}${svc.renewalDueDay ? ` ${svc.renewalDueDay}` : ""}`
+                        : "\u2014"}
                     </td>
                   </>
                   )}
