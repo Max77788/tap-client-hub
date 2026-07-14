@@ -334,7 +334,7 @@ export async function PUT(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { id: clientId, services, name, type, group, contact, emails, phones, email, phone, address, city, state, zip, assignedStaff, ein, notes } = body;
+    const { id: clientId, services, name, type, group, contact, emails, phones, email, phone, address, city, state, zip, assignedStaff, ein, notes, active, authorName } = body;
 
     if (!clientId) {
       return NextResponse.json({ error: "client id is required" }, { status: 400 });
@@ -370,6 +370,11 @@ export async function PUT(request: Request) {
       clientUpdates._assignedStaff = assignedStaff;
     }
     if (ein !== undefined) clientUpdates.ein = ein;
+    if (active !== undefined) {
+      clientUpdates.active = active;
+      clientUpdates.active_updated_at = new Date().toISOString();
+      if (authorName) clientUpdates.active_updated_by = authorName;
+    }
 
     if (Object.keys(clientUpdates).length > 0) {
       // Strip _assignedStaff before DB write — handled separately
