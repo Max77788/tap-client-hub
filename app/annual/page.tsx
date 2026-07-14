@@ -19,12 +19,35 @@ export default function AnnualPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
 
-  // Filter: only clients with renditions service AND stateRenewal=true
-  const filteredClients = useMemo(() => {
-    return clients.filter((c: any) => {
-      const rendSvc = c.services?.find((s: any) => s.key === "renditions" && s.enabled);
-      return rendSvc?.stateRenewal === true;
-    });
+  // Filter + expand: clients with renditions + stateRenewal=true, expand stateRenewalItems into rows
+  const flatRenewalClients = useMemo(() => {
+    const expanded: any[] = [];
+    for (const client of clients) {
+      const rendSvc = client.services?.find((s: any) => s.key === "renditions" && s.enabled);
+      if (!rendSvc?.stateRenewal) continue;
+
+      const items = rendSvc.stateRenewalItems || [];
+      if (items.length > 0) {
+        items.forEach((item: any, idx: number) => {
+          expanded.push({
+            ...client,
+            _renewalItem: item,
+            _renewalIdx: idx,
+            _renewalName: `${item.state} Renewal`,
+          });
+        });
+      } else {
+        // No items yet but stateRenewal=true — show a single placeholder row
+        expanded.push({
+          ...client,
+          _renewalItem: null,
+          _renewalIdx: -1,
+          _renewalName: null,
+        });
+      }
+    }
+    expanded.sort((a, b) => a.name.localeCompare(b.name));
+    return expanded;
   }, [clients]);
 
   const selectedClient = useMemo(
@@ -53,7 +76,7 @@ export default function AnnualPage() {
 
   return (
     <div className="space-y-4">
-      <WorklistTable serviceKey="renditions" clients={filteredClients} year={year} loading={loading} showRenewalColumns
+      <WorklistTable serviceKey="renditions" clients={flatRenewalClients} year={year} loading={loading} showRenewalColumns
         onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "renditions", monthIdx, stage)}
         onClientClick={handleClientClick} />
       {selectedClient && (

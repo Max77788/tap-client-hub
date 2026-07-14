@@ -351,7 +351,7 @@ export default function WorklistTable({
         const q = search.toLowerCase();
         list = list.filter((c) => {
           if (c.name.toLowerCase().includes(q)) return true;
-          // For sales tax, also search within line item names
+          // For sales tax & state renewal, also search within line item names
           if (serviceKey === "sales_tax") {
             // Check pre-expanded data first (from stx/page.tsx)
             const stxName = (c._stxName || "").toLowerCase();
@@ -367,6 +367,12 @@ export default function WorklistTable({
             return items.some((item: any) =>
               (item.serviceName || "").toLowerCase().includes(q)
             );
+          }
+          // State renewal: search within renewal item names
+          if (serviceKey === "renditions" && showRenewalColumns) {
+            const rnName = (c._renewalName || "").toLowerCase();
+            if (rnName && rnName.includes(q)) return true;
+            if (c._renewalItem?.state && c._renewalItem.state.toLowerCase().includes(q)) return true;
           }
           return false;
         });
@@ -1260,6 +1266,12 @@ export default function WorklistTable({
               const stxItem = client._stxItem;
               const stxIdx = client._stxIdx;
               const displayName = isStxItem ? (client._stxName || "—") : client.name;
+
+              // State renewal line items (Annual Reports tab)
+              const isRenewalItem = serviceKey === "renditions" && client._renewalItem;
+              const renewalItem = client._renewalItem;
+              const renewalIdx = client._renewalIdx;
+              const renewalDisplayName = isRenewalItem ? (client._renewalName || "—") : client.name;
               const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
               const key = `${client.id}:${serviceKey}`;
               const stages = worklistState[key] ?? Array(12).fill("");
@@ -1411,8 +1423,8 @@ export default function WorklistTable({
                   <td className="px-1.5 py-1" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
-                        title={`Open ${displayName} details`}
-                      >{displayName}</button>
+                        title={`Open ${isRenewalItem ? renewalDisplayName : displayName} details`}
+                      >{isRenewalItem ? renewalDisplayName : displayName}</button>
                     </td>
 
                   {/* Payroll-specific columns: Pay Day (read-only) */}
@@ -1444,13 +1456,18 @@ export default function WorklistTable({
                   <>
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 50, maxWidth: 60 }}
                       onClick={() => onClientClick?.(client.id)}>
-                      {svc.renewalState || "—"}
+                      {isRenewalItem ? (renewalItem?.state || "—") : (svc.renewalState || "—")}
                     </td>
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 70, maxWidth: 80 }}
                       onClick={() => onClientClick?.(client.id)}>
-                      {svc.renewalDueMonth
-                        ? `${MONTHS_SHORT[Math.max(0, Math.min(11, parseInt(svc.renewalDueMonth || "1") - 1))] || svc.renewalDueMonth.substring(0,3)}${svc.renewalDueDay ? ` ${svc.renewalDueDay}` : ""}`
-                        : "\u2014"}
+                      {(() => {
+                        const item = isRenewalItem ? renewalItem : null;
+                        const dm = item?.dueMonth || svc.renewalDueMonth;
+                        const dd = item?.dueDay || svc.renewalDueDay;
+                        return dm
+                          ? `${MONTHS_SHORT[Math.max(0, Math.min(11, parseInt(dm || "1") - 1))] || dm.substring(0,3)}${dd ? ` ${dd}` : ""}`
+                          : "\u2014";
+                      })()}
                     </td>
                   </>
                   )}
