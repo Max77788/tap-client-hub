@@ -1541,7 +1541,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // MODULE-SPECIFIC VIEW (from worklist — shows detail for one module)
   // ══════════════════════════════════════════════════════════════
   if (moduleKey) {
-    const targetSvc = localSvcs.find((s: any) => s.key === moduleKey);
+    const targetSvc = localSvcs.find((s: any) => s.key === resolvedKey);
     if (!targetSvc) return null;
 
     // Resolve short/partial name to full profile name so select matches correctly
@@ -1565,7 +1565,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         createdAt: new Date().toISOString(),
       };
       const updated = localSvcs.map((s: any) => {
-        if (s.key === moduleKey) {
+        if (s.key === resolvedKey) {
           const existing = s.comments || [];
           return { ...s, comments: [...existing, comment] };
         }
@@ -1575,7 +1575,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       setNotesText("");
       setNoteType("others");
       // Jump to last page so new note is visible
-      const targetSvc = updated.find((s: any) => s.key === moduleKey);
+      const targetSvc = updated.find((s: any) => s.key === resolvedKey);
       const newTotal = (targetSvc?.comments || []).length;
       setNotePage(Math.floor(Math.max(0, newTotal - 1) / 3));
       throttledOnSave({ ...client, services: updated } as Client);
