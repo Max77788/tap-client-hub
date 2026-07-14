@@ -307,7 +307,7 @@ export default function WorklistTable({
 
   // ── Filing type + due month filters (Tax Returns) ──
   const filingTypeOptions = useMemo(() => variant === "tax_returns" ? [
-    "All", "C Corp.", "S Corp.", "Partnership", "SMLLC", "Individual", "Trust", "Non Profit", "Retirem Plan"
+    "All", "C Corp.", "S Corp.", "Partnership", "SMLLC", "Individual", "Personal", "Trust", "Non Profit", "Retirem Plan"
   ] : [], [variant]);
 
   const dueMonthOptions = useMemo(() => variant === "tax_returns" ? [
