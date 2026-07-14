@@ -261,6 +261,15 @@ export default function WorklistTable({
     [clients, serviceKey],
   );
 
+  // Show STATE + DUE columns on renditions only when clients have state renewal data
+  const showRenditionColumns = useMemo(
+    () => serviceKey === "renditions" && serviceClients.some(c => {
+      const svc = c.services?.find((s: any) => s.key === "renditions");
+      return svc?.stateRenewal || svc?.renewalState;
+    }),
+    [serviceKey, serviceClients],
+  );
+
   // ── Search state ──
   const [search, setSearch] = useState("");
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
@@ -1125,6 +1134,12 @@ export default function WorklistTable({
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Filing Type</th>
             </>
             )}
+            {serviceKey === "renditions" && (
+            <>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 50, maxWidth: 60 }}>State</th>
+              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Due</th>
+            </>
+            )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
             {serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 90, maxWidth: 100 }}>Cadence</th>
@@ -1416,6 +1431,18 @@ export default function WorklistTable({
                     {/* Filing Type */}
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 80, maxWidth: 100 }}>
                       {svc.filingType || "—"}
+                    </td>
+                  </>
+                  )}
+
+                  {/* Renditions columns: State, Due (only when data exists) */}
+                  {serviceKey === "renditions" && showRenditionColumns && (
+                  <>
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 50, maxWidth: 60 }}>
+                      {svc.renewalState || "—"}
+                    </td>
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
+                      {svc.renewalDueMonth && svc.renewalDueDay ? `${svc.renewalDueMonth.substring(0,3)} ${svc.renewalDueDay}` : svc.renewalDueMonth || "—"}
                     </td>
                   </>
                   )}
