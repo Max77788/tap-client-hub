@@ -100,7 +100,7 @@ export default function StxPage() {
     (flatId: string, monthIdx: number, stage: any, csId?: string) => {
       const parts = flatId.split("::");
       const entryCsId = csId || parts[1] || undefined;
-      // Persist directly — don't use updateServiceMonth (mutates shared source, duplicates across line items)
+      if (!entryCsId) return;
       const now = new Date();
       const period = `${now.getFullYear()}-${String(monthIdx + 1).padStart(2, "0")}`;
       const wStage = (() => {
@@ -114,10 +114,10 @@ export default function StxPage() {
           default: return "not_started";
         }
       })();
-      fetch("/api/clients/service-month", {
-        method: "PATCH",
+      fetch("/api/work-periods", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csId: entryCsId, period, stage: wStage }),
+        body: JSON.stringify({ client_service_id: entryCsId, period, stage: wStage }),
       }).catch(() => {});
     },
     [],
