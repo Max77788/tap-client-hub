@@ -2452,7 +2452,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           ref={eCityRef} defaultValue={eCity} onBlur={e => setECity(e.target.value)} placeholder="City" />
                         <input style={{ width: 44, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                           ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="ST" />
-                        <input style={{ width: 75, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                        <input style={{ width: 90, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                           ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="ZIP" />
                       </div>
                     </div>
@@ -2659,7 +2659,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="—" />
               </div>
-              <div className="field" style={{ ...fieldStyle, flex: "0 0 85px" }}>
+              <div className="field" style={{ ...fieldStyle, flex: "0 0 100px" }}>
                 <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>ZIP</span>
                 <input style={{ width: "100%", minWidth: 0, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="—" />
