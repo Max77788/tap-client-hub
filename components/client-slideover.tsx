@@ -2458,8 +2458,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             </div>
             )}
 
-            {/* Full client record */}
-            <div style={{ marginTop: 20 }}>
+            {/* Full client record — only on Clients tab, not worklist tabs */}
+            {!moduleKey && <div style={{ marginTop: 20 }}>
               <button className="reveal" onClick={() => {
                 setShowFullRecord((p) => !p);
               }} style={{ fontWeight: 600, fontSize: 13 }}>
@@ -2524,6 +2524,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
               )}
             </div>
+            }
           </div>
 
           {/* Footer */}
