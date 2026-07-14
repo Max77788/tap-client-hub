@@ -346,6 +346,8 @@ export default function TimePage() {
   const [filterTask, setFilterTask] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const filteredEntries = useMemo(() => {
     let list = [...entries];
@@ -354,7 +356,6 @@ export default function TimePage() {
     if (filterTask) list = list.filter((e) => e.task === filterTask || taskKeyFromLabel(e.taskLabel) === filterTask);
     if (filterDateFrom) list = list.filter((e) => e.date.slice(0, 10) >= filterDateFrom);
     if (filterDateTo) list = list.filter((e) => e.date.slice(0, 10) <= filterDateTo);
-    if (!filterDateFrom && !filterDateTo) list = list.filter((e) => e.date.slice(0, 10) === today);
     if (viewingAs) list = list.filter((e) => e.personId === viewingAs);
     if (!impersonatingAs && effectiveIsStaff && currentUser) list = list.filter((e) => e.personId === currentUser.id);
     return [...list].sort((a, b) => {
@@ -363,6 +364,12 @@ export default function TimePage() {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
   }, [entries, filterPerson, filterClient, filterTask, filterDateFrom, filterDateTo, today, viewingAs, effectiveIsStaff, impersonatingAs, currentUser]);
+
+  // ── Pagination ──
+  useEffect(() => { setPage(1); }, [filterPerson, filterClient, filterTask, filterDateFrom, filterDateTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
+  const pagedEntries = filteredEntries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const totalFiltered = filteredEntries.reduce((s, e) =>
     s + (e.isRunning ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000) : e.duration), 0);
@@ -599,7 +606,7 @@ export default function TimePage() {
         {filteredEntries.length > 0 && (
           <button
             onClick={() => {
-              const headers = ["Who","Client","Task","Minutes","Date","Note"];
+              const headers = ["Who","Client","Task","Minutes","Start","End","Date","Note"];
               const rows = filteredEntries.map((e: TimeEntry) => {
                 const dur = e.isRunning
                   ? Math.floor((Date.now() - new Date(e.date).getTime()) / 1000)
@@ -610,6 +617,8 @@ export default function TimePage() {
                   e.clientName || "",
                   e.taskLabel || e.task || "",
                   mins,
+                  e.startedAt ? fmtTime(e.startedAt) : (e.date ? fmtTime(e.date) : ""),
+                  e.endedAt ? fmtTime(e.endedAt) : "",
                   e.date ? new Date(e.date).toLocaleDateString("en-US") : "",
                   (e.note || "").replace(/"/g, '""'),
                 ];
@@ -646,8 +655,8 @@ export default function TimePage() {
             </tr>
           </thead>
           <tbody>
-            {filteredEntries.length > 0 ? (
-              filteredEntries.map((entry) => {
+            {pagedEntries.length > 0 ? (
+              pagedEntries.map((entry) => {
                   const idx = entries.indexOf(entry);
                   const isEditing = editIdx === idx;
                   const h = Math.floor(entry.duration / 3600);
@@ -770,6 +779,23 @@ export default function TimePage() {
         Click <b>Start</b> — a row appears immediately with a live clock. Stop to save. Use <b>Manual Entry</b> to add past time.
         Entries survive reload.
       </p>
+
+      {/* ── Pagination ── */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 16 }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+            style={{ all: "unset", cursor: page <= 1 ? "default" : "pointer", padding: "6px 12px", borderRadius: 6, border: "1px solid var(--line)", fontSize: 13, opacity: page <= 1 ? 0.4 : 1 }}>
+            ← Prev
+          </button>
+          <span style={{ fontSize: 13, color: "var(--muted)" }}>
+            Page {page} of {totalPages} ({filteredEntries.length} entries)
+          </span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+            style={{ all: "unset", cursor: page >= totalPages ? "default" : "pointer", padding: "6px 12px", borderRadius: 6, border: "1px solid var(--line)", fontSize: 13, opacity: page >= totalPages ? 0.4 : 1 }}>
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
