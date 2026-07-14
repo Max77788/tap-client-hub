@@ -243,6 +243,19 @@ export async function PATCH(request: Request) {
       }
     }
 
+    // Handle password change if provided (uses admin client to update auth user)
+    if (body.password) {
+      try {
+        const adminSupabase = createAdminClient();
+        const { error: pwError } = await adminSupabase.auth.admin.updateUserById(id, { password: body.password });
+        if (pwError) {
+          return NextResponse.json({ error: pwError.message }, { status: 400 });
+        }
+      } catch (pwErr: any) {
+        return NextResponse.json({ error: pwErr.message || "Failed to update password" }, { status: 400 });
+      }
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update(updateData)
