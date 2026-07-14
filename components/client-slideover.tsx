@@ -851,6 +851,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           <div className="st" style={{ flex: 1 }}>
             <div className="t" style={{ fontWeight: 600, fontSize: 14 }}>{svcLabel(svc.key)}</div>
             <div className="d" style={{ fontSize: 12, color: "var(--muted)" }}>{freqLabel(svc.key, svc)}</div>
+            {!moduleKey && (
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                {svc.assignedTo || "Unassigned"}
+                {isPayroll && svc.processor && <> · {svc.processor}</>}
+                {isT9 && svc.expectedAnnual ? <> · {svc.expectedAnnual}/yr</> : null}
+              </div>
+            )}
           </div>
           <div
             className={`sw ${svc.enabled ? "on" : ""}`}
