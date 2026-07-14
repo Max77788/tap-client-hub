@@ -237,8 +237,7 @@ export async function GET(request: Request) {
           payEmails: (() => { const pe = cs.pay_emails; if (!pe) return []; if (Array.isArray(pe)) return pe; try { const p = JSON.parse(pe); return Array.isArray(p) ? p : pe ? [String(pe)] : []; } catch { return pe ? [String(pe)] : []; } })(),
           comments: lite ? [] : (() => {
             const oldCmts = Array.isArray(cs.comments) ? cs.comments : [];
-            const newCmts = (normCommentsByCsId[cs.id] || [])
-              .filter((cm: any) => cm.stx_item_idx === undefined || cm.stx_item_idx === null);
+            const newCmts = normCommentsByCsId[cs.id] || [];
             return [...oldCmts, ...newCmts];
           })(),
           salesTaxLineItems: lite ? [] : (() => {
@@ -248,13 +247,7 @@ export async function GET(request: Request) {
                   assignedTo: staffNames[item.assignedTo || ""] || item.assignedTo || "",
                 }))
               : [];
-            const newStx = (normStxByCsId[cs.id] || []).map((item: any, idx: number) => {
-              // Merge per-line-item comments from service_comments
-              const itemCmts = (normCommentsByCsId[cs.id] || [])
-                .filter((cm: any) => cm.stx_item_idx !== undefined && cm.stx_item_idx !== null && cm.stx_item_idx === idx);
-              const existingCmts = Array.isArray(item.comments) ? item.comments : [];
-              return { ...item, comments: [...existingCmts, ...itemCmts] };
-            });
+            const newStx = (normStxByCsId[cs.id] || []);
             return [...oldStx, ...newStx];
           })(),
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
@@ -827,33 +820,6 @@ export async function PATCH(request: Request) {
             return base;
           })(),
         });
-      }
-    }
-
-    // Also sync per-line-item comments to service_comments (for STX)
-    // Graceful: if stx_item_idx column doesn't exist, comments still persist via sales_tax_registration
-    if (salesTaxLineItems !== undefined) {
-      try {
-        await supabase.from("service_comments").delete().eq("client_service_id", csId).not("stx_item_idx", "is", null);
-        const items = Array.isArray(salesTaxLineItems) ? salesTaxLineItems : [];
-        for (let idx = 0; idx < items.length; idx++) {
-          const item = items[idx];
-          const cmts = Array.isArray(item.comments) ? item.comments : [];
-          for (const c of cmts) {
-            if (c.text || c.body) {
-              await supabase.from("service_comments").insert({
-                client_service_id: csId,
-                month: c.month ?? null,
-                body: c.text || c.body || "",
-                author_label: c.author || "",
-                stx_item_idx: idx,
-                created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-              });
-            }
-          }
-        }
-      } catch {
-        // stx_item_idx column may not exist yet — comments stored in sales_tax_registration.notes instead
       }
     }
 
