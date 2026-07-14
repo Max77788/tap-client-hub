@@ -499,11 +499,27 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       return s;
     });
     setLocalSvcs(updated);
+    // Also sync stxLineItems state
+    if (svcKey === "sales_tax") {
+      const stxSvc = updated.find((s: any) => s.key === "sales_tax");
+      if (stxSvc?.salesTaxLineItems) setStxLineItems(stxSvc.salesTaxLineItems);
+    }
     setCommentText("");
     setActiveCommentMonth(-1);
     setActiveCommentSvc(null);
     // Persist
-    throttledOnSave({ ...client, services: updated });
+    if (svcKey === "sales_tax" && stxLineItemFocus) {
+      const stxSvc = updated.find((s: any) => s.key === "sales_tax");
+      if (stxSvc?.csId) {
+        fetch("/api/clients", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csId: stxSvc.csId, salesTaxLineItems: stxSvc.salesTaxLineItems }),
+        }).catch(() => {});
+      }
+    } else {
+      throttledOnSave({ ...client, services: updated });
+    }
   }
 
   function deleteComment(svcKey: string, commentId: string) {
@@ -522,6 +538,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       return s;
     });
     setLocalSvcs(updated);
+    // Also sync stxLineItems state
+    if (svcKey === "sales_tax") {
+      const stxSvc = updated.find((s: any) => s.key === "sales_tax");
+      if (stxSvc?.salesTaxLineItems) setStxLineItems(stxSvc.salesTaxLineItems);
+    }
     const svc = updated.find((s: any) => s.key === svcKey);
     // Count from both sources
     const svcCmts = (svc?.comments || []).length;
@@ -532,7 +553,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (notePage > 0 && notePage * 3 >= remaining) {
       setNotePage(Math.max(0, Math.floor((remaining - 1) / 3)));
     }
-    throttledOnSave({ ...client, services: updated });
+    // Persist STX via PATCH, everything else via PUT
+    if (svcKey === "sales_tax") {
+      const stxSvc = updated.find((s: any) => s.key === "sales_tax");
+      if (stxSvc?.csId) {
+        fetch("/api/clients", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csId: stxSvc.csId, salesTaxLineItems: stxSvc.salesTaxLineItems }),
+        }).catch(() => {});
+      }
+    } else {
+      throttledOnSave({ ...client, services: updated });
+    }
   }
 
   // ── Client-level notes helpers ──

@@ -507,7 +507,7 @@ export default function WorklistTable({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: items }),
         });
-        if (res.ok) setCommentRefreshKey(k => k + 1);
+        if (res.ok) { setCommentRefreshKey(k => k + 1); onDataChange?.(); }
       } catch (e) { console.error("Failed to delete line item comment:", e); }
       return;
     }
