@@ -261,9 +261,9 @@ export default function WorklistTable({
     [clients, serviceKey],
   );
 
-  // Show STATE + DUE columns on renditions only when clients have state renewal data
+  // Show STATE + DUE columns on renditions only when all clients have state renewal
   const showRenditionColumns = useMemo(
-    () => serviceKey === "renditions" && serviceClients.some(c => {
+    () => serviceKey === "renditions" && serviceClients.length > 0 && serviceClients.every(c => {
       const svc = c.services?.find((s: any) => s.key === "renditions");
       return svc?.stateRenewal || svc?.renewalState;
     }),
