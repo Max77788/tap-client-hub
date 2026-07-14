@@ -218,6 +218,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [renewalDueDay, setRenewalDueDay] = useState(rendSvcInit?.renewalDueDay || "");
   const [renewalIds, setRenewalIds] = useState(rendSvcInit?.renewalIdentifiers || "");
 
+  // ── Active / Inactive toggle ──
+  const [isActive, setIsActive] = useState(client.active !== false);
+  const toggleActive = async () => {
+    const newVal = !isActive;
+    setIsActive(newVal);
+    try {
+      await fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: client.id, active: newVal, authorName: getAuthorName() }),
+      });
+    } catch (e) { console.error("Failed to toggle active:", e); }
+  };
+
   // ── 1099s count state ──
   const [t9Counts, setT9Counts] = useState<number[]>(Array(12).fill(0));
 
@@ -1220,58 +1234,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                   </select>
                 </div>
-                {/* State renewal — moved to Annual Reports tab */}
-                {false && <div style={{ width: "100%", marginTop: 6 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                    <input type="checkbox" checked={stateRenewal} onChange={e => {
-                      setStateRenewal(e.target.checked);
-                      saveServiceField("renditions", "stateRenewal", e.target.checked);
-                    }} style={{ width: "auto" }} />
-                    State renewal
-                  </label>
-                  {stateRenewal && (
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-                      <div style={{ flex: "1 0 80px" }}>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>STATE</label>
-                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                          value={renewalState}
-                          onChange={e => {
-                            setRenewalState(e.target.value);
-                            saveServiceField("renditions", "renewalState", e.target.value);
-                          }}>
-                          <option value="">—</option>
-                          {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-                        </select>
-                      </div>
-                      <div style={{ flex: "1 0 80px" }}>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Month</label>
-                        <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                          value={renewalDueMonth}
-                          onChange={e => {
-                            setRenewalDueMonth(e.target.value);
-                            saveServiceField("renditions", "renewalDueMonth", e.target.value);
-                          }}>
-                          <option value="">—</option>
-                          {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                        </select>
-                      </div>
-                      <div style={{ flex: "1 0 60px" }}>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Due Day</label>
-                        <input type="number" min="1" max="31" placeholder="1-31"
-                          style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                          defaultValue={renewalDueDay}
-                          onBlur={e => { const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1)); e.target.value = String(v); setRenewalDueDay(String(v)); saveServiceField("renditions", "renewalDueDay", String(v)); }} />
-                      </div>
-                      <div style={{ flex: "2 0 140px" }}>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Identifying Numbers</label>
-                        <input placeholder="e.g. EIN, state IDs"
-                          style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
-                          defaultValue={renewalIds}
-                          onBlur={e => { setRenewalIds(e.target.value); saveServiceField("renditions", "renewalIdentifiers", e.target.value); }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
@@ -2140,6 +2102,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 textTransform: "uppercase", letterSpacing: "0.05em",
                 backgroundColor: typeBadge.bg, color: typeBadge.fg, marginLeft: 6,
               }}>{c.type === "Business" ? "BIZ" : "PERS"}</span>
+              <span className="badge"
+                onClick={toggleActive}
+                style={{
+                  fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: 20,
+                  textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer",
+                  backgroundColor: isActive ? "var(--green-soft,#e6f4ea)" : "var(--red-soft,#fce8e6)",
+                  color: isActive ? "var(--green,#1e7e34)" : "var(--red,#c62828)",
+                  marginLeft: 6,
+                }}>
+                {isActive ? "ACTIVE" : "INACTIVE"}
+              </span>
             </div>
           </div>
 
@@ -2424,51 +2397,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                   </select>
                 </div>
-                {/* State renewal — moved to Annual Reports */}
-                {false && (<div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                  <input type="checkbox" checked={stateRenewal} onChange={e => {
-                    setStateRenewal(e.target.checked);
-                    autoSave(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewal: e.target.checked } : s));
-                  }} style={{ width: "auto" }} />
-                </div>
-                {stateRenewal && (
-                  <>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>STATE</span>
-                      <select value={renewalState} onChange={e => {
-                        setRenewalState(e.target.value);
-                        autoSave(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, renewalState: e.target.value } : s));
-                      }}
-                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
-                        <option value="">—</option>
-                        {US_STATES.map(st => <option key={st}>{st}</option>)}
-                      </select>
-                    </div>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>Due Month</span>
-                      <select value={renewalDueMonth} onChange={e => {
-                        setRenewalDueMonth(e.target.value);
-                        autoSave(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, renewalDueMonth: e.target.value } : s));
-                      }}
-                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
-                        <option value="">—</option>
-                        {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>Due Day</span>
-                      <input type="number" min="1" max="31" defaultValue={renewalDueDay} onBlur={e => { const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1)); e.target.value = String(v); setRenewalDueDay(String(v)); saveServiceField("renditions", "renewalDueDay", String(v)); }}
-                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }} />
-                    </div>
-                    <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                      <span className="k" style={{ color: "var(--muted)" }}>Identifying Numbers</span>
-                      <input defaultValue={renewalIds} onBlur={e => { setRenewalIds(e.target.value); saveServiceField("renditions", "renewalIdentifiers", e.target.value); }}
-                        style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                        placeholder="e.g. EIN, state IDs" />
-                    </div>
-                  </>
-                )}
-              )}
               </>
             )}
 

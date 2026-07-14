@@ -314,6 +314,9 @@ export async function GET(request: Request) {
         assignedStaff: staffNames[svcs[0]?.assigned_to || ""] || svcs[0]?.assigned_to || "Unassigned",
         notes: db.notes || "",
         ein: db.ein || "",
+        active: db.active !== false,  // default true for existing clients
+        activeUpdatedAt: db.active_updated_at || null,
+        activeUpdatedBy: db.active_updated_by || null,
         services: mergedSvcs,
       };
     });

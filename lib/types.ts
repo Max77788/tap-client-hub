@@ -105,6 +105,9 @@ export interface Client {
   groupName?: string;
   contact?: string;
   status: string;
+  active?: boolean;
+  activeUpdatedAt?: string | null;
+  activeUpdatedBy?: string | null;
   city: string;
   state: string;
   zip?: string;
