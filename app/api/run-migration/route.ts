@@ -1,66 +1,50 @@
 import { NextResponse } from "next/server";
+import { Pool } from "pg";
 
-async function getSupabase() {
-  const { createClient } = await import("@supabase/supabase-js");
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+// We'll try to get the connection from environment
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_DB_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 export async function GET() {
   try {
-    const supabase = await getSupabase();
-
-    // Run each migration statement via raw SQL
-    const { error } = await supabase.rpc("", {}).select(); // dummy check
-    
-    // Use direct query approach
-    const sql = `
-      ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
-    `;
-    
-    // Supabase JS doesn't have raw SQL. Let's use the REST API directly.
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
-    const statements = [
-      "ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true",
-      "ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active_updated_at TIMESTAMPTZ",
-      "ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active_updated_by TEXT",
-      "UPDATE tap_hub_project.clients SET active = true WHERE active IS NULL",
-    ];
-    
-    const results: string[] = [];
-    for (const stmt of statements) {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": key,
-            "Authorization": `Bearer ${key}`,
-            "Prefer": "resolution=merge-duplicates",
-          },
-          body: JSON.stringify({ query: stmt }),
-        });
-        results.push(`${res.status}: ${stmt.substring(0, 60)}...`);
-      } catch (e: any) {
-        results.push(`Error: ${e.message}`);
+    const client = await pool.connect();
+    try {
+      const sql = `
+        ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
+        ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active_updated_at TIMESTAMPTZ;
+        ALTER TABLE tap_hub_project.clients ADD COLUMN IF NOT EXISTS active_updated_by TEXT;
+        UPDATE tap_hub_project.clients SET active = true WHERE active IS NULL;
+      `;
+      
+      const results: string[] = [];
+      for (const stmt of sql.split(";").filter(s => s.trim())) {
+        try {
+          await client.query(stmt.trim());
+          results.push(`OK: ${stmt.trim().substring(0, 60)}`);
+        } catch (e: any) {
+          results.push(`Error: ${e.message?.substring(0, 100)}`);
+        }
       }
+      
+      const { rows } = await client.query(
+        "SELECT column_name FROM information_schema.columns WHERE table_schema='tap_hub_project' AND table_name='clients' AND column_name IN ('active','active_updated_at','active_updated_by')"
+      );
+      
+      const { rows: sample } = await client.query(
+        "SELECT active, active_updated_at, active_updated_by FROM tap_hub_project.clients LIMIT 1"
+      );
+      
+      return NextResponse.json({
+        success: true,
+        columns_found: rows.map((r: any) => r.column_name),
+        sample: sample[0] || null,
+        results,
+      });
+    } finally {
+      client.release();
     }
-    
-    // Verify
-    const { data, error: checkErr } = await supabase
-      .from("clients")
-      .select("active,active_updated_at,active_updated_by")
-      .limit(1);
-    
-    return NextResponse.json({
-      success: !checkErr,
-      results,
-      sample: data?.[0] || null,
-    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
