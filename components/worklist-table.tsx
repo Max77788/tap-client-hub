@@ -1400,9 +1400,8 @@ export default function WorklistTable({
               return (
                 <tr
                   key={client.id}
-                  className="transition-colors cursor-pointer hover:bg-[var(--teal-soft)]"
+                  className="transition-colors"
                   style={{ borderBottom: "1px solid var(--line)" }}
-                  onClick={() => onClientClick?.(client.id)}
                 >
                   {/* Client / Line Item name (clickable) */}
                   <td className="px-1.5 py-1" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>
@@ -1436,13 +1435,15 @@ export default function WorklistTable({
                   </>
                   )}
 
-                  {/* Renditions columns: State, Due (only when data exists) */}
+                  {/* Renditions columns: State, Due (clickable to open details) */}
                   {serviceKey === "renditions" && showRenditionColumns && (
                   <>
-                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 50, maxWidth: 60 }}>
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 50, maxWidth: 60 }}
+                      onClick={() => onClientClick?.(client.id)}>
                       {svc.renewalState || "—"}
                     </td>
-                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 70, maxWidth: 80 }}>
+                    <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 70, maxWidth: 80 }}
+                      onClick={() => onClientClick?.(client.id)}>
                       {svc.renewalDueMonth && svc.renewalDueDay ? `${svc.renewalDueMonth.substring(0,3)} ${svc.renewalDueDay}` : svc.renewalDueMonth || "—"}
                     </td>
                   </>
