@@ -36,7 +36,7 @@ const PAYDAY_OPTIONS = [
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
   "EOM", "15th & EOM", "5th/20th", "16th/EOM",
 ];
-const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Trust", "Non Profit", "Retirem Plan"];
+const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Individual", "Personal", "Trust", "Non Profit", "Retirem Plan"];
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
   "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
