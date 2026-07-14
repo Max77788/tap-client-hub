@@ -189,23 +189,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const stxRoutingRef = useRef<HTMLInputElement>(null);
   const stxAccountRef = useRef<HTMLInputElement>(null);
 
-  // ── Pay Day options (fetched from DB) ──
-  const [payDayOptions, setPayDayOptions] = useState<string[]>([]);
-  const [payDayByFreq, setPayDayByFreq] = useState<Record<string,string[]>>({});
-  useEffect(() => {
-    fetch("/api/payroll/paydays")
-      .then(r => r.json())
-      .then(data => { 
-        if (data.paydaysByFreq) { 
-          setPayDayByFreq(data.paydaysByFreq); 
-          // Also populate flat list for non-module view
-          const all = new Set<string>();
-          Object.values(data.paydaysByFreq).forEach((arr: string[]) => arr.forEach(v => all.add(v)));
-          setPayDayOptions([...all]);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  // ── Pay Day options (local, filtered by cadence) ──
+  const payDayByFreq: Record<string, string[]> = {
+    "Weekly":       ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Bi-Weekly A":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Bi-Weekly B":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Bi-Weekly":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Semi-Monthly": ["1st & 15th","15th & EOM","5th/20th"],
+    "Monthly":      ["EOM","1st","5th","10th","15th","20th","25th","28th"],
+    "Quarterly":    ["EOM","1st","5th","10th","15th","20th","25th","28th"],
+  };
+  const payDayOptions = Object.values(payDayByFreq).flat().filter((v,i,a) => a.indexOf(v) === i);
 
   // ── Notes pagination ──
   const [notePage, setNotePage] = useState(0);

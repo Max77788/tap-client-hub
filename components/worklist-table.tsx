@@ -34,8 +34,19 @@ const REPORTING_METHODS = ["", "PR Reports only", "Email Paystub to Client", "Lo
 const PAYROLL_CATEGORIES = ["", "Monthly", "Salary", "SAME", "Right Network", "Tushar"];
 const PAYDAY_OPTIONS = [
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
-  "EOM", "15th & EOM", "5th/20th", "16th/EOM",
-];
+  "EOM", "15th & EOM", "5th/20th", "1st & 15th",
+] as const;
+
+// Payday options grouped by cadence for smart dropdown filtering
+const PAYDAY_BY_CADENCE: Record<string, string[]> = {
+  "Weekly":       ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+  "Bi-Weekly A":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+  "Bi-Weekly B":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+  "Bi-Weekly":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+  "Semi-Monthly": ["1st & 15th","15th & EOM","5th/20th"],
+  "Monthly":      ["EOM","1st","5th","10th","15th","20th","25th","28th"],
+  "Quarterly":    ["EOM","1st","5th","10th","15th","20th","25th","28th"],
+} as const;
 const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Personal", "Trust", "Non Profit", "Retirem Plan"];
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
@@ -1634,13 +1645,23 @@ export default function WorklistTable({
 
                               // Fallback to cadence-based logic if no paydate or parse failed
                               if (!d) {
+                                // Extract target day-of-week from paydate if it's a weekday name
+                                const dowFromPaydate = (() => {
+                                  if (!pd) return -1;
+                                  const days = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+                                  return days.indexOf(pd.toLowerCase().replace(/s$/,"").trim());
+                                })();
+
                                 d = new Date(startFrom);
                                 if (freq === "Weekly") {
-                                  d = findNext(startFrom, x => x.getDay() === 5);
+                                  const targetDow = dowFromPaydate >= 0 ? dowFromPaydate : 5;
+                                  d = findNext(startFrom, x => x.getDay() === targetDow);
                                 } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
-                                  d = findNext(startFrom, x => x.getDay() === 5 && ((x.getDate() >= 1 && x.getDate() <= 7) || (x.getDate() >= 15 && x.getDate() <= 22) || (x.getDate() >= 29 && x.getDate() <= 31)));
+                                  const targetDow = dowFromPaydate >= 0 ? dowFromPaydate : 5;
+                                  d = findNext(startFrom, x => x.getDay() === targetDow && ((x.getDate() >= 1 && x.getDate() <= 7) || (x.getDate() >= 15 && x.getDate() <= 22) || (x.getDate() >= 29 && x.getDate() <= 31)));
                                 } else if (freq === "Bi-Weekly B") {
-                                  d = findNext(startFrom, x => x.getDay() === 5 && ((x.getDate() >= 8 && x.getDate() <= 14) || (x.getDate() >= 23 && x.getDate() <= 28)));
+                                  const targetDow = dowFromPaydate >= 0 ? dowFromPaydate : 5;
+                                  d = findNext(startFrom, x => x.getDay() === targetDow && ((x.getDate() >= 8 && x.getDate() <= 14) || (x.getDate() >= 23 && x.getDate() <= 28)));
                                 } else if (freq === "Semi-Monthly") {
                                   d = findNext(startFrom, x => x.getDate() === 1 || x.getDate() === 15);
                                 } else if (freq === "Monthly") {
