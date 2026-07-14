@@ -155,7 +155,7 @@ export async function GET(request: Request) {
         const batch = allCsIds.slice(i, i + BATCH_SIZE);
         // sales_tax_registration
         const { data: stxBatch } = await supabase.from("sales_tax_registration")
-          .select("*").in("client_service_id", batch);
+          .select("*").in("client_service_id", batch).order("id");
         if (stxBatch) {
           for (const stx of stxBatch) {
             if (!normStxByCsId[stx.client_service_id]) normStxByCsId[stx.client_service_id] = [];
@@ -241,14 +241,15 @@ export async function GET(request: Request) {
             return [...oldCmts, ...newCmts];
           })(),
           salesTaxLineItems: lite ? [] : (() => {
+            const newStx = (normStxByCsId[cs.id] || []);
+            if (newStx.length > 0) return newStx;
             const oldStx = Array.isArray(cs.sales_tax_line_items)
               ? cs.sales_tax_line_items.map((item: any) => ({
                   ...item,
                   assignedTo: staffNames[item.assignedTo || ""] || item.assignedTo || "",
                 }))
               : [];
-            const newStx = (normStxByCsId[cs.id] || []);
-            return [...oldStx, ...newStx];
+            return oldStx;
           })(),
           currentStage: (periodByCsId[cs.id]?.[new Date().getMonth()] || "not_started"),
           months: lite ? Array(12).fill("lock") : Array.from({ length: 12 }, (_, i) => {
