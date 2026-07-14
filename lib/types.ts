@@ -85,11 +85,12 @@ export interface ClientService {
   // State renewal
   serviceName?: string;
   // Sales tax service name (from spreadsheet column E)
-  stateRenewal?: boolean;
-  renewalState?: string;
-  renewalDueMonth?: string;
-  renewalDueDay?: string;
-  renewalIdentifiers?: string;
+  stateRenewal?: boolean | null;
+  renewalState?: string | null;
+  renewalDueMonth?: string | null;
+  renewalDueDay?: string | null;
+  renewalIdentifiers?: string | null;
+  stateRenewalItems?: any[];
   payEmails?: string[];
   comments?: CommentEntry[];
   svcNotes?: string;

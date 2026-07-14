@@ -150,6 +150,7 @@ export async function GET(request: Request) {
     // ── v7 normalized tables: sales_tax_registration + service_comments ──
     const normStxByCsId: Record<string, any[]> = {};
     const normCommentsByCsId: Record<string, any[]> = {};
+    const normSrByCsId: Record<string, any[]> = {};
     if (allCsIds.length > 0) {
       for (let i = 0; i < allCsIds.length; i += BATCH_SIZE) {
         const batch = allCsIds.slice(i, i + BATCH_SIZE);
@@ -180,6 +181,25 @@ export async function GET(request: Request) {
                 return [];
               })(),
               assignedTo: staffNames[stx.assigned_to || ""] || stx.assigned_to || "",
+            });
+          }
+        }
+        // state_renewals
+        const { data: srBatch } = await supabase.from("state_renewals")
+          .select("*").in("client_service_id", batch).order("id");
+        if (srBatch) {
+          for (const sr of srBatch) {
+            if (!normSrByCsId[sr.client_service_id]) normSrByCsId[sr.client_service_id] = [];
+            normSrByCsId[sr.client_service_id].push({
+              id: sr.id,
+              isStateRenewal: true,
+              state: sr.state,
+              dueMonth: sr.due_month,
+              dueDay: sr.due_day,
+              identifiers: sr.identifiers,
+              serviceName: `${sr.state} Renewal`,
+              assignedTo: sr.assigned_to || "",
+              frequency: sr.frequency || "Yearly",
             });
           }
         }
@@ -263,6 +283,7 @@ export async function GET(request: Request) {
           renewalDueMonth: cs.renewal_due_month || null,
           renewalDueDay: cs.renewal_due_day || null,
           renewalIdentifiers: cs.renewal_identifiers || null,
+          stateRenewalItems: lite ? [] : (normSrByCsId[cs.id] || []),
           serviceName: cs.service_name || "",
         };
       });
@@ -285,7 +306,7 @@ export async function GET(request: Request) {
             "eftps","biweeklyCode","payStartDate","payPeriodFrequency","reportingMethod",
             "payrollCategory","qbLicense","reportingNotes","filingState","filingMonth",
             "filingType","currentStage","stateRenewal","renewalState","renewalDueMonth",
-            "renewalDueDay","renewalIdentifiers","serviceName"];
+            "renewalDueDay","renewalIdentifiers","stateRenewalItems","serviceName"];
           for (const f of copyFields) {
             if (svc[f] && !existing[f]) existing[f] = svc[f];
           }
@@ -298,7 +319,7 @@ export async function GET(request: Request) {
         }
       }
       for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, serviceName: "", currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
+        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, stateRenewalItems: [], serviceName: "", currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),
@@ -484,6 +505,25 @@ export async function PUT(request: Request) {
         });
       }
     }
+// Helper to sync state renewal items
+    async function syncStateRenewals(csId: string, items: any[]) {
+      if (!items || !Array.isArray(items)) return;
+      const { error: delErr } = await supabase.from("state_renewals").delete().eq("client_service_id", csId);
+      if (delErr) { console.error("SR delete error:", delErr.message); return; }
+      for (const item of items) {
+        const { error: insErr } = await supabase.from("state_renewals").insert({
+          id: item.id || randomUUID(),
+          client_service_id: csId,
+          state: item.state || "TX",
+          due_month: item.dueMonth || null,
+          due_day: item.dueDay || null,
+          identifiers: item.identifiers || null,
+          assigned_to: item.assignedTo || null,
+          frequency: item.frequency || "Yearly",
+        });
+        if (insErr) console.error("SR insert error:", insErr.message);
+      }
+    }
 
 
     for (const svc of safeServices) {
@@ -538,6 +578,7 @@ export async function PUT(request: Request) {
             }
             results.push({ key: svc.key, action: "activated" });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
+            if (svc.key === "renditions" && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           } else {
             // Base fields update
@@ -581,6 +622,7 @@ export async function PUT(request: Request) {
             }
             results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1, _stxSyncErr: stxSyncErr, _csId: existing.id } as any);
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
+            if (svc.key === "renditions" && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           }
         } else {
@@ -624,6 +666,7 @@ export async function PUT(request: Request) {
           } else {
             results.push({ key: svc.key, action: "created" });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(newCsId as string, svc.salesTaxLineItems);
+            if (svc.key === "renditions" && svc.stateRenewalItems) await syncStateRenewals(newCsId as string, svc.stateRenewalItems);
             if (svc.comments) await syncComments(newCsId as string, svc.comments);
           }
         }
@@ -692,7 +735,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, financialsMonth, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers } = body;
+    const { csId, assignedTo, processor, frequency, financialsMonth, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers, stateRenewalItems } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -828,6 +871,24 @@ export async function PATCH(request: Request) {
             if (cmts.length > 0) return base + "\n__STX_CMTS__" + JSON.stringify(cmts);
             return base;
           })(),
+        });
+      }
+    }
+
+    // Sync stateRenewalItems → state_renewals
+    if (stateRenewalItems !== undefined) {
+      await supabase.from("state_renewals").delete().eq("client_service_id", csId);
+      const srItems = Array.isArray(stateRenewalItems) ? stateRenewalItems : [];
+      for (const item of srItems) {
+        await supabase.from("state_renewals").insert({
+          id: item.id || randomUUID(),
+          client_service_id: csId,
+          state: item.state || "TX",
+          due_month: item.dueMonth || null,
+          due_day: item.dueDay || null,
+          identifiers: item.identifiers || null,
+          assigned_to: item.assignedTo || null,
+          frequency: item.frequency || "Yearly",
         });
       }
     }
