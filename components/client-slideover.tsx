@@ -2133,9 +2133,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <select className="ef" style={{ width: "100%", padding: "7px 9px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff" }}
                 value={resolvedAssignee}
                 onChange={e => {
-                  setESvcAssignees((prev: any) => ({ ...prev, [moduleKey]: e.target.value }));
+                  setESvcAssignees((prev: any) => ({ ...prev, [resolvedKey]: e.target.value }));
                   autoSave(prev => prev.map((s: any) =>
-                    s.key === moduleKey ? { ...s, assignedTo: e.target.value } : s
+                    s.key === resolvedKey ? { ...s, assignedTo: e.target.value } : s
                   ));
                 }}
               >
@@ -2149,7 +2149,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Frequency/Cadence for non-payroll services */}
-            {moduleKey !== "payroll" && moduleKey !== "renditions" && targetSvc.enabled && (
+            {moduleKey !== "payroll" && resolvedKey !== "renditions" && targetSvc.enabled && (
               <div style={{ marginBottom: 12 }}>
                 <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                   Details
@@ -2438,7 +2438,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
               <div style={{ marginTop: 10 }}>
                 {(() => {
-                  const svc = localSvcs.find((s: any) => s.key === moduleKey);
+                  const svc = localSvcs.find((s: any) => s.key === resolvedKey);
                   const allComments = (svc?.comments || []).sort((a: CommentEntry, b: CommentEntry) => a.month - b.month);
                   const PER_PAGE = 3;
                   const totalPages = Math.ceil(allComments.length / PER_PAGE);
@@ -2450,7 +2450,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           <div key={cm.id} className="note">
                             <div className="ntxt">{cm.text}</div>
                             <div className="nmeta">{MONTHS[cm.month]} · {cm.author} · {new Date(cm.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                            <button onClick={() => deleteComment(moduleKey, cm.id)}
+                            <button onClick={() => deleteComment(resolvedKey, cm.id)}
                               style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}>
                               × Delete
                             </button>
