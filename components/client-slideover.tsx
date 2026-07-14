@@ -738,6 +738,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
     function handleNextStage(svcKey: string, monthIdx: number) {
       if (!moduleKey) return; // read-only from Clients tab
+      if (svcKey === "sales_tax") return; // STX statuses managed from worklist, not slideover
       const svc = localSvcs.find((s: any) => s.key === svcKey);
       const currentStage = toStageKey((svc?.months || [])[monthIdx] || "");
       const idx = STAGE_CYCLE.indexOf(currentStage);
@@ -803,7 +804,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       color: n > 0 ? "var(--green)" : "var(--muted)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       margin: "0 auto", fontWeight: 700, fontSize: 13, userSelect: "none",
-                      cursor: moduleKey ? "pointer" : "default",
+                      cursor: svcKey === "sales_tax" ? "default" : (moduleKey ? "pointer" : "default"),
                       border: n > 0 ? "1px solid var(--green)" : "1px solid transparent",
                       position: "relative",
                     }}
@@ -837,7 +838,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div key={mo} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{mo}</div>
                 <div
-                  onClick={() => handleNextStage(svcKey, i)}
+                  onClick={() => { if (svcKey !== "sales_tax") handleNextStage(svcKey, i); }}
                   style={{
                     width: 30, height: 30, borderRadius: 8,
                     border: `1px solid ${hasDelayBorder ? "var(--red)" : style.border}`,
@@ -849,7 +850,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     boxShadow: hasDelayBorder ? "0 0 0 2px var(--red)" : "none",
                     position: "relative",
                   }}
-                  title={`${mo} — ${hasDelayBorder ? "DELAYED · " : ""}${stageLabel}${moduleKey ? " — click to cycle" : ""}`}
+                  title={`${mo} — ${hasDelayBorder ? "DELAYED · " : ""}${stageLabel}${moduleKey && svcKey !== "sales_tax" ? " — click to cycle" : ""}`}
                 >
                   {t}
                   {cmt && (
