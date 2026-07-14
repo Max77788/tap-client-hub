@@ -1400,8 +1400,9 @@ export default function WorklistTable({
               return (
                 <tr
                   key={client.id}
-                  className="transition-colors"
+                  className="transition-colors cursor-pointer hover:bg-[var(--teal-soft)]"
                   style={{ borderBottom: "1px solid var(--line)" }}
+                  onClick={() => onClientClick?.(client.id)}
                 >
                   {/* Client / Line Item name (clickable) */}
                   <td className="px-1.5 py-1" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>
@@ -1528,7 +1529,7 @@ export default function WorklistTable({
                           }} />
                         )}
                         <div
-                          onClick={cellReadOnly ? undefined : (e) => handleCellClick(client.id, i, e)}
+                          onClick={cellReadOnly ? undefined : (e) => { e.stopPropagation(); handleCellClick(client.id, i, e); }}
                           className="mcell"
                           style={{
                             width: 26, height: 26, borderRadius: 6,
