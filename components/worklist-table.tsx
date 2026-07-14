@@ -1429,7 +1429,7 @@ export default function WorklistTable({
                   )}
 
                   {/* Renditions columns: State, Due (clickable to open details) */}
-                  {serviceKey === "renditions" && showRenditionColumns && (
+                  {serviceKey === "renditions" && showRenewalColumns && (
                   <>
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 50, maxWidth: 60 }}
                       onClick={() => onClientClick?.(client.id)}>
