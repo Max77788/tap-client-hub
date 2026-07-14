@@ -342,7 +342,7 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount } }, {
+    return NextResponse.json({ clients, stats: { total: totalCount, business: bizCount, personal: persCount }, _srDebug: { srRows: Object.keys(normSrByCsId).length, csIds: Object.keys(normSrByCsId).map(k => k.substring(0,12)) } }, {
       headers: { 'Cache-Control': 'no-store, max-age=0' }
     });
   } catch (e: any) {
