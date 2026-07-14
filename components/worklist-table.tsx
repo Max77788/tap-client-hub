@@ -262,6 +262,8 @@ export default function WorklistTable({
   // ── Search state ──
   const [search, setSearch] = useState("");
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
+  const [filingTypeFilter, setFilingTypeFilter] = useState<string>("All");
+  const [dueMonthFilter, setDueMonthFilter] = useState<string>("All");
 
   // ── Comment panel state ──
   const [activeCommentClientId, setActiveCommentClientId] = useState<string | null>(null);
@@ -300,6 +302,15 @@ export default function WorklistTable({
     }
     return [];
   }, [serviceKey, variant]);
+
+  // ── Filing type + due month filters (Tax Returns) ──
+  const filingTypeOptions = useMemo(() => variant === "tax_returns" ? [
+    "All", "C Corp.", "S Corp.", "Partnership", "SMLLC", "Individual", "Trust", "Non Profit", "Retirem Plan"
+  ] : [], [variant]);
+
+  const dueMonthOptions = useMemo(() => variant === "tax_returns" ? [
+    "All", ...MONTHS_SHORT
+  ] : [], [variant]);
   // ── Stage dropdown picker ──
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
@@ -371,9 +382,24 @@ export default function WorklistTable({
           });
         }
       }
+      // Tax Returns: filing type filter
+      if (filingTypeFilter !== "All" && variant === "tax_returns") {
+        list = list.filter((c) => {
+          const svc = c.services?.find((s: any) => s.key === "tax_returns");
+          return (svc?.filingType || "") === filingTypeFilter;
+        });
+      }
+      // Tax Returns: due month filter
+      if (dueMonthFilter !== "All" && variant === "tax_returns") {
+        const monthNum = String(MONTHS_SHORT.indexOf(dueMonthFilter) + 1);
+        list = list.filter((c) => {
+          const svc = c.services?.find((s: any) => s.key === "tax_returns");
+          return String(svc?.filingMonth || "") === monthNum;
+        });
+      }
       return list;
     },
-    [serviceClients, search, cadenceFilter, variant, serviceKey],
+    [serviceClients, search, cadenceFilter, variant, serviceKey, filingTypeFilter, dueMonthFilter],
   );
 
   // Short name from "Last, First" format → "First"
@@ -1002,6 +1028,30 @@ export default function WorklistTable({
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
+        )}
+        {variant === "tax_returns" && (
+          <>
+            <select
+              value={filingTypeFilter}
+              onChange={(e) => setFilingTypeFilter(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] cursor-pointer"
+            >
+              <option value="All">All types</option>
+              {filingTypeOptions.filter(opt => opt !== "All").map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <select
+              value={dueMonthFilter}
+              onChange={(e) => setDueMonthFilter(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] cursor-pointer"
+            >
+              <option value="All">All months</option>
+              {dueMonthOptions.filter(opt => opt !== "All").map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </>
         )}
         {search && filteredClients.length < serviceClients.length && (
           <span className="text-[11px] text-[var(--muted)] whitespace-nowrap">
