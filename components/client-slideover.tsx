@@ -450,7 +450,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   function getServiceComments(svcKey: string, monthIdx: number): CommentEntry[] {
     const svc = localSvcs.find((s: any) => s.key === svcKey);
-    return (svc?.comments || []).filter((cm: CommentEntry) => cm.month === monthIdx);
+    // Merge service-level comments with per-line-item comments (STX)
+    const svcCmts = (svc?.comments || []);
+    const lineItemCmts = svcKey === "sales_tax" && svc?.salesTaxLineItems
+      ? svc.salesTaxLineItems.flatMap((item: any, idx: number) => 
+          (item.comments || []).map((c: any) => ({ ...c, _stxIdx: idx }))
+        )
+      : [];
+    return [...svcCmts, ...lineItemCmts].filter((cm: CommentEntry) => cm.month === monthIdx);
   }
 
   function hasComment(svcKey: string, monthIdx: number): boolean {
@@ -468,6 +475,18 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     };
     const updated = localSvcs.map((s: any) => {
       if (s.key === svcKey) {
+        // For STX: write comment to the focused line item if one is selected
+        if (svcKey === "sales_tax" && stxLineItemFocus && s.salesTaxLineItems?.length) {
+          const stxIdx = s.salesTaxLineItems.findIndex((item: any) => 
+            (item.serviceName || item.rt_number || "") === stxLineItemFocus
+          );
+          if (stxIdx >= 0) {
+            const items = [...s.salesTaxLineItems];
+            items[stxIdx] = { ...items[stxIdx], comments: [...(items[stxIdx].comments || []), comment] };
+            return { ...s, salesTaxLineItems: items };
+          }
+        }
+        // Default: service-level comments
         const existing = s.comments || [];
         return { ...s, comments: [...existing, comment] };
       }
@@ -484,14 +503,26 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   function deleteComment(svcKey: string, commentId: string) {
     const updated = localSvcs.map((s: any) => {
       if (s.key === svcKey) {
+        // Check per-line-item comments first (STX)
+        if (svcKey === "sales_tax" && s.salesTaxLineItems?.length) {
+          const items = s.salesTaxLineItems.map((item: any) => ({
+            ...item,
+            comments: (item.comments || []).filter((cm: CommentEntry) => cm.id !== commentId),
+          }));
+          return { ...s, salesTaxLineItems: items };
+        }
         return { ...s, comments: (s.comments || []).filter((cm: CommentEntry) => cm.id !== commentId) };
       }
       return s;
     });
     setLocalSvcs(updated);
-    // If current page is now empty, go back one
     const svc = updated.find((s: any) => s.key === svcKey);
-    const remaining = (svc?.comments || []).length;
+    // Count from both sources
+    const svcCmts = (svc?.comments || []).length;
+    const lineItemCmts = svcKey === "sales_tax" && svc?.salesTaxLineItems
+      ? svc.salesTaxLineItems.reduce((sum: number, item: any) => sum + (item.comments?.length || 0), 0)
+      : 0;
+    const remaining = svcCmts + lineItemCmts;
     if (notePage > 0 && notePage * 3 >= remaining) {
       setNotePage(Math.max(0, Math.floor((remaining - 1) / 3)));
     }
@@ -505,6 +536,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       if (svc.comments && Array.isArray(svc.comments)) {
         for (const cm of svc.comments) {
           all.push({ ...cm, _svcKey: svc.key });
+        }
+      }
+      // Also collect per-line-item comments from STX
+      if (svc.key === "sales_tax" && svc.salesTaxLineItems) {
+        for (let idx = 0; idx < svc.salesTaxLineItems.length; idx++) {
+          const item = svc.salesTaxLineItems[idx];
+          if (item.comments && Array.isArray(item.comments)) {
+            for (const cm of item.comments) {
+              all.push({ ...cm, _svcKey: svc.key, _stxIdx: idx });
+            }
+          }
         }
       }
     }

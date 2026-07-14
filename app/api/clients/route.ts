@@ -193,6 +193,7 @@ export async function GET(request: Request) {
               id: cmt.id, month: typeof cmt.month === 'string' ? parseInt(cmt.month, 10) : cmt.month, body: cmt.body,
               text: cmt.body, author: cmt.author_label || "",
               createdAt: cmt.created_at,
+              stx_item_idx: cmt.stx_item_idx ?? undefined,
             });
           }
         }
@@ -822,7 +823,29 @@ export async function PATCH(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, ...updates });
+    // Also sync per-line-item comments to service_comments (for STX)
+    if (salesTaxLineItems !== undefined) {
+      await supabase.from("service_comments").delete().eq("client_service_id", csId).not("stx_item_idx", "is", null);
+      const items = Array.isArray(salesTaxLineItems) ? salesTaxLineItems : [];
+      for (let idx = 0; idx < items.length; idx++) {
+        const item = items[idx];
+        const cmts = Array.isArray(item.comments) ? item.comments : [];
+        for (const c of cmts) {
+          if (c.text || c.body) {
+            await supabase.from("service_comments").insert({
+              client_service_id: csId,
+              month: c.month ?? null,
+              body: c.text || c.body || "",
+              author_label: c.author || "",
+              stx_item_idx: idx,
+              created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+
+return NextResponse.json({ success: true, ...updates });
   } catch (e: any) {
     return NextResponse.json({ error: "ERR: " + (e?.message || String(e)) }, { status: 500 });
   }
