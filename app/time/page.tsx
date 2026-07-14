@@ -18,6 +18,8 @@ interface TimeEntry {
   edited?: boolean;
   isRunning?: boolean;
   manual?: boolean;
+  startedAt?: string;
+  endedAt?: string;
 }
 
 interface StaffMember { id: string; name: string; role: string; firstName: string; }
@@ -51,6 +53,11 @@ function fmtClock(s: number) {
   return p(Math.floor(s / 3600)) + ":" + p(Math.floor((s % 3600) / 60)) + ":" + p(s % 60);
 }
 
+function fmtTime(iso: string): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
 export default function TimePage() {
   const [entryTab, setEntryTab] = useState<EntryTab>("timer");
 
@@ -59,14 +66,16 @@ export default function TimePage() {
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedService, setSelectedService] = useState("fin");
   const [timerRunning, setTimerRunning] = useState(false);
+  const [timerNote, setTimerNote] = useState("");
 
   // Manual entry
   const [manualPerson, setManualPerson] = useState("");
   const [manualClient, setManualClient] = useState("");
   const [manualService, setManualService] = useState("fin");
-  const [manualHours, setManualHours] = useState(0);
-  const [manualMinutes, setManualMinutes] = useState(0);
+  const [manualStartTime, setManualStartTime] = useState("");
+  const [manualEndTime, setManualEndTime] = useState("");
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [manualNote, setManualNote] = useState("");
 
   // Table
   const [entries, setEntries] = useState<TimeEntry[]>([]);
@@ -146,14 +155,21 @@ export default function TimePage() {
         const today = new Date().toISOString().slice(0, 10);
         setEntries(data.entries.map((e: any) => {
           const isFromToday = (e.date || "").slice(0, 10) === today;
+          const startedAt = e.started_at || e.date;
+          const duration = e.duration || 0;
+          const endedAt = duration > 0 && startedAt
+            ? new Date(new Date(startedAt).getTime() + duration * 1000).toISOString()
+            : null;
           return {
             id: e.id, clientName: e.clientName || "", clientId: e.clientId || "",
             personName: e.personName || "", personId: e.personId || "",
             task: "", taskLabel: e.serviceLabel || "",
-            duration: e.duration || 0, date: e.date || "", note: e.note || "",
+            duration, date: e.date || "", note: e.note || "",
             edited: e.edited || false,
-            isRunning: isFromToday && (e.duration || 0) === 0,
+            isRunning: isFromToday && duration === 0,
             manual: e.manual || false,
+            startedAt: startedAt || null,
+            endedAt: endedAt || null,
           };
         }));
         // Re-activate timer state if there's a running entry from today
@@ -199,12 +215,14 @@ export default function TimePage() {
       id: entryId, clientName: client.name, clientId: client.id,
       personName: person.name, personId: person.id,
       task: selectedService, taskLabel: TASK_LABEL[selectedService] || "Admin/Other",
-      duration: 0, date: now, note: "", isRunning: true,
+      duration: 0, date: now, note: timerNote, isRunning: true,
+      startedAt: now,
     };
 
     // Add to table immediately
     setEntries((prev) => [entry, ...prev]);
     setTimerRunning(true);
+    setTimerNote("");
 
     // Save to backend so it survives reload
     try {
@@ -214,11 +232,11 @@ export default function TimePage() {
         body: JSON.stringify({
           id: entryId, who: person.id, client_id: client.id,
           task: TASK_LABEL[selectedService] || "Admin/Other",
-          seconds: 0, started_at: now, note: "",
+          seconds: 0, started_at: now, note: timerNote,
         }),
       });
     } catch (e) { console.error("Save failed:", e); }
-  }, [selectedClient, selectedPerson, selectedService, clientOptions, staff]);
+  }, [selectedClient, selectedPerson, selectedService, clientOptions, staff, timerNote]);
 
   // ── Stop timer — patches the backend with final duration ──
   const stopTimer = useCallback(async (entryId?: string) => {
@@ -251,8 +269,12 @@ export default function TimePage() {
 
   // ── Manual entry submit ──
   async function submitManualEntry() {
-    if (!manualPerson || !manualClient) return;
-    const elapsed = manualHours * 3600 + manualMinutes * 60;
+    if (!manualPerson || !manualClient || !manualStartTime || !manualEndTime) return;
+
+    const start = new Date(`${manualDate}T${manualStartTime}:00`);
+    const end = new Date(`${manualDate}T${manualEndTime}:00`);
+    if (end <= start) return;
+    const elapsed = Math.floor((end.getTime() - start.getTime()) / 1000);
     if (elapsed < 1) return;
 
     const client = clientOptions.find((c) => c.id === manualClient);
@@ -260,13 +282,14 @@ export default function TimePage() {
     if (!client || !person) return;
 
     const entryId = uid();
-    const dateStr = manualDate + "T12:00:00.000Z";
+    const dateStr = start.toISOString();
 
     const entry: TimeEntry = {
       id: entryId, clientName: client.name, clientId: client.id,
       personName: person.name, personId: person.id,
       task: manualService, taskLabel: TASK_LABEL[manualService] || "Admin/Other",
-      duration: elapsed, date: dateStr, note: "", edited: false, isRunning: false, manual: true,
+      duration: elapsed, date: dateStr, note: manualNote, edited: false, isRunning: false, manual: true,
+      startedAt: dateStr, endedAt: end.toISOString(),
     };
     setEntries((prev) => [entry, ...prev]);
 
@@ -276,11 +299,11 @@ export default function TimePage() {
       body: JSON.stringify({
         id: entryId, who: person.id, client_id: client.id,
         task: TASK_LABEL[manualService] || "Admin/Other",
-        seconds: elapsed, started_at: dateStr, note: "", manual: true,
+        seconds: elapsed, started_at: dateStr, note: manualNote, manual: true,
       }),
     }).catch((e) => console.error("Manual save failed:", e));
 
-    setManualHours(0); setManualMinutes(0);
+    setManualStartTime(""); setManualEndTime(""); setManualNote("");
     setManualDate(new Date().toISOString().slice(0, 10));
   }
 
@@ -306,7 +329,7 @@ export default function TimePage() {
         who: person?.id || entry.personId,
         client_id: client?.id || entry.clientId,
         task: entry.taskLabel, seconds: entry.duration,
-        note: entry.note, started_at: entry.date, edited: true,
+        note: entry.note, started_at: entry.date, ended_at: entry.endedAt, edited: true,
       }),
     }).catch(() => {});
   }
@@ -428,6 +451,13 @@ export default function TimePage() {
             </select>
           </div>
 
+          <div className="fld">
+            <label>Note</label>
+            <input type="text" value={timerNote} onChange={(e) => setTimerNote(e.target.value)}
+              placeholder="What are you working on?"
+              style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit", width: "100%" }} />
+          </div>
+
           <button className="tw-go"
             onClick={startTimer}
             disabled={!selectedClient || !selectedPerson}>
@@ -460,24 +490,28 @@ export default function TimePage() {
             </select>
           </div>
           <div className="fld">
-            <label>Hours</label>
-            <input type="number" min={0} value={manualHours}
-              onChange={(e) => setManualHours(parseInt(e.target.value) || 0)}
-              style={{ width: 80, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit" }} />
-          </div>
-          <div className="fld">
-            <label>Minutes</label>
-            <input type="number" min={0} max={59} value={manualMinutes}
-              onChange={(e) => setManualMinutes(parseInt(e.target.value) || 0)}
-              style={{ width: 80, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit" }} />
-          </div>
-          <div className="fld">
             <label>Date</label>
             <input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)}
               style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit" }} />
           </div>
+          <div className="fld">
+            <label>Start</label>
+            <input type="time" value={manualStartTime} onChange={(e) => setManualStartTime(e.target.value)}
+              style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit" }} />
+          </div>
+          <div className="fld">
+            <label>End</label>
+            <input type="time" value={manualEndTime} onChange={(e) => setManualEndTime(e.target.value)}
+              style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit" }} />
+          </div>
+          <div className="fld">
+            <label>Note</label>
+            <input type="text" value={manualNote} onChange={(e) => setManualNote(e.target.value)}
+              placeholder="What was done?"
+              style={{ padding: "6px 10px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 14, font: "inherit", width: "100%" }} />
+          </div>
           <button className="tw-go" onClick={submitManualEntry}
-            disabled={!manualPerson || !manualClient || (manualHours === 0 && manualMinutes === 0)}
+            disabled={!manualPerson || !manualClient || !manualStartTime || !manualEndTime}
             style={{ background: "var(--teal)", color: "#fff" }}>
             + Add Entry
           </button>
@@ -604,6 +638,9 @@ export default function TimePage() {
               <th>Client</th>
               <th>Task</th>
               <th style={{ whiteSpace: "nowrap" }}>Time</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Note</th>
               <th>When</th>
               <th></th>
             </tr>
@@ -628,11 +665,18 @@ export default function TimePage() {
                           <span className="tw-live"><i />{fmtClock(elapsed)}</span>
                         </td>
                         <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
+                          {fmtTime(entry.startedAt || entry.date)}
+                        </td>
+                        <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>—</td>
+                        <td style={{ color: "var(--muted)", fontSize: 12, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {entry.note || "—"}
+                        </td>
+                        <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
                           {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </td>
                         <td>
                           <button className="stop-btn" onClick={() => stopTimer(entry.id)}>
-                            {"\u25a0 Stop"}
+                            {"■ Stop"}
                           </button>
                         </td>
                       </tr>
@@ -662,6 +706,16 @@ export default function TimePage() {
                           <input className="edit-inp" type="number" min={0} max={59} value={m}
                             onChange={(e) => { const nm = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: h * 3600 + nm * 60, edited: true })); }} />m
                         </td>
+                        <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--muted)" }}>
+                          {fmtTime(entry.startedAt || entry.date)}
+                        </td>
+                        <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--muted)" }}>
+                          {entry.endedAt ? fmtTime(entry.endedAt) : "—"}
+                        </td>
+                        <td><input className="edit-inp" type="text" value={entry.note || ""}
+                          onChange={(e) => handleEdit(idx, "note", e.target.value)}
+                          placeholder="Note"
+                          style={{ width: 140, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
                         <td><input className="edit-inp" type="date" value={entry.date.slice(0, 10)}
                           onChange={(e) => handleEdit(idx, "date", e.target.value + "T12:00:00.000Z")}
                           style={{ width: 130, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
@@ -683,6 +737,15 @@ export default function TimePage() {
                         {fmtDur(entry.duration)}{entry.edited && <span className="edited">edited</span>}{entry.manual && <span className="edited" style={{ color: "var(--teal)" }}>manual</span>}
                       </td>
                       <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
+                        {fmtTime(entry.startedAt || entry.date)}
+                      </td>
+                      <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
+                        {entry.endedAt ? fmtTime(entry.endedAt) : "—"}
+                      </td>
+                      <td style={{ color: "var(--muted)", fontSize: 12, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {entry.note || "—"}
+                      </td>
+                      <td style={{ color: "var(--muted)", fontSize: 12, whiteSpace: "nowrap" }}>
                         {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </td>
                       <td style={{ whiteSpace: "nowrap" }}>
@@ -694,7 +757,7 @@ export default function TimePage() {
                 })
             ) : (
               <tr>
-                <td colSpan={6} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>
+                <td colSpan={9} style={{ color: "var(--muted)", textAlign: "center", padding: "24px" }}>
                   No time entries yet — pick a person, client, and task, then click Start, or use Manual Entry.
                 </td>
               </tr>
