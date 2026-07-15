@@ -675,6 +675,8 @@ function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Cli
       transition: ".14s",
       cursor: "pointer",
       position: "relative",
+      opacity: client.active === false ? 0.55 : 1,
+      filter: client.active === false ? "grayscale(60%)" : "none",
     }}>
       {/* Selection checkbox */}
       {onToggleSelect && (

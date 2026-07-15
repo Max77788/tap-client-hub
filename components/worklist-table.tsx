@@ -279,6 +279,7 @@ export default function WorklistTable({
   const [cadenceFilter, setCadenceFilter] = useState<string>("All");
   const [filingTypeFilter, setFilingTypeFilter] = useState<string>("All");
   const [dueMonthFilter, setDueMonthFilter] = useState<string>("All");
+  const [assignedFilter, setAssignedFilter] = useState<string>("All");
 
   // ── Comment panel state ──
   const [activeCommentClientId, setActiveCommentClientId] = useState<string | null>(null);
@@ -328,6 +329,31 @@ export default function WorklistTable({
   const dueMonthOptions = useMemo(() => variant === "tax_returns" ? [
     "All", ...MONTHS_SHORT
   ] : [], [variant]);
+
+  // ── Assigned-to filter options (from services and line items) ──
+  const assignedOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const c of serviceClients) {
+      const svc = c.services?.find((s: any) => s.key === serviceKey);
+      if (svc?.assignedTo) names.add(svc.assignedTo);
+      if (svc?.processor) names.add(svc.processor);
+      // STX line items
+      if (svc?.salesTaxLineItems) {
+        for (const item of svc.salesTaxLineItems) {
+          if (item.assignedTo) names.add(item.assignedTo);
+        }
+      }
+      // State renewal items
+      if (svc?.stateRenewalItems) {
+        for (const item of svc.stateRenewalItems) {
+          if (item.assignedTo) names.add(item.assignedTo);
+        }
+      }
+      // Client-level assigned staff
+      if ((c as any).assignedStaff) names.add((c as any).assignedStaff);
+    }
+    return ["All", ...Array.from(names).sort()];
+  }, [serviceClients, serviceKey]);
   // ── Stage dropdown picker ──
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
@@ -420,9 +446,34 @@ export default function WorklistTable({
           return String(svc?.filingMonth || "") === monthNum;
         });
       }
+      // Assigned-to filter (works across all worklist tabs)
+      if (assignedFilter !== "All") {
+        list = list.filter((c) => {
+          const svc = c.services?.find((s: any) => s.key === serviceKey);
+          const filter = assignedFilter.toLowerCase();
+          // Check service-level assignedTo / processor
+          if ((svc?.assignedTo || "").toLowerCase().includes(filter)) return true;
+          if ((svc?.processor || "").toLowerCase().includes(filter)) return true;
+          // Check STX line items
+          if (svc?.salesTaxLineItems) {
+            for (const item of svc.salesTaxLineItems) {
+              if ((item.assignedTo || "").toLowerCase().includes(filter)) return true;
+            }
+          }
+          // Check state renewal items
+          if (svc?.stateRenewalItems) {
+            for (const item of svc.stateRenewalItems) {
+              if ((item.assignedTo || "").toLowerCase().includes(filter)) return true;
+            }
+          }
+          // Check client-level assignedStaff
+          if (((c as any).assignedStaff || "").toLowerCase().includes(filter)) return true;
+          return false;
+        });
+      }
       return list;
     },
-    [serviceClients, search, cadenceFilter, variant, serviceKey, filingTypeFilter, dueMonthFilter],
+    [serviceClients, search, cadenceFilter, variant, serviceKey, filingTypeFilter, dueMonthFilter, assignedFilter],
   );
 
   // Short name from "Last, First" format → "First"
@@ -1114,6 +1165,18 @@ export default function WorklistTable({
           >
             <option value="All">All cadences</option>
             {cadenceOptions.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        )}
+        {assignedOptions.length > 1 && (
+          <select
+            value={assignedFilter}
+            onChange={(e) => setAssignedFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--card)] text-[13px] text-[var(--ink)] outline-none transition-colors focus:border-[var(--teal)] focus:ring-2 focus:ring-[var(--teal-soft)] cursor-pointer"
+          >
+            <option value="All">All staff</option>
+            {assignedOptions.filter(opt => opt !== "All").map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>

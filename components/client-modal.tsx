@@ -598,10 +598,6 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
           {/* Annual Reports */}
           <ServiceCard icon="📄" label="Annual Reports" checked={rend} onChange={setRend}>
-            <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
-            <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
-              {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
             {/* State renewal — multi-state support */}
             <label style={{ ...labelStyle, marginTop: 12, fontWeight: 600 }}>State Renewals</label>
             {stateRenewalItems.length > 0 && (
