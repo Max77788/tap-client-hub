@@ -1375,7 +1375,7 @@ export function getStats(clients: Client[]): ClientStats {
       if (svc.key === "sales_tax") salesTaxCount++;
       if (svc.key === "1099s") t9Count++;
       if (svc.key === "renditions") renditionsCount++;
-      if (svc.key === "annual_reports") annualReportsCount++;
+      if (svc.key === "annual_reports") { if ((svc as any).stateRenewal) annualReportsCount++; }
       if (svc.key === "tax_returns") taxReturnsCount++;
     }
 
