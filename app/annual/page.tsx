@@ -99,7 +99,7 @@ export default function AnnualPage() {
           client={selectedClient}
           open={slideoverOpen}
           moduleKey="annual_reports"
-          onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); }}
+          onClose={() => { setSlideoverOpen(false); setSelectedClientId(null); refresh(); }}
           onSave={handleSlideoverSave}
         />
       )}

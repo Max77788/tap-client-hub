@@ -271,6 +271,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const renewalAddDayRef = useRef<HTMLInputElement>(null);
   const renewalAddIdsRef = useRef<HTMLInputElement>(null);
   const renewalAddAssignedRef = useRef<HTMLSelectElement>(null);
+  const [editingRenewalIdx, setEditingRenewalIdx] = useState<number | null>(null);
 
   // ── State: being edited → show full record ──
   const [isActive, setIsActive] = useState(client.active !== false);
@@ -2088,29 +2089,95 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               {renewalItems.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
                   {renewalItems.map((item: any, idx: number) => (
-                    <div key={item.id || idx} style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
-                      background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12
-                    }}>
-                      <span style={{ fontWeight: 600, minWidth: 30, color: "var(--teal)" }}>{item.state}</span>
-                      <span style={{ color: "var(--muted)" }}>
-                        Due: {item.dueMonth ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Math.max(0,Math.min(11,parseInt(item.dueMonth||"1")-1))] || item.dueMonth}${item.dueDay ? ` ${item.dueDay}` : ""}` : "—"}
-                      </span>
-                      {item.identifiers && <span style={{ color: "var(--muted)", fontSize: 10 }}>{item.identifiers}</span>}
-                      <span style={{ color: "var(--muted)", fontSize: 11, fontWeight: 500 }}>{item.assignedTo || "Unassigned"}</span>
-                      <div style={{ flex: 1 }} />
-                      <button
-                        onClick={() => {
-                          const updated = renewalItems.filter((_: any, i: number) => i !== idx);
-                          setRenewalItems(updated);
-                          const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
-                          const csId = rendSvc?.csId || targetSvc?.csId;
-                          fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
-                        }}
-                        style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, fontWeight: 600 }}
-                      >×</button>
-                    </div>
+                    editingRenewalIdx === idx ? (
+                      // ── Edit mode ──
+                      <div key={item.id || idx} style={{
+                        background: "var(--paper)", border: "1px solid var(--teal)", borderRadius: 8, padding: 10
+                      }}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" }}>
+                          <div style={{ flex: "1 0 50px" }}>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>State</label>
+                            <select ref={renewalAddStateRef} defaultValue={item.state} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                              {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                            </select>
+                          </div>
+                          <div style={{ flex: "1 0 50px" }}>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Month</label>
+                            <select ref={renewalAddMonthRef} defaultValue={item.dueMonth} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                              {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                            </select>
+                          </div>
+                          <div style={{ flex: "0 0 40px" }}>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Day</label>
+                            <input ref={renewalAddDayRef} type="number" min="1" max="31" defaultValue={item.dueDay} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
+                          </div>
+                          <div style={{ flex: "1.5 0 80px" }}>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>IDs</label>
+                            <input ref={renewalAddIdsRef} defaultValue={item.identifiers} placeholder="e.g. EIN" style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
+                          </div>
+                          <div style={{ flex: "1 0 80px" }}>
+                            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Assigned</label>
+                            <select ref={renewalAddAssignedRef} defaultValue={item.assignedTo || ""} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                              <option value="">Unassigned</option>
+                              {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                          <button onClick={() => setEditingRenewalIdx(null)}
+                            style={{ all: "unset", cursor: "pointer", padding: "5px 10px", borderRadius: 6, fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>Cancel</button>
+                          <button onClick={() => {
+                            const st = renewalAddStateRef.current?.value || item.state;
+                            const mo = renewalAddMonthRef.current?.value || item.dueMonth;
+                            const dy = renewalAddDayRef.current?.value || item.dueDay;
+                            const ids = renewalAddIdsRef.current?.value || "";
+                            const assigned = renewalAddAssignedRef.current?.value || "";
+                            const updated = renewalItems.map((it: any, i: number) =>
+                              i === idx ? { ...it, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned } : it
+                            );
+                            setRenewalItems(updated);
+                            setEditingRenewalIdx(null);
+                            const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+                            const csId = rendSvc?.csId || targetSvc?.csId;
+                            setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
+                            fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                          }}
+                            style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Save</button>
+                        </div>
+                      </div>
+                    ) : (
+                      // ── Display mode ──
+                      <div key={item.id || idx} style={{
+                        display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
+                        background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12
+                      }}>
+                        <span style={{ fontWeight: 600, minWidth: 30, color: "var(--teal)" }}>{item.state}</span>
+                        <span style={{ color: "var(--muted)" }}>
+                          Due: {item.dueMonth ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Math.max(0,Math.min(11,parseInt(item.dueMonth||"1")-1))] || item.dueMonth}${item.dueDay ? ` ${item.dueDay}` : ""}` : "—"}
+                        </span>
+                        {item.identifiers && <span style={{ color: "var(--muted)", fontSize: 10 }}>{item.identifiers}</span>}
+                        <span style={{ color: "var(--muted)", fontSize: 11, fontWeight: 500 }}>{item.assignedTo || "Unassigned"}</span>
+                        <div style={{ flex: 1 }} />
+                        <button
+                          onClick={() => {
+                            setEditingRenewalIdx(idx);
+                            // Pre-fill refs on next render via defaultValue
+                          }}
+                          style={{ all: "unset", cursor: "pointer", color: "var(--blue)", fontSize: 11, fontWeight: 600 }}
+                        >✎</button>
+                        <button
+                          onClick={() => {
+                            const updated = renewalItems.filter((_: any, i: number) => i !== idx);
+                            setRenewalItems(updated);
+                            const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+                            const csId = rendSvc?.csId || targetSvc?.csId;
+                            fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                            setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
+                          }}
+                          style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, fontWeight: 600 }}
+                        >×</button>
+                      </div>
+                    )
                   ))}
                 </div>
               )}
