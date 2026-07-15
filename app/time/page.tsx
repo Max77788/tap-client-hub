@@ -425,13 +425,13 @@ export default function TimePage() {
           color: entryTab === "timer" ? "var(--teal)" : "var(--muted)",
           transition: ".12s",
         }}>Timer</button>
-        {!effectiveIsStaff && <button onClick={() => setEntryTab("manual")} style={{
+        <button onClick={() => setEntryTab("manual")} style={{
           all: "unset", cursor: "pointer",
           padding: "10px 20px", fontWeight: 700, fontSize: 13,
           borderBottom: entryTab === "manual" ? "2px solid var(--teal)" : "2px solid transparent",
           color: entryTab === "manual" ? "var(--teal)" : "var(--muted)",
           transition: ".12s",
-        }}>Manual Entry</button>}
+        }}>Manual Entry</button>
       </div>
 
       {/* ── Timer Form ── */}
