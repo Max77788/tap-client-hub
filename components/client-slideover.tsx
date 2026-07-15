@@ -438,6 +438,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eEin, setEEin] = useState(client.ein || "");
   const eEinRef = useRef<HTMLInputElement>(null);
   const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
+
+  // ── Helper: sync renewal items via PATCH (or PUT if service row doesn't exist yet) ──
+  const syncRenewalItems = useCallback((items: any[]) => {
+    const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+    const csId = rendSvc?.csId || targetSvc?.csId;
+    if (csId) {
+      fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: items }) }).catch(() => {});
+    } else {
+      // No DB row yet — go through PUT to create service + items together
+      const updated = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
+      throttledOnSave({ ...c, services: updated } as Client);
+    }
+  }, [localSvcs, targetSvc, c, throttledOnSave]);
   const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
   const [eFinMonth, setEFinMonth] = useState(() => {
     const svc = client.services.find((s: any) => s.key === "financials");
@@ -2137,10 +2150,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             );
                             setRenewalItems(updated);
                             setEditingRenewalIdx(null);
-                            const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
-                            const csId = rendSvc?.csId || targetSvc?.csId;
                             setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
-                            fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                            syncRenewalItems(updated);
                           }}
                             style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Save</button>
                         </div>
@@ -2169,9 +2180,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           onClick={() => {
                             const updated = renewalItems.filter((_: any, i: number) => i !== idx);
                             setRenewalItems(updated);
-                            const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
-                            const csId = rendSvc?.csId || targetSvc?.csId;
-                            fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                            syncRenewalItems(updated);
                             setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
                           }}
                           style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, fontWeight: 600 }}
@@ -2228,10 +2237,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       setRenewalItems(updated);
                       setStateRenewal(true);
                       setAddingRenewal(false);
-                      const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
-                      const csId = rendSvc?.csId || targetSvc?.csId;
                       setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated, stateRenewal: true } : s));
-                      fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: updated }) }).catch(() => {});
+                      syncRenewalItems(updated);
                     }}
                       style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Add</button>
                   </div>
