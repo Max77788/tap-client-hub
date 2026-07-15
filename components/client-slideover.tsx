@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Client, ServiceKey, CommentEntry, SalesTaxLineItem } from "@/lib/types";
 import { SERVICE_META, STAFF } from "@/lib/data";
 
