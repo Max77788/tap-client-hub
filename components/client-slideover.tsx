@@ -1088,8 +1088,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prPeriodFreq}
                       onChange={e => {
-                        setPrPeriodFreq(e.target.value);
-                        const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: e.target.value, frequency: e.target.value } : s);
+                        const newFreq = e.target.value;
+                        setPrPeriodFreq(newFreq);
+                        // Reset pay date if it's not valid for the new cadence
+                        const validDays = payDayByFreq[newFreq] || payDayByFreq[newFreq.replace(/ [AB]$/, "")] || [];
+                        if (prPaydate && !validDays.includes(prPaydate)) setPrPaydate("");
+                        const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: newFreq, frequency: newFreq } : s);
                         setLocalSvcs(updated);
                         throttledOnSave({ ...c, services: updated } as Client);
                       }}
@@ -2251,6 +2255,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={prPeriodFreq} onChange={e => {
                       const val = e.target.value;
                       setPrPeriodFreq(val);
+                      // Reset pay date if invalid for new cadence
+                      const validDays = payDayByFreq[val] || payDayByFreq[val.replace(/ [AB]$/, "")] || [];
+                      if (prPaydate && !validDays.includes(prPaydate)) setPrPaydate("");
                       setLocalSvcs(prev => { const up = prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val } : s); return up; });
                       if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,payPeriodFrequency:val,frequency:val})}).catch(()=>{});
                       // Auto-set start date based on cadence

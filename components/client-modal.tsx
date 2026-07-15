@@ -45,6 +45,17 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [finFreq, setFinFreq] = useState("Monthly");
   const [finMonth, setFinMonth] = useState("1");
 
+  // ── Pay Day options (filtered by cadence) ──
+  const payDayByFreq: Record<string, string[]> = {
+    "Weekly":       ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Bi-Weekly A":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Bi-Weekly B":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Bi-Weekly":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    "Semi-Monthly": ["1st & 15th","15th & EOM","5th/20th"],
+    "Monthly":      ["EOM","1st","5th","10th","15th","20th","25th","28th"],
+    "Quarterly":    ["EOM","1st","5th","10th","15th","20th","25th","28th"],
+  };
+
   const [prFreq, setPrFreq] = useState("Bi-Weekly A");
   const [prPaydate, setPrPaydate] = useState("");
   const [prPin, setPrPin] = useState("");
@@ -326,7 +337,13 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <div className="two" style={{ display: "flex", gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Frequency</label>
-                <select style={inputStyle} value={prFreq} onChange={e => setPrFreq(e.target.value)}>
+                <select style={inputStyle} value={prFreq} onChange={e => {
+                  const newFreq = e.target.value;
+                  setPrFreq(newFreq);
+                  // Reset pay date if it's not valid for the new cadence
+                  const validDays = payDayByFreq[newFreq] || payDayByFreq[newFreq.replace(/ [AB]$/, "")] || [];
+                  if (prPaydate && !validDays.includes(prPaydate)) setPrPaydate("");
+                }}>
                   <option value="Weekly">Weekly</option><option value="Bi-Weekly A">Bi-Weekly A</option><option value="Bi-Weekly B">Bi-Weekly B</option><option value="Semi-Monthly">Semi-Monthly</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option>
                 </select>
               </div>
@@ -334,15 +351,9 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 <label style={{ ...labelStyle, marginTop: 8 }}>Pay date / day</label>
                 <select style={inputStyle} value={prPaydate} onChange={e => setPrPaydate(e.target.value)}>
                   <option value="">-</option>
-                  <option value="Fridays">Fridays</option>
-                  <option value="Saturdays">Saturdays</option>
-                  <option value="Thursdays">Thursdays</option>
-                  <option value="5th/20th">5th/20th</option>
-                  <option value="15th & EOM">15th & EOM</option>
-                  <option value="15th/EOM">15th/EOM</option>
-                  <option value="16th/EOM">16th/EOM</option>
-                  <option value="EOM">EOM</option>
-                  <option value="25th">25th</option>
+                  {(payDayByFreq[prFreq] || payDayByFreq[prFreq.replace(/ [AB]$/, "")] || []).map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -545,8 +556,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </select>
           </ServiceCard>
 
-          {/* Renditions */}
-          <ServiceCard icon="🏠" label="Renditions" checked={rend} onChange={setRend}>
+          {/* Annual Reports */}
+          <ServiceCard icon="📄" label="Annual Reports" checked={rend} onChange={setRend}>
             <label style={{ ...labelStyle, marginTop: 8 }}>Assigned to</label>
             <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
               {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
