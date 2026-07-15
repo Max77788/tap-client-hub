@@ -200,6 +200,7 @@ export async function GET(request: Request) {
               serviceName: `${sr.state} Renewal`,
               assignedTo: sr.assigned_to || "",
               frequency: sr.frequency || "Yearly",
+              comments: sr.comments || [],
             });
           }
         }
@@ -520,6 +521,7 @@ export async function PUT(request: Request) {
           identifiers: item.identifiers || null,
           assigned_to: item.assignedTo || null,
           frequency: item.frequency || "Yearly",
+          comments: item.comments || [],
         });
         if (insErr) console.error("SR insert error:", insErr.message);
       }
@@ -891,6 +893,7 @@ export async function PATCH(request: Request) {
           identifiers: item.identifiers || null,
           assigned_to: item.assignedTo || null,
           frequency: item.frequency || "Yearly",
+          comments: item.comments || [],
         });
       }
     }
