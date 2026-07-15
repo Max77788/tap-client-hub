@@ -785,6 +785,20 @@ export default function WorklistTable({
     [readOnly, isHistorical],
   );
 
+  // ── Keep dropdown visible by shifting if needed ──
+  useEffect(() => {
+    if (!dropdownPos || !dropdownRef.current) return;
+    const el = dropdownRef.current;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    let { top, left } = dropdownPos;
+    if (left - rect.width / 2 < 8) left = rect.width / 2 + 8;
+    if (left + rect.width / 2 > vw - 8) left = vw - rect.width / 2 - 8;
+    if (top !== dropdownPos.top || left !== dropdownPos.left) {
+      setDropdownPos({ top, left });
+    }
+  }, [dropdownPos]);
+
   // ── Select a stage from dropdown ──
   const handleStageSelect = useCallback(
     (clientId: string, monthIdx: number, stage: WorklistStage, csId?: string) => {
@@ -1825,7 +1839,7 @@ export default function WorklistTable({
             transform: "translateX(-50%)",
             background: "#fff", border: "1px solid #d8d2c4",
             borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
-            padding: "4px 0", minWidth: 160,
+            padding: "4px 0", minWidth: 190, overflow: "visible",
           }}
         >
           {STAGE_CYCLE.map((s) => {
@@ -1837,7 +1851,7 @@ export default function WorklistTable({
                 onClick={(e) => { e.stopPropagation(); handleStageSelect(activeDropdownInfo.client.id, activeDropdownInfo.monthIdx, s); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  padding: "7px 14px", cursor: "pointer", fontSize: 13,
+                  padding: "7px 14px", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap",
                   fontWeight: isCurrent ? 700 : 400,
                   color: isCurrent ? "var(--ink)" : "var(--muted)",
                   background: isCurrent ? "#f0f4f8" : "transparent",
