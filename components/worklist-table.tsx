@@ -512,6 +512,7 @@ export default function WorklistTable({
 
     // ── Sales tax line item: store comment on the line item itself ──
     if (stxIdx != null && svc.salesTaxLineItems) {
+      console.log("[addComment STX] csId:", svc.csId, "stxIdx:", stxIdx, "totalItems:", svc.salesTaxLineItems.length);
       const items = [...(svc.salesTaxLineItems || [])];
       if (!items[stxIdx]) { console.error("stxIdx out of range"); return; }
       items[stxIdx] = {
@@ -525,10 +526,13 @@ export default function WorklistTable({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: items }),
         });
+        console.log("[addComment STX] PATCH response:", res.status, res.ok);
         if (res.ok) {
           setCommentText("");
           setCommentRefreshKey(k => k + 1);
           onDataChange?.();
+        } else {
+          console.error("[addComment STX] PATCH failed with status:", res.status);
         }
       } catch (e) {
         console.error("Failed to add line item comment:", e);
