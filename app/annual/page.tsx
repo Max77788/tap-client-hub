@@ -29,10 +29,15 @@ export default function AnnualPage() {
       const items = rendSvc.stateRenewalItems || [];
       if (items.length > 0) {
         items.forEach((item: any, idx: number) => {
+          // Deep clone services so each item has independent months
+          const svcClone = JSON.parse(JSON.stringify(
+            client.services.find((s: any) => s.key === "renditions")
+          ));
           expanded.push({
             ...client,
             id: `${client.id}::${item.id}`,
             _originalClientId: client.id,
+            services: [svcClone],
             _renewalItem: item,
             _renewalIdx: idx,
             _renewalName: `${item.state} Renewal`,
@@ -83,7 +88,10 @@ export default function AnnualPage() {
   return (
     <div className="space-y-4">
       <WorklistTable serviceKey="renditions" clients={flatRenewalClients} year={year} loading={loading} showRenewalColumns
-        onStageChange={(clientId, monthIdx, stage) => updateServiceMonth(clientId, "renditions", monthIdx, stage)}
+        onStageChange={(flatId, monthIdx, stage) => {
+          const origId = flatId.includes("::") ? flatId.split("::")[0] : flatId;
+          updateServiceMonth(origId, "renditions", monthIdx, stage);
+        }}
         onClientClick={handleClientClick} />
       {selectedClient && (
         <ClientSlideover

@@ -1480,13 +1480,18 @@ export default function WorklistTable({
                   </>
                   )}
 
-                  {/* Assigned — read-only text for payroll, inline editable dropdown for others */}
+                  {/* Assigned — per-item for STX and renewals, service-level for others */}
                   <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
                     {isStxItem ? (
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-[11px] text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
                         title={`Open ${displayName} details`}
                       >{toShortName(stxItem.assignedTo || svc.assignedTo || svc.processor || "—")}</button>
+                    ) : isRenewalItem ? (
+                      <button onClick={() => onClientClick?.(client.id)}
+                        className="text-[11px] text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
+                        title={`Open ${renewalDisplayName} details`}
+                      >{toShortName(renewalItem?.assignedTo || "Unassigned")}</button>
                     ) : (
                       <span className="text-[var(--ink)]">{toShortName(svc.assignedTo || svc.processor || "—")}</span>
                     )}
