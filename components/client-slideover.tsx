@@ -1630,6 +1630,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       });
       throttledOnSave({
         ...c,
+        active: isActive,
         services: synced,
         // Also include client-level edits if Full client record was edited
         name: eName, type: eType as "Business" | "Personal", group: eGroup,
@@ -2694,6 +2695,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       });
       throttledOnSave({
         ...c,
+        active: isActive,
         name: eName,
         type: eType as "Business" | "Personal",
         group: eGroup,
