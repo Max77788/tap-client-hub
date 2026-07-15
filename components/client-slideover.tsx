@@ -2189,8 +2189,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             </div>
             )}
 
-            {/* Per-service assignee selector — skip for sales_tax (assigned at line-item level) */}
-            {moduleKey !== "sales_tax" && (
+            {/* Per-service assignee selector — skip for sales_tax and annual_reports (assigned at line-item level) */}
+            {moduleKey !== "sales_tax" && moduleKey !== "annual_reports" && (
             <div style={{ marginBottom: 12 }}>
               <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                 Assigned To
