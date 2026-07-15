@@ -1389,7 +1389,10 @@ export default function WorklistTable({
                 return (
                   <tr className="stxband">
                     <td colSpan={colCount}>
-                      <b>{client._groupOrigId ? (serviceClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId)?.name || '') : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} {svcLabel}{client._groupCount !== 1 ? "s" : ""}</span>
+                      <b>{client._groupOrigId ? (() => {
+                        const found = serviceClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId);
+                        return found ? <>{found.name}{found.active === false && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 700, color: "#c62828", background: "rgba(255,255,255,.85)", padding: "1px 6px", borderRadius: 3 }}>INACTIVE</span>}</> : '';
+                      })() : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} {svcLabel}{client._groupCount !== 1 ? "s" : ""}</span>
                     </td>
                   </tr>
                 );
@@ -1559,7 +1562,6 @@ export default function WorklistTable({
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
                         title={`Open ${isRenewalItem ? renewalDisplayName : displayName} details`}
                       >{isRenewalItem ? renewalDisplayName : displayName}
-                        {client.active === false && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#c62828", background: "#fce8e6", padding: "1px 5px", borderRadius: 4 }}>INACTIVE</span>}
                       </button>
                     </td>
 
