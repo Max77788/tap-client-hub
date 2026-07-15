@@ -445,9 +445,9 @@ export default function WorklistTable({
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
     const cl = clients.find((c: any) => (c._originalClientId || c.id) === origId);
-    if (!cl) return;
+    if (!cl) { console.warn("addComment: client not found for", origId); return; }
     const svc = cl.services.find((s: any) => s.key === serviceKey);
-    if (!svc?.csId) return;
+    if (!svc?.csId) { console.warn("addComment: no csId on service", serviceKey, "for client", cl.name); return; }
 
     const newComment: any = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -536,9 +536,9 @@ export default function WorklistTable({
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
     const cl = clients.find((c: any) => (c._originalClientId || c.id) === origId);
-    if (!cl) return;
+    if (!cl) { console.warn("deleteComment: client not found for", origId); return; }
     const svc = cl.services.find((s: any) => s.key === serviceKey);
-    if (!svc?.csId) return;
+    if (!svc?.csId) { console.warn("deleteComment: no csId on service", serviceKey); return; }
 
     // ── Sales tax line item: delete from line item comments ──
     if (stxIdx != null && svc.salesTaxLineItems) {
