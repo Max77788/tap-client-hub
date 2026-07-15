@@ -239,10 +239,13 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     addSvc("1099s", t9, "Yearly", t9Assigned, {
       expectedAnnual: t9Count ? parseInt(t9Count) : undefined,
     });
-    addSvc("renditions", rend, "Yearly", rendAssigned, {
-      stateRenewal: stateRenewalItems.length > 0 || null,
-      stateRenewalItems: stateRenewalItems.length > 0 ? stateRenewalItems : undefined,
-    });
+    addSvc("renditions", rend, "Yearly", rendAssigned);
+    if (stateRenewalItems.length > 0 && rend) {
+      addSvc("annual_reports", true, "Yearly", "Unassigned", {
+        stateRenewal: true,
+        stateRenewalItems,
+      });
+    }
     addSvc("tax_returns", tax, "Yearly", taxAssigned, {
       processor: taxType,
       filingMonth: taxFilingMonth || null,

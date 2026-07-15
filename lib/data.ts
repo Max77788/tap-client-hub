@@ -27,7 +27,8 @@ export const SERVICE_META: Record<ServiceKey, { label: string; pillColor: string
   payroll:     { label: "Payroll",     pillColor: "#214b6e",            pillBg: "var(--blue-soft)"   },
   sales_tax:   { label: "Sales Tax",   pillColor: "#8a560f",            pillBg: "var(--amber-soft)"  },
   "1099s":     { label: "1099s",       pillColor: "#7a5436",            pillBg: "#f0e8e2"             },
-  renditions:  { label: "Renditions",  pillColor: "#3a5a44",            pillBg: "#e7eee8"             },
+  renditions:     { label: "Renditions",     pillColor: "#3a5a44",            pillBg: "#e7eee8"             },
+  annual_reports: { label: "Annual Reports", pillColor: "#4a4a80",            pillBg: "#e7eaf0"             },
   tax_returns: { label: "Tax Returns", pillColor: "#5a4a80",            pillBg: "#ece7f3"             },
 };
 

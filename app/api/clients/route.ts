@@ -26,6 +26,7 @@ async function getSupabaseAnon() {
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FIN: "financials", PR: "payroll", STX: "sales_tax",
   T9: "1099s", REND: "renditions", TAX: "tax_returns",
+  RENEWAL: "annual_reports",
 };
 
 export const dynamic = "force-dynamic"; // Never cache — data changes frequently
@@ -429,6 +430,7 @@ export async function PUT(request: Request) {
     const KEY_TO_CODE: Record<string, string> = {
       financials: "FIN", payroll: "PR", sales_tax: "STX",
       "1099s": "T9", renditions: "REND", tax_returns: "TAX",
+      annual_reports: "RENEWAL",
     };
 
     // Build unique codes we need
@@ -580,7 +582,7 @@ export async function PUT(request: Request) {
             }
             results.push({ key: svc.key, action: "activated" });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
-            if (svc.key === "renditions" && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
+            if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           } else {
             // Base fields update
@@ -624,7 +626,7 @@ export async function PUT(request: Request) {
             }
             results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1, _stxSyncErr: stxSyncErr, _csId: existing.id } as any);
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
-            if (svc.key === "renditions" && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
+            if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           }
         } else {
@@ -668,7 +670,7 @@ export async function PUT(request: Request) {
           } else {
             results.push({ key: svc.key, action: "created" });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(newCsId as string, svc.salesTaxLineItems);
-            if (svc.key === "renditions" && svc.stateRenewalItems) await syncStateRenewals(newCsId as string, svc.stateRenewalItems);
+            if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(newCsId as string, svc.stateRenewalItems);
             if (svc.comments) await syncComments(newCsId as string, svc.comments);
           }
         }

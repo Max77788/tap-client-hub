@@ -70,8 +70,8 @@ interface ClientSlideoverProps {
 }
 
 export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser, stxLineItemFocus }: ClientSlideoverProps) {
-  // Resolve virtual module keys to real service keys
-  const resolvedKey = moduleKey === "annual_reports" ? "renditions" : moduleKey;
+  // Resolve virtual module keys to real service keys (annual_reports is now its own key)
+  const resolvedKey = moduleKey === "annual_reports" ? "annual_reports" : moduleKey;
   const isWorklistTab = !!moduleKey;
   const bodyRef = useRef<HTMLDivElement>(null);
   const scrollPosRef = useRef(0);
@@ -253,7 +253,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // ── Tax returns state ──
   const trSvcInit = client.services.find((s: any) => s.key === "tax_returns");
-  const rendSvcInit = client.services.find((s: any) => s.key === "renditions");
+  const rendSvcInit = client.services.find((s: any) => s.key === "annual_reports") || client.services.find((s: any) => s.key === "renditions");
   const [filingState, setFilingState] = useState(trSvcInit?.filingState || "");
   const [filingMonth, setFilingMonth] = useState(trSvcInit?.filingMonth ? String(trSvcInit.filingMonth) : "");
   const [filingType, setFilingType] = useState(trSvcInit?.filingType || "");
@@ -357,7 +357,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     // Auto-select the month with the earliest comment for the active module
     if (moduleKey) {
       // Map virtual module keys to real service keys
-      const resolvedKey = moduleKey === "annual_reports" ? "renditions" : moduleKey;
+      const resolvedKey = moduleKey === "annual_reports" ? "annual_reports" : moduleKey;
       const svc = client.services.find((s: any) => s.key === resolvedKey);
       const comments = svc?.comments || [];
       if (comments.length > 0) {
@@ -996,16 +996,25 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             className={`sw ${svc.enabled ? "on" : ""}`}
             onClick={() => {
               if (moduleKey) return;
-              if (isAnnualReports && svc.key === "annual_reports") {
-                // Toggle annual_reports controls renditions' stateRenewal
-                const rend = localSvcs.find((s: any) => s.key === "renditions");
-                const newVal = !(rend?.stateRenewal || false);
-                setStateRenewal(newVal);
-                saveServiceField("renditions", "stateRenewal", newVal);
-                // Also enable renditions if turning on
-                if (newVal && rend && !rend.enabled) {
-                  toggleSvc("renditions");
-                }
+              if (svc.key === "annual_reports") {
+                // Toggle annual_reports as a real service
+                const newEnabled = !svc.enabled;
+                setLocalSvcs(prev => {
+                  const updated = prev.map((s: any) =>
+                    s.key === "annual_reports" ? { ...s, enabled: newEnabled, stateRenewal: newEnabled, months: s.enabled ? Array(12).fill("lock") : s.months } : s
+                  );
+                  // If enabling, copy current stateRenewalItems from renditions if annual_reports has none
+                  if (newEnabled) {
+                    const rend = updated.find((s: any) => s.key === "renditions");
+                    const annual = updated.find((s: any) => s.key === "annual_reports");
+                    if (rend && annual && !annual.stateRenewalItems?.length && rend.stateRenewalItems?.length) {
+                      annual.stateRenewalItems = rend.stateRenewalItems;
+                      annual.stateRenewal = true;
+                    }
+                  }
+                  throttledOnSave({ ...client, services: updated });
+                  return updated;
+                });
                 return;
               }
               toggleSvc(svc.key);
@@ -2303,7 +2312,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Month stage grid — for renditions/annual_reports module view */}
-            {resolvedKey === "renditions" && targetSvc.enabled && (
+            {((resolvedKey === "renditions" || resolvedKey === "annual_reports") || moduleKey === "annual_reports") && targetSvc.enabled && (
               <div style={{ marginBottom: 12 }}>
                 <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 8px" }}>
                   Queue

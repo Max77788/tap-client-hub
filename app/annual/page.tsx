@@ -19,11 +19,11 @@ export default function AnnualPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
 
-  // Filter + expand: clients with renditions + stateRenewal=true, expand stateRenewalItems into rows
+  // Filter + expand: clients with annual_reports + stateRenewal=true, expand stateRenewalItems into rows
   const flatRenewalClients = useMemo(() => {
     const expanded: any[] = [];
     for (const client of clients) {
-      const rendSvc = client.services?.find((s: any) => s.key === "renditions" && s.enabled);
+      const rendSvc = client.services?.find((s: any) => s.key === "annual_reports" && s.enabled);
       if (!rendSvc?.stateRenewal) continue;
 
       const items = rendSvc.stateRenewalItems || [];
@@ -31,7 +31,7 @@ export default function AnnualPage() {
         items.forEach((item: any, idx: number) => {
           // Deep clone services so each item has independent months
           const svcClone = JSON.parse(JSON.stringify(
-            client.services.find((s: any) => s.key === "renditions")
+            client.services.find((s: any) => s.key === "annual_reports")
           ));
           expanded.push({
             ...client,
