@@ -50,7 +50,7 @@ const svcMeta: Record<string, { label: string; ic: string; bg: string }> = {
   sales_tax:   { label: "Sales Tax", ic: "🧾", bg: "var(--amber-soft)" },
   tax_returns: { label: "Tax Return", ic: "📋", bg: "#ece7f3" },
   "1099s":     { label: "1099 Filing", ic: "📄", bg: "#f0e8e2" },
-  renditions:       { label: "Annual Reports", ic: "📄", bg: "#e7eee8" },
+  renditions:       { label: "Renditions",  ic: "🏠", bg: "#e7eee8" },
   annual_reports:   { label: "Annual Reports", ic: "📄", bg: "#e7eee8" },
 };
 const svcLabel = (k: string) => svcMeta[k]?.label || k;
@@ -969,7 +969,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const isFin = svc.key === "financials";
     const isT9 = svc.key === "1099s";
     const isRend = svc.key === "renditions";
-    const isAnnualReports = svc.key === "renditions" && moduleKey === "annual_reports";
+    const isAnnualReports = svc.key === "annual_reports" || (svc.key === "renditions" && moduleKey === "annual_reports");
+    const isRendOrAnnual = svc.key === "renditions" || svc.key === "annual_reports";
 
     return (
       <div style={{ marginBottom: 12, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
@@ -993,7 +994,22 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           </div>
           <div
             className={`sw ${svc.enabled ? "on" : ""}`}
-            onClick={() => { if (!moduleKey) toggleSvc(svc.key); }}
+            onClick={() => {
+              if (moduleKey) return;
+              if (isAnnualReports && svc.key === "annual_reports") {
+                // Toggle annual_reports controls renditions' stateRenewal
+                const rend = localSvcs.find((s: any) => s.key === "renditions");
+                const newVal = !(rend?.stateRenewal || false);
+                setStateRenewal(newVal);
+                saveServiceField("renditions", "stateRenewal", newVal);
+                // Also enable renditions if turning on
+                if (newVal && rend && !rend.enabled) {
+                  toggleSvc("renditions");
+                }
+                return;
+              }
+              toggleSvc(svc.key);
+            }}
             style={{
               width: 46, height: 27, borderRadius: 20,
               background: svc.enabled ? "var(--teal)" : "#d8d2c4",
@@ -1527,8 +1543,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
-            {/* Renditions: state renewal items */}
-            {isRend && (
+            {/* Renditions / Annual Reports: state renewal items */}
+            {isRendOrAnnual && svc.enabled && (
               <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 4 }}>
                   State Renewals ({renewalItems.length})
@@ -2737,6 +2753,25 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       setTimeout(() => { setToast(null); setSaving(false); }, 2000);
     }
 
+    // ── Inject Annual Reports as a synthetic service derived from Renditions ──
+    const hasAnnual = localSvcs.some((s: any) => s.key === "annual_reports");
+    const displaySvcs = hasAnnual ? localSvcs : (() => {
+      const rend = localSvcs.find((s: any) => s.key === "renditions");
+      if (!rend) return localSvcs;
+      const annualSvc = {
+        key: "annual_reports",
+        label: "Annual Reports",
+        enabled: !!(rend.stateRenewal || (rend.stateRenewalItems?.length > 0)),
+        stateRenewal: rend.stateRenewal || false,
+        stateRenewalItems: rend.stateRenewalItems || [],
+        assignedTo: (rend.stateRenewalItems || [])[0]?.assignedTo || "",
+        frequency: "Yearly",
+        months: rend.months || [],
+        csId: rend.csId,
+      };
+      return [...localSvcs, annualSvc];
+    })();
+
     return (
       <>
         <div className="scrim show" onClick={() => { handleSave(); onClose(); }} />
@@ -2854,7 +2889,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 10px" }}>
                 Services
               </div>
-              {localSvcs.map((svc: any) => (
+              {displaySvcs.map((svc: any) => (
                 <SingleServiceCard key={svc.key} svc={svc} />
               ))}
             </div>
