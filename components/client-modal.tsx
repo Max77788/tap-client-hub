@@ -50,8 +50,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     // From Google Sheet (normalized)
     "15th/EOM","16th/EOM","25th","5th/20th","EOM",
     "Fridays","Saturdays","Thursdays",
-    // Weekdays
-    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday",
+    // Weekdays (deduped — sheet already covers Fri/Sat/Thu)
+    "Monday","Tuesday","Wednesday","Sunday",
   ];
 
   // ── Calculate next payroll start date based on cadence + pay day ──

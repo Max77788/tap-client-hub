@@ -194,8 +194,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     // From Google Sheet (normalized)
     "15th/EOM","16th/EOM","25th","5th/20th","EOM",
     "Fridays","Saturdays","Thursdays",
-    // Weekdays
-    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday",
+    // Weekdays (deduped — sheet already covers Fri/Sat/Thu)
+    "Monday","Tuesday","Wednesday","Sunday",
   ];
 
   // ── Calculate next payroll start date based on cadence + pay day ──
@@ -1148,6 +1148,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <option value="Bi-Weekly B">Bi-Weekly B</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
                     <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
                   </select>
                 </div>
               </div>
@@ -2311,6 +2312,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <option value="Bi-Weekly B">Bi-Weekly B</option>
                     <option value="Semi-Monthly">Semi-Monthly</option>
                     <option value="Monthly">Monthly</option>
+                    <option value="Quarterly">Quarterly</option>
                   </select>
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
