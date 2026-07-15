@@ -60,7 +60,9 @@ export default function AnnualPage() {
   );
 
   const handleClientClick = useCallback((clientId: string) => {
-    setSelectedClientId(clientId);
+    // Strip composite ID (UUID::state_renewal_id) to get the real client UUID
+    const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
+    setSelectedClientId(origId);
     setSlideoverOpen(true);
   }, []);
 
