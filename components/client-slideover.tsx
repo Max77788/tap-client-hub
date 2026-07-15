@@ -1527,6 +1527,22 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
+            {/* Renditions: state renewal items */}
+            {isRend && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 4 }}>
+                  State Renewals ({renewalItems.length})
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", marginBottom: renewalItems.length > 0 ? 8 : 4 }}>
+                  <input type="checkbox" checked={stateRenewal} onChange={e => {
+                    setStateRenewal(e.target.checked);
+                    saveServiceField("renditions", "stateRenewal", e.target.checked);
+                  }} style={{ width: "auto" }} />
+                  Enable state renewal tracking
+                </label>
+              </div>
+            )}
+
             {/* Legend + Month cells — skip for sales tax (handled by line items) */}
             {!isSalesTax && (
               <>

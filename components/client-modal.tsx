@@ -124,11 +124,14 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [taxFilingMonth, setTaxFilingMonth] = useState("");
   const [taxFilingState, setTaxFilingState] = useState("");
   const [taxFilingType, setTaxFilingType] = useState("");
-  const [taxStateRenewal, setTaxStateRenewal] = useState(false);
-  const [taxRenewalState, setTaxRenewalState] = useState("TX");
-  const [taxRenewalDueMonth, setTaxRenewalDueMonth] = useState("");
-  const [taxRenewalDueDay, setTaxRenewalDueDay] = useState("");
-  const [taxRenewalIds, setTaxRenewalIds] = useState("");
+  // ── Multi-state renewal items ──
+  const [stateRenewalItems, setStateRenewalItems] = useState<any[]>([]);
+  const [addingRenewal, setAddingRenewal] = useState(false);
+  const [newRenewalState, setNewRenewalState] = useState("TX");
+  const [newRenewalMonth, setNewRenewalMonth] = useState("");
+  const [newRenewalDay, setNewRenewalDay] = useState("");
+  const [newRenewalIds, setNewRenewalIds] = useState("");
+  const [newRenewalAssigned, setNewRenewalAssigned] = useState("Unassigned");
 
   // Per-service assigned staff
   const [finAssigned, setFinAssigned] = useState("Unassigned");
@@ -176,11 +179,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         setTaxFilingMonth(trSvc.filingMonth || "");
         setTaxFilingState(trSvc.filingState || "");
         setTaxFilingType(trSvc.filingType || "");
-        setTaxStateRenewal(rendSvc?.stateRenewal || false);
-        setTaxRenewalState(rendSvc?.renewalState || "TX");
-        setTaxRenewalDueMonth(rendSvc?.renewalDueMonth || "");
-        setTaxRenewalDueDay(rendSvc?.renewalDueDay || "");
-        setTaxRenewalIds(rendSvc?.renewalIdentifiers || "");
+        const rendSvcEdit = svcs.find((s: any) => s.key === "renditions");
+        setStateRenewalItems(rendSvcEdit?.stateRenewalItems || []);
       }
     } else {
       setName(""); setType("Business"); setGroup(""); setContact(""); setAssigned("Unassigned");
@@ -190,8 +190,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
       setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
       setTaxFilingMonth(""); setTaxFilingState("");
-      setTaxFilingType(""); setTaxStateRenewal(false);
-      setTaxRenewalState("TX"); setTaxRenewalDueMonth(""); setTaxRenewalDueDay(""); setTaxRenewalIds("");
+      setTaxFilingType(""); setStateRenewalItems([]);
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
       setFinAssigned("Unassigned"); setPrAssigned("Unassigned");
       setT9Assigned("Unassigned"); setRendAssigned("Unassigned"); setTaxAssigned("Unassigned");
@@ -241,11 +240,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       expectedAnnual: t9Count ? parseInt(t9Count) : undefined,
     });
     addSvc("renditions", rend, "Yearly", rendAssigned, {
-      stateRenewal: taxStateRenewal || null,
-      renewalState: taxStateRenewal ? taxRenewalState : undefined,
-      renewalDueMonth: taxStateRenewal ? taxRenewalDueMonth : undefined,
-      renewalDueDay: taxStateRenewal ? taxRenewalDueDay : undefined,
-      renewalIdentifiers: taxStateRenewal ? taxRenewalIds : undefined,
+      stateRenewal: stateRenewalItems.length > 0 || null,
+      stateRenewalItems: stateRenewalItems.length > 0 ? stateRenewalItems : undefined,
     });
     addSvc("tax_returns", tax, "Yearly", taxAssigned, {
       processor: taxType,
@@ -606,36 +602,68 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             <select style={inputStyle} value={rendAssigned} onChange={e => setRendAssigned(e.target.value)}>
               {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            {/* State renewal */}
-            <label style={{ ...labelStyle, marginTop: 12, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-              <input type="checkbox" checked={taxStateRenewal} onChange={e => setTaxStateRenewal(e.target.checked)} style={{ width: "auto" }} />
-              State renewal
-            </label>
-            {taxStateRenewal && (
-              <>
-                <div className="two" style={{ display: "flex", gap: 12 }}>
+            {/* State renewal — multi-state support */}
+            <label style={{ ...labelStyle, marginTop: 12, fontWeight: 600 }}>State Renewals</label>
+            {stateRenewalItems.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+                {stateRenewalItems.map((item: any, idx: number) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", background: "var(--paper)", borderRadius: 6, fontSize: 12 }}>
+                    <span style={{ fontWeight: 600, minWidth: 30 }}>{item.state}</span>
+                    <span style={{ color: "var(--muted)", fontSize: 11 }}>
+                      Due: {item.dueMonth ? MONTH_NAMES[Math.max(0, Math.min(11, parseInt(item.dueMonth || "1") - 1))] : "—"}{item.dueDay ? ` ${item.dueDay}` : ""}
+                    </span>
+                    <span style={{ color: "var(--muted)", fontSize: 10, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.identifiers || ""}</span>
+                    <button onClick={() => setStateRenewalItems(prev => prev.filter((_, i) => i !== idx))}
+                      style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 14, lineHeight: 1, padding: "0 2px" }}
+                      title="Remove">×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {addingRenewal ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+                <div style={{ display: "flex", gap: 6 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, marginTop: 8 }}>STATE</label>
-                    <select style={inputStyle} value={taxRenewalState} onChange={e => setTaxRenewalState(e.target.value)}>
-                      <option value="">—</option>
+                    <select style={inputStyle} value={newRenewalState} onChange={e => setNewRenewalState(e.target.value)}>
+                      <option value="">State</option>
                       {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
                     </select>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, marginTop: 8 }}>Due Month</label>
-                    <select style={inputStyle} value={taxRenewalDueMonth} onChange={e => setTaxRenewalDueMonth(e.target.value)}>
-                      <option value="">—</option>
+                    <select style={inputStyle} value={newRenewalMonth} onChange={e => setNewRenewalMonth(e.target.value)}>
+                      <option value="">Month</option>
                       {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                     </select>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ ...labelStyle, marginTop: 8 }}>Due Day</label>
-                    <input style={inputStyle} type="number" value={taxRenewalDueDay} onChange={e => setTaxRenewalDueDay(e.target.value)} placeholder="1-31" min="1" max="31" />
+                  <div style={{ flex: 0.6 }}>
+                    <input style={inputStyle} type="number" value={newRenewalDay} onChange={e => setNewRenewalDay(e.target.value)} placeholder="Day" min="1" max="31" />
                   </div>
                 </div>
-                <label style={{ ...labelStyle, marginTop: 8 }}>Identifying Numbers</label>
-                <input style={inputStyle} value={taxRenewalIds} onChange={e => setTaxRenewalIds(e.target.value)} placeholder="e.g. EIN, state IDs" />
-              </>
+                <input style={inputStyle} value={newRenewalIds} onChange={e => setNewRenewalIds(e.target.value)} placeholder="IDs (e.g. EIN, state IDs)" />
+                <select style={inputStyle} value={newRenewalAssigned} onChange={e => setNewRenewalAssigned(e.target.value)}>
+                  {STAFF_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setAddingRenewal(false)}
+                    style={{ all: "unset", cursor: "pointer", padding: "4px 10px", borderRadius: 6, fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>Cancel</button>
+                  <button onClick={() => {
+                    if (!newRenewalState) return;
+                    setStateRenewalItems(prev => [...prev, {
+                      state: newRenewalState, dueMonth: newRenewalMonth, dueDay: newRenewalDay,
+                      identifiers: newRenewalIds, assignedTo: newRenewalAssigned, frequency: "Yearly",
+                    }]);
+                    setNewRenewalState("TX"); setNewRenewalMonth(""); setNewRenewalDay("");
+                    setNewRenewalIds(""); setNewRenewalAssigned("Unassigned");
+                    setAddingRenewal(false);
+                  }}
+                    style={{ all: "unset", cursor: "pointer", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Add</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setAddingRenewal(true)}
+                style={{ all: "unset", cursor: "pointer", marginTop: 6, padding: "6px 12px", border: "1px dashed var(--line)", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "var(--teal)", width: "100%", boxSizing: "border-box", textAlign: "center" }}>
+                + Add state
+              </button>
             )}
           </ServiceCard>
 
