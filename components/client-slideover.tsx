@@ -365,59 +365,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setPrEftps(prSvc?.eftps || "");
     setPrEmails(prSvc?.payEmails || []);
     setPrPeriodFreq(prSvc?.frequency || prSvc?.payPeriodFrequency || "");
-    // Auto-fill start date if cadence is set but start date is not
-    if ((prSvc?.frequency || prSvc?.payPeriodFrequency) && !prSvc?.payStartDate) {
-      const freq = prSvc?.frequency || prSvc?.payPeriodFrequency || "";
-      const today = new Date();
-      let d = new Date(today);
-      d.setDate(d.getDate() + 1);
-      let finalDate = "";
-      if (freq === "Weekly") {
-        while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
-        finalDate = d.toISOString().slice(0, 10);
-      } else if (freq === "Bi-Weekly" || freq === "Bi-Weekly A") {
-        while (true) {
-          if (d.getDay() === 5) {
-            const dom = d.getDate();
-            if ((dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31)) {
-              finalDate = d.toISOString().slice(0, 10);
-              break;
-            }
-          }
-          d.setDate(d.getDate() + 1);
-        }
-      } else if (freq === "Bi-Weekly B") {
-        while (true) {
-          if (d.getDay() === 5) {
-            const dom = d.getDate();
-            if ((dom >= 8 && dom <= 14) || (dom >= 23 && dom <= 28)) {
-              finalDate = d.toISOString().slice(0, 10);
-              break;
-            }
-          }
-          d.setDate(d.getDate() + 1);
-        }
-      } else if (freq === "Semi-Monthly") {
-        while (true) {
-          const dom = d.getDate();
-          if (dom === 1 || dom === 15) {
-            finalDate = d.toISOString().slice(0, 10);
-            break;
-          }
-          d.setDate(d.getDate() + 1);
-        }
-      } else if (freq === "Monthly") {
-        while (true) {
-          if (d.getDate() === 1) {
-            finalDate = d.toISOString().slice(0, 10);
-            break;
-          }
-          d.setDate(d.getDate() + 1);
-        }
-      }
-      if (finalDate) {
-        setPrStartDate(finalDate);
-        if (prSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:prSvc.csId,payStartDate:finalDate})}).catch(()=>{});
+    // Auto-fill start date if cadence + pay day are set but start date is not
+    const effectiveFreq = prSvc?.frequency || prSvc?.payPeriodFrequency || "";
+    const effectivePayday = prSvc?.paydate || "";
+    if (effectiveFreq && effectivePayday && !prSvc?.payStartDate) {
+      const newStart = calcPayrollStartDate(effectiveFreq, effectivePayday);
+      if (newStart) {
+        setPrStartDate(newStart);
+        if (prSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:prSvc.csId,payStartDate:newStart})}).catch(()=>{});
       }
     }
     setPrReportingMethod(prSvc?.reportingMethod || "");
