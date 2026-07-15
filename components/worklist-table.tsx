@@ -510,35 +510,8 @@ export default function WorklistTable({
     if (stxIdx != null) newComment.stxIdx = stxIdx;
     if (renewalIdx != null) newComment.renewalIdx = renewalIdx;
 
-    // ── Sales tax line item: store comment on the line item itself ──
-    if (stxIdx != null && svc.salesTaxLineItems) {
-      console.log("[addComment STX] csId:", svc.csId, "stxIdx:", stxIdx, "totalItems:", svc.salesTaxLineItems.length);
-      const items = [...(svc.salesTaxLineItems || [])];
-      if (!items[stxIdx]) { console.error("stxIdx out of range"); return; }
-      items[stxIdx] = {
-        ...items[stxIdx],
-        comments: [...(items[stxIdx].comments || []), newComment],
-      };
-      svc.salesTaxLineItems = items;
-      try {
-        const res = await fetch("/api/clients", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: items }),
-        });
-        console.log("[addComment STX] PATCH response:", res.status, res.ok);
-        if (res.ok) {
-          setCommentText("");
-          setCommentRefreshKey(k => k + 1);
-          onDataChange?.();
-        } else {
-          console.error("[addComment STX] PATCH failed with status:", res.status);
-        }
-      } catch (e) {
-        console.error("Failed to add line item comment:", e);
-      }
-      return;
-    }
+    // ── STX: store comment on the service itself (not per-line-item) ──
+    // Falls through to generic service-level handler below
 
     // ── State renewal item: store comment on the renewal item ──
     if (renewalIdx != null && svc.stateRenewalItems) {
@@ -574,7 +547,7 @@ export default function WorklistTable({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: clientId,
+          id: origId,
           services: [{ csId: svc.csId, key: serviceKey, enabled: true, comments: updatedComments }],
         }),
       });
@@ -643,7 +616,7 @@ export default function WorklistTable({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: clientId,
+          id: origId,
           services: [{ csId: svc.csId, key: serviceKey, enabled: true, comments: updatedComments }],
         }),
       });
@@ -1681,9 +1654,7 @@ export default function WorklistTable({
                       : stage === "na" ? "–" : "";
                     const lockHist = isHistorical && isActive;
                     // ── Comment marker: per-line-item for STX & renewals, service-level otherwise ──
-                    const commentSource = isStxItem && stxIdx != null && stxIdx >= 0
-                      ? (svc.salesTaxLineItems?.[stxIdx]?.comments || [])
-                      : isRenewalItem
+                    const commentSource = isRenewalItem
                       ? (renewalItem?.comments || [])
                       : (serviceKey === "renditions" || serviceKey === "annual_reports")
                       ? []
