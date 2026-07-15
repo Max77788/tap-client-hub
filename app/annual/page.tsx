@@ -31,6 +31,8 @@ export default function AnnualPage() {
         items.forEach((item: any, idx: number) => {
           expanded.push({
             ...client,
+            id: `${client.id}::${item.id}`,
+            _originalClientId: client.id,
             _renewalItem: item,
             _renewalIdx: idx,
             _renewalName: `${item.state} Renewal`,
@@ -40,6 +42,8 @@ export default function AnnualPage() {
         // No items yet but stateRenewal=true — show a single placeholder row
         expanded.push({
           ...client,
+          id: `${client.id}::placeholder`,
+          _originalClientId: client.id,
           _renewalItem: null,
           _renewalIdx: -1,
           _renewalName: null,
