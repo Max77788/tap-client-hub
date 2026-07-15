@@ -489,7 +489,7 @@ export async function PUT(request: Request) {
       if (delErr) { console.error("STX delete error:", delErr.message); return; }
       for (const item of items) {
         const { error: insErr } = await supabase.from("sales_tax_registration").insert({
-          id: randomUUID(),
+          id: item.id || randomUUID(),
           client_service_id: csId,
           rt_number: item.rt || item.rt_number || "",
           service_name: item.serviceName || "",
@@ -859,7 +859,7 @@ export async function PATCH(request: Request) {
       const stxItems = Array.isArray(salesTaxLineItems) ? salesTaxLineItems : [];
       for (const item of stxItems) {
         await supabase.from("sales_tax_registration").insert({
-          id: randomUUID(),
+          id: item.id || randomUUID(),
           client_service_id: csId,
           rt_number: item.rt || item.rt_number || "",
           service_name: item.serviceName || "",
