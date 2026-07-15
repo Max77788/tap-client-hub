@@ -45,16 +45,50 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [finFreq, setFinFreq] = useState("Monthly");
   const [finMonth, setFinMonth] = useState("1");
 
-  // ── Pay Day options (filtered by cadence) ──
-  const payDayByFreq: Record<string, string[]> = {
-    "Weekly":       ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Bi-Weekly A":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Bi-Weekly B":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Bi-Weekly":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Semi-Monthly": ["1st & 15th","15th & EOM","5th/20th"],
-    "Monthly":      ["EOM","1st","5th","10th","15th","20th","25th","28th"],
-    "Quarterly":    ["EOM","1st","5th","10th","15th","20th","25th","28th"],
-  };
+  // ── Pay Day options (all options, no cadence filtering) ──
+  const payDayOptions = [
+    // From Google Sheet (normalized)
+    "15th/EOM","16th/EOM","25th","5th/20th","EOM",
+    "Fridays","Saturdays","Thursdays",
+    // Weekdays
+    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday",
+  ];
+
+  // ── Calculate next payroll start date based on cadence + pay day ──
+  function calcPayrollStartDate(cadence: string, payDay: string): string | null {
+    if (!cadence || !payDay) return null;
+    const today = new Date();
+    let d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    const dowMap: Record<string, number> = {
+      sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,
+      sundays:0,mondays:1,tuesdays:2,wednesdays:3,thursdays:4,fridays:5,saturdays:6,
+    };
+    const dow = dowMap[payDay.toLowerCase()];
+    if (cadence === "Weekly" || cadence === "Bi-Weekly A" || cadence === "Bi-Weekly B") {
+      if (dow === undefined) return null;
+      while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
+      if (cadence === "Bi-Weekly B") d.setDate(d.getDate() + 7);
+      return d.toISOString().slice(0,10);
+    }
+    const parts = payDay.split("/");
+    for (let attempt = 0; attempt < 62; attempt++) {
+      const dom = d.getDate();
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      let match = false;
+      for (const p of parts) {
+        if (p === "EOM" && dom === lastDay) match = true;
+        else if (/^\d+/.test(p)) {
+          const n = parseInt(p);
+          if (n <= lastDay && dom === n) match = true;
+          else if (n > lastDay && dom === lastDay) match = true;
+        }
+      }
+      if (match) return d.toISOString().slice(0,10);
+      d.setDate(d.getDate() + 1);
+    }
+    return null;
+  }
 
   const [prFreq, setPrFreq] = useState("Bi-Weekly A");
   const [prPaydate, setPrPaydate] = useState("");
@@ -340,18 +374,21 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
                 <select style={inputStyle} value={prFreq} onChange={e => {
                   const newFreq = e.target.value;
                   setPrFreq(newFreq);
-                  // Reset pay date if it's not valid for the new cadence
-                  const validDays = payDayByFreq[newFreq] || payDayByFreq[newFreq.replace(/ [AB]$/, "")] || [];
-                  if (prPaydate && !validDays.includes(prPaydate)) setPrPaydate("");
+                  // Recalculate start date
+                  const newStart = calcPayrollStartDate(newFreq, prPaydate);
                 }}>
                   <option value="Weekly">Weekly</option><option value="Bi-Weekly A">Bi-Weekly A</option><option value="Bi-Weekly B">Bi-Weekly B</option><option value="Semi-Monthly">Semi-Monthly</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ ...labelStyle, marginTop: 8 }}>Pay date / day</label>
-                <select style={inputStyle} value={prPaydate} onChange={e => setPrPaydate(e.target.value)}>
+                <select style={inputStyle} value={prPaydate} onChange={e => {
+                  setPrPaydate(e.target.value);
+                  // Calculate start date dynamically
+                  const newStart = calcPayrollStartDate(prFreq, e.target.value);
+                }}>
                   <option value="">-</option>
-                  {(payDayByFreq[prFreq] || payDayByFreq[prFreq.replace(/ [AB]$/, "")] || []).map(opt => (
+                  {(payDayOptions).map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>

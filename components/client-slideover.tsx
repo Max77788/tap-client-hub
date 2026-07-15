@@ -189,17 +189,58 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const stxRoutingRef = useRef<HTMLInputElement>(null);
   const stxAccountRef = useRef<HTMLInputElement>(null);
 
-  // ── Pay Day options (local, filtered by cadence) ──
-  const payDayByFreq: Record<string, string[]> = {
-    "Weekly":       ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Bi-Weekly A":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Bi-Weekly B":  ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Bi-Weekly":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-    "Semi-Monthly": ["1st & 15th","15th & EOM","5th/20th"],
-    "Monthly":      ["EOM","1st","5th","10th","15th","20th","25th","28th"],
-    "Quarterly":    ["EOM","1st","5th","10th","15th","20th","25th","28th"],
-  };
-  const payDayOptions = Object.values(payDayByFreq).flat().filter((v,i,a) => a.indexOf(v) === i);
+  // ── Pay Day options (all options, no cadence filtering) ──
+  const payDayOptions = [
+    // From Google Sheet (normalized)
+    "15th/EOM","16th/EOM","25th","5th/20th","EOM",
+    "Fridays","Saturdays","Thursdays",
+    // Weekdays
+    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday",
+  ];
+
+  // ── Calculate next payroll start date based on cadence + pay day ──
+  function calcPayrollStartDate(cadence: string, payDay: string): string | null {
+    if (!cadence || !payDay) return null;
+    const today = new Date();
+    let d = new Date(today);
+    d.setDate(d.getDate() + 1); // start from tomorrow
+
+    // Map weekday names to day numbers (handle both "Friday" and "Fridays")
+    const dayMap: Record<string, number> = {
+      sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,
+      sundays:0,mondays:1,tuesdays:2,wednesdays:3,thursdays:4,fridays:5,saturdays:6,
+    };
+    const dow = dayMap[payDay.toLowerCase()];
+
+    if (cadence === "Weekly" || cadence === "Bi-Weekly A" || cadence === "Bi-Weekly B") {
+      if (dow === undefined) return null;
+      while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
+      if (cadence === "Bi-Weekly B") {
+        // Advance one more week for B cycle
+        d.setDate(d.getDate() + 7);
+      }
+      return d.toISOString().slice(0,10);
+    }
+
+    // Date-based pay days: "15th/EOM", "5th/20th", "16th/EOM", "EOM", "25th"
+    const parts = payDay.split("/");
+    for (let attempt = 0; attempt < 62; attempt++) {
+      const dom = d.getDate();
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      let match = false;
+      for (const p of parts) {
+        if (p === "EOM" && dom === lastDay) match = true;
+        else if (/^\d+/.test(p)) {
+          const n = parseInt(p);
+          if (n <= lastDay && dom === n) match = true;
+          else if (n > lastDay && dom === lastDay) match = true; // overflow → EOM
+        }
+      }
+      if (match) return d.toISOString().slice(0,10);
+      d.setDate(d.getDate() + 1);
+    }
+    return null;
+  }
 
   // ── Notes pagination ──
   const [notePage, setNotePage] = useState(0);
@@ -1025,12 +1066,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       value={prPaydate}
                       onChange={e => {
                         setPrPaydate(e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s));
+                        // Recalculate start date when pay day changes
+                        const newStart = calcPayrollStartDate(prPeriodFreq, e.target.value);
+                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value, ...(newStart ? { pay_start_date: newStart } : {}) } : s));
+                        if (newStart) setPrStartDate(newStart);
                         const px = localSvcs.find((s: any) => s.key === "payroll");
-                        if (px?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:px.csId,paydate:e.target.value})}).catch(()=>{});
+                        if (px?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:px.csId,paydate:e.target.value,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
                       }}>
                       <option value="">—</option>
-                      {(payDayByFreq[prPeriodFreq || ""] || payDayByFreq[(prPeriodFreq || "").replace(/ [AB]$/, "")] || []).map(opt => (
+                      {payDayOptions.map(opt => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
@@ -1090,11 +1134,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       onChange={e => {
                         const newFreq = e.target.value;
                         setPrPeriodFreq(newFreq);
-                        // Reset pay date if it's not valid for the new cadence
-                        const validDays = payDayByFreq[newFreq] || payDayByFreq[newFreq.replace(/ [AB]$/, "")] || [];
-                        if (prPaydate && !validDays.includes(prPaydate)) setPrPaydate("");
-                        const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: newFreq, frequency: newFreq } : s);
+                        // Recalculate start date based on new cadence + current pay day
+                        const newStart = calcPayrollStartDate(newFreq, prPaydate);
+                        const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: newFreq, frequency: newFreq, ...(newStart ? { pay_start_date: newStart } : {}) } : s);
                         setLocalSvcs(updated);
+                        if (newStart) setPrStartDate(newStart);
                         throttledOnSave({ ...c, services: updated } as Client);
                       }}
                     >
@@ -2255,72 +2299,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     value={prPeriodFreq} onChange={e => {
                       const val = e.target.value;
                       setPrPeriodFreq(val);
-                      // Reset pay date if invalid for new cadence
-                      const validDays = payDayByFreq[val] || payDayByFreq[val.replace(/ [AB]$/, "")] || [];
-                      if (prPaydate && !validDays.includes(prPaydate)) setPrPaydate("");
-                      setLocalSvcs(prev => { const up = prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val } : s); return up; });
-                      if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,payPeriodFrequency:val,frequency:val})}).catch(()=>{});
-                      // Auto-set start date based on cadence
-                      if (val) {
-                        const today = new Date();
-                        let d = new Date(today);
-                        d.setDate(d.getDate() + 1);
-                        if (val === "Weekly") {
-                          while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
-                          const iso = d.toISOString().slice(0, 10);
-                          setPrStartDate(iso);
-                          setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
-                        } else if (val === "Bi-Weekly" || val === "Bi-Weekly A") {
-                          while (true) {
-                            if (d.getDay() === 5) {
-                              const dom = d.getDate();
-                              if ((dom >= 1 && dom <= 7) || (dom >= 15 && dom <= 22) || (dom >= 29 && dom <= 31)) {
-                                const iso = d.toISOString().slice(0, 10);
-                                setPrStartDate(iso);
-                                setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
-                                break;
-                              }
-                            }
-                            d.setDate(d.getDate() + 1);
-                          }
-                        } else if (val === "Bi-Weekly B") {
-                          while (true) {
-                            if (d.getDay() === 5) {
-                              const dom = d.getDate();
-                              if ((dom >= 8 && dom <= 14) || (dom >= 23 && dom <= 28)) {
-                                const iso = d.toISOString().slice(0, 10);
-                                setPrStartDate(iso);
-                                setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
-                                break;
-                              }
-                            }
-                            d.setDate(d.getDate() + 1);
-                          }
-                        } else if (val === "Semi-Monthly") {
-                          // Next 1st or 15th
-                          while (true) {
-                            const dom = d.getDate();
-                            if (dom === 1 || dom === 15) {
-                              const iso = d.toISOString().slice(0, 10);
-                              setPrStartDate(iso);
-                              setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
-                              break;
-                            }
-                            d.setDate(d.getDate() + 1);
-                          }
-                        } else if (val === "Monthly") {
-                          // Next 1st of month
-                          while (true) {
-                            if (d.getDate() === 1) {
-                              const iso = d.toISOString().slice(0, 10);
-                              setPrStartDate(iso);
-                              setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, pay_start_date: iso } : s));
-                              break;
-                            }
-                            d.setDate(d.getDate() + 1);
-                          }
-                        }
-                      }
+                      // Recalculate start date based on new cadence + current pay day
+                      const newStart = calcPayrollStartDate(val, prPaydate);
+                      setLocalSvcs(prev => { const up = prev.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: val, frequency: val, ...(newStart ? { pay_start_date: newStart } : {}) } : s); return up; });
+                      if (newStart) setPrStartDate(newStart);
+                      if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,payPeriodFrequency:val,frequency:val,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
                     }}>
                     <option value="">—</option>
                     <option value="Weekly">Weekly</option>
@@ -2335,7 +2318,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                     value={prPaydate} onChange={e => {
                       setPrPaydate(e.target.value);
-                      autoSave(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value } : s));
+                      // Recalculate start date when pay day changes
+                      const newStart = calcPayrollStartDate(prPeriodFreq, e.target.value);
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value, ...(newStart ? { pay_start_date: newStart } : {}) } : s));
+                      if (newStart) setPrStartDate(newStart);
+                      if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,paydate:e.target.value,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
                     }}>
                     <option value="">—</option>
                     {payDayOptions.includes(prPaydate) || !prPaydate ? null : <option value={prPaydate}>{prPaydate}</option>}
