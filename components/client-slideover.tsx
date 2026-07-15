@@ -2642,30 +2642,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Footer */}
           <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10, alignItems: "center" }}>
-            {confirmDelete ? (
-              <>
-                <span style={{ color: "var(--red)", fontWeight: 600, fontSize: 13 }}>Are you sure?</span>
-                <button onClick={() => { onDelete?.(c.id); setConfirmDelete(false); onClose(); }} style={{
-                  all: "unset", cursor: "pointer", color: "#fff", fontWeight: 600, fontSize: "12.5px",
-                  padding: "8px 16px", borderRadius: 9, background: "var(--red)",
-                }}>
-                  Delete
-                </button>
-                <button onClick={() => setConfirmDelete(false)} style={{
-                  all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: "12.5px",
-                  padding: "8px 16px", borderRadius: 9, border: "1px solid var(--line)",
-                }}>
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button className="danger" onClick={() => setConfirmDelete(true)} style={{
-                all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
-                padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
-              }}>
-                Remove client
-              </button>
-            )}
+            <button onClick={toggleActive} style={{
+              all: "unset", cursor: "pointer", fontWeight: 600, fontSize: "13.5px",
+              padding: "10px 14px", borderRadius: 11,
+              background: isActive ? "var(--red-soft,#fce8e6)" : "var(--green-soft,#e6f4ea)",
+              color: isActive ? "var(--red,#c62828)" : "var(--green,#1e7e34)",
+              border: `1px solid ${isActive ? "var(--red-soft,#fce8e6)" : "var(--green-soft,#c8e6c9)"}`,
+            }}>
+              {isActive ? "Deactivate client" : "Activate client"}
+            </button>
             <div style={{ flex: 1 }}></div>
             <button className="btn" onClick={handleSaveModule} disabled={saving} style={{
               all: "unset", cursor: saving ? "default" : "pointer",
@@ -2850,30 +2835,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Footer */}
           <div className="ofoot" style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--card)", display: "flex", gap: 10, alignItems: "center" }}>
-            {confirmDelete ? (
-              <>
-                <span style={{ color: "var(--red)", fontWeight: 600, fontSize: 13 }}>Are you sure?</span>
-                <button onClick={() => { onDelete?.(c.id); setConfirmDelete(false); onClose(); }} style={{
-                  all: "unset", cursor: "pointer", color: "#fff", fontWeight: 600, fontSize: "12.5px",
-                  padding: "8px 16px", borderRadius: 9, background: "var(--red)",
-                }}>
-                  Delete
-                </button>
-                <button onClick={() => setConfirmDelete(false)} style={{
-                  all: "unset", cursor: "pointer", color: "var(--muted)", fontWeight: 600, fontSize: "12.5px",
-                  padding: "8px 16px", borderRadius: 9, border: "1px solid var(--line)",
-                }}>
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button className="danger" onClick={() => setConfirmDelete(true)} style={{
-                all: "unset", cursor: "pointer", color: "var(--red)", fontWeight: 600, fontSize: "13.5px",
-                padding: "10px 14px", border: "1px solid var(--red-soft)", borderRadius: 11, background: "var(--red-soft)",
-              }}>
-                Remove client
-              </button>
-            )}
+            <button onClick={toggleActive} style={{
+              all: "unset", cursor: "pointer", fontWeight: 600, fontSize: "13.5px",
+              padding: "10px 14px", borderRadius: 11,
+              background: isActive ? "var(--red-soft,#fce8e6)" : "var(--green-soft,#e6f4ea)",
+              color: isActive ? "var(--red,#c62828)" : "var(--green,#1e7e34)",
+              border: `1px solid ${isActive ? "var(--red-soft,#fce8e6)" : "var(--green-soft,#c8e6c9)"}`,
+            }}>
+              {isActive ? "Deactivate client" : "Activate client"}
+            </button>
             <div style={{ flex: 1 }}></div>
             <button onClick={onClose} style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",

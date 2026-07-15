@@ -736,6 +736,16 @@ function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Cli
         <span className={`badge ${client.type === "Business" ? "b-biz" : "b-per"}`} style={{ flexShrink: 0 }}>
           {client.type === "Business" ? "BIZ" : "PERS"}
         </span>
+        {client.active === false && (
+          <span style={{
+            flexShrink: 0, fontSize: "9px", fontWeight: 700, letterSpacing: "0.05em",
+            padding: "2px 7px", borderRadius: 10,
+            background: "#fce8e6", color: "#c62828",
+            border: "1px solid #f5c6cb",
+          }}>
+            INACTIVE
+          </span>
+        )}
       </div>
     </div>
   );

@@ -1432,7 +1432,9 @@ export default function WorklistTable({
                       <button onClick={() => onClientClick?.(client.id)}
                         className="text-xs font-medium text-[var(--ink)] truncate text-left w-full bg-transparent border-none cursor-pointer hover:text-[var(--teal)] transition-colors p-0"
                         title={`Open ${isRenewalItem ? renewalDisplayName : displayName} details`}
-                      >{isRenewalItem ? renewalDisplayName : displayName}</button>
+                      >{isRenewalItem ? renewalDisplayName : displayName}
+                        {client.active === false && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: "#c62828", background: "#fce8e6", padding: "1px 5px", borderRadius: 4 }}>INACTIVE</span>}
+                      </button>
                     </td>
 
                   {/* Payroll-specific columns: Pay Day (read-only) */}
