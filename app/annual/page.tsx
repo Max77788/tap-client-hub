@@ -87,10 +87,10 @@ export default function AnnualPage() {
 
   return (
     <div className="space-y-4">
-      <WorklistTable serviceKey="renditions" clients={flatRenewalClients} year={year} loading={loading} showRenewalColumns
+      <WorklistTable serviceKey="annual_reports" clients={flatRenewalClients} year={year} loading={loading} showRenewalColumns
         onStageChange={(flatId, monthIdx, stage) => {
           const origId = flatId.includes("::") ? flatId.split("::")[0] : flatId;
-          updateServiceMonth(origId, "renditions", monthIdx, stage);
+          updateServiceMonth(origId, "annual_reports", monthIdx, stage);
         }}
         onClientClick={handleClientClick}
         onDataChange={refresh} />

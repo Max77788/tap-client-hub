@@ -397,7 +397,7 @@ export default function WorklistTable({
             );
           }
           // State renewal: search within renewal item names
-          if (serviceKey === "renditions" && showRenewalColumns) {
+          if ((serviceKey === "renditions" || serviceKey === "annual_reports") && showRenewalColumns) {
             const rnName = (c._renewalName || "").toLowerCase();
             if (rnName && rnName.includes(q)) return true;
             if (c._renewalItem?.state && c._renewalItem.state.toLowerCase().includes(q)) return true;
@@ -1093,7 +1093,7 @@ export default function WorklistTable({
   const baseCols = 2; // Client + Assigned
   const payrollCols = variant === "payroll" ? 2 : 0; // PayDay, QBO
   const taxReturnCols = variant === "tax_returns" ? 2 : 0; // Filing State, Filing Type
-  const extraCols = serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" ? 1 : 0; // Cadence
+  const extraCols = serviceKey !== "renditions" && serviceKey !== "annual_reports" && serviceKey !== "tax_returns" && variant !== "t9" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
   const colCount = baseCols + payrollCols + taxReturnCols + extraCols + t9PreCols + 12 + t9PostCols;
@@ -1270,14 +1270,14 @@ export default function WorklistTable({
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 80, maxWidth: 100 }}>Filing Type</th>
             </>
             )}
-            {serviceKey === "renditions" && showRenewalColumns && (
+            {((serviceKey === "renditions" || serviceKey === "annual_reports")) && showRenewalColumns && (
             <>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 50, maxWidth: 60 }}>State</th>
               <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 70, maxWidth: 80 }}>Due</th>
             </>
             )}
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 120, maxWidth: 150 }}>Assigned</th>
-            {serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" && (
+            {serviceKey !== "renditions" && serviceKey !== "annual_reports" && serviceKey !== "tax_returns" && variant !== "t9" && (
             <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1 py-2" style={{ width: 90, maxWidth: 100 }}>Cadence</th>
             )}
             {variant === "t9" && (
@@ -1309,7 +1309,7 @@ export default function WorklistTable({
             </tr>
           )}
           {filteredClients.length > 0 && (
-            ((serviceKey === "sales_tax" || (serviceKey === "renditions" && showRenewalColumns))
+            ((serviceKey === "sales_tax" || ((serviceKey === "renditions" || serviceKey === "annual_reports") && showRenewalColumns))
               ? // ── Sales Tax / Annual Reports: group by client, add group header rows ──
                 // Flat clients may already be pre-expanded with _stxItem / _stxName from stx/page.tsx
                 (() => {
@@ -1385,7 +1385,7 @@ export default function WorklistTable({
             ).map((client: any, _mapIdx: number) => {
               // ── Group header row ──
               if (client._isGroupHeader) {
-                const svcLabel = serviceKey === "sales_tax" ? "registration" : serviceKey === "renditions" ? "state renewal" : "item";
+                const svcLabel = serviceKey === "sales_tax" ? "registration" : (serviceKey === "renditions" || serviceKey === "annual_reports") ? "state renewal" : "item";
                 return (
                   <tr className="stxband">
                     <td colSpan={colCount}>
@@ -1401,7 +1401,7 @@ export default function WorklistTable({
               const displayName = isStxItem ? (client._stxName || "—") : client.name;
 
               // State renewal line items (Annual Reports tab)
-              const isRenewalItem = serviceKey === "renditions" && client._renewalItem;
+              const isRenewalItem = (serviceKey === "renditions" || serviceKey === "annual_reports") && client._renewalItem;
               const renewalItem = client._renewalItem;
               const renewalIdx = client._renewalIdx;
               const renewalDisplayName = isRenewalItem ? (client._renewalName || `—`) : client.name;
@@ -1429,7 +1429,7 @@ export default function WorklistTable({
                     <td className="px-1 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate" style={{ width: 120, maxWidth: 150 }}>
                       <span className="text-[var(--ink)]">{toShortName(svc.assignedTo || svc.processor || "—")}</span>
                     </td>
-                    {serviceKey !== "renditions" && serviceKey !== "tax_returns" && variant !== "t9" && (
+                    {serviceKey !== "renditions" && serviceKey !== "annual_reports" && serviceKey !== "tax_returns" && variant !== "t9" && (
                     <td className="px-1.5 py-1 text-[11px] text-[var(--muted)] whitespace-nowrap truncate">{svc.frequency}</td>
                     )}
                     <td className="px-1.5 py-1 text-center text-[11px] font-semibold text-[var(--ink)] tabular-nums" style={{ width: 60, minWidth: 60 }}>{exp || "—"}</td>
@@ -1588,7 +1588,7 @@ export default function WorklistTable({
                   )}
 
                   {/* Renditions columns: State, Due (clickable to open details) */}
-                  {serviceKey === "renditions" && showRenewalColumns && (
+                  {((serviceKey === "renditions" || serviceKey === "annual_reports")) && showRenewalColumns && (
                   <>
                     <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate cursor-pointer hover:text-[var(--teal)]" style={{ width: 50, maxWidth: 60 }}
                       onClick={() => onClientClick?.(client.id)}>
@@ -1626,7 +1626,7 @@ export default function WorklistTable({
                   </td>
 
                   {/* Cadence — read-only text */}
-                  {serviceKey !== "renditions" && serviceKey !== "tax_returns" && (
+                  {serviceKey !== "renditions" && serviceKey !== "annual_reports" && serviceKey !== "tax_returns" && (
                   <td className="px-1 py-1 text-[11px] text-[var(--ink)] whitespace-nowrap truncate" style={{ width: 90, maxWidth: 100 }}>
                     {(() => {
                       const raw = variant === "payroll"
@@ -1679,7 +1679,7 @@ export default function WorklistTable({
                       ? (svc.salesTaxLineItems?.[stxIdx]?.comments || [])
                       : isRenewalItem
                       ? (renewalItem?.comments || [])
-                      : serviceKey === "renditions"
+                      : (serviceKey === "renditions" || serviceKey === "annual_reports")
                       ? []
                       : (svc.comments || []);
                     const hasCmt = commentSource.some((c: any) => c.month === i);
