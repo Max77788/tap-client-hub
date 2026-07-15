@@ -270,6 +270,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const renewalAddMonthRef = useRef<HTMLSelectElement>(null);
   const renewalAddDayRef = useRef<HTMLInputElement>(null);
   const renewalAddIdsRef = useRef<HTMLInputElement>(null);
+  const renewalAddAssignedRef = useRef<HTMLSelectElement>(null);
 
   // ── State: being edited → show full record ──
   const [isActive, setIsActive] = useState(client.active !== false);
@@ -2112,6 +2113,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         Due: {item.dueMonth ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Math.max(0,Math.min(11,parseInt(item.dueMonth||"1")-1))] || item.dueMonth}${item.dueDay ? ` ${item.dueDay}` : ""}` : "—"}
                       </span>
                       {item.identifiers && <span style={{ color: "var(--muted)", fontSize: 10 }}>{item.identifiers}</span>}
+                      <span style={{ color: "var(--muted)", fontSize: 11, fontWeight: 500 }}>{item.assignedTo || "Unassigned"}</span>
                       <div style={{ flex: 1 }} />
                       <button
                         onClick={() => {
@@ -2153,6 +2155,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>IDs</label>
                       <input ref={renewalAddIdsRef} placeholder="e.g. EIN" style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
                     </div>
+                    <div style={{ flex: "1.5 0 100px" }}>
+                      <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Assigned</label>
+                      <select ref={renewalAddAssignedRef} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                        <option value="">Unassigned</option>
+                        {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
                     <button onClick={() => setAddingRenewal(false)}
@@ -2162,7 +2171,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       const mo = renewalAddMonthRef.current?.value || String(new Date().getMonth() + 1);
                       const dy = renewalAddDayRef.current?.value || "1";
                       const ids = renewalAddIdsRef.current?.value || "";
-                      const newItem = { id: `sr-${Date.now()}`, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, frequency: "Yearly" };
+                      const assigned = renewalAddAssignedRef.current?.value || "";
+                      const newItem = { id: `sr-${Date.now()}`, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned, frequency: "Yearly" };
                       const updated = [...renewalItems, newItem];
                       setRenewalItems(updated);
                       setStateRenewal(true);

@@ -878,6 +878,8 @@ export async function PATCH(request: Request) {
     // Sync stateRenewalItems → state_renewals
     if (stateRenewalItems !== undefined) {
       await supabase.from("state_renewals").delete().eq("client_service_id", csId);
+      // Auto-set state_renewal=true so the client shows on Annual Reports tab
+      await supabase.from("client_services").update({ state_renewal: true }).eq("id", csId);
       const srItems = Array.isArray(stateRenewalItems) ? stateRenewalItems : [];
       for (const item of srItems) {
         await supabase.from("state_renewals").insert({
