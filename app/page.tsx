@@ -229,6 +229,7 @@ export default function ClientsPage() {
             <StatCard label="Sales Tax" value={computedStats.salesTaxCount} color="var(--amber)" />
             <StatCard label="1099s" value={computedStats.t9Count} color="var(--ink)" />
             <StatCard label="Renditions" value={computedStats.renditionsCount} color="var(--green)" />
+            <StatCard label="Annual Reports" value={computedStats.annualReportsCount} color="#7c3aed" />
           </div>
 
           {/* ── Controls: Search + Filters + Actions ── */}

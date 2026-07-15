@@ -1365,6 +1365,7 @@ export function getStats(clients: Client[]): ClientStats {
   let t9Count = 0;
   let renditionsCount = 0;
   let taxReturnsCount = 0;
+  let annualReportsCount = 0;
 
   for (const client of clients) {
     for (const svc of client.services) {
@@ -1374,6 +1375,7 @@ export function getStats(clients: Client[]): ClientStats {
       if (svc.key === "sales_tax") salesTaxCount++;
       if (svc.key === "1099s") t9Count++;
       if (svc.key === "renditions") renditionsCount++;
+      if (svc.key === "annual_reports") annualReportsCount++;
       if (svc.key === "tax_returns") taxReturnsCount++;
     }
 
@@ -1411,6 +1413,7 @@ export function getStats(clients: Client[]): ClientStats {
     t9Count,
     renditionsCount,
     taxReturnsCount,
+    annualReportsCount,
   };
 }
 

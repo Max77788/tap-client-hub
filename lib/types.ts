@@ -186,6 +186,7 @@ export interface ClientStats {
   t9Count: number;
   renditionsCount: number;
   taxReturnsCount: number;
+  annualReportsCount: number;
 }
 
 export interface StaffMember {
