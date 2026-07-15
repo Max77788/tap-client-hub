@@ -50,7 +50,7 @@ const svcMeta: Record<string, { label: string; ic: string; bg: string }> = {
   sales_tax:   { label: "Sales Tax", ic: "🧾", bg: "var(--amber-soft)" },
   tax_returns: { label: "Tax Return", ic: "📋", bg: "#ece7f3" },
   "1099s":     { label: "1099 Filing", ic: "📄", bg: "#f0e8e2" },
-  renditions:       { label: "Renditions", ic: "🏠", bg: "#e7eee8" },
+  renditions:       { label: "Annual Reports", ic: "📄", bg: "#e7eee8" },
   annual_reports:   { label: "Annual Reports", ic: "📄", bg: "#e7eee8" },
 };
 const svcLabel = (k: string) => svcMeta[k]?.label || k;
