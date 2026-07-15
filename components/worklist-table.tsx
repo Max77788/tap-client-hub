@@ -1183,8 +1183,8 @@ export default function WorklistTable({
             </tr>
           )}
           {filteredClients.length > 0 && (
-            (serviceKey === "sales_tax"
-              ? // ── Sales Tax: group by client, add group header rows ──
+            ((serviceKey === "sales_tax" || (serviceKey === "renditions" && showRenewalColumns))
+              ? // ── Sales Tax / Annual Reports: group by client, add group header rows ──
                 // Flat clients may already be pre-expanded with _stxItem / _stxName from stx/page.tsx
                 (() => {
                   let expanded: any[] = [];
