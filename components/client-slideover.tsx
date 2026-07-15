@@ -440,13 +440,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
 
   // ── Helper: sync renewal items via PATCH (or PUT if service row doesn't exist yet) ──
-  const syncRenewalItems = useCallback((items: any[]) => {
+  const syncRenewalItems = useCallback(async (items: any[]) => {
     const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
     const csId = rendSvc?.csId || targetSvc?.csId;
     if (csId) {
-      fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: items }) }).catch(() => {});
+      try {
+        const res = await fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: items }) });
+        if (!res.ok) console.warn("syncRenewalItems PATCH failed:", res.status, await res.text());
+      } catch (e: any) {
+        console.error("syncRenewalItems PATCH error:", e.message);
+      }
     } else {
       // No DB row yet — go through PUT to create service + items together
+      console.warn("syncRenewalItems: no csId, falling back to PUT");
       const updated = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
       throttledOnSave({ ...c, services: updated } as Client);
     }
