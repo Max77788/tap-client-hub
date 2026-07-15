@@ -1258,23 +1258,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             )}
 
-            {/* Renditions: Assigned To only */}
-            {(isRend || isAnnualReports) && svc.enabled && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 0 100px", minWidth: 100 }}>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
-                    <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
-                      value={svc.assignedTo || svc.processor || ""}
-                      onChange={e => saveServiceField("renditions", "assignedTo", e.target.value)}
-                    >
-                      <option value="">—</option>
-                      {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* State renewal items (per-item assigned) are handled in the module-specific annual_reports section below */}
 
             {/* Sales Tax: line items */}
             {isSalesTax && svc.enabled && (
