@@ -892,7 +892,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       color: n > 0 ? "var(--green)" : "var(--muted)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       margin: "0 auto", fontWeight: 700, fontSize: 13, userSelect: "none",
-                      cursor: (!moduleKey || svcKey === "sales_tax") ? "default" : "pointer",
+                      cursor: (!moduleKey) ? "default" : "pointer",
                       border: n > 0 ? "1px solid var(--green)" : "1px solid transparent",
                       position: "relative",
                     }}
