@@ -442,7 +442,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ── Helper: sync renewal items via PATCH (or PUT if service row doesn't exist yet) ──
   const syncRenewalItems = useCallback(async (items: any[]) => {
     const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
-    const csId = rendSvc?.csId || targetSvc?.csId;
+    const csId = rendSvc?.csId;
     if (csId) {
       try {
         const res = await fetch("/api/clients", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ csId, stateRenewalItems: items }) });
@@ -451,12 +451,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         console.error("syncRenewalItems PATCH error:", e.message);
       }
     } else {
-      // No DB row yet — go through PUT to create service + items together
+      // No DB row yet - go through PUT to create service + items together
       console.warn("syncRenewalItems: no csId, falling back to PUT");
       const updated = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
       throttledOnSave({ ...c, services: updated } as Client);
     }
-  }, [localSvcs, targetSvc, c, throttledOnSave]);
+  }, [localSvcs, c, throttledOnSave]);
   const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
   const [eFinMonth, setEFinMonth] = useState(() => {
     const svc = client.services.find((s: any) => s.key === "financials");
