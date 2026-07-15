@@ -454,9 +454,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       // No DB row yet - go through PUT to create service + items together
       console.warn("syncRenewalItems: no csId, falling back to PUT");
       const updated = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
-      throttledOnSave({ ...c, services: updated } as Client);
+      throttledOnSave({ ...client, services: updated } as Client);
     }
-  }, [localSvcs, c, throttledOnSave]);
+  }, [localSvcs, client, throttledOnSave]);
   const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
   const [eFinMonth, setEFinMonth] = useState(() => {
     const svc = client.services.find((s: any) => s.key === "financials");
