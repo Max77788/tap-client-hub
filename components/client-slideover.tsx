@@ -892,7 +892,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       color: n > 0 ? "var(--green)" : "var(--muted)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       margin: "0 auto", fontWeight: 700, fontSize: 13, userSelect: "none",
-                      cursor: moduleKey ? "pointer" : "default",
+                      cursor: (!moduleKey || svcKey === "sales_tax") ? "default" : "pointer",
                       border: n > 0 ? "1px solid var(--green)" : "1px solid transparent",
                       position: "relative",
                     }}
@@ -934,7 +934,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     color: style.fg,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     margin: "0 auto", fontWeight: 700, fontSize: 14, userSelect: "none",
-                    cursor: moduleKey ? "pointer" : "default",
+                    cursor: (!moduleKey || svcKey === "sales_tax") ? "default" : "pointer",
                     boxShadow: hasDelayBorder ? "0 0 0 2px var(--red)" : "none",
                     position: "relative",
                   }}
