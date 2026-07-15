@@ -15,7 +15,7 @@ export default function AnnualPage() {
     }
     return currentYear;
   });
-  const { clients, loading, updateServiceMonth, updateClient } = useClients();
+  const { clients, loading, updateServiceMonth, updateClient, refresh } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [slideoverOpen, setSlideoverOpen] = useState(false);
 
@@ -92,7 +92,8 @@ export default function AnnualPage() {
           const origId = flatId.includes("::") ? flatId.split("::")[0] : flatId;
           updateServiceMonth(origId, "renditions", monthIdx, stage);
         }}
-        onClientClick={handleClientClick} />
+        onClientClick={handleClientClick}
+        onDataChange={refresh} />
       {selectedClient && (
         <ClientSlideover
           client={selectedClient}
