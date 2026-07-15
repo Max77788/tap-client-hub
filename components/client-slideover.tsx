@@ -2232,7 +2232,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       const dy = renewalAddDayRef.current?.value || "1";
                       const ids = renewalAddIdsRef.current?.value || "";
                       const assigned = renewalAddAssignedRef.current?.value || "";
-                      const newItem = { id: `sr-${Date.now()}`, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned, frequency: "Yearly" };
+                      const newItem = { state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned, frequency: "Yearly" };
                       const updated = [...renewalItems, newItem];
                       setRenewalItems(updated);
                       setStateRenewal(true);
