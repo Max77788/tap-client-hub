@@ -106,7 +106,7 @@ export async function GET() {
           "workload":"Workload","vault":"Vault","users":"Users & Access",
           "support":"Support","billing":"Billing","Tax Returns":"Tax Returns",
           "Business Taxes":"Tax Returns","Personal Taxes":"Tax Returns",
-          "Annual Reports":"Renditions",
+          "Annual Reports":"Annual Reports",
         };
         return map[m] || m;
       }) : [],

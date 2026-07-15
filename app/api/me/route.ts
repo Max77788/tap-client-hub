@@ -94,7 +94,7 @@ export async function GET() {
     : (profile ? [] : [
         // If no profile found, grant all modules as safety net (sidebar is the real gate)
         "Clients", "Workload", "Timesheet", "Financials", "Payroll",
-        "Sales Tax", "1099s", "Tax Returns", "Renditions", "Vault",
+        "Sales Tax", "1099s", "Tax Returns", "Renditions", "Annual Reports", "Vault",
         "Users & Access", "Support"
       ]);
 
