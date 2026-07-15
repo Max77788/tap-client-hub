@@ -212,13 +212,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     };
     const dow = dayMap[payDay.toLowerCase()];
 
-    if (cadence === "Weekly" || cadence === "Bi-Weekly A" || cadence === "Bi-Weekly B") {
+    if (cadence === "Weekly" || cadence.startsWith("Bi-Weekly")) {
       if (dow === undefined) return null;
       while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
-      if (cadence === "Bi-Weekly B") {
-        // Advance one more week for B cycle
-        d.setDate(d.getDate() + 7);
-      }
+      if (cadence === "Bi-Weekly B") d.setDate(d.getDate() + 7);
       return d.toISOString().slice(0,10);
     }
 
@@ -230,10 +227,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       let match = false;
       for (const p of parts) {
         if (p === "EOM" && dom === lastDay) match = true;
-        else if (/^\d+/.test(p)) {
-          const n = parseInt(p);
-          if (n <= lastDay && dom === n) match = true;
-          else if (n > lastDay && dom === lastDay) match = true; // overflow → EOM
+        else {
+          // Parse numeric date (handles "15th", "5th", "25th", etc.)
+          const numMatch = p.match(/^(\d+)/);
+          if (numMatch) {
+            const n = parseInt(numMatch[1]);
+            if (n <= lastDay && dom === n) match = true;
+            else if (n > lastDay && dom === lastDay) match = true; // overflow → EOM
+          }
+          // Also check if it's a weekday (handles "Fridays" for Monthly)
+          else {
+            const wd = dayMap[p.toLowerCase()];
+            if (wd !== undefined && d.getDay() === wd) match = true;
+          }
         }
       }
       if (match) return d.toISOString().slice(0,10);

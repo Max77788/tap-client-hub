@@ -78,10 +78,17 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       let match = false;
       for (const p of parts) {
         if (p === "EOM" && dom === lastDay) match = true;
-        else if (/^\d+/.test(p)) {
-          const n = parseInt(p);
-          if (n <= lastDay && dom === n) match = true;
-          else if (n > lastDay && dom === lastDay) match = true;
+        else {
+          const numMatch = p.match(/^(\d+)/);
+          if (numMatch) {
+            const n = parseInt(numMatch[1]);
+            if (n <= lastDay && dom === n) match = true;
+            else if (n > lastDay && dom === lastDay) match = true;
+          }
+          else {
+            const wd = dowMap[p.toLowerCase()];
+            if (wd !== undefined && d.getDay() === wd) match = true;
+          }
         }
       }
       if (match) return d.toISOString().slice(0,10);
