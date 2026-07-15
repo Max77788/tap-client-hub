@@ -1188,11 +1188,12 @@ export default function WorklistTable({
                 // Flat clients may already be pre-expanded with _stxItem / _stxName from stx/page.tsx
                 (() => {
                   let expanded: any[] = [];
-                  const hasPreExpanded = filteredClients.some((c: any) => c._stxItem !== undefined || c._stxName !== undefined);
+                  const hasPreExpanded = filteredClients.some((c: any) => c._stxItem !== undefined || c._stxName !== undefined || c._renewalItem !== undefined);
                   if (hasPreExpanded) {
                     // Preserve ALL rows — pre-expanded keep their _stxItem, others get fallback
                     expanded = filteredClients.map((c: any) => {
                       if (c._stxItem != null || c._stxName) return c;
+                      if (c._renewalItem != null) return c;
                       return { ...c, _stxItem: null, _stxIdx: -1, _stxName: c.name };
                     });
                   } else {
@@ -1219,6 +1220,11 @@ export default function WorklistTable({
                   if (search) {
                     const q = search.toLowerCase();
                     filteredExpanded = expanded.filter((row) => {
+                      if (row._renewalItem != null) {
+                        const rn = (row._renewalName || "").toLowerCase();
+                        const cn = (row.name || "").toLowerCase();
+                        return rn.includes(q) || cn.includes(q) || (row._renewalItem?.state || "").toLowerCase().includes(q);
+                      }
                       if (row._stxItem == null) {
                         return row.name.toLowerCase().includes(q);
                       }
@@ -1251,12 +1257,13 @@ export default function WorklistTable({
                 })()
               : filteredClients
             ).map((client: any, _mapIdx: number) => {
-              // ── Group header row (sales tax only) ──
+              // ── Group header row ──
               if (client._isGroupHeader) {
+                const svcLabel = serviceKey === "sales_tax" ? "registration" : serviceKey === "renditions" ? "state renewal" : "item";
                 return (
                   <tr className="stxband">
                     <td colSpan={colCount}>
-                      <b>{client._groupOrigId ? (serviceClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId)?.name || '') : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} registration{client._groupCount !== 1 ? "s" : ""}</span>
+                      <b>{client._groupOrigId ? (serviceClients.find((c: any) => (c._originalClientId || c.id) === client._groupOrigId)?.name || '') : ''}</b> <span style={{ color: "rgba(255,255,255,.7)" }}>· {client._groupCount} {svcLabel}{client._groupCount !== 1 ? "s" : ""}</span>
                     </td>
                   </tr>
                 );
@@ -1271,7 +1278,8 @@ export default function WorklistTable({
               const isRenewalItem = serviceKey === "renditions" && client._renewalItem;
               const renewalItem = client._renewalItem;
               const renewalIdx = client._renewalIdx;
-              const renewalDisplayName = isRenewalItem ? (client._renewalName || "—") : client.name;
+              const renewalDisplayName = isRenewalItem ? (client._renewalName || `—`) : client.name;
+              const groupName = isRenewalItem ? client.name : null; // for group header lookups
               const activeMonths = getActiveMonths(svc.frequency, svc.financialsMonth);
               const key = `${client.id}:${serviceKey}`;
               const stages = worklistState[key] ?? Array(12).fill("");
