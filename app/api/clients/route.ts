@@ -166,21 +166,9 @@ export async function GET(request: Request) {
               taxId: stx.tax_reg_id,
               rt: stx.rt_number, frequency: stx.frequency,
               bankName: stx.bank_name, bankAccount: stx.bank_account_ref,
-              bankRouting: stx.bank_routing_ref, notes: (() => {
-                const raw = stx.notes || "";
-                const marker = "\n__STX_CMTS__";
-                const idx = raw.lastIndexOf(marker);
-                return idx > -1 ? raw.slice(0, idx) : raw;
-              })(),
-              comments: (() => {
-                const raw = stx.notes || "";
-                const marker = "\n__STX_CMTS__";
-                const idx = raw.lastIndexOf(marker);
-                if (idx > -1) {
-                  try { return JSON.parse(raw.slice(idx + marker.length)); } catch {}
-                }
-                return [];
-              })(),
+              bankRouting: stx.bank_routing_ref,
+              notes: stx.notes || "",
+              comments: [], // filled below from unified comments table
               assignedTo: staffNames[stx.assigned_to || ""] || stx.assigned_to || "",
             });
           }
@@ -205,7 +193,35 @@ export async function GET(request: Request) {
             });
           }
         }
-        // unified comments table
+        // STX per-line-item comments from unified table
+        const stxItemIds = Object.values(normStxByCsId).flat().map((s: any) => s.id);
+        if (stxItemIds.length > 0) {
+          for (let j = 0; j < stxItemIds.length; j += BATCH_SIZE) {
+            const idBatch = stxItemIds.slice(j, j + BATCH_SIZE);
+            const { data: stxCmts } = await supabase.from("comments")
+              .select("*").eq("entity_type", "stx_line_item").in("entity_id", idBatch);
+            if (stxCmts) {
+              for (const cmt of stxCmts) {
+                // Find the STX item and push comment
+                for (const csId in normStxByCsId) {
+                  const item = normStxByCsId[csId].find((s: any) => s.id === cmt.entity_id);
+                  if (item) {
+                    item.comments.push({
+                      id: cmt.id,
+                      month: typeof cmt.month === 'string' ? parseInt(cmt.month, 10) : cmt.month,
+                      text: cmt.body,
+                      body: cmt.body,
+                      author: cmt.author_label || "",
+                      createdAt: cmt.created_at,
+                    });
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        // unified comments table (service-level)
         const { data: cmtBatch } = await supabase.from("comments")
           .select("*").eq("entity_type", "service").in("entity_id", batch);
         if (cmtBatch) {
@@ -492,11 +508,13 @@ export async function PUT(request: Request) {
 // Helper to sync sales tax line items
     async function syncStxLineItems(csId: string, items: any[]) {
       if (!items || !Array.isArray(items)) return;
+      // Delete old STX items for this service
       const { error: delErr } = await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
       if (delErr) { console.error("STX delete error:", delErr.message); return; }
       for (const item of items) {
+        const itemId = item.id || randomUUID();
         const { error: insErr } = await supabase.from("sales_tax_registration").insert({
-          id: item.id || randomUUID(),
+          id: itemId,
           client_service_id: csId,
           rt_number: item.rt || item.rt_number || "",
           service_name: item.serviceName || "",
@@ -506,13 +524,28 @@ export async function PUT(request: Request) {
           bank_name: item.bankName || "",
           bank_account_ref: item.bankAccount || "",
           bank_routing_ref: item.bankRouting || "",
-          notes: (() => {
-            const base = item.notes || "";
-            const cmts = Array.isArray(item.comments) ? item.comments : [];
-            if (cmts.length > 0) return base + "\n__STX_CMTS__" + JSON.stringify(cmts);
-            return base;
-          })(),
+          notes: item.notes || "",
         });
+        if (insErr) continue;
+        // Sync per-line-item comments to unified table
+        const cmts = Array.isArray(item.comments) ? item.comments : [];
+        if (cmts.length > 0) {
+          // Delete old comments for this item
+          await supabase.from("comments").delete()
+            .eq("entity_type", "stx_line_item").eq("entity_id", itemId);
+          for (const cm of cmts) {
+            const body = cm.text || cm.body || "";
+            if (!body) continue;
+            await supabase.from("comments").insert({
+              entity_type: "stx_line_item",
+              entity_id: itemId,
+              month: cm.month ?? null,
+              body,
+              author_label: cm.author || "",
+              created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+            });
+          }
+        }
       }
     }
 // Helper to sync state renewal items

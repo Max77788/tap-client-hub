@@ -510,8 +510,30 @@ export default function WorklistTable({
     if (stxIdx != null) newComment.stxIdx = stxIdx;
     if (renewalIdx != null) newComment.renewalIdx = renewalIdx;
 
-    // ── STX: store comment on the service itself (not per-line-item) ──
-    // Falls through to generic service-level handler below
+    // ── STX per-line-item: store comment on the specific line item ──
+    if (stxIdx != null && svc.salesTaxLineItems) {
+      const items = svc.salesTaxLineItems.map((it: any, idx: number) =>
+        idx === stxIdx ? { ...it, comments: [...(it.comments || []), newComment] } : it
+      );
+      svc.salesTaxLineItems = items;
+      try {
+        // Send via PUT — triggers syncStxLineItems which saves to unified comments table
+        const res = await fetch("/api/clients", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: origId,
+            services: [{ csId: svc.csId, key: serviceKey, enabled: true, salesTaxLineItems: items }],
+          }),
+        });
+        if (res.ok) {
+          setCommentText("");
+          setCommentRefreshKey(k => k + 1);
+          onDataChange?.();
+        }
+      } catch (e) { console.error("Failed to add STX item comment:", e); }
+      return;
+    }
 
     // ── State renewal item: store comment on the renewal item ──
     if (renewalIdx != null && svc.stateRenewalItems) {
@@ -1654,7 +1676,9 @@ export default function WorklistTable({
                       : stage === "na" ? "–" : "";
                     const lockHist = isHistorical && isActive;
                     // ── Comment marker: per-line-item for STX & renewals, service-level otherwise ──
-                    const commentSource = isRenewalItem
+                    const commentSource = isStxItem && stxIdx != null
+                      ? (svc.salesTaxLineItems?.[stxIdx]?.comments || [])
+                      : isRenewalItem
                       ? (renewalItem?.comments || [])
                       : (serviceKey === "renditions" || serviceKey === "annual_reports")
                       ? []
