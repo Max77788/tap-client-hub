@@ -29,29 +29,29 @@ export default function StxPage() {
       );
       if (stxServices.length === 0) continue;
 
-      const allLineItems: any[] = [];
+      const allLineItems: { item: any; svc: any; itemIdx: number }[] = [];
       for (const svc of stxServices) {
         if (svc.salesTaxLineItems?.length) {
-          for (const item of svc.salesTaxLineItems) {
-            allLineItems.push({ ...item, _csId: svc.csId, _svcName: svc.serviceName });
-          }
+          svc.salesTaxLineItems.forEach((item: any, itemIdx: number) => {
+            allLineItems.push({ item, svc, itemIdx });
+          });
         }
       }
 
       if (allLineItems.length > 0) {
-        allLineItems.forEach((item, idx) => {
-          // Deep clone service so each line item has independent months/salesTaxLineItems
-          const svcClone = JSON.parse(JSON.stringify(stxServices[0]));
+        allLineItems.forEach(({ item, svc, itemIdx }) => {
+          // Keep each row tied to the exact service and stable line-item ID it came from.
+          const svcClone = JSON.parse(JSON.stringify(svc));
           result.push({
             ...client,
-            id: `${client.id}::${item._csId}::${item.serviceName}`,
+            id: `${client.id}::${svc.csId}::${item.id}`,
             _originalClientId: client.id,
-            _csId: item._csId,
+            _csId: svc.csId,
             services: [svcClone],
-            _mergedLineItems: allLineItems,
+            _mergedLineItems: allLineItems.map((entry) => entry.item),
             _stxItem: item,
-            _stxIdx: idx,
-            _stxName: item._svcName || item.serviceName,
+            _stxIdx: itemIdx,
+            _stxName: svc.serviceName || item.serviceName,
           });
         });
       } else {
@@ -87,14 +87,13 @@ export default function StxPage() {
   );
 
   const handleClientClick = useCallback((flatId: string) => {
-    // Split composite ID: clientId::csId::serviceName or clientId::csId
+    const row = flatClients.find((c: any) => c.id === flatId);
     const parts = flatId.split("::");
     const origId = parts[0];
-    const lineItemName = parts.length > 2 ? parts.slice(2).join("::") : null;
     setSelectedClientId(origId);
-    setStxLineItemFocus(lineItemName);
+    setStxLineItemFocus(row?._stxItem?.serviceName || null);
     setSlideoverOpen(true);
-  }, []);
+  }, [flatClients]);
 
   const handleStageChange = useCallback(
     (flatId: string, monthIdx: number, stage: any, csId?: string) => {

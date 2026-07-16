@@ -538,14 +538,29 @@ export async function PUT(request: Request) {
         });
       }
     }
-// Helper to sync sales tax line items
+// Helper to sync sales tax line items and their normalized comments
     async function syncStxLineItems(csId: string, items: any[]) {
       if (!items || !Array.isArray(items)) return;
-      // Delete old STX items for this service
+      const normalizedItems = items.map((item: any) => ({ ...item, itemId: item.id || randomUUID() }));
+      const { data: existingRows, error: existingErr } = await supabase
+        .from("sales_tax_registration").select("id").eq("client_service_id", csId);
+      if (existingErr) throw new Error(`STX lookup error: ${existingErr.message}`);
+
+      const commentEntityIds = [...new Set([
+        ...(existingRows || []).map((row: any) => row.id),
+        ...normalizedItems.map((item: any) => item.itemId),
+      ])];
+      if (commentEntityIds.length > 0) {
+        const { error: commentDeleteErr } = await supabase.from("comments").delete()
+          .eq("entity_type", "stx_line_item").in("entity_id", commentEntityIds);
+        if (commentDeleteErr) throw new Error(`STX comment delete error: ${commentDeleteErr.message}`);
+      }
+
       const { error: delErr } = await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
-      if (delErr) { console.error("STX delete error:", delErr.message); return; }
-      for (const item of items) {
-        const itemId = item.id || randomUUID();
+      if (delErr) throw new Error(`STX delete error: ${delErr.message}`);
+
+      for (const item of normalizedItems) {
+        const itemId = item.itemId;
         const { error: insErr } = await supabase.from("sales_tax_registration").insert({
           id: itemId,
           client_service_id: csId,
@@ -559,25 +574,20 @@ export async function PUT(request: Request) {
           bank_routing_ref: item.bankRouting || "",
           notes: item.notes || "",
         });
-        if (insErr) continue;
-        // Sync per-line-item comments to unified table
-        const cmts = Array.isArray(item.comments) ? item.comments : [];
-        if (cmts.length > 0) {
-          // Delete old comments for this item
-          await supabase.from("comments").delete()
-            .eq("entity_type", "stx_line_item").eq("entity_id", itemId);
-          for (const cm of cmts) {
-            const body = cm.text || cm.body || "";
-            if (!body) continue;
-            await supabase.from("comments").insert({
-              entity_type: "stx_line_item",
-              entity_id: itemId,
-              month: cm.month ?? null,
-              body,
-              author_label: cm.author || "",
-              created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
-            });
-          }
+        if (insErr) throw new Error(`STX insert error: ${insErr.message}`);
+
+        for (const cm of Array.isArray(item.comments) ? item.comments : []) {
+          const body = cm.text || cm.body || "";
+          if (!body) continue;
+          const { error: commentInsertErr } = await supabase.from("comments").insert({
+            entity_type: "stx_line_item",
+            entity_id: itemId,
+            month: cm.month ?? null,
+            body,
+            author_label: cm.author || "",
+            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+          });
+          if (commentInsertErr) throw new Error(`STX comment insert error: ${commentInsertErr.message}`);
         }
       }
     }
@@ -726,12 +736,10 @@ export async function PUT(request: Request) {
                     await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
                 }
             }
-            let stxSyncErr = null;
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) {
-              try { await syncStxLineItems(existing.id, svc.salesTaxLineItems); } catch(e: any) { stxSyncErr = e.message || String(e); }
+              await syncStxLineItems(existing.id, svc.salesTaxLineItems);
             }
-            results.push({ key: svc.key, action: "already_active", _stxCount: Array.isArray(svc.salesTaxLineItems) ? svc.salesTaxLineItems.length : -1, _stxSyncErr: stxSyncErr, _csId: existing.id } as any);
-            if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
+            results.push({ key: svc.key, action: "already_active" });
             if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           }
@@ -959,13 +967,36 @@ export async function PATCH(request: Request) {
       }
     }
 
-    // Sync salesTaxLineItems → sales_tax_registration
+    // Sync salesTaxLineItems → sales_tax_registration + comments (normalized, mirrors stateRenewalItems)
     if (salesTaxLineItems !== undefined) {
-      await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
       const stxItems = Array.isArray(salesTaxLineItems) ? salesTaxLineItems : [];
-      for (const item of stxItems) {
-        await supabase.from("sales_tax_registration").insert({
-          id: item.id || randomUUID(),
+      const normalizedItems = stxItems.map((item: any) => ({ ...item, itemId: item.id || randomUUID() }));
+
+      // Gather existing registration IDs so we can clean up their comments
+      const { data: existingRows, error: existingErr } = await supabase
+        .from("sales_tax_registration").select("id").eq("client_service_id", csId);
+      if (existingErr) throw new Error(`STX lookup error: ${existingErr.message}`);
+
+      // Delete comments for both old and new item IDs before touching parent rows
+      const commentEntityIds = [...new Set([
+        ...(existingRows || []).map((row: any) => row.id),
+        ...normalizedItems.map((item: any) => item.itemId),
+      ])];
+      if (commentEntityIds.length > 0) {
+        const { error: commentDeleteErr } = await supabase.from("comments").delete()
+          .eq("entity_type", "stx_line_item").in("entity_id", commentEntityIds);
+        if (commentDeleteErr) throw new Error(`STX comment delete error: ${commentDeleteErr.message}`);
+      }
+
+      // Delete old registrations
+      const { error: delErr } = await supabase.from("sales_tax_registration").delete().eq("client_service_id", csId);
+      if (delErr) throw new Error(`STX delete error: ${delErr.message}`);
+
+      // Re-insert registrations + their comments
+      for (const item of normalizedItems) {
+        const itemId = item.itemId;
+        const { error: insErr } = await supabase.from("sales_tax_registration").insert({
+          id: itemId,
           client_service_id: csId,
           rt_number: item.rt || item.rt_number || "",
           service_name: item.serviceName || "",
@@ -977,6 +1008,21 @@ export async function PATCH(request: Request) {
           bank_routing_ref: item.bankRouting || "",
           notes: item.notes || "",
         });
+        if (insErr) throw new Error(`STX insert error: ${insErr.message}`);
+
+        for (const cm of Array.isArray(item.comments) ? item.comments : []) {
+          const body = cm.text || cm.body || "";
+          if (!body) continue;
+          const { error: commentInsertErr } = await supabase.from("comments").insert({
+            entity_type: "stx_line_item",
+            entity_id: itemId,
+            month: cm.month ?? null,
+            body,
+            author_label: cm.author || "",
+            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+          });
+          if (commentInsertErr) throw new Error(`STX comment insert error: ${commentInsertErr.message}`);
+        }
       }
     }
 

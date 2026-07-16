@@ -284,8 +284,8 @@ export default function WorklistTable({
   // ── Comment panel state ──
   const [activeCommentClientId, setActiveCommentClientId] = useState<string | null>(null);
   const [activeCommentMonth, setActiveCommentMonth] = useState<number>(-1);
-  const [activeStxIdx, setActiveStxIdx] = useState<number | null>(null);
-  const [activeRenewalIdx, setActiveRenewalIdx] = useState<number | null>(null);
+  const [activeStxItemId, setActiveStxItemId] = useState<string | null>(null);
+  const [activeRenewalItemId, setActiveRenewalItemId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentPanelPos, setCommentPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -298,8 +298,8 @@ export default function WorklistTable({
       if (!target.closest(".comment-panel-wl") && !target.closest(".cdot")) {
         setActiveCommentClientId(null);
         setActiveCommentMonth(-1);
-        setActiveStxIdx(null);
-        setActiveRenewalIdx(null);
+        setActiveStxItemId(null);
+        setActiveRenewalItemId(null);
         setCommentPanelPos(null);
       }
     }
@@ -491,11 +491,12 @@ export default function WorklistTable({
     return "You";
   };
 
-  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxIdx?: number, renewalIdx?: number) => {
+  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxItemId?: string, renewalItemId?: string) => {
     if (!text.trim()) return;
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
-    const cl = clients.find((c: any) => (c._originalClientId || c.id) === origId);
+    const cl = clients.find((c: any) => c.id === clientId)
+      || clients.find((c: any) => (c._originalClientId || c.id) === origId);
     if (!cl) { console.warn("addComment: client not found for", origId); return; }
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) { console.warn("addComment: no csId on service", serviceKey, "for client", cl.name); return; }
@@ -507,24 +508,17 @@ export default function WorklistTable({
       author: getAuthorName(),
       createdAt: new Date().toISOString(),
     };
-    if (stxIdx != null) newComment.stxIdx = stxIdx;
-    if (renewalIdx != null) newComment.renewalIdx = renewalIdx;
-
     // ── STX per-line-item: store comment on the specific line item ──
-    if (stxIdx != null && svc.salesTaxLineItems) {
-      const items = svc.salesTaxLineItems.map((it: any, idx: number) =>
-        idx === stxIdx ? { ...it, comments: [...(it.comments || []), newComment] } : it
+    if (stxItemId && svc.salesTaxLineItems) {
+      const items = svc.salesTaxLineItems.map((it: any) =>
+        it.id === stxItemId ? { ...it, comments: [...(it.comments || []), newComment] } : it
       );
       svc.salesTaxLineItems = items;
       try {
-        // Send via PUT — triggers syncStxLineItems which saves to unified comments table
         const res = await fetch("/api/clients", {
-          method: "PUT",
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: origId,
-            services: [{ csId: svc.csId, key: serviceKey, enabled: true, salesTaxLineItems: items }],
-          }),
+          body: JSON.stringify({ csId: svc.csId, salesTaxLineItems: items }),
         });
         if (res.ok) {
           setCommentText("");
@@ -536,12 +530,13 @@ export default function WorklistTable({
     }
 
     // ── State renewal item: store comment on the renewal item ──
-    if (renewalIdx != null && svc.stateRenewalItems) {
+    if (renewalItemId && svc.stateRenewalItems) {
       const items = [...(svc.stateRenewalItems || [])];
-      if (!items[renewalIdx]) { console.error("renewalIdx out of range"); return; }
-      items[renewalIdx] = {
-        ...items[renewalIdx],
-        comments: [...(items[renewalIdx].comments || []), newComment],
+      const itemIdx = items.findIndex((item: any) => item.id === renewalItemId);
+      if (itemIdx < 0) { console.error("renewal item not found"); return; }
+      items[itemIdx] = {
+        ...items[itemIdx],
+        comments: [...(items[itemIdx].comments || []), newComment],
       };
       svc.stateRenewalItems = items;
       try {
@@ -582,21 +577,23 @@ export default function WorklistTable({
     }
   }, [clients, serviceKey]);
 
-  const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string, stxIdx?: number, renewalIdx?: number) => {
+  const deleteComment = useCallback(async (clientId: string, monthIdx: number, commentId: string, stxItemId?: string, renewalItemId?: string) => {
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
-    const cl = clients.find((c: any) => (c._originalClientId || c.id) === origId);
+    const cl = clients.find((c: any) => c.id === clientId)
+      || clients.find((c: any) => (c._originalClientId || c.id) === origId);
     if (!cl) { console.warn("deleteComment: client not found for", origId); return; }
     const svc = cl.services.find((s: any) => s.key === serviceKey);
     if (!svc?.csId) { console.warn("deleteComment: no csId on service", serviceKey); return; }
 
     // ── Sales tax line item: delete from line item comments ──
-    if (stxIdx != null && svc.salesTaxLineItems) {
+    if (stxItemId && svc.salesTaxLineItems) {
       const items = [...(svc.salesTaxLineItems || [])];
-      if (!items[stxIdx]) return;
-      items[stxIdx] = {
-        ...items[stxIdx],
-        comments: (items[stxIdx].comments || []).filter((c: any) => c.id !== commentId),
+      const itemIdx = items.findIndex((item: any) => item.id === stxItemId);
+      if (itemIdx < 0) return;
+      items[itemIdx] = {
+        ...items[itemIdx],
+        comments: (items[itemIdx].comments || []).filter((c: any) => c.id !== commentId),
       };
       svc.salesTaxLineItems = items;
       try {
@@ -611,12 +608,13 @@ export default function WorklistTable({
     }
 
     // ── State renewal item: delete from renewal item comments ──
-    if (renewalIdx != null && svc.stateRenewalItems) {
+    if (renewalItemId && svc.stateRenewalItems) {
       const items = [...(svc.stateRenewalItems || [])];
-      if (!items[renewalIdx]) return;
-      items[renewalIdx] = {
-        ...items[renewalIdx],
-        comments: (items[renewalIdx].comments || []).filter((c: any) => c.id !== commentId),
+      const itemIdx = items.findIndex((item: any) => item.id === renewalItemId);
+      if (itemIdx < 0) return;
+      items[itemIdx] = {
+        ...items[itemIdx],
+        comments: (items[itemIdx].comments || []).filter((c: any) => c.id !== commentId),
       };
       svc.stateRenewalItems = items;
       try {
@@ -1485,7 +1483,7 @@ export default function WorklistTable({
                                 const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                                 setActiveCommentClientId(isOpen ? null : client.id);
                                 setActiveCommentMonth(isOpen ? -1 : i);
-                                setActiveStxIdx(isOpen ? null : (isStxItem ? (stxIdx ?? null) : null));
+                                setActiveStxItemId(null);
                                 if (!isOpen) setCommentText("");
                               }}
                               className="cdot"
@@ -1516,7 +1514,7 @@ export default function WorklistTable({
                                       </div>
                                       <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
                                       <button
-                                        onClick={() => deleteComment(client.id, i, cm.id, activeStxIdx ?? undefined)}
+                                        onClick={() => deleteComment(client.id, i, cm.id, activeStxItemId ?? undefined)}
                                         style={{ all: "unset", cursor: "pointer", position: "absolute", top: 4, right: 6, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
                                         title="Delete comment"
                                       >×</button>
@@ -1529,11 +1527,11 @@ export default function WorklistTable({
                                   style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
                                   value={commentText}
                                   onChange={e => setCommentText(e.target.value)}
-                                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxIdx ?? undefined); } }}
+                                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxItemId ?? undefined); } }}
                                   placeholder="Add a comment…"
                                 />
                                 <button
-                                  onClick={() => addComment(client.id, i, commentText, activeStxIdx ?? undefined)}
+                                  onClick={() => addComment(client.id, i, commentText, activeStxItemId ?? undefined)}
                                   style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
                                 >Send</button>
                               </div>
@@ -1676,11 +1674,11 @@ export default function WorklistTable({
                       : stage === "na" ? "–" : "";
                     const lockHist = isHistorical && isActive;
                     // ── Comment marker: per-line-item for STX & renewals, service-level otherwise ──
-                    const commentSource = isStxItem && stxIdx != null
-                      ? (svc.salesTaxLineItems?.[stxIdx]?.comments || [])
+                    const commentSource = isStxItem && stxItem
+                      ? (stxItem.comments || [])
                       : isRenewalItem
                       ? (renewalItem?.comments || [])
-                      : (serviceKey === "renditions" || serviceKey === "annual_reports")
+                      : (serviceKey === "sales_tax" || serviceKey === "renditions" || serviceKey === "annual_reports")
                       ? []
                       : (svc.comments || []);
                     const hasCmt = commentSource.some((c: any) => c.month === i);
@@ -1732,8 +1730,8 @@ export default function WorklistTable({
                             const isOpen = activeCommentClientId === client.id && activeCommentMonth === i;
                             setActiveCommentClientId(isOpen ? null : client.id);
                             setActiveCommentMonth(isOpen ? -1 : i);
-                            setActiveStxIdx(isOpen ? null : (isStxItem ? (stxIdx ?? null) : null));
-                            setActiveRenewalIdx(isOpen ? null : (isRenewalItem ? (renewalIdx ?? null) : null));
+                            setActiveStxItemId(isOpen ? null : (isStxItem ? (stxItem?.id ?? null) : null));
+                            setActiveRenewalItemId(isOpen ? null : (isRenewalItem ? (renewalItem?.id ?? null) : null));
                             if (!isOpen) setCommentText("");
                             }}
                             className="cdot"
@@ -1764,7 +1762,7 @@ export default function WorklistTable({
                                     </div>
                                     <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
                                     <button
-                                      onClick={() => deleteComment(client.id, i, cm.id, activeStxIdx ?? undefined, activeRenewalIdx ?? undefined)}
+                                      onClick={() => deleteComment(client.id, i, cm.id, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined)}
                                       style={{ all: "unset", cursor: "pointer", position: "absolute", top: 4, right: 6, color: "var(--red)", fontSize: 11, lineHeight: 1 }}
                                       title="Delete comment"
                                     >×</button>
@@ -1777,11 +1775,11 @@ export default function WorklistTable({
                                 style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
                                 value={commentText}
                                 onChange={e => setCommentText(e.target.value)}
-                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxIdx ?? undefined, activeRenewalIdx ?? undefined); } }}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined); } }}
                                 placeholder="Add a comment…"
                               />
                               <button
-                                onClick={() => addComment(client.id, i, commentText, activeStxIdx ?? undefined, activeRenewalIdx ?? undefined)}
+                                onClick={() => addComment(client.id, i, commentText, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined)}
                                 style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
                               >Send</button>
                             </div>

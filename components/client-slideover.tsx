@@ -563,6 +563,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   }
 
   function getServiceComments(svcKey: string, monthIdx: number): CommentEntry[] {
+    if ((moduleKey === "sales_tax" && svcKey === "sales_tax") ||
+        (moduleKey === "annual_reports" && svcKey === "annual_reports")) return [];
     const svc = localSvcs.find((s: any) => s.key === svcKey);
     // Merge service-level comments with per-line-item comments (STX)
     const svcCmts = (svc?.comments || []);
@@ -1674,6 +1676,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
     function handleAddNoteForModule() {
       if (!notesText.trim()) return;
+      // Do not add service-level notes on Sales Tax or Annual Reports tabs (notes are per-line-item)
+      if (moduleKey === "sales_tax" || moduleKey === "annual_reports") return;
       const prefix = noteType !== "others" ? `[${noteType}] ` : "";
       const comment: CommentEntry = {
         id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -2677,8 +2681,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
             {/* Service notes from DB — hidden */}
 
-            {/* Notes section */}
-            {(
+            {/* Notes section — hidden on Sales Tax and Annual Reports tabs (notes are per-line-item) */}
+            {moduleKey !== "sales_tax" && moduleKey !== "annual_reports" && (
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
               <div className="notemo">Notes for {svcLabel(moduleKey)}</div>
               <div className="noteadd">
