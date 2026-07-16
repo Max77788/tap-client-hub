@@ -584,10 +584,29 @@ export async function PUT(request: Request) {
 // Helper to sync state renewal items
     async function syncStateRenewals(csId: string, items: any[]) {
       if (!items || !Array.isArray(items)) return;
+
+      const normalizedItems = items.map((item: any) => ({ ...item, itemId: item.id || randomUUID() }));
+      const { data: existingRows, error: existingErr } = await supabase
+        .from("state_renewals").select("id").eq("client_service_id", csId);
+      if (existingErr) throw new Error(`SR lookup error: ${existingErr.message}`);
+
+      // Remove comments for deleted items as well as items being rewritten. This must
+      // happen before the parent rows are deleted so removed renewals cannot orphan notes.
+      const commentEntityIds = [...new Set([
+        ...(existingRows || []).map((row: any) => row.id),
+        ...normalizedItems.map((item: any) => item.itemId),
+      ])];
+      if (commentEntityIds.length > 0) {
+        const { error: commentDeleteErr } = await supabase.from("comments").delete()
+          .eq("entity_type", "state_renewal_item").in("entity_id", commentEntityIds);
+        if (commentDeleteErr) throw new Error(`SR comment delete error: ${commentDeleteErr.message}`);
+      }
+
       const { error: delErr } = await supabase.from("state_renewals").delete().eq("client_service_id", csId);
-      if (delErr) { console.error("SR delete error:", delErr.message); return; }
-      for (const item of items) {
-        const itemId = item.id || randomUUID();
+      if (delErr) throw new Error(`SR delete error: ${delErr.message}`);
+
+      for (const item of normalizedItems) {
+        const itemId = item.itemId;
         const { error: insErr } = await supabase.from("state_renewals").insert({
           id: itemId,
           client_service_id: csId,
@@ -598,24 +617,20 @@ export async function PUT(request: Request) {
           assigned_to: item.assignedTo || null,
           frequency: item.frequency || "Yearly",
         });
-        if (insErr) { console.error("SR insert error:", insErr.message); continue; }
-        // Sync per-item comments to unified table
-        const cmts = Array.isArray(item.comments) ? item.comments : [];
-        if (cmts.length > 0) {
-          await supabase.from("comments").delete()
-            .eq("entity_type", "state_renewal_item").eq("entity_id", itemId);
-          for (const cm of cmts) {
-            const body = cm.text || cm.body || "";
-            if (!body) continue;
-            await supabase.from("comments").insert({
-              entity_type: "state_renewal_item",
-              entity_id: itemId,
-              month: cm.month ?? null,
-              body,
-              author_label: cm.author || "",
-              created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
-            });
-          }
+        if (insErr) throw new Error(`SR insert error: ${insErr.message}`);
+
+        for (const cm of Array.isArray(item.comments) ? item.comments : []) {
+          const body = cm.text || cm.body || "";
+          if (!body) continue;
+          const { error: commentInsertErr } = await supabase.from("comments").insert({
+            entity_type: "state_renewal_item",
+            entity_id: itemId,
+            month: cm.month ?? null,
+            body,
+            author_label: cm.author || "",
+            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+          });
+          if (commentInsertErr) throw new Error(`SR comment insert error: ${commentInsertErr.message}`);
         }
       }
     }
@@ -901,7 +916,7 @@ export async function PATCH(request: Request) {
     if (renewalDueDay !== undefined) updates.renewal_due_day = renewalDueDay || null;
     if (renewalIdentifiers !== undefined) updates.renewal_identifiers = renewalIdentifiers || null;
 
-    if (Object.keys(updates).length === 0 && salesTaxLineItems === undefined && comments === undefined && stateRenewal === undefined) {
+    if (Object.keys(updates).length === 0 && salesTaxLineItems === undefined && comments === undefined && stateRenewalItems === undefined) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
@@ -967,13 +982,33 @@ export async function PATCH(request: Request) {
 
     // Sync stateRenewalItems → state_renewals
     if (stateRenewalItems !== undefined) {
-      await supabase.from("state_renewals").delete().eq("client_service_id", csId);
-      // Auto-set state_renewal=true so the client shows on Annual Reports tab
-      await supabase.from("client_services").update({ state_renewal: true }).eq("id", csId);
       const srItems = Array.isArray(stateRenewalItems) ? stateRenewalItems : [];
-      for (const item of srItems) {
-        await supabase.from("state_renewals").insert({
-          id: item.id || randomUUID(),
+      const normalizedItems = srItems.map((item: any) => ({ ...item, itemId: item.id || randomUUID() }));
+      const { data: existingRows, error: existingErr } = await supabase
+        .from("state_renewals").select("id").eq("client_service_id", csId);
+      if (existingErr) throw new Error(`SR lookup error: ${existingErr.message}`);
+
+      const commentEntityIds = [...new Set([
+        ...(existingRows || []).map((row: any) => row.id),
+        ...normalizedItems.map((item: any) => item.itemId),
+      ])];
+      if (commentEntityIds.length > 0) {
+        const { error: commentDeleteErr } = await supabase.from("comments").delete()
+          .eq("entity_type", "state_renewal_item").in("entity_id", commentEntityIds);
+        if (commentDeleteErr) throw new Error(`SR comment delete error: ${commentDeleteErr.message}`);
+      }
+
+      const { error: renewalDeleteErr } = await supabase.from("state_renewals").delete().eq("client_service_id", csId);
+      if (renewalDeleteErr) throw new Error(`SR delete error: ${renewalDeleteErr.message}`);
+
+      // Auto-set state_renewal=true so the client shows on Annual Reports tab
+      const { error: renewalFlagErr } = await supabase.from("client_services").update({ state_renewal: true }).eq("id", csId);
+      if (renewalFlagErr) throw new Error(`SR flag update error: ${renewalFlagErr.message}`);
+
+      for (const item of normalizedItems) {
+        const itemId = item.itemId;
+        const { error: renewalInsertErr } = await supabase.from("state_renewals").insert({
+          id: itemId,
           client_service_id: csId,
           state: item.state || "TX",
           due_month: item.dueMonth || null,
@@ -982,24 +1017,20 @@ export async function PATCH(request: Request) {
           assigned_to: item.assignedTo || null,
           frequency: item.frequency || "Yearly",
         });
-        // Sync per-item comments to unified table
-        const cmts = Array.isArray(item.comments) ? item.comments : [];
-        if (cmts.length > 0) {
-          const itemId = item.id || randomUUID();
-          await supabase.from("comments").delete()
-            .eq("entity_type", "state_renewal_item").eq("entity_id", itemId);
-          for (const cm of cmts) {
-            const body = cm.text || cm.body || "";
-            if (!body) continue;
-            await supabase.from("comments").insert({
-              entity_type: "state_renewal_item",
-              entity_id: itemId,
-              month: cm.month ?? null,
-              body,
-              author_label: cm.author || "",
-              created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
-            });
-          }
+        if (renewalInsertErr) throw new Error(`SR insert error: ${renewalInsertErr.message}`);
+
+        for (const cm of Array.isArray(item.comments) ? item.comments : []) {
+          const body = cm.text || cm.body || "";
+          if (!body) continue;
+          const { error: commentInsertErr } = await supabase.from("comments").insert({
+            entity_type: "state_renewal_item",
+            entity_id: itemId,
+            month: cm.month ?? null,
+            body,
+            author_label: cm.author || "",
+            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+          });
+          if (commentInsertErr) throw new Error(`SR comment insert error: ${commentInsertErr.message}`);
         }
       }
     }

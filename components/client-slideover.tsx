@@ -57,6 +57,15 @@ const svcLabel = (k: string) => svcMeta[k]?.label || k;
 const svcIc = (k: string) => svcMeta[k]?.ic || "📋";
 const svcBg = (k: string) => svcMeta[k]?.bg || "var(--teal-soft)";
 
+// Annual Reports owns state renewal items. Fall back to the legacy Renditions
+// service only for clients that do not yet have an Annual Reports service row.
+function findRenewalService(services: any[]) {
+  return services.find((s: any) => s.key === "annual_reports" && s.csId)
+    || services.find((s: any) => s.key === "renditions" && s.csId)
+    || services.find((s: any) => s.key === "annual_reports")
+    || services.find((s: any) => s.key === "renditions");
+}
+
 interface ClientSlideoverProps {
   client: Client;
   open: boolean;
@@ -285,12 +294,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       i === itemIdx ? { ...it, comments: [...(it.comments || []), comment] } : it
     );
     setRenewalItems(items);
+    const renewalSvc = findRenewalService(localSvcs);
     const newSvcs = localSvcs.map((s: any) =>
-      s.key === "renditions" ? { ...s, stateRenewalItems: items } : s
+      s.key === (renewalSvc?.key || "annual_reports") ? { ...s, stateRenewalItems: items } : s
     );
     setLocalSvcs(newSvcs);
     setRenewalNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
-    const rendSvc = newSvcs.find((s: any) => s.key === "renditions");
+    const rendSvc = findRenewalService(newSvcs);
     if (rendSvc?.csId) {
       fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: items }) }).catch(() => {});
@@ -302,11 +312,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       i === itemIdx ? { ...it, comments: (it.comments || []).filter((c: any) => c.id !== commentId) } : it
     );
     setRenewalItems(items);
+    const renewalSvc = findRenewalService(localSvcs);
     const newSvcs = localSvcs.map((s: any) =>
-      s.key === "renditions" ? { ...s, stateRenewalItems: items } : s
+      s.key === (renewalSvc?.key || "annual_reports") ? { ...s, stateRenewalItems: items } : s
     );
     setLocalSvcs(newSvcs);
-    const rendSvc = newSvcs.find((s: any) => s.key === "renditions");
+    const rendSvc = findRenewalService(newSvcs);
     if (rendSvc?.csId) {
       fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: items }) }).catch(() => {});
@@ -455,8 +466,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setFilingState(trSvc?.filingState || "");
     setFilingMonth(trSvc?.filingMonth ? String(trSvc.filingMonth) : "");
     setFilingType(trSvc?.filingType || "");
-    // Initialize state renewal from renditions service
-    const rendSvc = client.services.find((s: any) => s.key === "renditions");
+    // Initialize state renewal from Annual Reports, with legacy Renditions fallback
+    const rendSvc = findRenewalService(client.services);
     setStateRenewal(rendSvc?.stateRenewal || false);
     setRenewalState(rendSvc?.renewalState || "TX");
     setRenewalDueMonth(rendSvc?.renewalDueMonth || "");
@@ -488,7 +499,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // ── Helper: sync renewal items via PATCH (or PUT if service row doesn't exist yet) ──
   const syncRenewalItems = useCallback(async (items: any[]) => {
-    const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+    const rendSvc = findRenewalService(localSvcs);
     const csId = rendSvc?.csId;
     if (csId) {
       try {
@@ -500,7 +511,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     } else {
       // No DB row yet - go through PUT to create service + items together
       console.warn("syncRenewalItems: no csId, falling back to PUT");
-      const updated = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
+      const targetKey = rendSvc?.key || "annual_reports";
+      const updated = localSvcs.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
       throttledOnSave({ ...client, services: updated } as Client);
     }
   }, [localSvcs, client, throttledOnSave]);
@@ -2257,7 +2269,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                             );
                             setRenewalItems(updated);
                             setEditingRenewalIdx(null);
-                            setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
+                            setLocalSvcs(prev => {
+                              const targetKey = findRenewalService(prev)?.key || "annual_reports";
+                              return prev.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: updated } : s);
+                            });
                             syncRenewalItems(updated);
                           }}
                             style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Save</button>
@@ -2288,9 +2303,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           onClick={() => {
                             const updated = renewalItems.filter((_: any, i: number) => i !== idx);
                             setRenewalItems(updated);
-                            const newSvcs = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s);
+                            const targetKey = findRenewalService(localSvcs)?.key || "annual_reports";
+                            const newSvcs = localSvcs.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: updated } : s);
                             setLocalSvcs(newSvcs);
-                            const rendSvc = newSvcs.find((s: any) => s.key === "renditions");
+                            const rendSvc = findRenewalService(newSvcs);
                             if (rendSvc?.csId) {
                               fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
                                 body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: updated }) }).catch(() => {});
@@ -2379,12 +2395,15 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       const dy = renewalAddDayRef.current?.value || "1";
                       const ids = renewalAddIdsRef.current?.value || "";
                       const assigned = renewalAddAssignedRef.current?.value || "";
-                      const newItem = { state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned, frequency: "Yearly" };
+                      const newItem = { id: crypto.randomUUID(), state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned, frequency: "Yearly", comments: [] };
                       const updated = [...renewalItems, newItem];
                       setRenewalItems(updated);
                       setStateRenewal(true);
                       setAddingRenewal(false);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated, stateRenewal: true } : s));
+                      setLocalSvcs(prev => {
+                        const targetKey = findRenewalService(prev)?.key || "annual_reports";
+                        return prev.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: updated, stateRenewal: true } : s);
+                      });
                       syncRenewalItems(updated);
                     }}
                       style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Add</button>
