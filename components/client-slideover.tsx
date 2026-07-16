@@ -926,7 +926,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div key={mo} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 2 }}>{mo}</div>
                 <div
-                  onClick={() => { if (svcKey !== "sales_tax") handleNextStage(svcKey, i); }}
+                  onClick={svcKey === "sales_tax" ? undefined : () => handleNextStage(svcKey, i)}
                   style={{
                     width: 30, height: 30, borderRadius: 8,
                     border: `1px solid ${hasDelayBorder ? "var(--red)" : style.border}`,
