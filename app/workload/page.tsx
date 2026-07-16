@@ -92,7 +92,7 @@ export default function WorkloadPage() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/profiles");
+        const res = await fetch("/api/profile-directory");
         if (!res.ok) throw new Error("Failed to load profiles");
         const data = await res.json();
         if (!cancelled) {

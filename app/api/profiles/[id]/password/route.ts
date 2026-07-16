@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
-import { requireUserManagementAccess } from "@/lib/access-server";
+import { resolveAccessIdentity } from "@/lib/access-server";
 
 /**
  * POST /api/profiles/[id]/password
@@ -11,15 +11,15 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const access = await requireUserManagementAccess();
-  if (access.status) {
-    return NextResponse.json(
-      { error: access.status === 401 ? "Unauthorized" : "Forbidden" },
-      { status: access.status }
-    );
-  }
   try {
     const { id } = await params;
+    const identity = await resolveAccessIdentity();
+    if (!identity) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!identity.canManageUsers && identity.id !== id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const { password } = await request.json();
 
     if (!password || password.length < 6) {

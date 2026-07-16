@@ -651,7 +651,7 @@ export default function WorklistTable({
   // ── Staff list for dropdowns — only active members, full names, no duplicates ──
   const [staffList, setStaffList] = useState<string[]>([]);
   useEffect(() => {
-    fetch("/api/profiles")
+    fetch("/api/profile-directory")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {

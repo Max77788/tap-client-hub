@@ -100,7 +100,7 @@ export default function TimePage() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/profiles");
+        const res = await fetch("/api/profile-directory");
         if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {

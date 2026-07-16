@@ -54,7 +54,6 @@ assert.match(meRoute, /status: 401/);
 for (const route of [
   "app/api/profiles/route.ts",
   "app/api/profiles/[id]/route.ts",
-  "app/api/profiles/[id]/password/route.ts",
   "app/api/2fa/admin-toggle/route.ts",
 ]) {
   const source = read(route);
@@ -81,5 +80,26 @@ assert.doesNotMatch(loginPage, /TapHub2024|MaxHub2025/);
 const proxy = read("proxy.ts");
 assert.match(proxy, /tap_demo_session/);
 assert.doesNotMatch(proxy, /hasDemoCookie = .*tap_demo_user/);
+
+const legacyAuth = read("lib/supabase/auth-user.ts");
+assert.match(legacyAuth, /resolveAccessIdentity/);
+assert.doesNotMatch(legacyAuth, /tap_demo_user/);
+assert.doesNotMatch(legacyAuth, /tap_demo_email/);
+
+const passwordRoute = read("app/api/profiles/[id]/password/route.ts");
+assert.match(passwordRoute, /identity\.id\s*!==\s*id/);
+assert.match(passwordRoute, /identity\.canManageUsers/);
+
+const directoryRoute = read("app/api/profile-directory/route.ts");
+assert.match(directoryRoute, /resolveAccessIdentity/);
+assert.match(directoryRoute, /select\("id, full_name, role, location, reporting_manager, active"\)/);
+for (const consumer of [
+  "app/time/page.tsx",
+  "app/workload/page.tsx",
+  "components/client-slideover.tsx",
+  "components/worklist-table.tsx",
+]) {
+  assert.match(read(consumer), /fetch\(["']\/api\/profile-directory["']\)/);
+}
 
 console.log("access-policy regression tests passed");

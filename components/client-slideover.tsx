@@ -407,7 +407,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ── Profiles for assignee dropdown ──
   const [profiles, setProfiles] = useState<{id: string; name: string}[]>([]);
   useEffect(() => {
-    fetch("/api/profiles").then(r => r.json()).then(data => {
+    fetch("/api/profile-directory").then(r => r.json()).then(data => {
       if (Array.isArray(data)) setProfiles(data
         .filter((u: any) => u.status === "Active")
         .filter((u: any) => !["Max Matronin", "Staff Test"].includes(u.name))
