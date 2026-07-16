@@ -15,8 +15,8 @@ export async function proxy(request: NextRequest) {
 
   const cookieHeader = request.headers.get("cookie") || "";
 
-  // Check for demo login cookie
-  const hasDemoCookie = /(?:^|;\s*)tap_demo_user=([^;]*)/.test(cookieHeader);
+  // Only the server-issued signed demo session is authoritative.
+  const hasDemoCookie = /(?:^|;\s*)tap_demo_session=([^;]*)/.test(cookieHeader);
 
   // Check for Supabase auth token cookie
   const hasAuthToken = /(?:^|;\s*)sb-[^-]+-auth-token=/.test(cookieHeader);

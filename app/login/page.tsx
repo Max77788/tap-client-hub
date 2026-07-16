@@ -19,43 +19,29 @@ function LoginContent() {
   useEffect(() => {
     document.cookie = "tap_demo_user=; path=/; max-age=0";
     document.cookie = "tap_demo_email=; path=/; max-age=0";
+    document.cookie = "tap_demo_role=; path=/; max-age=0";
+    document.cookie = "tap_modules=; path=/; max-age=0";
   }, []);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
 
-  // ── Demo accounts bypass everything ──
-  const DEMO_USERS: Record<string, { password: string; name: string }> = {
-    "tushar@tapallc.com": { password: "TapHub2024!", name: "Tushar Patil" },
-    "lizette@tapallc.com": { password: "TapHub2024!", name: "Lizette" },
-    "mmatronin@gmail.com": { password: "MaxHub2025!", name: "Max Matronin" },
-    "ben@aifusioniqlabs.com": { password: "TapHub2024!", name: "Ben" },
-    "staff@tapallc.com": { password: "TapHub2024!", name: "Staff Test" },
-    "janeth@tapallc.com": { password: "TapHub2024!", name: "Janeth Noguera" },
-    "alvaro@tapallc.com": { password: "TapHub2024!", name: "Alvaro Ortega" },
-    "bonnie@tapallc.com": { password: "TapHub2024!", name: "Bonnie Edwards" },
-    "shilpa@tapallc.com": { password: "TapHub2024!", name: "Shilpa Kulkarni" },
-    "sam@tapallc.com": { password: "TapHub2024!", name: "Sam Patil" },
-  };
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    // Demo credentials - check 2FA before auto-login
-    const demo = DEMO_USERS[email.toLowerCase()];
-    if (demo && password === demo.password) {
-      // Set temporary cookie so 2FA endpoints can identify this user
-      document.cookie = `tap_demo_user=${encodeURIComponent(demo.name)}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
-      (() => {
-        const e = email.toLowerCase();
-        if (e === "tushar@tapallc.com") document.cookie = "tap_demo_role=owner; path=/; max-age=86400; SameSite=Lax";
-        else if (e === "lizette@tapallc.com" || e === "mmatronin@gmail.com") document.cookie = "tap_demo_role=admin; path=/; max-age=86400; SameSite=Lax";
-      })();
-
+    // Demo credentials are validated server-side. The server issues a signed,
+    // HttpOnly session instead of trusting browser-writable identity cookies.
+    const demoResponse = await fetch("/api/demo-login", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (demoResponse.ok) {
       // Check if 2FA is enabled for this user
       try {
         const res = await fetch("/api/2fa/status");
@@ -110,8 +96,6 @@ function LoginContent() {
           .catch(() => setTwoFAMessage("Enter the code from your email"));
       } else {
         // No 2FA - proceed
-        document.cookie = `tap_demo_user=${encodeURIComponent(demo?.name || email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
         fetch("/api/me", { credentials: "include" }).catch(() => {});
         router.push(next);
         router.refresh();
@@ -145,8 +129,6 @@ function LoginContent() {
         return;
       }
 
-      document.cookie = `tap_demo_user=${encodeURIComponent(data.name || email.split('@')[0])}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `tap_demo_email=${encodeURIComponent(email.toLowerCase())}; path=/; max-age=86400; SameSite=Lax`;
       fetch("/api/me", { credentials: "include" }).catch(() => {});
 
       router.push(next);

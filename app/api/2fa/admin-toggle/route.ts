@@ -1,22 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireUserManagementAccess } from "@/lib/access-server";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  // Only admins/managers can toggle 2FA for other users
-  const { data: caller } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!caller || (caller.role !== "admin" && caller.role !== "manager")) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-  }
+  const access = await requireUserManagementAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
 
   let body: { target_user_id?: string; enabled?: boolean };
   try { body = await req.json(); } catch {
@@ -49,20 +37,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-  // Only admins/managers can view all 2FA statuses
-  const { data: caller } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!caller || (caller.role !== "admin" && caller.role !== "manager")) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-  }
+  const access = await requireUserManagementAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
 
   const { searchParams } = new URL(req.url);
   const targetUserId = searchParams.get("user_id");

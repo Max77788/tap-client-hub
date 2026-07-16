@@ -31,6 +31,7 @@ export default function UsersPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const isOwner = currentUser?.role === "owner" || currentUser?.role === "admin";
 
   // ── Load current user (for owner check) ──
   useEffect(() => {
@@ -63,11 +64,10 @@ export default function UsersPage() {
         if (!cancelled) { setError(err.message); setLoading(false); }
       }
     }
-    if (!ownerLoading) load();
+    if (!ownerLoading && isOwner) load();
     return () => { cancelled = true; };
-  }, [ownerLoading]);
-
-  const isOwner = currentUser?.role === "owner" || currentUser?.role === "admin";
+  }, [ownerLoading, isOwner]);
+  const isRestrictedRole = !["Owner / Admin", "owner", "admin"].includes(editForm.role || "");
 
   const stats = useMemo(() => ({
     total: users.length,
@@ -472,7 +472,7 @@ export default function UsersPage() {
               <div className="modgrid" style={{
                 display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 7, marginTop: 6,
               }}>
-                {MODULES_LIST.map(m => (
+                {MODULES_LIST.filter(m => !(m === "Users & Access" && isRestrictedRole)).map(m => (
                   <label key={m} style={{
                     display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink)",
                   }}>

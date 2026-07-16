@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { requireUserManagementAccess } from "@/lib/access-server";
+import { effectiveModules, sanitizeModulesForRole } from "@/lib/access-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,8 @@ export const dynamic = "force-dynamic";
  * List all profiles mapped to the User shape used by app/users
  */
 export async function GET() {
+  const access = await requireUserManagementAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -97,19 +101,7 @@ export async function GET() {
       role: ROLE_MAP[p.role] || p.role || "Staff",
       location: p.location || "",
       mgr: mgrName,
-      modules: Array.isArray(p.modules) ? p.modules.map((m: string) => {
-        // Normalize: short codes → display names
-        const map: Record<string,string> = {
-          "clients":"Clients","fin":"Financials","pr":"Payroll","stx":"Sales Tax",
-          "btax":"Tax Returns","ptax":"Tax Returns","t9":"1099s","tax_returns":"Tax Returns",
-          "rend":"Renditions","annual":"Renditions","timesheet":"Timesheet",
-          "workload":"Workload","vault":"Vault","users":"Users & Access",
-          "support":"Support","billing":"Billing","Tax Returns":"Tax Returns",
-          "Business Taxes":"Tax Returns","Personal Taxes":"Tax Returns",
-          "Annual Reports":"Annual Reports",
-        };
-        return map[m] || m;
-      }) : [],
+      modules: effectiveModules(p.role, p.modules),
       status: STATUS_MAP[p.invite_status] ||
         (p.active ? "Active" : "Inactive"),
       email_2fa_enabled: p.email_2fa_enabled ?? false,
@@ -120,6 +112,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const access = await requireUserManagementAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const body = await request.json();
     const { full_name, email, password, role, location, reporting_manager, modules } = body;
@@ -179,7 +173,7 @@ export async function POST(request: Request) {
       role: role || "staff",
       location: location || null,
       reporting_manager: mgrId,
-      modules: Array.isArray(modules) ? modules : [],
+      modules: sanitizeModulesForRole(role || "staff", modules),
       active: true,
       invite_status: "active",
     });
@@ -201,6 +195,8 @@ export async function POST(request: Request) {
 // ── Also add PATCH for updating profiles ──
 
 export async function PATCH(request: Request) {
+  const access = await requireUserManagementAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const body = await request.json();
     const { id, full_name, role, location, reporting_manager, modules } = body;
@@ -219,7 +215,19 @@ export async function PATCH(request: Request) {
     if (full_name !== undefined) updateData.full_name = full_name;
     if (role !== undefined) updateData.role = role;
     if (location !== undefined) updateData.location = location;
-    if (modules !== undefined) updateData.modules = modules;
+    if (modules !== undefined) {
+      let moduleRole = role;
+      if (moduleRole === undefined) {
+        const adminSupabase = createAdminClient();
+        const { data: existing } = await adminSupabase
+          .from("profiles")
+          .select("role")
+          .eq("id", id)
+          .maybeSingle();
+        moduleRole = existing?.role || "staff";
+      }
+      updateData.modules = sanitizeModulesForRole(moduleRole, modules);
+    }
     if (body.active !== undefined) updateData.active = body.active;
     if (body.invite_status !== undefined) updateData.invite_status = body.invite_status;
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ClientsProvider } from "@/hooks/use-clients-context";
+import { canAccessPathname, effectiveModules, firstAllowedRoute, normalizeRole } from "@/lib/access-policy";
 import "./globals.css";
 
 interface NavItem {
@@ -54,11 +55,13 @@ function MobileSidebar({
   pathname,
   open,
   onClose,
+  onNavigate,
 }: {
   visibleNav: NavItem[];
   pathname: string;
   open: boolean;
   onClose: () => void;
+  onNavigate: (href: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -109,7 +112,7 @@ function MobileSidebar({
             return (
               <button
                 key={item.label}
-                onClick={() => { window.location.href = item.href; onClose(); }}
+                onClick={() => { onNavigate(item.href); onClose(); }}
                 className={isActive ? "on" : ""}
               >
                 {item.icon && (
@@ -122,8 +125,10 @@ function MobileSidebar({
         </nav>
         <div className="px-3 pb-3">
           <button
-            onClick={() => {
+            onClick={async () => {
+              await fetch("/api/demo-login", { method: "DELETE", credentials: "include" }).catch(() => {});
               document.cookie = "tap_demo_user=; path=/; max-age=0";
+              document.cookie = "tap_demo_email=; path=/; max-age=0";
               document.cookie.split("; ").forEach(c => {
                 const name = c.split("=")[0];
                 if (name.includes("sb-") || name.includes("supabase")) {
@@ -154,87 +159,60 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
-  // ── Role from cookie (for nav filtering, user-switchable via dropdown) ──
-  const [role, setRole] = useState(() => {
-    if (typeof document === "undefined") return "admin";
-    const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
-    if (!match) return "admin";
-    const raw = decodeURIComponent(match[1]).trim().toLowerCase();
-    if (raw.includes("owner")) return "owner";
-    if (raw.includes("admin")) return "admin";
-    if (raw === "manager") return "manager";
-    if (raw === "staff") return "staff";
-    if (raw.includes("offshore") || raw.includes("india")) return "offshore";
-    return "staff";
-  });
-
-  // ── Real role + modules from database ──
-  const [realRole, setRealRole] = useState<string>("admin");
-  const [userModules, setUserModules] = useState<string[]>(() => {
-    if (typeof document === "undefined") return [];
-    const match = document.cookie.match(/(?:^|;\s*)tap_modules=([^;]*)/);
-    if (!match) return [];
-    return decodeURIComponent(match[1]).split(",").filter(Boolean);
-  });
-  // Fetch real role + modules from /api/me on mount
-  useEffect(() => {
-    fetch("/api/me", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => {
-        if (d.role) {
-          const rl = d.role.toLowerCase();
-          const resolved = rl.includes("owner") ? "owner" : rl.includes("admin") ? "admin" : d.role;
-          setRealRole(resolved);
-        }
-        if (Array.isArray(d.modules)) {
-          setUserModules(d.modules.filter((m: string) => m !== "All"));
-        } else if (["owner", "admin"].includes(d.role?.toLowerCase() || "")) {
-          // Admins/owners see everything if no modules list
-          setUserModules([]);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Keep cookie in sync on future changes
-  useEffect(() => {
-    const match = document.cookie.match(/(?:^|;\s*)tap_demo_role=([^;]*)/);
-    if (match) {
-      const raw = decodeURIComponent(match[1]).trim().toLowerCase();
-      let resolved = "staff";
-      if (raw.includes("owner")) resolved = "owner";
-      else if (raw.includes("admin")) resolved = "admin";
-      else if (raw === "manager") resolved = "manager";
-      else if (raw === "staff") resolved = "staff";
-      else if (raw.includes("offshore") || raw.includes("india")) resolved = "offshore";
-      if (resolved !== role) setRole(resolved);
-    }
-  }, []);
+  const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
+  const [accessLoading, setAccessLoading] = useState(!isAuthPage);
+  const [role, setRole] = useState<string>("staff");
+  const [realRole, setRealRole] = useState<string>("staff");
+  const [userModules, setUserModules] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
-  const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
-
-  // Read email from cookie
   useEffect(() => {
-    const match = document.cookie.match(/(?:^|;\s*)tap_demo_email=([^;]*)/);
-    if (match) {
-      setUserEmail(decodeURIComponent(match[1]));
+    if (isAuthPage) {
+      setAccessLoading(false);
+      return;
     }
-  }, []);
+    let cancelled = false;
+    setAccessLoading(true);
+    fetch("/api/me", { credentials: "include", cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Unauthorized");
+        return response.json();
+      })
+      .then(data => {
+        if (cancelled) return;
+        const resolvedRole = normalizeRole(data.role);
+        setRealRole(resolvedRole);
+        setRole(resolvedRole);
+        setUserModules(Array.isArray(data.modules) ? data.modules : []);
+        setUserEmail(String(data.email || ""));
+        setAccessLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAccessLoading(false);
+        router.replace("/login");
+      });
+    return () => { cancelled = true; };
+  }, [isAuthPage, router]);
 
-  const visibleNav = NAV_ITEMS.filter((item) => {
-    // Separators always pass
-    if (!item.module) return true;
-    // Admins/owners see everything
-    const isPowerUser = role === "admin" || role === "owner";
-    if (isPowerUser) return true;
-    // Staff: filter by what we have right now — cookie modules on first render, API modules after
-    if (userModules.length > 0) return userModules.includes(item.module);
-    // No modules available at all — show only Clients (the universal base tab)
-    return item.module === "Clients";
-  });
+  const allowedModules = useMemo(() => effectiveModules(role, userModules), [role, userModules]);
+  const visibleNav = useMemo(
+    () => accessLoading ? [] : NAV_ITEMS.filter(item => !item.module || allowedModules.includes(item.module)),
+    [accessLoading, allowedModules]
+  );
+
+  useEffect(() => {
+    if (isAuthPage || accessLoading || canAccessPathname(role, userModules, pathname)) return;
+    router.replace(firstAllowedRoute(role, userModules));
+  }, [accessLoading, isAuthPage, pathname, role, router, userModules]);
+
+  useEffect(() => {
+    if (accessLoading) return;
+    visibleNav.forEach(item => item.href && router.prefetch(item.href));
+  }, [accessLoading, router, visibleNav]);
 
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
@@ -268,6 +246,13 @@ export default function RootLayout({
 
             {/* Nav */}
             <nav className="nav flex flex-col gap-[3px] flex-1" style={{ marginTop: 28 }}>
+              {accessLoading && (
+                <div className="space-y-3 px-2" aria-label="Loading navigation">
+                  {[72, 88, 64, 92, 76, 84].map((width, index) => (
+                    <div key={index} className="h-8 rounded-lg animate-pulse" style={{ width: `${width}%`, background: "rgba(255,255,255,.10)" }} />
+                  ))}
+                </div>
+              )}
               {visibleNav.map((item, i) => {
                 if (item.label === "---") {
                   return <div key={`sep-${i}`} className="sep" />;
@@ -276,7 +261,7 @@ export default function RootLayout({
                 return (
                   <button
                     key={item.label}
-                    onClick={() => window.location.href = item.href}
+                    onClick={() => router.push(item.href)}
                     className={isActive ? "on" : ""}
                   >
                     {item.icon && (
@@ -291,8 +276,10 @@ export default function RootLayout({
         {/* Logout */}
         <div className="pb-3">
           <button
-            onClick={() => {
+            onClick={async () => {
+              await fetch("/api/demo-login", { method: "DELETE", credentials: "include" }).catch(() => {});
               document.cookie = "tap_demo_user=; path=/; max-age=0";
+              document.cookie = "tap_demo_email=; path=/; max-age=0";
               document.cookie.split("; ").forEach(c => {
                 const name = c.split("=")[0];
                 if (name.includes("sb-") || name.includes("supabase")) {
@@ -324,7 +311,7 @@ export default function RootLayout({
 
         {/* ── Mobile sidebar drawer ── */}
         {!isAuthPage && (
-          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={href => router.push(href)} />
         )}
 
         {/* ── Main content ── */}
@@ -415,7 +402,12 @@ export default function RootLayout({
 
           {/* Page content */}
           <main className={`flex-1 ${isAuthPage ? "" : "px-8 py-[18px]"}`}>
-            {!isAuthPage ? (
+            {!isAuthPage && accessLoading ? (
+              <div className="space-y-4" aria-label="Loading page access">
+                <div className="h-8 w-52 rounded-lg bg-[var(--line)] animate-pulse" />
+                <div className="h-40 rounded-xl bg-[var(--card)] border border-[var(--line)] animate-pulse" />
+              </div>
+            ) : !isAuthPage && canAccessPathname(role, userModules, pathname) ? (
               <ClientsProvider>
                 <div className="tip-container" style={{ margin: "0px 0px 14px 0px" }}>
                   {role === "india" && (
@@ -451,9 +443,9 @@ export default function RootLayout({
                 </div>
                 {children}
               </ClientsProvider>
-            ) : (
+            ) : isAuthPage ? (
               children
-            )}
+            ) : null}
           </main>
         </div>
       </body>
