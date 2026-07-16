@@ -1637,7 +1637,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const targetSvc = updated.find((s: any) => s.key === resolvedKey);
       const newTotal = (targetSvc?.comments || []).length;
       setNotePage(Math.floor(Math.max(0, newTotal - 1) / 3));
-      throttledOnSave({ ...client, services: updated } as Client);
+      // Immediate PUT — bypass throttle to ensure notes persist
+      fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...client, services: updated }),
+      }).catch(e => console.error("[addNote] PUT failed:", e));
     }
 
     function autoSave(updater: (prev: any[]) => any[]) {
