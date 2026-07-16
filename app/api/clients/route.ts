@@ -152,6 +152,7 @@ export async function GET(request: Request) {
     const normStxByCsId: Record<string, any[]> = {};
     const normCommentsByCsId: Record<string, any[]> = {};
     const normSrByCsId: Record<string, any[]> = {};
+    const seenStxIds = new Set<string>();
     if (allCsIds.length > 0) {
       for (let i = 0; i < allCsIds.length; i += BATCH_SIZE) {
         const batch = allCsIds.slice(i, i + BATCH_SIZE);
@@ -193,11 +194,13 @@ export async function GET(request: Request) {
             });
           }
         }
-        // STX per-line-item comments from unified table
+        // STX per-line-item comments from unified table (only new items from this batch)
         const stxItemIds = Object.values(normStxByCsId).flat().map((s: any) => s.id);
-        if (stxItemIds.length > 0) {
-          for (let j = 0; j < stxItemIds.length; j += BATCH_SIZE) {
-            const idBatch = stxItemIds.slice(j, j + BATCH_SIZE);
+        const newStxIds = stxItemIds.filter(id => !seenStxIds.has(id));
+        newStxIds.forEach(id => seenStxIds.add(id));
+        if (newStxIds.length > 0) {
+          for (let j = 0; j < newStxIds.length; j += BATCH_SIZE) {
+            const idBatch = newStxIds.slice(j, j + BATCH_SIZE);
             const { data: stxCmts } = await supabase.from("comments")
               .select("*").eq("entity_type", "stx_line_item").in("entity_id", idBatch);
             if (stxCmts) {
