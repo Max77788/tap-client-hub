@@ -153,6 +153,7 @@ export async function GET(request: Request) {
     const normCommentsByCsId: Record<string, any[]> = {};
     const normSrByCsId: Record<string, any[]> = {};
     const seenStxIds = new Set<string>();
+    const seenSrIds = new Set<string>();
     if (allCsIds.length > 0) {
       for (let i = 0; i < allCsIds.length; i += BATCH_SIZE) {
         const batch = allCsIds.slice(i, i + BATCH_SIZE);
@@ -190,7 +191,7 @@ export async function GET(request: Request) {
               serviceName: `${sr.state} Renewal`,
               assignedTo: sr.assigned_to || "",
               frequency: sr.frequency || "Yearly",
-              comments: sr.comments || [],
+              comments: [], // filled below from unified comments table
             });
           }
         }
@@ -208,6 +209,35 @@ export async function GET(request: Request) {
                 // Find the STX item and push comment
                 for (const csId in normStxByCsId) {
                   const item = normStxByCsId[csId].find((s: any) => s.id === cmt.entity_id);
+                  if (item) {
+                    item.comments.push({
+                      id: cmt.id,
+                      month: typeof cmt.month === 'string' ? parseInt(cmt.month, 10) : cmt.month,
+                      text: cmt.body,
+                      body: cmt.body,
+                      author: cmt.author_label || "",
+                      createdAt: cmt.created_at,
+                    });
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        // State renewal per-item comments from unified table
+        const srItemIds = Object.values(normSrByCsId).flat().map((s: any) => s.id);
+        const newSrIds = srItemIds.filter(id => !seenSrIds.has(id));
+        newSrIds.forEach(id => seenSrIds.add(id));
+        if (newSrIds.length > 0) {
+          for (let j = 0; j < newSrIds.length; j += BATCH_SIZE) {
+            const idBatch = newSrIds.slice(j, j + BATCH_SIZE);
+            const { data: srCmts } = await supabase.from("comments")
+              .select("*").eq("entity_type", "state_renewal_item").in("entity_id", idBatch);
+            if (srCmts) {
+              for (const cmt of srCmts) {
+                for (const csId in normSrByCsId) {
+                  const item = normSrByCsId[csId].find((s: any) => s.id === cmt.entity_id);
                   if (item) {
                     item.comments.push({
                       id: cmt.id,
@@ -557,8 +587,9 @@ export async function PUT(request: Request) {
       const { error: delErr } = await supabase.from("state_renewals").delete().eq("client_service_id", csId);
       if (delErr) { console.error("SR delete error:", delErr.message); return; }
       for (const item of items) {
+        const itemId = item.id || randomUUID();
         const { error: insErr } = await supabase.from("state_renewals").insert({
-          id: item.id || randomUUID(),
+          id: itemId,
           client_service_id: csId,
           state: item.state || "TX",
           due_month: item.dueMonth || null,
@@ -566,9 +597,26 @@ export async function PUT(request: Request) {
           identifiers: item.identifiers || null,
           assigned_to: item.assignedTo || null,
           frequency: item.frequency || "Yearly",
-          comments: item.comments || [],
         });
-        if (insErr) console.error("SR insert error:", insErr.message);
+        if (insErr) { console.error("SR insert error:", insErr.message); continue; }
+        // Sync per-item comments to unified table
+        const cmts = Array.isArray(item.comments) ? item.comments : [];
+        if (cmts.length > 0) {
+          await supabase.from("comments").delete()
+            .eq("entity_type", "state_renewal_item").eq("entity_id", itemId);
+          for (const cm of cmts) {
+            const body = cm.text || cm.body || "";
+            if (!body) continue;
+            await supabase.from("comments").insert({
+              entity_type: "state_renewal_item",
+              entity_id: itemId,
+              month: cm.month ?? null,
+              body,
+              author_label: cm.author || "",
+              created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+            });
+          }
+        }
       }
     }
 
@@ -912,12 +960,7 @@ export async function PATCH(request: Request) {
           bank_name: item.bankName || "",
           bank_account_ref: item.bankAccount || "",
           bank_routing_ref: item.bankRouting || "",
-          notes: (() => {
-            const base = item.notes || "";
-            const cmts = Array.isArray(item.comments) ? item.comments : [];
-            if (cmts.length > 0) return base + "\n__STX_CMTS__" + JSON.stringify(cmts);
-            return base;
-          })(),
+          notes: item.notes || "",
         });
       }
     }
@@ -938,8 +981,26 @@ export async function PATCH(request: Request) {
           identifiers: item.identifiers || null,
           assigned_to: item.assignedTo || null,
           frequency: item.frequency || "Yearly",
-          comments: item.comments || [],
         });
+        // Sync per-item comments to unified table
+        const cmts = Array.isArray(item.comments) ? item.comments : [];
+        if (cmts.length > 0) {
+          const itemId = item.id || randomUUID();
+          await supabase.from("comments").delete()
+            .eq("entity_type", "state_renewal_item").eq("entity_id", itemId);
+          for (const cm of cmts) {
+            const body = cm.text || cm.body || "";
+            if (!body) continue;
+            await supabase.from("comments").insert({
+              entity_type: "state_renewal_item",
+              entity_id: itemId,
+              month: cm.month ?? null,
+              body,
+              author_label: cm.author || "",
+              created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+            });
+          }
+        }
       }
     }
 
