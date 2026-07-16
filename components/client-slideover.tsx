@@ -2558,8 +2558,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
             {/* Service notes from DB — hidden */}
 
-            {/* Notes section — hide for Sales Tax (notes live on line items instead) */}
-            {moduleKey !== "sales_tax" && (
+            {/* Notes section */}
+            {(
             <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
               <div className="notemo">Notes for {svcLabel(moduleKey)}</div>
               <div className="noteadd">
