@@ -7,7 +7,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://phgogybfgovrlcdmifpv.supabase.co";
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rqxscydyvrvbdkqagemy.supabase.co";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbG...YYP0";
 
 export function getSupabaseClient() {

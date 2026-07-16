@@ -2,172 +2,126 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 // GET /api/work-periods?client_id=X&service_code=FIN&year=2026
-// Returns work_periods joined with client_services and services
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const { searchParams } = new URL(request.url);
+  try {
+    const supabase = await createClient();
+    const { searchParams } = new URL(request.url);
+    const clientId = searchParams.get("client_id") || searchParams.get("clientId");
+    const serviceCode = searchParams.get("service_code");
+    const year = searchParams.get("year");
 
-  const clientId = searchParams.get("client_id");
-  const serviceCode = searchParams.get("service_code");
-  const year = searchParams.get("year");
-
-  let query = supabase
-    .from("work_periods")
-    .select(`
-      id,
-      client_service_id,
-      period,
-      stage,
-      done_by,
-      done_at,
-      client_service:client_services(
-        id,
-        client_id,
-        service_id,
-        assigned_to,
-        active,
-        frequency,
-        processor,
-        service:services(id, code, name)
-      )
-    `)
-    .order("period", { ascending: true });
-
-  if (clientId) {
-    // Filter by client_id through client_services
-    query = query.eq("client_service.client_id", clientId);
-  }
-
-  if (serviceCode) {
-    // Need to get the service_id first
-    const { data: svc } = await supabase
-      .from("services")
-      .select("id")
-      .eq("code", serviceCode.toUpperCase())
-      .single();
-
-    if (svc) {
-      // Join through client_services to filter by service_id
-      // We filter work_periods whose client_service has this service_id
-      const { data: csIds } = await supabase
-        .from("client_services")
+    let serviceId: string | null = null;
+    if (serviceCode) {
+      const { data: service, error: serviceError } = await supabase
+        .from("services")
         .select("id")
-        .eq("service_id", svc.id);
-
-      if (csIds && csIds.length > 0) {
-        query = query.in(
-          "client_service_id",
-          csIds.map((cs: any) => cs.id)
-        );
-      } else {
-        // No matching client_services, return empty
-        return NextResponse.json({ periods: [] });
-      }
+        .eq("code", serviceCode.toUpperCase())
+        .maybeSingle();
+      if (serviceError) return NextResponse.json({ error: serviceError.message }, { status: 500 });
+      if (!service) return NextResponse.json({ periods: [] });
+      serviceId = service.id;
     }
-  }
 
-  if (year) {
-    const yearInt = parseInt(year) * 100;
-    query = query.gte("period", yearInt + 1).lte("period", yearInt + 12);
-  }
+    let filteredClientServiceIds: string[] | null = null;
+    if (clientId || serviceId) {
+      let serviceQuery = supabase.from("client_services").select("id");
+      if (clientId) serviceQuery = serviceQuery.eq("client_id", clientId);
+      if (serviceId) serviceQuery = serviceQuery.eq("service_id", serviceId);
+      const { data: clientServices, error: clientServiceError } = await serviceQuery;
+      if (clientServiceError) return NextResponse.json({ error: clientServiceError.message }, { status: 500 });
+      filteredClientServiceIds = (clientServices || []).map((row: any) => row.id);
+      if (filteredClientServiceIds.length === 0) return NextResponse.json({ periods: [] });
+    }
 
-  const { data, error } = await query;
+    let periodQuery = supabase.from("work_periods").select("*").order("period", { ascending: true });
+    if (filteredClientServiceIds) periodQuery = periodQuery.in("client_service_id", filteredClientServiceIds);
+    if (year) {
+      const yearInt = parseInt(year, 10) * 100;
+      periodQuery = periodQuery.gte("period", yearInt + 1).lte("period", yearInt + 12);
+    }
 
-  if (error) {
+    const { data, error } = await periodQuery;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const ids = Array.from(new Set((data || []).map((row: any) => row.client_service_id).filter(Boolean)));
+    const serviceById = new Map<string, any>();
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: rows, error: mappingError } = await supabase
+        .from("client_services")
+        .select("id, client_id, service_id, assigned_to, active, frequency, processor, service:services(id, code, name)")
+        .in("id", ids.slice(i, i + 200));
+      if (mappingError) return NextResponse.json({ error: mappingError.message }, { status: 500 });
+      for (const row of rows || []) serviceById.set(row.id, row);
+    }
+
+    const periods = (data || []).map((row: any) => {
+      const clientService = serviceById.get(row.client_service_id) || null;
+      return {
+        id: row.id,
+        clientServiceId: row.client_service_id,
+        period: row.period,
+        stage: row.stage,
+        doneBy: row.done_by,
+        doneAt: row.done_at,
+        clientService: clientService ? {
+          id: clientService.id,
+          clientId: clientService.client_id,
+          serviceId: clientService.service_id,
+          assignedTo: clientService.assigned_to,
+          active: clientService.active,
+          frequency: clientService.frequency,
+          processor: clientService.processor,
+          service: clientService.service,
+        } : null,
+      };
+    });
+
+    return NextResponse.json({ periods });
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const periods = (data || []).map((wp: any) => ({
-    id: wp.id,
-    clientServiceId: wp.client_service_id,
-    period: wp.period,
-    stage: wp.stage,
-    doneBy: wp.done_by,
-    doneAt: wp.done_at,
-    clientService: wp.client_service
-      ? {
-          id: wp.client_service.id,
-          clientId: wp.client_service.client_id,
-          serviceId: wp.client_service.service_id,
-          assignedTo: wp.client_service.assigned_to,
-          active: wp.client_service.active,
-          frequency: wp.client_service.frequency,
-          processor: wp.client_service.processor,
-          service: wp.client_service.service
-            ? {
-                id: wp.client_service.service.id,
-                code: wp.client_service.service.code,
-                name: wp.client_service.service.name,
-              }
-            : null,
-        }
-      : null,
-  }));
-
-  return NextResponse.json({ periods });
 }
 
-// POST /api/work-periods — upsert a work period
-// Body: { client_service_id, period, stage, done_by? }
-// Uses upsert based on client_service_id + period conflict
+// POST /api/work-periods - upsert a work period.
+// The snake_case fields are the established frontend contract. Camel-case aliases
+// remain accepted for compatibility with older callers.
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const body = await request.json();
-  const { client_service_id, period, stage, done_by } = body;
+  try {
+    const supabase = await createClient();
+    const body = await request.json();
+    const clientServiceId = body.client_service_id || body.clientServiceId;
+    const rawPeriod = body.period || (body.year && body.month ? `${body.year}-${String(body.month).padStart(2, "0")}` : null);
+    const { stage, done_by } = body;
 
-  if (!client_service_id || !period || !stage) {
-    return NextResponse.json(
-      { error: "Missing required fields: client_service_id, period, stage" },
-      { status: 400 }
-    );
-  }
+    if (!clientServiceId || !rawPeriod || !stage) {
+      return NextResponse.json(
+        { error: "Missing required fields: client_service_id, period, stage" },
+        { status: 400 },
+      );
+    }
 
-  // Convert "2026-07" to integer 202607 for DB compatibility
-  const periodInt = typeof period === "string" && period.includes("-")
-    ? parseInt(period.replace("-", ""))
-    : parseInt(String(period));
+    const normalizedPeriod = String(rawPeriod).replace("-", "");
+    const periodInt = parseInt(normalizedPeriod, 10);
+    const month = periodInt % 100;
+    if (!/^\d{6}$/.test(normalizedPeriod) || month < 1 || month > 12) {
+      return NextResponse.json({ error: "period must be YYYY-MM or YYYYMM" }, { status: 400 });
+    }
 
-  // Check if a row already exists for this client_service_id + period
-  const { data: existing } = await supabase
-    .from("work_periods")
-    .select("id")
-    .eq("client_service_id", client_service_id)
-    .eq("period", periodInt)
-    .maybeSingle();
-
-  let result;
-  if (existing) {
-    // Update
-    result = await supabase
+    const { data, error } = await supabase
       .from("work_periods")
-      .update({
-        stage,
-        done_by: done_by || null,
-        done_at: stage === "done" ? new Date().toISOString() : null,
-      })
-      .eq("id", existing.id)
-      .select()
-      .single();
-  } else {
-    // Insert
-    result = await supabase
-      .from("work_periods")
-      .insert({
-        client_service_id,
+      .upsert({
+        client_service_id: clientServiceId,
         period: periodInt,
         stage,
         done_by: done_by || null,
         done_at: stage === "done" ? new Date().toISOString() : null,
-      })
+      }, { onConflict: "client_service_id,period" })
       .select()
       .single();
-  }
 
-  const { data, error } = result;
-
-  if (error) {
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ period: data });
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ period: data });
 }

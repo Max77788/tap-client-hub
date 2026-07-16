@@ -17,23 +17,27 @@ const CODE_TO_KEY: Record<string, string> = {
 export async function GET() {
   const supabase = await createClient();
 
-  const { data: dbClients } = await supabase
+  const { data: dbClients, error: clientsError } = await supabase
     .from("clients")
     .select("*")
     .eq("status", "active")
     .order("name");
 
-  const { data: dbServices } = await supabase
+  const { data: dbServices, error: servicesError } = await supabase
     .from("client_services")
     .select("*, service:services(*)")
     .eq("active", true);
 
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("*")
     .eq("active", true)
-    .neq("invite_status", "disabled")
     .order("full_name");
+
+  const queryError = clientsError || servicesError || profilesError;
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
+  }
 
   if (!dbClients) {
     return NextResponse.json({ staffLoads: [], totalClients: 0, staffCount: 0 });

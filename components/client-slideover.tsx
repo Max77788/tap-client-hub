@@ -827,7 +827,22 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (!svc?.csId || svc.csId === "") {
       // No DB row yet — enable it and fire PUT immediately to create it
       const enabled = updated.map((s: any) => s.key === key ? { ...s, enabled: true } : s);
-      fetch("/api/clients", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...c, services: enabled }) }).catch(() => {});
+      fetch("/api/clients", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...c, services: enabled }),
+      })
+        .then(async response => {
+          if (!response.ok) throw new Error(`service creation failed (${response.status})`);
+          const payload = await response.json();
+          const created = payload.results?.find((result: any) => result.key === key && result.csId);
+          if (created?.csId) {
+            setLocalSvcs(prev => prev.map((service: any) =>
+              service.key === key ? { ...service, enabled: true, csId: created.csId } : service
+            ));
+          }
+        })
+        .catch((error: any) => console.warn("saveServiceField PUT error:", error.message));
     }
     if (svc?.csId && svc.csId !== "") {
       fetch("/api/clients", {

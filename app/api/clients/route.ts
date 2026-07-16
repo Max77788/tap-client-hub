@@ -26,7 +26,7 @@ async function getSupabaseAnon() {
 const CODE_TO_KEY: Record<string, ServiceKey> = {
   FIN: "financials", PR: "payroll", STX: "sales_tax",
   T9: "1099s", REND: "renditions", TAX: "tax_returns",
-  RENEWAL: "annual_reports",
+  RENEWAL: "annual_reports", ANNUAL: "annual_reports",
 };
 
 export const dynamic = "force-dynamic"; // Never cache — data changes frequently
@@ -148,7 +148,7 @@ export async function GET(request: Request) {
 
     // EIN is now stored directly on clients table — no need for client_tax_ids lookup
 
-    // ── v7 normalized tables: sales_tax_registration + service_comments ──
+    // ── v7 normalized tables: sales_tax_registration + unified comments ──
     const normStxByCsId: Record<string, any[]> = {};
     const normCommentsByCsId: Record<string, any[]> = {};
     const normSrByCsId: Record<string, any[]> = {};
@@ -462,15 +462,24 @@ export async function PUT(request: Request) {
 
       // Handle assignedStaff: update first active service's assigned_to
       if (assignedStaffVal !== undefined) {
-        // Find staff ID from name
-        let staffId = assignedStaffVal; // Could be a name or ID
-        // Update first service for this client
-        const { data: firstSvc } = await supabase.from("client_services")
-          .select("id").eq("client_id", clientId).limit(1).single();
+        let staffId = assignedStaffVal || null;
+        if (assignedStaffVal) {
+          const { data: staffProfile, error: staffLookupError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("full_name", assignedStaffVal)
+            .maybeSingle();
+          if (staffLookupError) throw new Error(`Staff lookup failed: ${staffLookupError.message}`);
+          if (staffProfile?.id) staffId = staffProfile.id;
+        }
+
+        const { data: firstSvc, error: firstSvcError } = await supabase.from("client_services")
+          .select("id").eq("client_id", clientId).limit(1).maybeSingle();
+        if (firstSvcError) throw new Error(`Service lookup failed: ${firstSvcError.message}`);
         if (firstSvc) {
           const { error: svcErr } = await supabase.from("client_services")
-            .update({ assigned_to: assignedStaffVal }).eq("id", firstSvc.id);
-          if (svcErr) console.error("Failed to update assigned_to:", svcErr.message);
+            .update({ assigned_to: staffId }).eq("id", firstSvc.id);
+          if (svcErr) throw new Error(`Assigned staff update failed: ${svcErr.message}`);
         }
       }
     }
@@ -503,17 +512,18 @@ export async function PUT(request: Request) {
     for (const sr of svcRows) svcCodeToId[sr.code] = sr.id;
 
     // Get existing client_services rows for this client
-    const { data: existingRows } = await supabase
+    const { data: existingRows, error: existingRowsError } = await supabase
       .from("client_services")
-      .select("id, client_id, service_id, active, frequency, assigned_to, processor")
+      .select("*")
       .eq("client_id", clientId);
+    if (existingRowsError) throw new Error(`Service lookup failed: ${existingRowsError.message}`);
 
     const existingByServiceId: Record<string, any> = {};
     for (const row of existingRows || []) {
       existingByServiceId[row.service_id] = row;
     }
 
-    const results: { key: string; action: string }[] = [];
+    const results: { key: string; action: string; csId?: string }[] = [];
 // Helper to sync comments
     async function syncComments(csId: string, comments: any[]) {
       if (!comments || !Array.isArray(comments)) return;
@@ -524,11 +534,12 @@ export async function PUT(request: Request) {
         const month = cm.month ?? null;
         const author = cm.author || "";
         // Skip if identical comment already exists
-        const { data: existing } = await supabase.from("comments")
+        const { data: existing, error: commentLookupError } = await supabase.from("comments")
           .select("id").eq("entity_type", "service").eq("entity_id", csId)
           .eq("month", month).eq("body", body).eq("author_label", author);
+        if (commentLookupError) throw new Error(`Comment lookup error: ${commentLookupError.message}`);
         if (existing && existing.length > 0) continue;
-        await supabase.from("comments").insert({
+        const { error: commentInsertError } = await supabase.from("comments").insert({
           entity_type: "service",
           entity_id: csId,
           month,
@@ -536,6 +547,7 @@ export async function PUT(request: Request) {
           author_label: author,
           created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
         });
+        if (commentInsertError) throw new Error(`Comment insert error: ${commentInsertError.message}`);
       }
     }
 // Helper to sync sales tax line items and their normalized comments
@@ -662,11 +674,12 @@ export async function PUT(request: Request) {
         if (existing) {
               // Already exists — activate if inactive
           if (!existing.active) {
-            await supabase.from("client_services").update({
+            const { error: activationError } = await supabase.from("client_services").update({
                 active: true,
                 frequency: svc.frequency || existing.frequency || "Monthly",
                 assigned_to: svc.assignedTo || existing.assigned_to || null,
                 processor: svc.processor || existing.processor || null,
+                financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
@@ -679,6 +692,7 @@ export async function PUT(request: Request) {
                 renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
                 renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
             }).eq("id", existing.id);
+            if (activationError) throw new Error(`Service activation failed: ${activationError.message}`);
             if (svc.key === "payroll") {
                 const prUpdate: Record<string,any> = {};
                 if (svc.paydate !== undefined) prUpdate.paydate = svc.paydate || null;
@@ -693,19 +707,21 @@ export async function PUT(request: Request) {
                 if (svc.payEmails !== undefined) prUpdate.pay_emails = Array.isArray(svc.payEmails) ? JSON.stringify(svc.payEmails) : (svc.payEmails || null);
                 if (svc.biweeklyCode !== undefined) prUpdate.biweekly_code = svc.biweeklyCode || null;
                 if (Object.keys(prUpdate).length > 0) {
-                    await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
+                    const { error: payrollActivationError } = await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
+                    if (payrollActivationError) throw new Error(`Payroll activation update failed: ${payrollActivationError.message}`);
                 }
             }
-            results.push({ key: svc.key, action: "activated" });
+            results.push({ key: svc.key, action: "activated", csId: existing.id });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(existing.id, svc.salesTaxLineItems);
             if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           } else {
             // Base fields update
-            await supabase.from("client_services").update({
+            const { error: serviceUpdateError } = await supabase.from("client_services").update({
                 frequency: svc.frequency ?? existing.frequency ?? null,
                 assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
+                financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
                 notes: svc.svcNotes ?? existing.notes ?? null,
                 filing_state: svc.filingState ?? existing.filing_state ?? null,
@@ -718,6 +734,7 @@ export async function PUT(request: Request) {
                 renewal_due_day: svc.renewalDueDay ?? existing.renewal_due_day ?? null,
                 renewal_identifiers: svc.renewalIdentifiers ?? existing.renewal_identifiers ?? null,
             }).eq("id", existing.id);
+            if (serviceUpdateError) throw new Error(`Service update failed: ${serviceUpdateError.message}`);
             // Payroll fields update (separate call — proven to work)
             if (svc.key === "payroll") {
                 const prUpdate: Record<string,any> = {};
@@ -733,13 +750,14 @@ export async function PUT(request: Request) {
                 if (svc.payEmails !== undefined) prUpdate.pay_emails = Array.isArray(svc.payEmails) ? JSON.stringify(svc.payEmails) : (svc.payEmails || null);
                 if (svc.biweeklyCode !== undefined) prUpdate.biweekly_code = svc.biweeklyCode || null;
                 if (Object.keys(prUpdate).length > 0) {
-                    await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
+                    const { error: payrollUpdateError } = await supabase.from("client_services").update(prUpdate).eq("id", existing.id);
+                    if (payrollUpdateError) throw new Error(`Payroll update failed: ${payrollUpdateError.message}`);
                 }
             }
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) {
               await syncStxLineItems(existing.id, svc.salesTaxLineItems);
             }
-            results.push({ key: svc.key, action: "already_active" });
+            results.push({ key: svc.key, action: "already_active", csId: existing.id });
             if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(existing.id, svc.stateRenewalItems);
             if (svc.comments) await syncComments(existing.id, svc.comments);
           }
@@ -756,6 +774,7 @@ export async function PUT(request: Request) {
               frequency: svc.frequency || "Monthly",
               assigned_to: svc.assignedTo || null,
               processor: svc.processor || null,
+              financials_month: svc.financialsMonth ?? null,
               expected_annual: svc.expectedAnnual || null,
               notes: svc.svcNotes || null,
               filing_state: svc.filingState || null,
@@ -780,9 +799,9 @@ export async function PUT(request: Request) {
               renewal_identifiers: svc.renewalIdentifiers ?? null,
             });
           if (insErr) {
-            results.push({ key: svc.key, action: `create_failed: ${insErr.message}` });
+            throw new Error(`Service create failed: ${insErr.message}`);
           } else {
-            results.push({ key: svc.key, action: "created" });
+            results.push({ key: svc.key, action: "created", csId: newCsId });
             if (svc.key === "sales_tax" && svc.salesTaxLineItems) await syncStxLineItems(newCsId as string, svc.salesTaxLineItems);
             if ((svc.key === "renditions" || svc.key === "annual_reports") && svc.stateRenewalItems) await syncStateRenewals(newCsId as string, svc.stateRenewalItems);
             if (svc.comments) await syncComments(newCsId as string, svc.comments);
@@ -791,10 +810,11 @@ export async function PUT(request: Request) {
       } else {
         // Want disabled
         if (existing && existing.active) {
-          await supabase
+          const { error: deactivationError } = await supabase
             .from("client_services")
             .update({ active: false })
             .eq("id", existing.id);
+          if (deactivationError) throw new Error(`Service deactivation failed: ${deactivationError.message}`);
           results.push({ key: svc.key, action: "deactivated" });
         } else {
           results.push({ key: svc.key, action: "already_inactive" });
@@ -853,7 +873,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await getSupabase();
     const body = await request.json();
-    const { csId, assignedTo, processor, frequency, financialsMonth, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers, stateRenewalItems } = body;
+    const { csId, assignedTo, processor, frequency, financialsMonth, expectedAnnual, salesTaxLineItems, comments, filingState, filingMonth, filingType, serviceName, payrollPassword, eftps, paydate, payStartDate, payPeriodFrequency, reportingMethod, payrollCategory, qbLicense, reportingNotes, payEmails, biweeklyCode, stateRenewal, renewalState, renewalDueMonth, renewalDueDay, renewalIdentifiers, stateRenewalItems } = body;
 
     if (!csId) {
       return NextResponse.json({ error: "csId is required" }, { status: 400 });
@@ -887,6 +907,9 @@ export async function PATCH(request: Request) {
     if (frequency !== undefined) {
       updates.frequency = frequency || null;
     }
+
+    if (financialsMonth !== undefined) updates.financials_month = financialsMonth || null;
+    if (expectedAnnual !== undefined) updates.expected_annual = expectedAnnual || null;
 
     if (filingState !== undefined) {
       updates.filing_state = filingState || null;
@@ -948,22 +971,29 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Sync comments → service_comments
+    // Append new service comments in the deployed unified comments table.
     if (comments !== undefined) {
-      // Delete existing comments for this CS
-      await supabase.from("service_comments").delete().eq("client_service_id", csId);
-      // Re-insert all comments
       const cmts = Array.isArray(comments) ? comments : [];
       for (const c of cmts) {
-        if (c.text || c.body) {
-          await supabase.from("service_comments").insert({
-            client_service_id: csId,
-            month: c.month ?? null,
-            body: c.text || c.body || "",
-            author_label: c.author || "",
-            created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-          });
-        }
+        const body = c.text || c.body || "";
+        if (!body) continue;
+        const month = c.month ?? null;
+        const author = c.author || "";
+        const { data: existingComments, error: commentLookupErr } = await supabase.from("comments")
+          .select("id").eq("entity_type", "service").eq("entity_id", csId)
+          .eq("month", month).eq("body", body).eq("author_label", author);
+        if (commentLookupErr) throw new Error(`Comment lookup error: ${commentLookupErr.message}`);
+        if (existingComments && existingComments.length > 0) continue;
+
+        const { error: commentInsertErr } = await supabase.from("comments").insert({
+          entity_type: "service",
+          entity_id: csId,
+          month,
+          body,
+          author_label: author,
+          created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+        });
+        if (commentInsertErr) throw new Error(`Comment insert error: ${commentInsertErr.message}`);
       }
     }
 
@@ -1130,11 +1160,33 @@ export async function DELETE(request: Request) {
         e = (await supabase.from("work_periods").delete().in("client_service_id", csIds)).error;
         if (e) results.push("work_periods: " + e.message);
 
-        e = (await supabase.from("service_comments").delete().in("client_service_id", csIds)).error;
-        if (e) results.push("service_comments: " + e.message);
+        e = (await supabase.from("comments").delete()
+          .eq("entity_type", "service").in("entity_id", csIds)).error;
+        if (e) results.push("comments(service): " + e.message);
+
+        const { data: stxRows } = await supabase.from("sales_tax_registration")
+          .select("id").in("client_service_id", csIds);
+        const stxIds = (stxRows || []).map((row: any) => row.id);
+        if (stxIds.length > 0) {
+          e = (await supabase.from("comments").delete()
+            .eq("entity_type", "stx_line_item").in("entity_id", stxIds)).error;
+          if (e) results.push("comments(stx): " + e.message);
+        }
+
+        const { data: renewalRows } = await supabase.from("state_renewals")
+          .select("id").in("client_service_id", csIds);
+        const renewalIds = (renewalRows || []).map((row: any) => row.id);
+        if (renewalIds.length > 0) {
+          e = (await supabase.from("comments").delete()
+            .eq("entity_type", "state_renewal_item").in("entity_id", renewalIds)).error;
+          if (e) results.push("comments(renewal): " + e.message);
+        }
 
         e = (await supabase.from("sales_tax_registration").delete().in("client_service_id", csIds)).error;
         if (e) results.push("sales_tax_registration: " + e.message);
+
+        e = (await supabase.from("state_renewals").delete().in("client_service_id", csIds)).error;
+        if (e) results.push("state_renewals: " + e.message);
       }
 
       let { error: e1 } = await supabase.from("client_services").delete().eq("client_id", cid);
