@@ -1320,6 +1320,7 @@ export function filterClients(
     type?: ClientType | "All";
     group?: string;
     staff?: string;
+    status?: string;
   } = {},
 ): Client[] {
   let result = [...clients];
@@ -1345,6 +1346,10 @@ export function filterClients(
 
   if (opts.staff) {
     result = result.filter((c) => c.assignedStaff === opts.staff);
+  }
+
+  if (opts.status && opts.status !== "All") {
+    result = result.filter((c) => (c.status || "").toLowerCase() === opts.status);
   }
 
   return result;

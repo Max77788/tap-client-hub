@@ -24,6 +24,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("All"); // "All" | "active" | "inactive"
   const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -66,8 +67,8 @@ export default function ClientsPage() {
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
 
   const filteredClients = useMemo(
-    () => filterClients(clients, { search, type: typeFilter, staff: staffFilter }),
-    [clients, search, typeFilter, staffFilter],
+    () => filterClients(clients, { search, type: typeFilter, staff: staffFilter, status: statusFilter }),
+    [clients, search, typeFilter, staffFilter, statusFilter],
   );
 
   // Group filtered clients: multi-client groups become one group card, singles stay as-is
@@ -274,6 +275,19 @@ export default function ClientsPage() {
               ))}
             </select>
 
+            {/* Status filter */}
+            <div className="seg">
+              {(["All", "active", "inactive"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={statusFilter === s ? "on" : ""}
+                >
+                  {s === "All" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+
             {/* Actions */}
             <button onClick={openAddModal} className="btn" style={{
               all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
@@ -386,9 +400,9 @@ export default function ClientsPage() {
                   ? `No results for "${search}". Try a different search term.`
                   : "No clients match the current filters. Try adjusting your filters."}
               </p>
-              {(search || typeFilter !== "All" || staffFilter) && (
+              {(search || typeFilter !== "All" || staffFilter || statusFilter !== "All") && (
                 <button
-                  onClick={() => { setSearch(""); setTypeFilter("All"); setStaffFilter(""); }}
+                  onClick={() => { setSearch(""); setTypeFilter("All"); setStaffFilter(""); setStatusFilter("All"); }}
                   className="mt-4 text-sm font-medium text-[var(--teal)] hover:underline"
                 >
                   Clear all filters
