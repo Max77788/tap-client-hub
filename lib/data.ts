@@ -1348,8 +1348,12 @@ export function filterClients(
     result = result.filter((c) => c.assignedStaff === opts.staff);
   }
 
-  if (opts.status && opts.status !== "All") {
-    result = result.filter((c) => (c.status || "").toLowerCase() === opts.status);
+  if (opts.status === "active") {
+    result = result.filter((c) => c.active !== false);
+  }
+
+  if (opts.status === "inactive") {
+    result = result.filter((c) => c.active === false);
   }
 
   return result;
