@@ -205,13 +205,13 @@ export async function GET(request: Request) {
             });
           }
         }
-        // service_comments
-        const { data: cmtBatch } = await supabase.from("service_comments")
-          .select("*").in("client_service_id", batch);
+        // unified comments table
+        const { data: cmtBatch } = await supabase.from("comments")
+          .select("*").eq("entity_type", "service").in("entity_id", batch);
         if (cmtBatch) {
           for (const cmt of cmtBatch) {
-            if (!normCommentsByCsId[cmt.client_service_id]) normCommentsByCsId[cmt.client_service_id] = [];
-            normCommentsByCsId[cmt.client_service_id].push({
+            if (!normCommentsByCsId[cmt.entity_id]) normCommentsByCsId[cmt.entity_id] = [];
+            normCommentsByCsId[cmt.entity_id].push({
               id: cmt.id, month: typeof cmt.month === 'string' ? parseInt(cmt.month, 10) : cmt.month, body: cmt.body,
               text: cmt.body, author: cmt.author_label || "",
               createdAt: cmt.created_at,
@@ -468,23 +468,25 @@ export async function PUT(request: Request) {
 // Helper to sync comments
     async function syncComments(csId: string, comments: any[]) {
       if (!comments || !Array.isArray(comments)) return;
-      // Only insert NEW comments — don't delete existing ones
-      // Find existing comment bodies to skip duplicates
-      const { data: existing } = await supabase.from("service_comments").select("body, month, author_label").eq("client_service_id", csId);
-      const existingKeys = new Set((existing || []).map((e: any) => `${e.month}|${e.body}|${e.author_label}`));
+      // Use unified comments table
       for (const cm of comments) {
-        const key = `${cm.month ?? ''}|${cm.text || cm.body || ''}|${cm.author || ''}`;
-        if (existingKeys.has(key)) continue;
-        if (cm.text || cm.body) {
-          await supabase.from("service_comments").insert({
-            client_service_id: csId,
-            month: cm.month ?? null,
-            body: cm.text || cm.body || "",
-            author_label: cm.author || "",
-            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
-          });
-          existingKeys.add(key);
-        }
+        const body = cm.text || cm.body || "";
+        if (!body) continue;
+        const month = cm.month ?? null;
+        const author = cm.author || "";
+        // Skip if identical comment already exists
+        const { data: existing } = await supabase.from("comments")
+          .select("id").eq("entity_type", "service").eq("entity_id", csId)
+          .eq("month", month).eq("body", body).eq("author_label", author);
+        if (existing && existing.length > 0) continue;
+        await supabase.from("comments").insert({
+          entity_type: "service",
+          entity_id: csId,
+          month,
+          body,
+          author_label: author,
+          created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+        });
       }
     }
 // Helper to sync sales tax line items
