@@ -265,6 +265,51 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // ── State renewal line items (multi-state, Annual Reports tab) ──
   const [renewalItems, setRenewalItems] = useState<any[]>(rendSvcInit?.stateRenewalItems || []);
+
+  // ── Per-renewal-item note state ──
+  const [renewalNoteText, setRenewalNoteText] = useState<Record<number, string>>({});
+  const [renewalNoteMonth, setRenewalNoteMonth] = useState<Record<number, number>>({});
+
+  function addRenewalItemNote(itemIdx: number) {
+    const text = (renewalNoteText[itemIdx] || "").trim();
+    if (!text) return;
+    const month = renewalNoteMonth[itemIdx] ?? new Date().getMonth();
+    const comment: CommentEntry = {
+      id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      month,
+      text,
+      author: getAuthorName(),
+      createdAt: new Date().toISOString(),
+    };
+    const items = renewalItems.map((it: any, i: number) =>
+      i === itemIdx ? { ...it, comments: [...(it.comments || []), comment] } : it
+    );
+    setRenewalItems(items);
+    setLocalSvcs((prev: any) => prev.map((s: any) =>
+      s.key === "renditions" ? { ...s, stateRenewalItems: items } : s
+    ));
+    setRenewalNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
+    const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+    if (rendSvc?.csId) {
+      fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: items }) }).catch(() => {});
+    }
+  }
+
+  function deleteRenewalItemComment(itemIdx: number, commentId: string) {
+    const items = renewalItems.map((it: any, i: number) =>
+      i === itemIdx ? { ...it, comments: (it.comments || []).filter((c: any) => c.id !== commentId) } : it
+    );
+    setRenewalItems(items);
+    setLocalSvcs((prev: any) => prev.map((s: any) =>
+      s.key === "renditions" ? { ...s, stateRenewalItems: items } : s
+    ));
+    const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+    if (rendSvc?.csId) {
+      fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: items }) }).catch(() => {});
+    }
+  }
   const [addingRenewal, setAddingRenewal] = useState(false);
   const renewalAddStateRef = useRef<HTMLSelectElement>(null);
   const renewalAddMonthRef = useRef<HTMLSelectElement>(null);
@@ -1700,9 +1745,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       const [editStxRouting, setEditStxRouting] = useState("");
       const [editStxAccount, setEditStxAccount] = useState("");
       const [editStxAssigned, setEditStxAssigned] = useState("");
-      const [stxNoteText, setStxNoteText] = useState<Record<number, string>>({});
-      const [stxNoteMonth, setStxNoteMonth] = useState<Record<number, number>>({});
-      const [stxNoteType, setStxNoteType] = useState<Record<number, string>>({});
+      const [stxItemNoteText, setStxItemNoteText] = useState<Record<number, string>>({});
+      const [stxItemNoteMonth, setStxItemNoteMonth] = useState<Record<number, number>>({});
 
       function startEdit(i: number) {
         const item = stxLineItems[i];
@@ -1746,40 +1790,45 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         } as Client);
       }
 
-      function addStxNote(itemIdx: number) {
-        const text = stxNoteText[itemIdx]?.trim();
+      function addStxItemNote(itemIdx: number) {
+        const text = (stxItemNoteText[itemIdx] || "").trim();
         if (!text) return;
-        const month = stxNoteMonth[itemIdx] ?? new Date().getMonth();
-        const ntype = (stxNoteType[itemIdx] || "others").trim();
-        const prefix = ntype !== "others" ? `[${ntype}] ` : "";
-        const comment: CommentEntry & { _lineItemKey?: string } = {
-          id: `stx-cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        const month = stxItemNoteMonth[itemIdx] ?? new Date().getMonth();
+        const comment: CommentEntry = {
+          id: `cmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           month,
-          text: prefix + text,
+          text,
           author: getAuthorName(),
           createdAt: new Date().toISOString(),
-          _lineItemKey: `stx-item-${itemIdx}`,
         };
-        const updated = localSvcs.map((s: any) => {
-          if (s.key === "sales_tax") {
-            const existing = s.comments || [];
-            return { ...s, comments: [...existing, comment] };
-          }
-          return s;
-        });
-        setLocalSvcs(updated);
-        setStxNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
-        throttledOnSave({ ...client, services: updated } as Client);
+        const items = stxLineItems.map((it: any, i: number) =>
+          i === itemIdx ? { ...it, comments: [...(it.comments || []), comment] } : it
+        );
+        setStxLineItems(items);
+        setLocalSvcs((prev: any) => prev.map((s: any) =>
+          s.key === "sales_tax" ? { ...s, salesTaxLineItems: items } : s
+        ));
+        setStxItemNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
+        const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
+        if (stxSvc?.csId) {
+          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ csId: stxSvc.csId, salesTaxLineItems: items }) }).catch(() => {});
+        }
       }
 
-      function getStxComments(itemIdx: number): CommentEntry[] {
-        const key = `stx-item-${itemIdx}`;
-        const svc = localSvcs.find((s: any) => s.key === "sales_tax");
-        return (svc?.comments || []).filter((cm: any) => cm._lineItemKey === key);
-      }
-
-      function stxHasComment(itemIdx: number, monthIdx: number): boolean {
-        return getStxComments(itemIdx).filter((cm: CommentEntry) => cm.month === monthIdx).length > 0;
+      function deleteStxItemComment(itemIdx: number, commentId: string) {
+        const items = stxLineItems.map((it: any, i: number) =>
+          i === itemIdx ? { ...it, comments: (it.comments || []).filter((c: any) => c.id !== commentId) } : it
+        );
+        setStxLineItems(items);
+        setLocalSvcs((prev: any) => prev.map((s: any) =>
+          s.key === "sales_tax" ? { ...s, salesTaxLineItems: items } : s
+        ));
+        const stxSvc = localSvcs.find((s: any) => s.key === "sales_tax");
+        if (stxSvc?.csId) {
+          fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ csId: stxSvc.csId, salesTaxLineItems: items }) }).catch(() => {});
+        }
       }
 
       // Per-line-item month stage
@@ -2023,7 +2072,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       {MONTHS.map((mo, mi) => {
                         const st = stxMonthStage(i, mi);
                         const ss = stxStageStyles[st] || stxStageStyles.lock;
-                        const hasCmt = stxHasComment(i, mi);
+                        const hasCmt = (item.comments || []).some((c: any) => c.month === mi);
                         return (
                           <div key={mi} style={{ textAlign: "center", position: "relative" }}>
                             <div style={{ fontSize: 9, color: "var(--muted)", marginBottom: 1 }}>{mo}</div>
@@ -2045,6 +2094,40 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* ── Per-item notes + comments ── */}
+                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed var(--line)" }}>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                      <select
+                        value={stxItemNoteMonth[i] ?? new Date().getMonth()}
+                        onChange={e => setStxItemNoteMonth((prev: any) => ({ ...prev, [i]: Number(e.target.value) }))}
+                        style={{ padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "var(--paper)", color: "var(--ink)" }}>
+                        {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m.substring(0, 3)}</option>)}
+                      </select>
+                      <input
+                        value={stxItemNoteText[i] || ""}
+                        onChange={e => setStxItemNoteText((prev: any) => ({ ...prev, [i]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addStxItemNote(i); } }}
+                        placeholder="Add note..."
+                        style={{ flex: 1, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "var(--paper)", color: "var(--ink)", outline: "none" }} />
+                      <button
+                        onClick={() => addStxItemNote(i)}
+                        style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" }}>Add</button>
+                    </div>
+                    {(item.comments || []).length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {(item.comments || []).sort((a: any, b: any) => a.month - b.month || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((cm: any) => (
+                          <div key={cm.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 8px", background: "var(--grey-soft)", borderRadius: 6, fontSize: 11 }}>
+                            <span style={{ flex: 1, color: "var(--ink)" }}>{cm.text}</span>
+                            <span style={{ color: "var(--muted)", fontSize: 10, whiteSpace: "nowrap" }}>{MONTHS[cm.month]} · {cm.author}</span>
+                            <button
+                              onClick={() => deleteStxItemComment(i, cm.id)}
+                              style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 13, fontWeight: 700, lineHeight: 1 }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -2207,6 +2290,38 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           }}
                           style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, fontWeight: 600 }}
                         >×</button>
+                        <div style={{ width: "100%", flexBasis: "100%", paddingTop: 8, borderTop: "1px solid var(--line)", marginTop: 4 }}>
+                          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                            <select
+                              value={renewalNoteMonth[idx] ?? new Date().getMonth()}
+                              onChange={e => setRenewalNoteMonth((prev: any) => ({ ...prev, [idx]: Number(e.target.value) }))}
+                              style={{ padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "var(--paper)", color: "var(--ink)" }}>
+                              {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m.substring(0, 3)}</option>)}
+                            </select>
+                            <input
+                              value={renewalNoteText[idx] || ""}
+                              onChange={e => setRenewalNoteText((prev: any) => ({ ...prev, [idx]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRenewalItemNote(idx); } }}
+                              placeholder="Add note..."
+                              style={{ flex: 1, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "var(--paper)", color: "var(--ink)", outline: "none" }} />
+                            <button
+                              onClick={() => addRenewalItemNote(idx)}
+                              style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" }}>Add</button>
+                          </div>
+                          {(item.comments || []).length > 0 && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              {(item.comments || []).sort((a: any, b: any) => a.month - b.month || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((cm: any) => (
+                                <div key={cm.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "4px 8px", background: "var(--grey-soft)", borderRadius: 6, fontSize: 11 }}>
+                                  <span style={{ flex: 1, color: "var(--ink)" }}>{cm.text}</span>
+                                  <span style={{ color: "var(--muted)", fontSize: 10, whiteSpace: "nowrap" }}>{MONTHS[cm.month]} · {cm.author}</span>
+                                  <button
+                                    onClick={() => deleteRenewalItemComment(idx, cm.id)}
+                                    style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 13, fontWeight: 700, lineHeight: 1 }}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )
                   ))}
