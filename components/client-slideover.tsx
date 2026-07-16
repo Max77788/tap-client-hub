@@ -86,25 +86,81 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const scrollPosRef = useRef(0);
   const clientRef = useRef(client.id);
   const [editing, setEditing] = useState(false);
-  const [showFullRecord, setShowFullRecord] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [localSvcs, setLocalSvcs] = useState<any[]>(client.services);
 
-  // ── Throttled save: batch rapid onChange calls to reduce parent re-renders ──
+  // ── Refs for debounced autosave ──
   const saveTimerRef = useRef<any>(null);
   const pendingSaveRef = useRef<any>(null);
-  const throttledOnSave = (data: any) => {
+  const dirtyRef = useRef(false);
+  const clientIdRef = useRef(client.id);
+  const pendingClientIdRef = useRef<string | null>(null);
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+
+
+  /** Debounced autosave: accumulates data and fires onSave after 800ms of inactivity */
+  const autoSave = useCallback((data: any) => {
+    // Guard: skip if client ID changed (prevents cross-client save)
+    if (clientIdRef.current !== client.id) return;
     pendingSaveRef.current = data;
-    if (!saveTimerRef.current) {
-      saveTimerRef.current = setTimeout(() => {
-        saveTimerRef.current = null;
-        onSave?.(pendingSaveRef.current);
-        pendingSaveRef.current = null;
-      }, 800);
+    pendingClientIdRef.current = client.id;
+    dirtyRef.current = true;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      if (dirtyRef.current && clientIdRef.current === client.id) {
+        onSaveRef.current?.(pendingSaveRef.current);
+      }
+      pendingSaveRef.current = null;
+      pendingClientIdRef.current = null;
+      dirtyRef.current = false;
+    }, 800);
+  }, [client.id]);
+
+  /** Flush any pending save immediately. Call before onClose. */
+  const flushSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
     }
-  };
+    if (dirtyRef.current && pendingSaveRef.current && pendingClientIdRef.current === clientIdRef.current && clientIdRef.current === client.id) {
+      onSaveRef.current?.(pendingSaveRef.current);
+    }
+    pendingSaveRef.current = null;
+    pendingClientIdRef.current = null;
+    dirtyRef.current = false;
+  }, [client.id]);
+
+  // ── Client switch: clear pending state before stale data could leak ──
+  useEffect(() => {
+    // Clear pending payload, timer, and dirty flag when switching clients
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    pendingSaveRef.current = null;
+    pendingClientIdRef.current = null;
+    dirtyRef.current = false;
+    clientIdRef.current = client.id;
+  }, [client.id]);
+
+  // ── Cleanup timer on unmount: only flush if pending data belongs to this client ──
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      // Only flush if pending data still belongs to this exact client instance
+      if (dirtyRef.current && pendingSaveRef.current && pendingClientIdRef.current === clientIdRef.current) {
+        onSaveRef.current?.(pendingSaveRef.current);
+      }
+      pendingSaveRef.current = null;
+      pendingClientIdRef.current = null;
+      dirtyRef.current = false;
+    };
+  }, []);
   const addPrEmail = () => {
     const val = newPrEmailRef.current?.value.trim();
     if (!val) return;
@@ -399,9 +455,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     })();
     if (currentId === client.id && !stxItemsChanged) return;
     clientRef.current = client.id;
+    clientIdRef.current = client.id;
     setLocalSvcs(client.services);
     setEditing(false);
-    setShowFullRecord(false);
     // Initialize per-service assignees for edit view
     const assigneeMap: Record<string, string> = {};
     client.services.forEach((s: any) => {
@@ -513,9 +569,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       console.warn("syncRenewalItems: no csId, falling back to PUT");
       const targetKey = rendSvc?.key || "annual_reports";
       const updated = localSvcs.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: items, stateRenewal: true, enabled: true } : s);
-      throttledOnSave({ ...client, services: updated } as Client);
+      autoSave({ ...client, services: updated } as Client);
     }
-  }, [localSvcs, client, throttledOnSave]);
+  }, [localSvcs, client, autoSave]);
   const [eSvcAssignees, setESvcAssignees] = useState<Record<string, string>>({});
   const [eFinMonth, setEFinMonth] = useState(() => {
     const svc = client.services.find((s: any) => s.key === "financials");
@@ -524,11 +580,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   // Close on Escape
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        // Blurring synchronously runs the active field's autosave handler so
+        // flushSave receives the latest ref value before the slideover closes.
+        (document.activeElement as HTMLElement | null)?.blur();
+        flushSave();
+        onClose();
+      }
+    }
     if (open) { document.addEventListener("keydown", onKey); document.body.style.overflow = "hidden"; }
     else { setConfirmDelete(false); }
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
-  }, [open, onClose]);
+  }, [open, flushSave, onClose]);
 
   // ── Preserve scroll position across re-renders ──
   useLayoutEffect(() => {
@@ -628,7 +692,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         }).catch(() => {});
       }
     } else {
-      throttledOnSave({ ...client, services: updated });
+      autoSave({ ...client, services: updated });
     }
   }
 
@@ -674,7 +738,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         }).catch(() => {});
       }
     } else {
-      throttledOnSave({ ...client, services: updated });
+      autoSave({ ...client, services: updated });
     }
   }
 
@@ -724,7 +788,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     setLocalSvcs(updated);
     setNotesText("");
     setNoteType("others");
-    throttledOnSave({ ...client, services: updated });
+    autoSave({ ...client, services: updated });
   }
 
   function deleteNote(commentId: string) {
@@ -733,7 +797,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       comments: (s.comments || []).filter((cm: CommentEntry) => cm.id !== commentId),
     }));
     setLocalSvcs(updated);
-    throttledOnSave({ ...client, services: updated });
+    autoSave({ ...client, services: updated });
   }
 
   function toggleSvc(key: string) {
@@ -747,7 +811,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
           setAddingStx(true);
         }
       }
-      throttledOnSave({ ...client, services: updated });
+      autoSave({ ...client, services: updated });
       return updated;
     });
   }
@@ -757,7 +821,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       s.key === key ? { ...s, [field]: value } : s
     );
     setLocalSvcs(updated);
-    throttledOnSave({ ...c, services: updated } as Client);
+    autoSave({ ...c, services: updated } as Client);
     // Also call PATCH for immediate persistence of individual field changes
     const svc = localSvcs.find((s: any) => s.key === key);
     if (!svc?.csId || svc.csId === "") {
@@ -1073,7 +1137,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       annual.stateRenewal = true;
                     }
                   }
-                  throttledOnSave({ ...client, services: updated });
+                  autoSave({ ...client, services: updated });
                   return updated;
                 });
                 return;
@@ -1207,7 +1271,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         const updated = localSvcs.map((s: any) => s.key === "payroll" ? { ...s, payPeriodFrequency: newFreq, frequency: newFreq, ...(newStart ? { pay_start_date: newStart } : {}) } : s);
                         setLocalSvcs(updated);
                         if (newStart) setPrStartDate(newStart);
-                        throttledOnSave({ ...c, services: updated } as Client);
+                        autoSave({ ...c, services: updated } as Client);
                       }}
                     >
                       <option value="">—</option>
@@ -1555,7 +1619,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ csId: stxSvc?.csId, salesTaxLineItems: upd }) }).catch(() => {});
                                   setEditingStxIdx(-1);
                                 }}>
-                                Save
+                                Done
                               </button>
                             </div>
                           </div>
@@ -1708,12 +1772,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       }).catch(e => console.error("[addNote] PUT failed:", e));
     }
 
-    function autoSave(updater: (prev: any[]) => any[]) {
-      setLocalSvcs(prev => updater(prev));
-    }
-
-    function handleSaveModule() {
-      setSaving(true);
+    function syncAndAutoSaveModule() {
       // Ensure payroll separate state is synced into localSvcs before saving
       const synced = localSvcs.map((s: any) => {
         if (s.key === "payroll") {
@@ -1737,19 +1796,27 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         }
         return s;
       });
-      throttledOnSave({
+      autoSave({
         ...c,
         active: isActive,
         services: synced,
-        // Also include client-level edits if Full client record was edited
         name: eName, type: eType as "Business" | "Personal", group: eGroup,
-        emails: [eEmail, eAddEmail].filter(Boolean),
-        phones: [ePhone, eAddPhone].filter(Boolean),
-        address: eAddress, city: eCity, state: eState, zip: eZip,
+        contact: eContact,
+        emails: [eEmailRef.current?.value ?? eEmail, eAddEmailRef.current?.value ?? eAddEmail].filter(Boolean),
+        phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
+        address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,
+        ein: eEinRef.current?.value ?? eEin,
         assignedStaff: eAssigned,
       } as Client);
-      setToast("Changes saved");
-      setTimeout(() => { setToast(null); setSaving(false); }, 2500);
+    }
+
+    /** Helper: updates local services state and queues autosave with a proper Client payload.
+     *  Prevents function-payload corruption where outer autoSave received prev => prev.map(...)
+     *  instead of a Client object. */
+    function updateServicesAndAutoSave(updater: (svcs: any[]) => any[]) {
+      const updated = updater(localSvcs);
+      setLocalSvcs(updated);
+      autoSave({ ...c, services: updated } as Client);
     }
 
     // ── Sales tax line item section ──
@@ -1791,10 +1858,34 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         };
         setStxLineItems(upd);
         setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-        throttledOnSave({
+        autoSave({
           ...client,
           services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
         } as Client);
+      }
+
+      /** Autosave STX edit fields without exiting edit mode. Accepts overrides to avoid stale state. */
+      function autoSaveStxFields(overrides?: { assignedTo?: string; frequency?: string }) {
+        if (editingStxIdx < 0 || !(stxNameRef.current?.value.trim())) return;
+        const upd = [...stxLineItems];
+        upd[editingStxIdx] = {
+          ...upd[editingStxIdx],
+          serviceName: stxNameRef.current?.value.trim() || '', rt: stxRtRef.current?.value.trim() || '', taxId: stxTaxIdRef.current?.value.trim() || '',
+          bankName: stxBankRef.current?.value.trim() || '', bankRouting: stxRoutingRef.current?.value.trim() || '', bankAccount: stxAccountRef.current?.value.trim() || '',
+          assignedTo: (overrides?.assignedTo ?? editStxAssigned).trim(),
+          frequency: overrides?.frequency ?? editStxFreq,
+        };
+        setStxLineItems(upd);
+        setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
+        autoSave({
+          ...client,
+          services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
+        } as Client);
+      }
+
+      /** Done button: saves and exits edit mode */
+      function doneEditItem() {
+        saveEditItem();
         setEditingStxIdx(-1);
       }
 
@@ -1802,7 +1893,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         const upd = stxLineItems.filter((_: any, j: number) => j !== i);
         setStxLineItems(upd);
         setLocalSvcs((prev: any) => prev.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s));
-        throttledOnSave({
+        autoSave({
           ...client,
           services: localSvcs.map((s: any) => s.key === "sales_tax" ? { ...s, salesTaxLineItems: upd } : s),
         } as Client);
@@ -1868,7 +1959,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             : s
         );
         setLocalSvcs(updated);
-        throttledOnSave({ ...client, services: updated } as Client);
+        autoSave({ ...client, services: updated } as Client);
       }
 
       const stxStageStyles: Record<string, { bg: string; fg: string; border: string }> = {
@@ -1999,32 +2090,32 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Service name</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxNameRef} defaultValue={editStxName} onBlur={e => setEditStxName(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxNameRef} defaultValue={editStxName} onBlur={e => { setEditStxName(e.target.value); autoSaveStxFields(); }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>RT #</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRtRef} defaultValue={editStxRt} onBlur={e => setEditStxRt(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRtRef} defaultValue={editStxRt} onBlur={e => { setEditStxRt(e.target.value); autoSaveStxFields(); }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Tax ID</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxTaxIdRef} defaultValue={editStxTaxId} onBlur={e => setEditStxTaxId(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxTaxIdRef} defaultValue={editStxTaxId} onBlur={e => { setEditStxTaxId(e.target.value); autoSaveStxFields(); }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Bank name</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxBankRef} defaultValue={editStxBank} onBlur={e => setEditStxBank(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxBankRef} defaultValue={editStxBank} onBlur={e => { setEditStxBank(e.target.value); autoSaveStxFields(); }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Routing #</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRoutingRef} defaultValue={editStxRouting} onBlur={e => setEditStxRouting(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxRoutingRef} defaultValue={editStxRouting} onBlur={e => { setEditStxRouting(e.target.value); autoSaveStxFields(); }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Account #</label>
-                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxAccountRef} defaultValue={editStxAccount} onBlur={e => setEditStxAccount(e.target.value)} />
+                      <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13 }} ref={stxAccountRef} defaultValue={editStxAccount} onBlur={e => { setEditStxAccount(e.target.value); autoSaveStxFields(); }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned to</label>
                       <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
-                        value={editStxAssigned} onChange={e => setEditStxAssigned(e.target.value)}>
+                        value={editStxAssigned} onChange={e => { setEditStxAssigned(e.target.value); autoSaveStxFields({ assignedTo: e.target.value }); }}>
                         <option value="">—</option>
                         {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                       </select>
@@ -2032,14 +2123,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <div>
                       <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Frequency</label>
                       <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "#fff", color: "var(--ink)" }}
-                        value={editStxFreq} onChange={e => setEditStxFreq(e.target.value)}>
+                        value={editStxFreq} onChange={e => { setEditStxFreq(e.target.value); autoSaveStxFields({ frequency: e.target.value }); }}>
                         <option>Monthly</option><option>Quarterly</option><option>Annually</option>
                       </select>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <button className="reveal" style={{ color: "var(--muted)" }} onClick={() => setEditingStxIdx(-1)}>Cancel</button>
-                    <button className="reveal" style={{ background: "var(--teal)", color: "#fff", padding: "6px 12px", borderRadius: 8 }} onClick={saveEditItem}>Save</button>
+                    <button className="reveal" style={{ background: "var(--teal)", color: "#fff", padding: "6px 12px", borderRadius: 8 }} onClick={doneEditItem}>Done</button>
                   </div>
                 </div>
               ) : (
@@ -2157,20 +2248,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
     return (
       <>
-        <div className="scrim show" onClick={onClose} />
+        <div className="scrim show" onClick={() => { syncAndAutoSaveModule(); flushSave(); onClose(); }} />
         <div className="over show" style={{
           background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
         }}>
-          {/* Toast notification */}
-          {toast && (
-            <div style={{
-              position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 100,
-              background: "var(--teal)", color: "#fff", padding: "8px 20px", borderRadius: 20,
-              fontSize: 13, fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,.15)",
-              animation: "fadeIn .25s ease",
-              pointerEvents: "none",
-            }}>{toast}</div>
-          )}
           {/* Header */}
           <div className="ohead" style={{
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
@@ -2183,7 +2264,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span>👤 {c.contact || "—"}</span>
                 </div>
               </div>
-              <button className="ox" onClick={onClose} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
+              <button className="ox" onClick={() => { syncAndAutoSaveModule(); flushSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
             <div className="sub" style={{ color: "var(--muted)", fontSize: 13, marginTop: 5 }}>
               <span className="badge b-biz" style={{
@@ -2211,7 +2292,27 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <span className="modtag" style={{ marginBottom: 12 }}>{svcIc(moduleKey)} {svcLabel(moduleKey)}</span>
 
             {/* State Renewal — multi-state support in Annual Reports tab */}
-            {moduleKey === "annual_reports" && (
+            {moduleKey === "annual_reports" && (() => {
+              /** Autosave current renewal edit item without exiting edit mode. Accepts overrides for fresh values. */
+              function saveCurrentRenewal(overrides?: { state?: string; month?: string; day?: string; ids?: string; assigned?: string }) {
+                const idx = editingRenewalIdx;
+                if (idx === null || idx < 0) return;
+                const st = overrides?.state ?? renewalAddStateRef.current?.value ?? renewalItems[idx]?.state;
+                const mo = overrides?.month ?? renewalAddMonthRef.current?.value ?? renewalItems[idx]?.dueMonth;
+                const dy = overrides?.day ?? renewalAddDayRef.current?.value ?? renewalItems[idx]?.dueDay;
+                const ids = overrides?.ids ?? renewalAddIdsRef.current?.value ?? "";
+                const assigned = overrides?.assigned ?? renewalAddAssignedRef.current?.value ?? "";
+                const updated = renewalItems.map((it: any, i: number) =>
+                  i === idx ? { ...it, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned } : it
+                );
+                setRenewalItems(updated);
+                setLocalSvcs((prev: any) => {
+                  const targetKey = findRenewalService(prev)?.key || "annual_reports";
+                  return prev.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: updated } : s);
+                });
+                syncRenewalItems(updated);
+              }
+            return (
             <div className="card" style={{ marginBottom: 16, padding: 14, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 10 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: stateRenewal || renewalItems.length > 0 ? 10 : 0 }}>
                 <input type="checkbox" checked={stateRenewal} onChange={e => {
@@ -2233,27 +2334,27 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" }}>
                           <div style={{ flex: "1 0 50px" }}>
                             <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>State</label>
-                            <select ref={renewalAddStateRef} defaultValue={item.state} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                            <select ref={renewalAddStateRef} defaultValue={item.state} onChange={() => saveCurrentRenewal({ state: renewalAddStateRef.current?.value })} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
                               {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
                             </select>
                           </div>
                           <div style={{ flex: "1 0 50px" }}>
                             <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Month</label>
-                            <select ref={renewalAddMonthRef} defaultValue={item.dueMonth} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                            <select ref={renewalAddMonthRef} defaultValue={item.dueMonth} onChange={() => saveCurrentRenewal({ month: renewalAddMonthRef.current?.value })} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
                               {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                             </select>
                           </div>
                           <div style={{ flex: "0 0 40px" }}>
                             <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Day</label>
-                            <input ref={renewalAddDayRef} type="number" min="1" max="31" defaultValue={item.dueDay} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
+                            <input ref={renewalAddDayRef} type="number" min="1" max="31" defaultValue={item.dueDay} onBlur={() => saveCurrentRenewal()} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
                           </div>
                           <div style={{ flex: "1.5 0 80px" }}>
                             <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>IDs</label>
-                            <input ref={renewalAddIdsRef} defaultValue={item.identifiers} placeholder="e.g. EIN" style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
+                            <input ref={renewalAddIdsRef} defaultValue={item.identifiers} placeholder="e.g. EIN" onBlur={() => saveCurrentRenewal()} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }} />
                           </div>
                           <div style={{ flex: "1 0 80px" }}>
                             <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 2 }}>Assigned</label>
-                            <select ref={renewalAddAssignedRef} defaultValue={item.assignedTo || ""} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
+                            <select ref={renewalAddAssignedRef} defaultValue={item.assignedTo || ""} onChange={() => saveCurrentRenewal({ assigned: renewalAddAssignedRef.current?.value })} style={{ width: "100%", padding: "5px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "var(--paper)" }}>
                               <option value="">Unassigned</option>
                               {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
                             </select>
@@ -2263,23 +2364,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           <button onClick={() => setEditingRenewalIdx(null)}
                             style={{ all: "unset", cursor: "pointer", padding: "5px 10px", borderRadius: 6, fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>Cancel</button>
                           <button onClick={() => {
-                            const st = renewalAddStateRef.current?.value || item.state;
-                            const mo = renewalAddMonthRef.current?.value || item.dueMonth;
-                            const dy = renewalAddDayRef.current?.value || item.dueDay;
-                            const ids = renewalAddIdsRef.current?.value || "";
-                            const assigned = renewalAddAssignedRef.current?.value || "";
-                            const updated = renewalItems.map((it: any, i: number) =>
-                              i === idx ? { ...it, state: st, dueMonth: mo, dueDay: dy, identifiers: ids, assignedTo: assigned } : it
-                            );
-                            setRenewalItems(updated);
+                            saveCurrentRenewal();
                             setEditingRenewalIdx(null);
-                            setLocalSvcs(prev => {
-                              const targetKey = findRenewalService(prev)?.key || "annual_reports";
-                              return prev.map((s: any) => s.key === targetKey ? { ...s, stateRenewalItems: updated } : s);
-                            });
-                            syncRenewalItems(updated);
                           }}
-                            style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Save</button>
+                            style={{ all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: "var(--ink)", color: "#fff" }}>Done</button>
                         </div>
                       </div>
                     ) : (
@@ -2431,7 +2519,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </button>
               )}
             </div>
-            )}
+            );})()}
 
             {/* Month stage grid — for renditions/annual_reports module view */}
             {((resolvedKey === "renditions" || resolvedKey === "annual_reports") || moduleKey === "annual_reports") && targetSvc.enabled && (
@@ -2453,7 +2541,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 value={resolvedAssignee}
                 onChange={e => {
                   setESvcAssignees((prev: any) => ({ ...prev, [resolvedKey]: e.target.value }));
-                  autoSave(prev => prev.map((s: any) =>
+                  updateServicesAndAutoSave((svcs) => svcs.map((s: any) =>
                     s.key === resolvedKey ? { ...s, assignedTo: e.target.value } : s
                   ));
                 }}
@@ -2479,7 +2567,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <span className="k" style={{ color: "var(--muted)" }}>Cadence</span>
                     <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                       value={(targetSvc.frequency || "Monthly") === "Yearly" || (targetSvc.frequency || "Monthly") === "yearly" || (targetSvc.frequency || "Monthly") === "annual" ? "Annual" : (targetSvc.frequency || "Monthly")} onChange={e => {
-                        autoSave(prev => prev.map((s: any) => s.key === moduleKey ? { ...s, frequency: e.target.value } : s));
+                        updateServicesAndAutoSave((svcs) => svcs.map((s: any) => s.key === moduleKey ? { ...s, frequency: e.target.value } : s));
                       }}>
                       <option value="Monthly">Monthly</option>
                       <option value="Quarterly">Quarterly</option>
@@ -2549,7 +2637,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                     value={targetSvc?.processor || ""} onChange={e => {
-                      autoSave(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s));
+                      updateServicesAndAutoSave((svcs) => svcs.map((s: any) => s.key === "payroll" ? { ...s, processor: e.target.value } : s));
                     }}>
                     <option value="">—</option>
                     <option value="Quickbooks Desktop 24">Quickbooks Desktop 24</option>
@@ -2637,7 +2725,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Filing Type</span>
                   <select value={filingType} onChange={e => {
                     setFilingType(e.target.value);
-                    autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s));
+                    updateServicesAndAutoSave((svcs) => svcs.map((s: any) => s.key === "tax_returns" ? { ...s, filingType: e.target.value } : s));
                   }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                     <option value="">—</option>
@@ -2648,7 +2736,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Filing State</span>
                   <select value={filingState} onChange={e => {
                     setFilingState(e.target.value);
-                    autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingState: e.target.value } : s));
+                    updateServicesAndAutoSave((svcs) => svcs.map((s: any) => s.key === "tax_returns" ? { ...s, filingState: e.target.value } : s));
                   }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                     <option value="">—</option>
@@ -2659,7 +2747,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Filing Month</span>
                   <select value={filingMonth} onChange={e => {
                     setFilingMonth(e.target.value);
-                    autoSave(prev => prev.map((s: any) => s.key === "tax_returns" ? { ...s, filingMonth: e.target.value } : s));
+                    updateServicesAndAutoSave((svcs) => svcs.map((s: any) => s.key === "tax_returns" ? { ...s, filingMonth: e.target.value } : s));
                   }}
                     style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}>
                     <option value="">—</option>
@@ -2744,74 +2832,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             </div>
             )}
-
-            {/* Full client record — only on Clients tab, not worklist tabs */}
-            {!moduleKey && <div style={{ marginTop: 20 }}>
-              <button className="reveal" onClick={() => {
-                setShowFullRecord((p) => !p);
-              }} style={{ fontWeight: 600, fontSize: 13 }}>
-                {showFullRecord ? "▲ Hide" : "▶ Full client record"}
-              </button>
-
-              {showFullRecord && (
-                <div style={{ marginTop: 12, padding: "12px 14px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--card)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: 0 }}>Client Info</div>
-                  </div>
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span style={{ color: "var(--muted)" }}>Group</span>
-                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      value={eGroup} onChange={e => setEGroup(e.target.value)} placeholder="—" />
-                  </div>
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span style={{ color: "var(--muted)" }}>Contact</span>
-                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      value={eContact} onChange={e => setEContact(e.target.value)} placeholder="—" />
-                  </div>
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span style={{ color: "var(--muted)" }}>Email</span>
-                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      ref={eEmailRef} defaultValue={eEmail} onBlur={e => setEEmail(e.target.value)} placeholder="—" />
-                  </div>
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span style={{ color: "var(--muted)" }}>Phone</span>
-                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      ref={ePhoneRef} defaultValue={ePhone} onBlur={e => setEPhone(e.target.value)} placeholder="—" />
-                  </div>
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span style={{ color: "var(--muted)" }}>Address</span>
-                    <div style={{ flex: 1, textAlign: "left" }}>
-                      <input style={{ width: "100%", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", marginBottom: 3, boxSizing: "border-box" }}
-                        ref={eAddressRef} defaultValue={eAddress} onBlur={e => setEAddress(e.target.value)} placeholder="Address" />
-                      <div style={{ display: "flex", gap: 3 }}>
-                        <input style={{ flex: 1, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                          ref={eCityRef} defaultValue={eCity} onBlur={e => setECity(e.target.value)} placeholder="City" />
-                        <input style={{ width: 44, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                          ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="ST" />
-                        <input style={{ width: 90, padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 12, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                          ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="ZIP" />
-                      </div>
-                    </div>
-                  </div>
-                  {false && moduleKey !== "sales_tax" && (
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px", borderBottom: "1px dashed #e7e1d3" }}>
-                    <span style={{ color: "var(--muted)" }}>Assigned To</span>
-                    <select style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                      value={eAssigned} onChange={e => { setEAssigned(e.target.value); setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, assignedTo: e.target.value } : s)); if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,assignedTo:e.target.value})}).catch(()=>{}); }}>
-                      {profiles.map((m) => <option key={m.id} value={m.name}>{firstName(m.name)}</option>)}
-                      <option>Unassigned</option>
-                    </select>
-                  </div>
-                  )}
-                  <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13px" }}>
-                    <span style={{ color: "var(--muted)" }}>EIN</span>
-                    <input style={{ flex: 1, textAlign: "left", padding: "3px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                      ref={eEinRef} defaultValue={eEin} onBlur={e => setEEin(e.target.value)} placeholder="—" />
-                  </div>
-                </div>
-              )}
-            </div>
-            }
           </div>
 
           {/* Footer */}
@@ -2826,16 +2846,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               {isActive ? "Deactivate client" : "Activate client"}
             </button>
             <div style={{ flex: 1 }}></div>
-            <button className="btn" onClick={handleSaveModule} disabled={saving} style={{
-              all: "unset", cursor: saving ? "default" : "pointer",
-              background: saving ? "var(--muted)" : "var(--ink)",
-              color: "#fff",
-              padding: "10px 20px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
-              opacity: saving ? 0.6 : 1,
-            }}>
-              {saving ? "Saved" : "Save"}
-            </button>
-            <button className="btn alt" onClick={() => { handleSaveModule(); onClose(); }} style={{
+            <button className="btn alt" onClick={() => { syncAndAutoSaveModule(); flushSave(); onClose(); }} style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
               border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
               fontWeight: 600, fontSize: "13.5px", display: "inline-flex", gap: 7, alignItems: "center",
@@ -2854,8 +2865,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   if (!moduleKey) {
     const prSvc = localSvcs.find((s: any) => s.key === "payroll");
 
-    function handleSave() {
-      setSaving(true);
+    function syncAndAutoSaveUniversal() {
       const updatedSvcs = localSvcs.map((s: any) => {
         let updated = s;
         if (s.key === "payroll") {
@@ -2866,7 +2876,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         }
         return updated;
       });
-      throttledOnSave({
+      autoSave({
         ...c,
         active: isActive,
         name: eName,
@@ -2876,12 +2886,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         emails: [...new Set([eEmailRef.current?.value ?? eEmail, eAddEmailRef.current?.value ?? eAddEmail].filter(Boolean))],
         phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
         address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,
- ein: eEinRef.current?.value ?? eEin,
- assignedStaff: eAssigned,
+        ein: eEinRef.current?.value ?? eEin,
+        assignedStaff: eAssigned,
         services: updatedSvcs,
       } as Client);
-      setToast("Changes saved");
-      setTimeout(() => { setToast(null); setSaving(false); }, 2000);
     }
 
     // ── Inject Annual Reports as a synthetic service derived from Renditions ──
@@ -2905,20 +2913,10 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
     return (
       <>
-        <div className="scrim show" onClick={() => { handleSave(); onClose(); }} />
+        <div className="scrim show" onClick={() => { syncAndAutoSaveUniversal(); flushSave(); onClose(); }} />
         <div className="over show" style={{
           background: "var(--paper)", boxShadow: "-12px 0 40px rgba(33,31,26,.18)",
         }}>
-          {/* Toast notification */}
-          {toast && (
-            <div style={{
-              position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 100,
-              background: "var(--teal)", color: "#fff", padding: "8px 20px", borderRadius: 20,
-              fontSize: 13, fontWeight: 600, boxShadow: "0 4px 16px rgba(0,0,0,.15)",
-              animation: "fadeIn .25s ease",
-              pointerEvents: "none",
-            }}>{toast}</div>
-          )}
           {/* Header */}
           <div className="ohead" style={{
             padding: "22px 24px 16px", borderBottom: "1px solid var(--line)", background: "var(--card)",
@@ -2931,7 +2929,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span>👤 {c.contact || "—"}</span>
                 </div>
               </div>
-              <button className="ox" onClick={() => { handleSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
+              <button className="ox" onClick={() => { syncAndAutoSaveUniversal(); flushSave(); onClose(); }} style={{ all: "unset", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
             </div>
           </div>
 
@@ -2948,45 +2946,45 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Group</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eGroup} onChange={e => setEGroup(e.target.value)} placeholder="—" />
+                value={eGroup} onChange={e => setEGroup(e.target.value)} onBlur={syncAndAutoSaveUniversal} placeholder="—" />
             </div>
             {/* Contact */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Contact</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                value={eContact} onChange={e => setEContact(e.target.value)} placeholder="—" />
+                value={eContact} onChange={e => setEContact(e.target.value)} onBlur={syncAndAutoSaveUniversal} placeholder="—" />
             </div>
 
             {/* Email */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Email</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={eEmailRef} defaultValue={eEmail} onBlur={e => setEEmail(e.target.value)} placeholder="—" />
+                ref={eEmailRef} defaultValue={eEmail} onBlur={e => { setEEmail(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
             {/* Additional email */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional email</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={eAddEmailRef} defaultValue={eAddEmail} onBlur={e => setEAddEmail(e.target.value)} placeholder="—" />
+                ref={eAddEmailRef} defaultValue={eAddEmail} onBlur={e => { setEAddEmail(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
             {/* Phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Phone</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={ePhoneRef} defaultValue={ePhone} onBlur={e => setEPhone(e.target.value)} placeholder="—" />
+                ref={ePhoneRef} defaultValue={ePhone} onBlur={e => { setEPhone(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
             {/* Additional phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={eAddPhoneRef} defaultValue={eAddPhone} onBlur={e => setEAddPhone(e.target.value)} placeholder="—" />
+                ref={eAddPhoneRef} defaultValue={eAddPhone} onBlur={e => { setEAddPhone(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
 
             {/* Address */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Address</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={eAddressRef} defaultValue={eAddress} onBlur={e => setEAddress(e.target.value)} placeholder="—" />
+                ref={eAddressRef} defaultValue={eAddress} onBlur={e => { setEAddress(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
 
             {/* City / State / ZIP row */}
@@ -2994,17 +2992,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <div className="field" style={{ ...fieldStyle, flex: 2 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>City</span>
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  ref={eCityRef} defaultValue={eCity} onBlur={e => setECity(e.target.value)} placeholder="—" />
+                  ref={eCityRef} defaultValue={eCity} onBlur={e => { setECity(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
               <div className="field" style={{ ...fieldStyle, flex: 1 }}>
                 <span className="k" style={{ color: "var(--muted)" }}>State</span>
                 <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  ref={eStateRef} defaultValue={eState} onBlur={e => setEState(e.target.value)} placeholder="—" />
+                  ref={eStateRef} defaultValue={eState} onBlur={e => { setEState(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
               <div className="field" style={{ ...fieldStyle, flex: "0 0 100px" }}>
                 <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>ZIP</span>
                 <input style={{ width: "100%", minWidth: 0, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  ref={eZipRef} defaultValue={eZip} onBlur={e => setEZip(e.target.value)} placeholder="—" />
+                  ref={eZipRef} defaultValue={eZip} onBlur={e => { setEZip(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
             </div>
 
@@ -3012,7 +3010,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                ref={eEinRef} defaultValue={eEin} onBlur={e => setEEin(e.target.value)} placeholder="—" />
+                ref={eEinRef} defaultValue={eEin} onBlur={e => { setEEin(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
 
             {/* ── Services ── */}
@@ -3039,21 +3037,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               {isActive ? "Deactivate client" : "Activate client"}
             </button>
             <div style={{ flex: 1 }}></div>
-            <button onClick={onClose} style={{
+            <button onClick={() => { syncAndAutoSaveUniversal(); flushSave(); onClose(); }} style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
               border: "1px solid var(--line)", padding: "10px 16px", borderRadius: 11,
               fontWeight: 600, fontSize: "13.5px",
             }}>
               Done
-            </button>
-            <button onClick={handleSave} disabled={saving} style={{
-              all: "unset", cursor: saving ? "default" : "pointer",
-              background: saving ? "var(--muted)" : "var(--ink)", color: "#fff",
-              padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
-              opacity: saving ? 0.7 : 1,
-              transition: "all 0.2s ease",
-            }}>
-              {saving ? "Saving…" : "Save changes"}
             </button>
           </div>
         </div>
