@@ -2046,36 +2046,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                       })}
                     </div>
                   </div>
-
-                  {/* Per-line-item notes */}
-                  <div style={{ marginTop: 8 }}>
-                    <div className="notemo">Notes</div>
-                    {getStxComments(i).filter((cm: CommentEntry & { _lineItemKey?: string }) => cm._lineItemKey === `stx-item-${i}`).map((cm: any) => (
-                      <div key={cm.id} className="note">
-                        <div className="ntxt">{cm.text}</div>
-                        <div className="nmeta">{cm.author} · {MONTHS[cm.month] || `Month ${cm.month + 1}`}</div>
-                        <button
-                          onClick={() => deleteComment("sales_tax", cm.id)}
-                          style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, marginTop: 4, display: "block" }}
-                        >× Delete</button>
-                      </div>
-                    ))}
-                    <div className="noteadd">
-                      <select value={stxNoteMonth[i] ?? new Date().getMonth()} onChange={e => setStxNoteMonth((prev: any) => ({ ...prev, [i]: Number(e.target.value) }))}
-                        style={{ padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}>
-                        {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m}</option>)}
-                      </select>
-                      <select value={stxNoteType[i] || "others"} onChange={e => setStxNoteType((prev: any) => ({ ...prev, [i]: e.target.value }))}
-                        style={{ padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}>
-                        {NOTE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                      <input value={stxNoteText[i] || ""} onChange={e => setStxNoteText((prev: any) => ({ ...prev, [i]: e.target.value }))}
-                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addStxNote(i); } }}
-                        placeholder="Note..." style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)", outline: "none" }} />
-                      <button onClick={() => addStxNote(i)}
-                        style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}>Add</button>
-                    </div>
-                  </div>
                 </>
               )}
             </div>
