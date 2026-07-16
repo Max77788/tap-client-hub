@@ -86,6 +86,12 @@ assert.match(legacyAuth, /resolveAccessIdentity/);
 assert.doesNotMatch(legacyAuth, /tap_demo_user/);
 assert.doesNotMatch(legacyAuth, /tap_demo_email/);
 
+const twoFactorStatus = read("app/api/2fa/status/route.ts");
+assert.match(twoFactorStatus, /resolveAccessIdentity/);
+assert.match(twoFactorStatus, /status: 401/);
+assert.doesNotMatch(twoFactorStatus, /tap_demo_user/);
+assert.doesNotMatch(twoFactorStatus, /tap_demo_email/);
+
 const passwordRoute = read("app/api/profiles/[id]/password/route.ts");
 assert.match(passwordRoute, /identity\.id\s*!==\s*id/);
 assert.match(passwordRoute, /identity\.canManageUsers/);
