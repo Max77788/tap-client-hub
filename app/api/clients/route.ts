@@ -468,9 +468,13 @@ export async function PUT(request: Request) {
 // Helper to sync comments
     async function syncComments(csId: string, comments: any[]) {
       if (!comments || !Array.isArray(comments)) return;
-      const { error: delErr } = await supabase.from("service_comments").delete().eq("client_service_id", csId);
-      if (delErr) { console.error("Comments delete error:", delErr.message); return; }
+      // Only insert NEW comments — don't delete existing ones
+      // Find existing comment bodies to skip duplicates
+      const { data: existing } = await supabase.from("service_comments").select("body, month, author_label").eq("client_service_id", csId);
+      const existingKeys = new Set((existing || []).map((e: any) => `${e.month}|${e.body}|${e.author_label}`));
       for (const cm of comments) {
+        const key = `${cm.month ?? ''}|${cm.text || cm.body || ''}|${cm.author || ''}`;
+        if (existingKeys.has(key)) continue;
         if (cm.text || cm.body) {
           await supabase.from("service_comments").insert({
             client_service_id: csId,
@@ -479,6 +483,7 @@ export async function PUT(request: Request) {
             author_label: cm.author || "",
             created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
           });
+          existingKeys.add(key);
         }
       }
     }
