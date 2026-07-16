@@ -285,11 +285,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       i === itemIdx ? { ...it, comments: [...(it.comments || []), comment] } : it
     );
     setRenewalItems(items);
-    setLocalSvcs((prev: any) => prev.map((s: any) =>
+    const newSvcs = localSvcs.map((s: any) =>
       s.key === "renditions" ? { ...s, stateRenewalItems: items } : s
-    ));
+    );
+    setLocalSvcs(newSvcs);
     setRenewalNoteText((prev: any) => ({ ...prev, [itemIdx]: "" }));
-    const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+    const rendSvc = newSvcs.find((s: any) => s.key === "renditions");
     if (rendSvc?.csId) {
       fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: items }) }).catch(() => {});
@@ -301,10 +302,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       i === itemIdx ? { ...it, comments: (it.comments || []).filter((c: any) => c.id !== commentId) } : it
     );
     setRenewalItems(items);
-    setLocalSvcs((prev: any) => prev.map((s: any) =>
+    const newSvcs = localSvcs.map((s: any) =>
       s.key === "renditions" ? { ...s, stateRenewalItems: items } : s
-    ));
-    const rendSvc = localSvcs.find((s: any) => s.key === "renditions");
+    );
+    setLocalSvcs(newSvcs);
+    const rendSvc = newSvcs.find((s: any) => s.key === "renditions");
     if (rendSvc?.csId) {
       fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: items }) }).catch(() => {});
@@ -2264,9 +2266,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     ) : (
                       // ── Display mode ──
                       <div key={item.id || idx} style={{
-                        display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
-                        background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, fontSize: 12
+                        background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden"
                       }}>
+                        <div style={{
+                          display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", fontSize: 12
+                        }}>
                         <span style={{ fontWeight: 600, minWidth: 30, color: "var(--teal)" }}>{item.state}</span>
                         <span style={{ color: "var(--muted)" }}>
                           Due: {item.dueMonth ? `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][Math.max(0,Math.min(11,parseInt(item.dueMonth||"1")-1))] || item.dueMonth}${item.dueDay ? ` ${item.dueDay}` : ""}` : "—"}
@@ -2277,7 +2281,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                         <button
                           onClick={() => {
                             setEditingRenewalIdx(idx);
-                            // Pre-fill refs on next render via defaultValue
                           }}
                           style={{ all: "unset", cursor: "pointer", color: "var(--blue)", fontSize: 11, fontWeight: 600 }}
                         >✎</button>
@@ -2285,17 +2288,24 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           onClick={() => {
                             const updated = renewalItems.filter((_: any, i: number) => i !== idx);
                             setRenewalItems(updated);
-                            syncRenewalItems(updated);
-                            setLocalSvcs(prev => prev.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s));
+                            const newSvcs = localSvcs.map((s: any) => s.key === "renditions" ? { ...s, stateRenewalItems: updated } : s);
+                            setLocalSvcs(newSvcs);
+                            const rendSvc = newSvcs.find((s: any) => s.key === "renditions");
+                            if (rendSvc?.csId) {
+                              fetch("/api/clients", { method: "PATCH", headers: {"Content-Type":"application/json"},
+                                body: JSON.stringify({ csId: rendSvc.csId, stateRenewalItems: updated }) }).catch(() => {});
+                            }
                           }}
                           style={{ all: "unset", cursor: "pointer", color: "var(--red)", fontSize: 11, fontWeight: 600 }}
                         >×</button>
-                        <div style={{ width: "100%", flexBasis: "100%", paddingTop: 8, borderTop: "1px solid var(--line)", marginTop: 4 }}>
+                        </div>
+                        {/* ── Notes section ── */}
+                        <div style={{ padding: "6px 10px", borderTop: "1px solid var(--line)", background: "var(--card)" }}>
                           <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                             <select
                               value={renewalNoteMonth[idx] ?? new Date().getMonth()}
                               onChange={e => setRenewalNoteMonth((prev: any) => ({ ...prev, [idx]: Number(e.target.value) }))}
-                              style={{ padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "var(--paper)", color: "var(--ink)" }}>
+                              style={{ padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "#fff", color: "var(--ink)" }}>
                               {MONTHS.map((m, mi) => <option key={mi} value={mi}>{m.substring(0, 3)}</option>)}
                             </select>
                             <input
@@ -2303,7 +2313,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                               onChange={e => setRenewalNoteText((prev: any) => ({ ...prev, [idx]: e.target.value }))}
                               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRenewalItemNote(idx); } }}
                               placeholder="Add note..."
-                              style={{ flex: 1, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "var(--paper)", color: "var(--ink)", outline: "none" }} />
+                              style={{ flex: 1, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 11, background: "#fff", color: "var(--ink)", outline: "none" }} />
                             <button
                               onClick={() => addRenewalItemNote(idx)}
                               style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" }}>Add</button>
