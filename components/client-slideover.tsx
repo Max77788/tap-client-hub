@@ -2023,14 +2023,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                           <div key={mi} style={{ textAlign: "center", position: "relative" }}>
                             <div style={{ fontSize: 9, color: "var(--muted)", marginBottom: 1 }}>{mo}</div>
                             <div
-                              onClick={() => handleStxStageClick(i, mi)}
                               style={{
                                 width: 24, height: 24, borderRadius: 6,
                                 border: `1px solid ${ss.border}`,
                                 background: ss.bg,
                                 color: ss.fg,
                                 display: "flex", alignItems: "center", justifyContent: "center",
-                                fontSize: 12, fontWeight: 700, cursor: "pointer", userSelect: "none",
+                                fontSize: 12, fontWeight: 700, cursor: "default", userSelect: "none",
                                 position: "relative",
                               }}
                             >
