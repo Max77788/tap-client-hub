@@ -246,6 +246,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const eCityRef = useRef<HTMLInputElement>(null);
   const eStateRef = useRef<HTMLInputElement>(null);
   const eZipRef = useRef<HTMLInputElement>(null);
+  const eNotesRef = useRef<HTMLTextAreaElement>(null);
   // ── STX line-item form refs (uncontrolled) ──
   const stxNameRef = useRef<HTMLInputElement>(null);
   const stxRtRef = useRef<HTMLInputElement>(null);
@@ -515,6 +516,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     if (eStateRef.current) eStateRef.current.value = client.state || "";
     if (eZipRef.current) eZipRef.current.value = (client as any).zip || "";
     if (eEinRef.current) eEinRef.current.value = client.ein || "";
+    if (eNotesRef.current) eNotesRef.current.value = client.notes || "";
+    setENotes(client.notes || "");
     // Reset notes pagination
     setNotePage(0);
     // Initialize tax returns fields
@@ -551,6 +554,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const [eZip, setEZip] = useState((client as any).zip || "");
   const [eEin, setEEin] = useState(client.ein || "");
   const eEinRef = useRef<HTMLInputElement>(null);
+  const [eNotes, setENotes] = useState(client.notes || "");
   const [eAssigned, setEAssigned] = useState(client.assignedStaff || "Unassigned");
 
   // ── Helper: sync renewal items via PATCH (or PUT if service row doesn't exist yet) ──
@@ -1821,6 +1825,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
         address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,
         ein: eEinRef.current?.value ?? eEin,
+        notes: eNotesRef.current?.value ?? eNotes,
         assignedStaff: eAssigned,
       } as Client);
     }
@@ -2902,6 +2907,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         phones: [ePhoneRef.current?.value ?? ePhone, eAddPhoneRef.current?.value ?? eAddPhone].filter(Boolean),
         address: eAddressRef.current?.value ?? eAddress, city: eCityRef.current?.value ?? eCity, state: eStateRef.current?.value ?? eState, zip: eZipRef.current?.value ?? eZip,
         ein: eEinRef.current?.value ?? eEin,
+        notes: eNotesRef.current?.value ?? eNotes,
         assignedStaff: eAssigned,
         services: updatedSvcs,
       } as Client);
@@ -3026,6 +3032,22 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
               <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
                 ref={eEinRef} defaultValue={eEin} onBlur={e => { setEEin(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
+            </div>
+
+            {/* General client notes */}
+            <div className="field" style={{ ...fieldStyle, display: "block" }}>
+              <label className="k" htmlFor="client-general-notes" style={{ color: "var(--muted)", display: "block", marginBottom: 5 }}>
+                General Notes
+              </label>
+              <textarea
+                id="client-general-notes"
+                ref={eNotesRef}
+                defaultValue={eNotes}
+                onBlur={e => { setENotes(e.target.value); syncAndAutoSaveUniversal(); }}
+                placeholder="Add general client information, context, or follow-up details..."
+                rows={4}
+                style={{ width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", resize: "vertical" }}
+              />
             </div>
 
             {/* ── Services ── */}

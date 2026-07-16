@@ -19,6 +19,31 @@ type DisplayItem =
   | { kind: "group"; name: string; clients: Client[] }
   | { kind: "single"; client: Client };
 
+function normalizeSearchValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map(normalizeSearchValue).join(" ");
+  return value == null ? "" : String(value).toLowerCase();
+}
+
+function matchesClientSearch(client: Client, search: string): boolean {
+  const query = normalizeSearchValue(search);
+  if (!query) return true;
+
+  const searchableValues = [
+    client.name,
+    client.cid,
+    client.group,
+    client.groupName,
+    client.contact,
+    client.phones,
+    client.address,
+    client.city,
+    client.state,
+    client.zip,
+  ];
+
+  return normalizeSearchValue(searchableValues).includes(query);
+}
+
 export default function ClientsPage() {
   // ── State from Supabase API ──
   const [search, setSearch] = useState("");
@@ -66,10 +91,15 @@ export default function ClientsPage() {
   const groups = useMemo(() => getGroups(clients), [clients]);
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
 
-  const filteredClients = useMemo(
-    () => filterClients(clients, { search, type: typeFilter, staff: staffFilter, status: statusFilter }),
-    [clients, search, typeFilter, staffFilter, statusFilter],
-  );
+  const filteredClients = useMemo(() => {
+    const clientsMatchingFilters = filterClients(clients, {
+      type: typeFilter,
+      staff: staffFilter,
+      status: statusFilter,
+    });
+
+    return clientsMatchingFilters.filter(client => matchesClientSearch(client, search));
+  }, [clients, search, typeFilter, staffFilter, statusFilter]);
 
   // Group filtered clients: multi-client groups become one group card, singles stay as-is
   const displayItems = useMemo((): DisplayItem[] => {
