@@ -644,9 +644,21 @@ function GroupCard({
                       </div>
                     )}
                   </div>
-                  <span className={`badge ${c.type === "Business" ? "b-biz" : "b-per"}`}>
-                    {c.type === "Business" ? "BIZ" : "PERS"}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`badge ${c.type === "Business" ? "b-biz" : "b-per"}`}>
+                      {c.type === "Business" ? "BIZ" : "PERS"}
+                    </span>
+                    {c.active === false && (
+                      <span style={{
+                        fontSize: "9px", fontWeight: 700, letterSpacing: "0.05em",
+                        padding: "2px 7px", borderRadius: 10,
+                        background: "#fce8e6", color: "#c62828",
+                        border: "1px solid #f5c6cb",
+                      }}>
+                        INACTIVE
+                      </span>
+                    )}
+                  </div>
                 </div>
                 );
               })}
