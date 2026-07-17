@@ -14,6 +14,7 @@ interface VaultModalProps {
 function makeEmptyEntry(): Omit<VaultEntry, "id"> {
   return {
     site: "",
+    service: "",
     url: "",
     email: "",
     password: "",
@@ -36,6 +37,7 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
     if (vaultEntry) {
       setForm({
         site: vaultEntry.site || "",
+        service: vaultEntry.service || "",
         url: vaultEntry.url || "",
         email: vaultEntry.email || "",
         password: vaultEntry.password || "",
@@ -223,6 +225,17 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+            </Field>
+
+            {/* Service */}
+            <Field label="Service">
+              <input
+                type="text"
+                value={form.service}
+                onChange={(e) => update("service", e.target.value)}
+                placeholder="e.g. Payroll, Sales Tax, Bookkeeping"
+                className="field-input"
+              />
             </Field>
 
             {/* Notes */}

@@ -25,6 +25,7 @@ export async function GET() {
   const entries = credentials.map((c: any) => ({
     id: c.id,
     site: c.site || "",
+    service: c.service_type || "",
     url: c.url || "",
     email: c.username || "",
     password: c.vault_ref || "",
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
       client_id: body.clientId || null,
       group_label: body.groupLabel || null,
       site: body.site.trim(),
+      service_type: body.service?.trim() || null,
       username: body.email?.trim() || null,
       vault_ref: body.password?.trim() || null,
       is_bank: body.isBank || false,
@@ -84,6 +86,7 @@ export async function POST(request: NextRequest) {
   const entry = {
     id: created.id,
     site: created.site || "",
+    service: created.service_type || "",
     url: created.url || "",
     email: created.username || "",
     password: created.vault_ref || "",
@@ -127,6 +130,7 @@ export async function PUT(request: NextRequest) {
       client_id: body.clientId || null,
       group_label: body.groupLabel || null,
       site: body.site.trim(),
+      service_type: body.service?.trim() || null,
       username: body.email?.trim() || null,
       vault_ref: body.password?.trim() || null,
       is_bank: body.isBank || false,
@@ -151,6 +155,7 @@ export async function PUT(request: NextRequest) {
   const entry = {
     id: updated.id,
     site: updated.site || "",
+    service: updated.service_type || "",
     url: updated.url || "",
     email: updated.username || "",
     password: updated.vault_ref || "",

@@ -199,6 +199,7 @@ export interface StaffMember {
 export interface VaultEntry {
   id: string;
   site: string;
+  service?: string;
   url?: string;
   email?: string;
   password?: string;
