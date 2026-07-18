@@ -1701,15 +1701,15 @@ export default function WorklistTable({
                           className="mcell"
                           style={{
                             width: "100%", height: 24, borderRadius: 4,
-                            border: `1px solid ${!isActive ? "transparent" : style.border}`,
-                            background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
+                            border: "1px solid transparent",
+                            background: !isActive ? "#eef1f7" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
                             color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto",
                             fontWeight: 600, fontSize: 11, userSelect: "none",
                             cursor: (!isActive || cellReadOnly) ? "default" : "pointer",
                             boxShadow: "none",
-                            opacity: !isActive && !lockHist ? 0 : 1,
+                            opacity: 1,
                           } as React.CSSProperties}
                           title={`${MONTHS_SHORT[i]} — ${getStageLabel(stage, variant)}${isHistorical ? ` (${year})` : ""}${isFilingMonth ? " · Filing month" : ""}`}
                         >{isActive || lockHist ? t : ""}</div>
