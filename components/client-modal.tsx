@@ -8,7 +8,7 @@ interface ClientModalProps {
   open: boolean;
   client?: Client | null;
   onClose: () => void;
-  onSave: (client: Client | Omit<Client, "id" | "cid">) => void;
+  onSave: (client: Client | Omit<Client, "id" | "cid">) => Promise<void> | void;
 }
 
 const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
@@ -19,6 +19,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const isEdit = !!client;
 
   const [previewCid] = useState(() => "TP|BS|" + String(Math.floor(1000 + Math.random() * 9000)).padStart(4, "0"));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // ── Form fields ──
   const [name, setName] = useState("");
@@ -205,9 +207,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
 
   if (!open) return null;
 
-  function handleSave() {
+  async function handleSave() {
     const nm = name.trim();
     if (!nm) return;
+    setSaving(true);
+    setSaveError("");
     const svcs: any[] = [];
     function addSvc(
       key: ServiceKey, enabled: boolean, frequency: string,
@@ -253,17 +257,24 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       filingType: taxFilingType || null,
     });
 
-    onSave({
-      name: nm, type: type as "Business" | "Personal", status: "active",
-      group: group.trim(),
-      contact: contact.trim(),
-      emails: [email, addEmail].filter(Boolean),
-      phones: [phone, addPhone].filter(Boolean),
-      address, city, state: st, zip,
-      ein: clientEin || null,
-      services: svcs.length ? svcs : [],
-    } as any);
-    onClose();
+    try {
+      await onSave({
+        name: nm, type: type as "Business" | "Personal", status: "active",
+        group: group.trim(),
+        contact: contact.trim(),
+        emails: [email, addEmail].filter(Boolean),
+        phones: [phone, addPhone].filter(Boolean),
+        address, city, state: st, zip,
+        ein: clientEin || null,
+        services: svcs.length ? svcs : [],
+      } as any);
+      onClose();
+    } catch (error) {
+      console.error("Add client failed:", error);
+      setSaveError(error instanceof Error ? error.message : "Unable to save client services. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -698,9 +709,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         <div className="mfoot" style={{
           padding: "6px 24px 22px", display: "flex", gap: 10, justifyContent: "flex-end",
         }}>
-          <button className="btn alt" onClick={onClose} style={btnStyle(false)}>Cancel</button>
-          <button className="btn" onClick={handleSave} style={btnStyle(true)}>
-            {isEdit ? "Save changes" : "＋ Add client"}
+          {saveError && <div role="alert" style={{ alignSelf: "center", color: "var(--red)", fontSize: 12, marginRight: "auto" }}>{saveError}</div>}
+          <button className="btn alt" onClick={onClose} disabled={saving} style={btnStyle(false)}>Cancel</button>
+          <button className="btn" onClick={handleSave} disabled={saving} style={btnStyle(true)}>
+            {saving ? "Saving…" : isEdit ? "Save changes" : "＋ Add client"}
           </button>
         </div>
       </div>

@@ -213,35 +213,34 @@ export default function ClientsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (res.ok) {
-        const { client } = await res.json();
-        const newClient: Client = {
-          ...data,
-          id: client.id || "c" + Date.now(),
-          cid: client.cid || "CID-" + Math.floor(1000 + Math.random() * 9000),
-          status: "active",
-        } as Client;
-        addClient(newClient);
-        // Persist services via PUT after client creation
-        if (services.length > 0) {
-          fetch("/api/clients", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: newClient.id, services }),
-          }).catch(() => {});
-        }
-        return;
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || `Client creation failed (${res.status})`);
       }
+      const { client } = await res.json();
+      const newClient: Client = {
+        ...data,
+        id: client.id || "c" + Date.now(),
+        cid: client.cid || "CID-" + Math.floor(1000 + Math.random() * 9000),
+        status: "active",
+      } as Client;
+      // Persist services before treating the client as saved in UI state.
+      if (services.length > 0) {
+        const servicesRes = await fetch("/api/clients", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: newClient.id, services }),
+        });
+        if (!servicesRes.ok) {
+          const error = await servicesRes.json().catch(() => ({}));
+          throw new Error(error.error || `Client services failed to save (${servicesRes.status})`);
+        }
+      }
+      addClient(newClient);
     } catch (e) {
       console.error("POST /api/clients failed:", e);
+      throw e;
     }
-    const newClient: Client = {
-      ...data,
-      id: "c" + Date.now(),
-      cid: "CID-" + Math.floor(1000 + Math.random() * 9000),
-      status: "active",
-    } as Client;
-    addClient(newClient);
   }, [addClient]);
 
   return (

@@ -1115,6 +1115,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     const isRend = svc.key === "renditions";
     const isAnnualReports = svc.key === "annual_reports" || (svc.key === "renditions" && moduleKey === "annual_reports");
     const isRendOrAnnual = svc.key === "renditions" || svc.key === "annual_reports";
+    const isUniversalRenditions = !moduleKey && svc.key === "renditions";
 
     return (
       <div style={{ marginBottom: 12, background: "var(--card)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
@@ -1181,6 +1182,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
         {/* Month tracking under card */}
         {svc.enabled && (
           <div style={{ padding: "6px 13px 12px", borderTop: "1px dashed var(--line)" }}>
+            {isUniversalRenditions && (
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Assigned To</label>
+                <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, background: "var(--paper)" }}
+                  value={svc.assignedTo || ""}
+                  onChange={e => saveServiceField("renditions", "assignedTo", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {profiles.map((p: any) => <option key={p.id} value={p.name}>{firstName(p.name)}</option>)}
+                </select>
+              </div>
+            )}
+            {!isUniversalRenditions && (
+              <>
             {/* Payroll: credentials section */}
             {isPayroll && svc.enabled && (
               <div style={{ marginBottom: 10 }}>
@@ -1697,7 +1712,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             )}
 
             {/* Renditions / Annual Reports: state renewal items */}
-            {isRendOrAnnual && svc.enabled && (
+            {isAnnualReports && svc.enabled && (
               <div style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 4 }}>
                   State Renewals ({renewalItems.length})
@@ -1732,6 +1747,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   </div>
                 )}
                 {monthCells(svc.key)}
+              </>
+            )}
               </>
             )}
           </div>

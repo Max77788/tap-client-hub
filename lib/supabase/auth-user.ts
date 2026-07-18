@@ -7,7 +7,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { resolveAccessIdentity } from "@/lib/access-server";
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rqxscydyvrvbdkqagemy.supabase.co";
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://verfpuxjuudhwiqjqrqw.supabase.co";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbG...YYP0";
 
 export function getSupabaseClient() {

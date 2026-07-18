@@ -493,6 +493,24 @@ export async function PUT(request: Request) {
 
     // Build unique codes we need
     const safeServices = Array.isArray(services) ? services : [];
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const assigneeNames = [...new Set(safeServices
+      .map((svc: any) => svc.assignedTo)
+      .filter((assignedTo: unknown): assignedTo is string => typeof assignedTo === "string" && assignedTo !== "" && assignedTo !== "Unassigned" && !uuidRegex.test(assignedTo))
+    )];
+    const assigneeIdsByName: Record<string, string> = {};
+    if (assigneeNames.length > 0) {
+      const { data: assigneeProfiles, error: assigneeProfilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("full_name", assigneeNames);
+      if (assigneeProfilesError) throw new Error(`Assignee lookup failed: ${assigneeProfilesError.message}`);
+      for (const profile of assigneeProfiles || []) assigneeIdsByName[profile.full_name] = profile.id;
+    }
+    const normalizeAssignedTo = (assignedTo: unknown): string | null => {
+      if (typeof assignedTo !== "string" || assignedTo === "" || assignedTo === "Unassigned") return null;
+      return uuidRegex.test(assignedTo) ? assignedTo : assigneeIdsByName[assignedTo] || null;
+    };
     const codes = [...new Set(safeServices
       .filter((s: any) => KEY_TO_CODE[s.key])
       .map((s: any) => KEY_TO_CODE[s.key])
@@ -677,7 +695,7 @@ export async function PUT(request: Request) {
             const { error: activationError } = await supabase.from("client_services").update({
                 active: true,
                 frequency: svc.frequency || existing.frequency || "Monthly",
-                assigned_to: svc.assignedTo || existing.assigned_to || null,
+                assigned_to: normalizeAssignedTo(svc.assignedTo) ?? existing.assigned_to ?? null,
                 processor: svc.processor || existing.processor || null,
                 financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
@@ -719,7 +737,7 @@ export async function PUT(request: Request) {
             // Base fields update
             const { error: serviceUpdateError } = await supabase.from("client_services").update({
                 frequency: svc.frequency ?? existing.frequency ?? null,
-                assigned_to: svc.assignedTo ?? existing.assigned_to ?? null,
+                assigned_to: normalizeAssignedTo(svc.assignedTo) ?? existing.assigned_to ?? null,
                 processor: svc.processor ?? existing.processor ?? null,
                 financials_month: svc.financialsMonth ?? existing.financials_month ?? null,
                 expected_annual: svc.expectedAnnual ?? existing.expected_annual ?? null,
@@ -772,7 +790,7 @@ export async function PUT(request: Request) {
               service_id: serviceId,
               active: true,
               frequency: svc.frequency || "Monthly",
-              assigned_to: svc.assignedTo || null,
+              assigned_to: normalizeAssignedTo(svc.assignedTo),
               processor: svc.processor || null,
               financials_month: svc.financialsMonth ?? null,
               expected_annual: svc.expectedAnnual || null,
