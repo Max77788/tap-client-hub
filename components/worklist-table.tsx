@@ -1252,7 +1252,7 @@ export default function WorklistTable({
           aria-label="Scroll left"
         >{'\u2039'}</button>
       <div id={`table-scroll-${serviceKey}`} style={{ overflowX: "auto", borderRadius: 14, border: "1px solid var(--line)", scrollBehavior: "smooth" }}>
-      <table style={{ minWidth: "100%", borderCollapse: "collapse" }}>
+      <table style={{ width: "max-content", minWidth: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "var(--card)", borderBottom: "2px solid var(--line)" }}>
              <th className="text-left text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider px-1.5 py-2" style={{ width: 160, minWidth: 120, maxWidth: 220 }}>Client / Line Item</th>
@@ -1703,7 +1703,7 @@ export default function WorklistTable({
                             width: "100%", height: 24, borderRadius: 4,
                             border: `${(serviceKey === "renditions" || serviceKey === "annual_reports") && !isActive ? "1px solid transparent" : `1px solid ${!isActive ? "transparent" : style.border}`}`,
                             background: (serviceKey === "renditions" || serviceKey === "annual_reports")
-                              ? (!isActive ? "#eef1f7" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg)
+                              ? (!isActive ? "var(--line)" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg)
                               : (!isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg),
                             color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
                             display: "flex", alignItems: "center", justifyContent: "center",
