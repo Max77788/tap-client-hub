@@ -1093,7 +1093,8 @@ export default function WorklistTable({
   const extraCols = serviceKey !== "renditions" && serviceKey !== "annual_reports" && serviceKey !== "tax_returns" && variant !== "t9" ? 1 : 0; // Cadence
   const t9PostCols = variant === "t9" ? 1 : 0; // Left
   const t9PreCols = variant === "t9" ? 1 : 0; // Expected
-  const colCount = baseCols + payrollCols + taxReturnCols + extraCols + t9PreCols + 12 + t9PostCols;
+  const renewalCols = (serviceKey === "renditions" || serviceKey === "annual_reports") && showRenewalColumns ? 2 : 0; // State, Due
+  const colCount = baseCols + renewalCols + payrollCols + taxReturnCols + extraCols + t9PreCols + 12 + t9PostCols;
 
   if (loading) {
     return (
