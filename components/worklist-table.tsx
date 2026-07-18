@@ -1700,7 +1700,7 @@ export default function WorklistTable({
                           onClick={cellReadOnly ? undefined : (e) => { e.stopPropagation(); handleCellClick(client.id, i, e); }}
                           className="mcell"
                           style={{
-                            width: 26, height: 26, borderRadius: 6,
+                            width: "100%", height: 24, borderRadius: 4,
                             border: `1px solid ${!isActive ? "transparent" : style.border}`,
                             background: !isActive ? "transparent" : stage === "na" ? `repeating-linear-gradient(45deg, ${style.bg} 0px, ${style.bg} 3px, #c0c4cc40 3px, #c0c4cc40 5px)` : style.bg,
                             color: !isActive ? (lockHist ? "var(--muted)" : "transparent") : style.fg,
