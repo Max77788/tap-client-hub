@@ -263,7 +263,9 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const payDayOptions = PAY_DAY_OPTIONS;
 
   // ── Calculate next payroll start date based on cadence + pay day ──
-  const calcPayrollStartDate = calculatePayrollStartDate;
+  const calcPayrollStartDate = (cadence: string, payDay: string): string | null => {
+    return calculatePayrollStartDate(cadence, normalizePayDay(payDay));
+  };
 
   // ── Notes pagination ──
   const [notePage, setNotePage] = useState(0);
@@ -2621,8 +2623,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Start Date</span>
-                  <input type="date" style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--paper)", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "default" }}
-                    value={formatPayrollStartDate(prStartDate)} readOnly />
+                  <input type="text" style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--paper)", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "default" }}
+                    value={prStartDate ? formatPayrollStartDate(prStartDate) : (prPeriodFreq && prPaydate ? formatPayrollStartDate(calcPayrollStartDate(prPeriodFreq, prPaydate)) : "")} readOnly />
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Processor</span>

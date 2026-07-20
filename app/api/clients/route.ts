@@ -3,6 +3,7 @@ import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 import { randomUUID } from "crypto";
 import { requireClientDataEditAccess } from "@/lib/access-server";
+import { calculatePayrollStartDate, normalizePayDay } from "@/lib/payroll-schedule";
 
 // ── Helper: create a Supabase client ──
 async function getSupabase() {
@@ -955,8 +956,15 @@ export async function PATCH(request: Request) {
     // Payroll-specific fields
     if (payrollPassword !== undefined) updates.payroll_password = payrollPassword || null;
     if (eftps !== undefined) updates.eftps = eftps || null;
-    if (paydate !== undefined) updates.paydate = paydate || null;
-    if (payStartDate !== undefined) updates.pay_start_date = payStartDate || null;
+    if (paydate !== undefined) updates.paydate = paydate ? normalizePayDay(paydate) : null;
+    if (payStartDate !== undefined) {
+      updates.pay_start_date = payStartDate || null;
+    } else if (paydate !== undefined || payPeriodFrequency !== undefined) {
+      const nextPayDay = paydate !== undefined ? normalizePayDay(paydate || "") : "";
+      const nextFrequency = payPeriodFrequency || frequency || "";
+      const calculatedStart = calculatePayrollStartDate(nextFrequency, nextPayDay);
+      if (calculatedStart) updates.pay_start_date = calculatedStart;
+    }
     if (payPeriodFrequency !== undefined) updates.pay_period_frequency = payPeriodFrequency || null;
     if (reportingMethod !== undefined) updates.reporting_method = reportingMethod || null;
     if (payrollCategory !== undefined) updates.payroll_category = payrollCategory || null;
