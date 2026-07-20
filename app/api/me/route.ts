@@ -17,5 +17,6 @@ export async function GET() {
     role: identity.role,
     modules: identity.modules,
     canManageUsers: identity.canManageUsers,
+    allowEditClientData: identity.allowEditClientData,
   });
 }

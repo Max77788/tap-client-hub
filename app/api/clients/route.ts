@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ServiceKey } from "@/lib/types";
 import { SERVICE_META } from "@/lib/data";
 import { randomUUID } from "crypto";
+import { requireClientDataEditAccess } from "@/lib/access-server";
 
 // ── Helper: create a Supabase client ──
 async function getSupabase() {
@@ -403,6 +404,8 @@ export async function GET(request: Request) {
 
 // ── PUT /api/clients — update client services (e.g. service toggle on/off) ──
 export async function PUT(request: Request) {
+  const access = await requireClientDataEditAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const supabase = await getSupabase();
     const body = await request.json();
@@ -849,6 +852,8 @@ export async function PUT(request: Request) {
 
 // ── POST /api/clients — create a new client ──
 export async function POST(request: Request) {
+  const access = await requireClientDataEditAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const supabase = await getSupabase();
     const body = await request.json();
@@ -888,6 +893,8 @@ export async function POST(request: Request) {
 
 // ── PATCH /api/clients — update a client service field (assigned_to, processor, frequency) ──
 export async function PATCH(request: Request) {
+  const access = await requireClientDataEditAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const supabase = await getSupabase();
     const body = await request.json();
@@ -1137,6 +1144,8 @@ return NextResponse.json({ success: true, ...updates });
 
 // ── DELETE /api/clients?id=... or ?ids=a,b,c — cascade-delete client(s) + all associated records ──
 export async function DELETE(request: Request) {
+  const access = await requireClientDataEditAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get("id");

@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageUsers, effectiveModules, normalizeRole } from "@/lib/access-policy";
 import { verifyDemoSession } from "@/lib/demo-session";
 
-type Profile = { id: string; full_name?: string | null; email?: string | null; role?: string | null; modules?: unknown; location?: string | null };
+type Profile = { id: string; full_name?: string | null; email?: string | null; role?: string | null; modules?: unknown; location?: string | null; allow_edit_client_data?: boolean | null };
 
 function normalizedName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -28,6 +28,7 @@ export type AccessIdentity = {
   role: string;
   modules: string[];
   canManageUsers: boolean;
+  allowEditClientData: boolean;
   authenticated: boolean;
 };
 
@@ -57,15 +58,15 @@ export async function resolveAccessIdentity(): Promise<AccessIdentity | null> {
   let profile: Profile | null = null;
 
   if (id) {
-    const { data } = await admin.from("profiles").select("id, full_name, email, role, modules, location").eq("id", id).maybeSingle();
+    const { data } = await admin.from("profiles").select("id, full_name, email, role, modules, location, allow_edit_client_data").eq("id", id).maybeSingle();
     profile = data;
   }
   if (!profile && email) {
-    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location");
+    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location, allow_edit_client_data");
     profile = (profiles || []).find((candidate: Profile) => String(candidate.email || "").toLowerCase() === email) || null;
   }
   if (!profile && demoName) {
-    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location");
+    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location, allow_edit_client_data");
     profile = (profiles || []).find((candidate: Profile) => nameMatches(candidate.full_name || "", demoName)) || null;
   }
 
@@ -87,6 +88,7 @@ export async function resolveAccessIdentity(): Promise<AccessIdentity | null> {
     role,
     modules,
     canManageUsers: canManageUsers(role),
+    allowEditClientData: ["owner", "admin"].includes(role) || profile?.allow_edit_client_data === true,
     authenticated: true,
   };
 }
@@ -95,5 +97,12 @@ export async function requireUserManagementAccess() {
   const identity = await resolveAccessIdentity();
   if (!identity) return { identity: null, status: 401 as const };
   if (!identity.canManageUsers) return { identity, status: 403 as const };
+  return { identity, status: null };
+}
+
+export async function requireClientDataEditAccess() {
+  const identity = await resolveAccessIdentity();
+  if (!identity) return { identity: null, status: 401 as const };
+  if (!identity.allowEditClientData) return { identity, status: 403 as const };
   return { identity, status: null };
 }

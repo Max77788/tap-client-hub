@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   SERVICE_META,
@@ -45,6 +45,16 @@ function matchesClientSearch(client: Client, search: string): boolean {
 }
 
 export default function ClientsPage() {
+  const [canEditClientData, setCanEditClientData] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/me").then(r => r.ok ? r.json() : null).then(me => {
+      if (!cancelled) setCanEditClientData(me?.allowEditClientData === true);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // ── State from Supabase API ──
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
@@ -168,6 +178,7 @@ export default function ClientsPage() {
   }
 
   function openAddModal() {
+    if (!canEditClientData) return;
     setModalOpen(true);
   }
 
@@ -318,13 +329,13 @@ export default function ClientsPage() {
             </div>
 
             {/* Actions */}
-            <button onClick={openAddModal} className="btn" style={{
+            {canEditClientData && <button onClick={openAddModal} className="btn" style={{
               all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
               padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
               display: "inline-flex", gap: 7, alignItems: "center",
             }}>
               ＋ Add client
-            </button>
+            </button>}
 
             <button onClick={exportCSV} title="Export to Excel (CSV)" style={{
               all: "unset", cursor: "pointer", background: "var(--card)", color: "var(--ink)",
@@ -346,7 +357,7 @@ export default function ClientsPage() {
           </div>
 
           {/* ── Bulk action bar ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 6px", minHeight: 30 }}>
+          {canEditClientData && <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 2px 6px", minHeight: 30 }}>
             <button
               onClick={() => { setBulkMode(!bulkMode); setSelectedIds(new Set()); }}
               style={{
@@ -387,7 +398,7 @@ export default function ClientsPage() {
                 )}
               </>
             )}
-          </div>
+          </div>}
 
           {/* ── Client cards grid ── */}
           {displayItems.length > 0 ? (
@@ -446,18 +457,19 @@ export default function ClientsPage() {
               client={selectedClient}
               open={slideoverOpen}
               onClose={closeSlideover}
-              onSave={handleSlideoverSave}
-              onDelete={handleSlideoverDelete}
-              onStageChange={(clientId, serviceKey, monthIdx, stage) => updateServiceMonth(clientId, serviceKey as any, monthIdx, stage as any)}
+              onSave={canEditClientData ? handleSlideoverSave : undefined}
+              onDelete={canEditClientData ? handleSlideoverDelete : undefined}
+              onStageChange={canEditClientData ? ((clientId, serviceKey, monthIdx, stage) => updateServiceMonth(clientId, serviceKey as any, monthIdx, stage as any)) : undefined}
+              canEditClientData={canEditClientData}
             />
           )}
 
           {/* ── Add Client modal ── */}
-          <ClientModal
+          {canEditClientData && <ClientModal
             open={modalOpen}
             onClose={() => setModalOpen(false)}
             onSave={handleModalSave}
-          />
+          />}
         </>
       )}
     </div>

@@ -75,10 +75,11 @@ interface ClientSlideoverProps {
   onStageChange?: (clientId: string, serviceKey: string, monthIdx: number, stage: string) => void;
   moduleKey?: ServiceKey | "annual_reports";
   currentUser?: string;
+  canEditClientData?: boolean;
   stxLineItemFocus?: string | null;
 }
 
-export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser, stxLineItemFocus }: ClientSlideoverProps) {
+export default function ClientSlideover({ client, open, onClose, onSave, onDelete, onStageChange, moduleKey, currentUser, canEditClientData = true, stxLineItemFocus }: ClientSlideoverProps) {
   // Resolve virtual module keys to real service keys (annual_reports is now its own key)
   const resolvedKey = moduleKey === "annual_reports" ? "annual_reports" : moduleKey;
   const isWorklistTab = !!moduleKey;
@@ -101,6 +102,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
   /** Debounced autosave: accumulates data and fires onSave after 800ms of inactivity */
   const autoSave = useCallback((data: any) => {
+    if (!canEditClientData) return;
     // Guard: skip if client ID changed (prevents cross-client save)
     if (clientIdRef.current !== client.id) return;
     pendingSaveRef.current = data;
@@ -116,10 +118,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
       pendingClientIdRef.current = null;
       dirtyRef.current = false;
     }, 800);
-  }, [client.id]);
+  }, [client.id, canEditClientData]);
 
   /** Flush any pending save immediately. Call before onClose. */
   const flushSave = useCallback(() => {
+    if (!canEditClientData) return;
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
@@ -130,7 +133,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     pendingSaveRef.current = null;
     pendingClientIdRef.current = null;
     dirtyRef.current = false;
-  }, [client.id]);
+  }, [client.id, canEditClientData]);
 
   // ── Client switch: clear pending state before stale data could leak ──
   useEffect(() => {
@@ -391,6 +394,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   // ── State: being edited → show full record ──
   const [isActive, setIsActive] = useState(client.active !== false);
   const toggleActive = async () => {
+    if (!canEditClientData) return;
     const newVal = !isActive;
     setIsActive(newVal);
     try {
@@ -2973,7 +2977,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
           {/* Body */}
           <div className="obody" ref={bodyRef} onScroll={saveScroll} style={{ overflowY: "auto", padding: "20px 24px 30px", flex: 1 }}>
-
+            <fieldset disabled={!canEditClientData} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div className="sect" style={{ marginTop: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 10 }}>
                 Details
@@ -3076,6 +3080,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <SingleServiceCard key={svc.key} svc={svc} />
               ))}
             </div>
+            </fieldset>
 
           </div>
 

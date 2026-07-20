@@ -105,6 +105,7 @@ export async function GET() {
       status: STATUS_MAP[p.invite_status] ||
         (p.active ? "Active" : "Inactive"),
       email_2fa_enabled: p.email_2fa_enabled ?? false,
+      allow_edit_client_data: p.allow_edit_client_data === true,
     };
   });
 
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
   if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const body = await request.json();
-    const { full_name, email, password, role, location, reporting_manager, modules } = body;
+    const { full_name, email, password, role, location, reporting_manager, modules, allow_edit_client_data } = body;
 
     if (!full_name || !email || !password) {
       return NextResponse.json(
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
       modules: sanitizeModulesForRole(role || "staff", modules),
       active: true,
       invite_status: "active",
+      allow_edit_client_data: allow_edit_client_data === true,
     });
 
     if (profileError) {
@@ -199,7 +201,7 @@ export async function PATCH(request: Request) {
   if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const body = await request.json();
-    const { id, full_name, role, location, reporting_manager, modules } = body;
+    const { id, full_name, role, location, reporting_manager, modules, allow_edit_client_data } = body;
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
@@ -230,6 +232,7 @@ export async function PATCH(request: Request) {
     }
     if (body.active !== undefined) updateData.active = body.active;
     if (body.invite_status !== undefined) updateData.invite_status = body.invite_status;
+    if (allow_edit_client_data !== undefined) updateData.allow_edit_client_data = allow_edit_client_data === true;
 
     // Resolve reporting_manager name → UUID if needed
     if (reporting_manager !== undefined) {

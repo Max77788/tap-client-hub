@@ -8,6 +8,7 @@ interface User {
   role: string; location: string; mgr: string; modules: string[]; status: string;
   displayName?: string;
   email_2fa_enabled?: boolean;
+  allow_edit_client_data?: boolean;
 }
 
 interface CurrentUser {
@@ -83,13 +84,13 @@ export default function UsersPage() {
     if (user === "new") {
       setEditForm({
         name: "", location: "", role: "Staff", mgr: "—", username: "",
-        email: "", password: "", modules: [],
+        email: "", password: "", modules: [], allow_edit_client_data: false,
       });
     } else if (user) {
       setEditForm({
         name: user.name, location: user.location, role: user.role,
         mgr: user.mgr, username: user.username, modules: [...user.modules],
-        email: user.email, password: "",
+        email: user.email, password: "", allow_edit_client_data: user.allow_edit_client_data === true,
       });
     }
   }
@@ -109,6 +110,7 @@ export default function UsersPage() {
             location: editForm.location,
             reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
             modules: editForm.modules || [],
+            allow_edit_client_data: editForm.allow_edit_client_data === true,
             ...(editForm.password ? { password: editForm.password } : {}),
           }),
         });
@@ -131,6 +133,7 @@ export default function UsersPage() {
             location: editForm.location,
             reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
             modules: editForm.modules || [],
+            allow_edit_client_data: editForm.allow_edit_client_data === true,
           }),
         });
         if (!res.ok) {
@@ -490,6 +493,13 @@ export default function UsersPage() {
                   </label>
                 ))}
               </div>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
+                <input type="checkbox" checked={editForm.allow_edit_client_data === true}
+                  onChange={e => setEditForm(p => ({ ...p, allow_edit_client_data: e.target.checked }))}
+                  style={{ width: "auto" }} />
+                Allow editing client data
+              </label>
 
               {/* Password change (edit mode) */}
               {modalUser !== "new" && (
