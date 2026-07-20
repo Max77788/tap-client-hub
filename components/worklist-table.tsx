@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { formatPayrollStartDate, getPayrollStartDate } from "@/lib/payroll-schedule";
+
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 
@@ -150,6 +152,7 @@ function getMaxRunsPerMonth(cadence: PayrollCadence): number {
 function getNextProcessingDate(cadence: PayrollCadence, payStartDate?: string): string {
   if (!payStartDate) return "·";
   const now = new Date();
+  // The active month cell displays the calculated start date as MM/DD.
   // Normalize: strip year prefix if ISO format "2026-01-15" → "01/15"
   let normalized = payStartDate;
   const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -1725,9 +1728,13 @@ export default function WorklistTable({
                         {/* ── Payroll: next pay date MM/DD in current month cell ── */}
                         {variant === "payroll" && isCurrentMonth && (
                           <div style={{ fontSize: 10, textAlign: "center", marginTop: 2, lineHeight: 1, whiteSpace: "nowrap" }}>
-                            {(() => {
-                              return <span style={{ color: "var(--ink)" }}>{getNextProcessingDate((svc?.frequency || svc?.payPeriodFrequency || "") as PayrollCadence, svc?.pay_start_date || svc?.payStartDate)}</span>;
-                            })()}
+                            <span style={{ color: "var(--ink)" }}>
+                              {formatPayrollStartDate(getPayrollStartDate(
+                                svc?.frequency || svc?.payPeriodFrequency || "",
+                                svc?.paydate || "",
+                                svc?.pay_start_date || svc?.payStartDate,
+                              ))}
+                            </span>
                           </div>
                         )}
                         {hasCmt && (

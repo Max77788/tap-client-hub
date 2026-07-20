@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Client, ServiceKey, CommentEntry, SalesTaxLineItem } from "@/lib/types";
 import { SERVICE_META, STAFF } from "@/lib/data";
+import { PAY_DAY_OPTIONS, calculatePayrollStartDate, normalizePayDay, formatPayrollStartDate } from "@/lib/payroll-schedule";
 
 // ── Utility: mask sensitive numbers (show last 4) ──
 function maskNum(val: string | undefined | null): string {
@@ -258,64 +259,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
   const stxRoutingRef = useRef<HTMLInputElement>(null);
   const stxAccountRef = useRef<HTMLInputElement>(null);
 
-  // ── Pay Day options (all options, no cadence filtering) ──
-  const payDayOptions = [
-    // From Google Sheet (normalized)
-    "15th/EOM","16th/EOM","25th","5th/20th","EOM",
-    "Fridays","Saturdays","Thursdays",
-    // Weekdays (deduped — sheet already covers Fri/Sat/Thu)
-    "Monday","Tuesday","Wednesday","Sunday",
-  ];
+  // ── Pay Day options (all weekdays plus month-date patterns) ──
+  const payDayOptions = PAY_DAY_OPTIONS;
 
   // ── Calculate next payroll start date based on cadence + pay day ──
-  function calcPayrollStartDate(cadence: string, payDay: string): string | null {
-    if (!cadence || !payDay) return null;
-    const today = new Date();
-    let d = new Date(today);
-    d.setDate(d.getDate() + 1); // start from tomorrow
-
-    // Map weekday names to day numbers (handle both "Friday" and "Fridays")
-    const dayMap: Record<string, number> = {
-      sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,
-      sundays:0,mondays:1,tuesdays:2,wednesdays:3,thursdays:4,fridays:5,saturdays:6,
-    };
-    const dow = dayMap[payDay.toLowerCase()];
-
-    if (cadence === "Weekly" || cadence.startsWith("Bi-Weekly")) {
-      if (dow === undefined) return null;
-      while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
-      if (cadence === "Bi-Weekly B") d.setDate(d.getDate() + 7);
-      return d.toISOString().slice(0,10);
-    }
-
-    // Date-based pay days: "15th/EOM", "5th/20th", "16th/EOM", "EOM", "25th"
-    const parts = payDay.split("/");
-    for (let attempt = 0; attempt < 62; attempt++) {
-      const dom = d.getDate();
-      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      let match = false;
-      for (const p of parts) {
-        if (p === "EOM" && dom === lastDay) match = true;
-        else {
-          // Parse numeric date (handles "15th", "5th", "25th", etc.)
-          const numMatch = p.match(/^(\d+)/);
-          if (numMatch) {
-            const n = parseInt(numMatch[1]);
-            if (n <= lastDay && dom === n) match = true;
-            else if (n > lastDay && dom === lastDay) match = true; // overflow → EOM
-          }
-          // Also check if it's a weekday (handles "Fridays" for Monthly)
-          else {
-            const wd = dayMap[p.toLowerCase()];
-            if (wd !== undefined && d.getDay() === wd) match = true;
-          }
-        }
-      }
-      if (match) return d.toISOString().slice(0,10);
-      d.setDate(d.getDate() + 1);
-    }
-    return null;
-  }
+  const calcPayrollStartDate = calculatePayrollStartDate;
 
   // ── Notes pagination ──
   const [notePage, setNotePage] = useState(0);
@@ -486,7 +434,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
     }
     // Initialize payroll fields
     const prSvc = client.services.find((s: any) => s.key === "payroll");
-    setPrPaydate(prSvc?.paydate || "");
+    setPrPaydate(normalizePayDay(prSvc?.paydate || ""));
     setPrStartDate(prSvc?.payStartDate || "");
     setPrPin(prSvc?.payrollPassword || "");
     setPrEftps(prSvc?.eftps || "");
@@ -1235,13 +1183,14 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     <select style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)" }}
                       value={prPaydate}
                       onChange={e => {
-                        setPrPaydate(e.target.value);
+                        const normalizedPayDay = normalizePayDay(e.target.value);
+                        setPrPaydate(normalizedPayDay);
                         // Recalculate start date when pay day changes
-                        const newStart = calcPayrollStartDate(prPeriodFreq, e.target.value);
-                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value, ...(newStart ? { pay_start_date: newStart } : {}) } : s));
+                        const newStart = calcPayrollStartDate(prPeriodFreq, normalizedPayDay);
+                        setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: normalizedPayDay, ...(newStart ? { pay_start_date: newStart } : {}) } : s));
                         if (newStart) setPrStartDate(newStart);
                         const px = localSvcs.find((s: any) => s.key === "payroll");
-                        if (px?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:px.csId,paydate:e.target.value,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
+                        if (px?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:px.csId,paydate:normalizedPayDay,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
                       }}>
                       <option value="">—</option>
                       {payDayOptions.map(opt => (
@@ -1252,7 +1201,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Start Date</label>
                     <input style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", color: "var(--ink)" }}
-                      value={prStartDate} readOnly placeholder="mm/dd/yyyy" />
+                      value={formatPayrollStartDate(prStartDate)} readOnly placeholder="mm/dd/yyyy" />
                   </div>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
                     <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Payroll PIN</label>
@@ -2657,12 +2606,13 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                   <span className="k" style={{ color: "var(--muted)" }}>Pay Day</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                     value={prPaydate} onChange={e => {
-                      setPrPaydate(e.target.value);
+                      const normalizedPayDay = normalizePayDay(e.target.value);
+                      setPrPaydate(normalizedPayDay);
                       // Recalculate start date when pay day changes
-                      const newStart = calcPayrollStartDate(prPeriodFreq, e.target.value);
-                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: e.target.value, ...(newStart ? { pay_start_date: newStart } : {}) } : s));
+                      const newStart = calcPayrollStartDate(prPeriodFreq, normalizedPayDay);
+                      setLocalSvcs(prev => prev.map((s: any) => s.key === "payroll" ? { ...s, paydate: normalizedPayDay, ...(newStart ? { pay_start_date: newStart } : {}) } : s));
                       if (newStart) setPrStartDate(newStart);
-                      if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,paydate:e.target.value,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
+                      if (targetSvc?.csId) fetch("/api/clients",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({csId:targetSvc.csId,paydate:normalizedPayDay,...(newStart?{pay_start_date:newStart}:{})})}).catch(()=>{});
                     }}>
                     <option value="">—</option>
                     {payDayOptions.includes(prPaydate) || !prPaydate ? null : <option value={prPaydate}>{prPaydate}</option>}
@@ -2672,7 +2622,7 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Start Date</span>
                   <input type="date" style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "var(--paper)", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "default" }}
-                    value={prStartDate} readOnly />
+                    value={formatPayrollStartDate(prStartDate)} readOnly />
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Processor</span>
