@@ -100,42 +100,31 @@ export default function TimePage() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/profile-directory");
-        if (!res.ok) throw new Error("Failed");
-        const data = await res.json();
+        const [dirRes, meRes] = await Promise.all([
+          fetch("/api/profile-directory"),
+          fetch("/api/me"),
+        ]);
+        if (!dirRes.ok) throw new Error("Failed");
+        const data = await dirRes.json();
         if (!cancelled && Array.isArray(data)) {
           const active = data.filter((u: any) => u.status === "Active").map((u: any) => {
             const fullName = u.name || "";
-            // Extract first name from "Patil, Tushar" → "Tushar" or "Tushar Patil" → "Tushar"
             const firstName = fullName.includes(",")
               ? (fullName.split(",")[1] || "").trim()
               : (fullName.split(" ")[0] || "").trim();
             return { id: u.id, name: fullName, role: u.role, firstName: firstName || fullName };
           });
           setStaff(active);
-          // Identify current user from cookie
-          const cookieMatch = document.cookie.match(/(?:^|;\s*)tap_demo_user=([^;]*)/);
-          const userName = cookieMatch ? decodeURIComponent(cookieMatch[1]) : "";
-          if (userName) {
-            // Try full name match first (both "First Last" and "Last, First" formats)
-            const nameParts = userName.trim().split(/\s+/);
-            const match = active.find((u: any) => {
-              const dbName = (u.name || "").trim().toLowerCase();
-              const searchName = userName.toLowerCase();
-              // Exact match: "Tushar Patil" vs "tushar patil" OR "Patil, Tushar" vs "tushar patil"
-              if (dbName === searchName) return true;
-              // Comma-separated match: "patil, tushar" vs "tushar patil"
-              const commaForm = nameParts.filter(Boolean).reverse().join(", ").toLowerCase();
-              if (dbName === commaForm) return true;
-              // Surname match — but only if unique to avoid matching wrong person
-              const surname = nameParts[nameParts.length - 1]?.toLowerCase() || "";
-              if (surname) {
-                const sameSurname = active.filter((u2: any) => (u2.name || "").trim().toLowerCase().startsWith(surname));
-                if (sameSurname.length === 1) return dbName.startsWith(surname);
-              }
-              return false;
-            });
-            if (match) setCurrentUser(match);
+        }
+        // Identify current user from /api/me (server-resolved, httpOnly-safe)
+        if (!cancelled && meRes.ok) {
+          const me = await meRes.json();
+          if (me.id && me.name) {
+            const fullName = me.name || "";
+            const firstName = fullName.includes(",")
+              ? (fullName.split(",")[1] || "").trim()
+              : (fullName.split(" ")[0] || "").trim();
+            setCurrentUser({ id: me.id, name: fullName, role: me.role, firstName: firstName || fullName });
           }
         }
       } catch {}
