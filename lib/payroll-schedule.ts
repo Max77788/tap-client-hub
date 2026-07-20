@@ -38,19 +38,36 @@ export function calculatePayrollStartDate(cadence: string, payDay: string, from 
     // starts on the second payday of the current period, so 15th/EOM at
     // the start of the month resolves to the current month's EOM, not the
     // following month's 15th.
-    const parts = day.split("/").map(part => part.trim().toLowerCase());
-    const hasEom = parts.includes("eom");
-    const numericDays = parts.map(part => Number(part.match(/^(\d+)/)?.[1])).filter(Number.isFinite);
-    const secondDay = hasEom ? 0 : (numericDays[1] || 15);
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    const targetDay = secondDay === 0 ? lastDay : Math.min(secondDay, lastDay);
-    if (d.getDate() <= targetDay) d.setDate(targetDay);
-    else {
-      d.setMonth(d.getMonth() + 1, 1);
-      const nextLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      d.setDate(secondDay === 0 ? nextLastDay : Math.min(secondDay, nextLastDay));
+    // Accept all spreadsheet variants: "15th/EOM", "15th & EOM",
+    // "15th and EOM", and "1st & 15th".
+    const parts = day
+      .replace(/\s*(?:&|and)\s*/gi, "/")
+      .split(/[\\/|,]+/)
+      .map(part => part.trim().toLowerCase())
+      .filter(Boolean);
+    const targets = parts.map(part => {
+      if (part === "eom") return 0;
+      const match = part.match(/^(\d+)/);
+      return match ? Number(match[1]) : null;
+    }).filter((value): value is number => value !== null && value > 0 || value === 0);
+
+    // Choose the next semi-monthly pay date, including the current month's
+    // EOM when the 15th has already passed. This makes July 20 + "15th & EOM"
+    // resolve to July 31, not August 15.
+    for (const monthOffset of [0, 1]) {
+      const year = d.getFullYear();
+      const month = d.getMonth() + monthOffset;
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const candidateDays = targets.map(target => target === 0 ? lastDay : Math.min(target, lastDay));
+      candidateDays.sort((a, b) => a - b);
+      for (const candidateDay of candidateDays) {
+        if (monthOffset > 0 || candidateDay >= d.getDate()) {
+          d.setMonth(month, candidateDay);
+          return toISODate(d);
+        }
+      }
     }
-    return toISODate(d);
+    return null;
   }
 
   if (key === "weekly" || key === "biweeklya" || key === "biweeklyb" || key === "biweekly") {
