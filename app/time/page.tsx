@@ -190,6 +190,19 @@ export default function TimePage() {
     return [{ id: "tap-associates", name: "Tap Associates" }, ...list];
   }, [clients]);
 
+  // Grouped for <optgroup> rendering
+  const groupedClientOptions = useMemo(() => {
+    const groups: Record<string, { id: string; name: string }[]> = {};
+    for (const c of clients) {
+      const g = (c as any).group || "Unassigned";
+      if (!groups[g]) groups[g] = [];
+      groups[g].push({ id: c.id, name: c.name });
+    }
+    // Sort groups alphabetically, then sort clients within each group
+    const sorted = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    return { tapAssociates: { id: "tap-associates", name: "Tap Associates" }, groups: sorted.map(g => ({ label: g, clients: groups[g].sort((a, b) => a.name.localeCompare(b.name)) })) };
+  }, [clients]);
+
   // ── Start timer — saves immediately so it survives reload ──
   const startTimer = useCallback(async () => {
     if (!selectedClient || !selectedPerson) return;
@@ -437,7 +450,12 @@ export default function TimePage() {
             <label>Client</label>
             <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)}>
               <option value="">— choose client —</option>
-              {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value={groupedClientOptions.tapAssociates.id}>{groupedClientOptions.tapAssociates.name}</option>
+              {groupedClientOptions.groups.map(grp => (
+                <optgroup key={grp.label} label={grp.label}>
+                  {grp.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              ))}
             </select>
           </div>
           <div className="fld">
@@ -476,7 +494,12 @@ export default function TimePage() {
             <label>Client</label>
             <select value={manualClient} onChange={(e) => setManualClient(e.target.value)}>
               <option value="">— choose client —</option>
-              {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value={groupedClientOptions.tapAssociates.id}>{groupedClientOptions.tapAssociates.name}</option>
+              {groupedClientOptions.groups.map(grp => (
+                <optgroup key={grp.label} label={grp.label}>
+                  {grp.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              ))}
             </select>
           </div>
           <div className="fld">
