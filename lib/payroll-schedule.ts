@@ -33,6 +33,26 @@ export function calculatePayrollStartDate(cadence: string, payDay: string, from 
   d.setDate(d.getDate() + 1);
 
   const dow = weekdayNumber(day);
+  if (key === "semimonthly") {
+    // Semi-monthly is paydays 1st/15th or 15th/EOM. Its processing period
+    // starts on the second payday of the current period, so 15th/EOM at
+    // the start of the month resolves to the current month's EOM, not the
+    // following month's 15th.
+    const parts = day.split("/").map(part => part.trim().toLowerCase());
+    const hasEom = parts.includes("eom");
+    const numericDays = parts.map(part => Number(part.match(/^(\d+)/)?.[1])).filter(Number.isFinite);
+    const secondDay = hasEom ? 0 : (numericDays[1] || 15);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    const targetDay = secondDay === 0 ? lastDay : Math.min(secondDay, lastDay);
+    if (d.getDate() <= targetDay) d.setDate(targetDay);
+    else {
+      d.setMonth(d.getMonth() + 1, 1);
+      const nextLastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(secondDay === 0 ? nextLastDay : Math.min(secondDay, nextLastDay));
+    }
+    return toISODate(d);
+  }
+
   if (key === "weekly" || key === "biweeklya" || key === "biweeklyb" || key === "biweekly") {
     if (dow === undefined) return null;
     while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
@@ -72,5 +92,9 @@ function toISODate(date: Date): string {
 }
 
 export function getPayrollStartDate(cadence: string, payDay: string, stored?: string): string | null {
+  // Semi-monthly dates are relative to the current pay period. Recalculate
+  // them even when an older stored date exists, otherwise stale values such
+  // as 08/15 can remain displayed when the correct current date is 07/31.
+  if (cadenceKey(cadence) === "semimonthly") return calculatePayrollStartDate(cadence, payDay);
   return stored || calculatePayrollStartDate(cadence, payDay);
 }

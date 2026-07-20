@@ -1648,6 +1648,7 @@ export default function WorklistTable({
                       let label = "Monthly";
                       if (norm === "yearly" || norm === "annual") label = "Annual";
                       else if (norm === "annually") label = "Annually";
+                      else if (norm === "semi_monthly" || norm === "semi-monthly" || norm === "semimonthly") label = "Semi-Monthly";
                       else label = (raw || "").trim() || "Monthly";
                       return isStxItem ? (
                         <button onClick={() => onClientClick?.(client.id)}
