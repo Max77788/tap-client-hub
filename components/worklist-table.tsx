@@ -150,8 +150,14 @@ function getMaxRunsPerMonth(cadence: PayrollCadence): number {
 function getNextProcessingDate(cadence: PayrollCadence, payStartDate?: string): string {
   if (!payStartDate) return "·";
   const now = new Date();
-  const [sm, sd] = payStartDate.split("/").map(Number);
-  if (isNaN(sm) || isNaN(sd) || sm < 1 || sm > 12 || sd < 1 || sd > 31) return payStartDate;
+  // Normalize: strip year prefix if ISO format "2026-01-15" → "01/15"
+  let normalized = payStartDate;
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) normalized = `${isoMatch[2]}/${isoMatch[3]}`;
+  // Also strip trailing year: "01/15/2026" → "01/15"
+  normalized = normalized.replace(/\/\d{4}$/, "");
+  const [sm, sd] = normalized.split("/").map(Number);
+  if (isNaN(sm) || isNaN(sd) || sm < 1 || sm > 12 || sd < 1 || sd > 31) return normalized;
 
   if (cadence === "Monthly") {
     // Next month starting from the day-of-month in payStartDate
