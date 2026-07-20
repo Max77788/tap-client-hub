@@ -12,8 +12,8 @@ const DEMO_USERS: Record<string, { password: string; name: string }> = {
   "bonnie@tapallc.com": { password: "TapHub2024!", name: "Bonnie Edwards" },
   "shilpa@tapallc.com": { password: "TapHub2024!", name: "Shilpa Kulkarni" },
   "sam@tapallc.com": { password: "TapHub2024!", name: "Sam Patil" },
-  "accounts3@tapallc.com": { password: "TapHub2024!", name: "Amruta Patil" },
-  "tax@tapallc.com": { password: "TapHub2024!", name: "Sanket Panchasara" },
+  "amruta@tapallc.com": { password: "TapHub2024!", name: "Amruta Patil" },
+  "sanket@tapallc.com": { password: "TapHub2024!", name: "Sanket Panchasara" },
 };
 
 const COOKIE_OPTIONS = {
