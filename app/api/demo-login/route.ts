@@ -3,7 +3,7 @@ import { createDemoSession } from "@/lib/demo-session";
 
 const DEMO_USERS: Record<string, { password: string; name: string }> = {
   "tushar@tapallc.com": { password: "TapHub2024!", name: "Tushar Patil" },
-  "lizette@tapallc.com": { password: "TapHub2024!", name: "Lizette" },
+  "lizette@tapallc.com": { password: "TapHub2024!", name: "Lizette Esparza" },
   "mmatronin@gmail.com": { password: "MaxHub2025!", name: "Max Matronin" },
   "ben@aifusioniqlabs.com": { password: "TapHub2024!", name: "Ben" },
   "staff@tapallc.com": { password: "TapHub2024!", name: "Staff Test" },
