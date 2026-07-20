@@ -75,5 +75,5 @@ export function canAccessPathname(role: unknown, modules: unknown, pathname: str
 }
 
 export function firstAllowedRoute(role: unknown, modules: unknown) {
-  return effectiveModules(role, modules).map(module => MODULE_ROUTES[module]).find(Boolean) || "/settings";
+  return effectiveModules(role, modules).map(module => MODULE_ROUTES[module]).find(Boolean) || "/time";
 }
