@@ -35,7 +35,10 @@ export async function resolveAccessIdentity(): Promise<AccessIdentity | null> {
   const cookieStore = await cookies();
   const demoSession = verifyDemoSession(cookieStore.get("tap_demo_session")?.value);
   const demoEmail = demoSession?.email || "";
-  const demoName = demoSession?.name || "";
+  let demoName = demoSession?.name || "";
+  // Fallback: staff users who lack a tap_demo_session may only have tap_demo_user
+  const demoUserFromCookie = cookieStore.get("tap_demo_user")?.value || "";
+  if (!demoName && demoUserFromCookie) demoName = decodeURIComponent(demoUserFromCookie);
   let authUser: { id: string; email?: string } | null = null;
 
   try {
