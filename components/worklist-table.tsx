@@ -365,19 +365,36 @@ export default function WorklistTable({
   }, [serviceClients, serviceKey]);
   // ── Stage dropdown picker ──
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number;
+    left: number;
+    placement: "below" | "above";
+  } | null>(null);
+  const dropdownAnchorRef = useRef<DOMRect | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click / scroll / resize so it never floats off the active cell
   useEffect(() => {
     if (!activeDropdown) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setActiveDropdown(null);
+    const close = (e?: Event) => {
+      if (e && dropdownRef.current && e.target instanceof Node && dropdownRef.current.contains(e.target)) {
+        return;
       }
+      setActiveDropdown(null);
+      setDropdownPos(null);
+      dropdownAnchorRef.current = null;
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const onPointerDown = (e: MouseEvent) => close(e);
+    const onScroll = () => close();
+    const onResize = () => close();
+    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
   }, [activeDropdown]);
 
   // ── Filter clients by search + cadence ──
@@ -882,26 +899,58 @@ export default function WorklistTable({
       setActiveDropdown((prev) => {
         if (prev === key) {
           setDropdownPos(null);
+          dropdownAnchorRef.current = null;
           return null;
         }
-        setDropdownPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
+        // Initial position: open below the cell, centered. Final clamp runs after mount.
+        dropdownAnchorRef.current = rect;
+        setDropdownPos({
+          top: rect.bottom + 4,
+          left: rect.left + rect.width / 2,
+          placement: "below",
+        });
         return key;
       });
     },
     [readOnly, isHistorical],
   );
 
-  // ── Keep dropdown visible by shifting if needed ──
+  // ── Keep stage picker fully on-screen (flip above when needed, clamp edges) ──
   useEffect(() => {
-    if (!dropdownPos || !dropdownRef.current) return;
+    if (!dropdownPos || !dropdownRef.current || !dropdownAnchorRef.current) return;
     const el = dropdownRef.current;
-    const rect = el.getBoundingClientRect();
+    const menu = el.getBoundingClientRect();
+    const anchor = dropdownAnchorRef.current;
     const vw = window.innerWidth;
-    let { top, left } = dropdownPos;
-    if (left - rect.width / 2 < 8) left = rect.width / 2 + 8;
-    if (left + rect.width / 2 > vw - 8) left = vw - rect.width / 2 - 8;
-    if (top !== dropdownPos.top || left !== dropdownPos.left) {
-      setDropdownPos({ top, left });
+    const vh = window.innerHeight;
+    const pad = 8;
+    const gap = 4;
+
+    let left = anchor.left + anchor.width / 2;
+    // Horizontal clamp against actual menu width
+    const half = menu.width / 2;
+    if (left - half < pad) left = half + pad;
+    if (left + half > vw - pad) left = vw - half - pad;
+
+    // Prefer below; flip above when not enough room under the cell
+    const spaceBelow = vh - anchor.bottom - pad;
+    const spaceAbove = anchor.top - pad;
+    let placement: "below" | "above" = "below";
+    let top = anchor.bottom + gap;
+    if (spaceBelow < menu.height && spaceAbove > spaceBelow) {
+      placement = "above";
+      top = anchor.top - gap - menu.height;
+    }
+    // Final vertical clamp so the whole menu stays in the viewport
+    if (top < pad) top = pad;
+    if (top + menu.height > vh - pad) top = Math.max(pad, vh - pad - menu.height);
+
+    if (
+      top !== dropdownPos.top ||
+      left !== dropdownPos.left ||
+      placement !== dropdownPos.placement
+    ) {
+      setDropdownPos({ top, left, placement });
     }
   }, [dropdownPos]);
 
@@ -917,6 +966,7 @@ export default function WorklistTable({
       if (onStageChange) onStageChange(clientId, monthIdx, stage, csId);
       setActiveDropdown(null);
       setDropdownPos(null);
+      dropdownAnchorRef.current = null;
     },
     [readOnly, isHistorical, serviceKey, worklistState, onStageChange],
   );
@@ -1851,13 +1901,22 @@ export default function WorklistTable({
         <div
           ref={dropdownRef}
           className="stage-picker"
+          role="listbox"
           style={{
-            position: "fixed", zIndex: 9999,
-            top: dropdownPos.top, left: dropdownPos.left,
+            position: "fixed",
+            zIndex: 99999,
+            top: dropdownPos.top,
+            left: dropdownPos.left,
             transform: "translateX(-50%)",
-            background: "#fff", border: "1px solid #d8d2c4",
-            borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)",
-            padding: "4px 0", minWidth: 190, overflow: "visible",
+            background: "#fff",
+            border: "1px solid #d8d2c4",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(15,23,42,.18)",
+            padding: "4px 0",
+            minWidth: 190,
+            maxHeight: "min(320px, calc(100vh - 16px))",
+            overflowY: "auto",
+            overflowX: "visible",
           }}
         >
           {STAGE_CYCLE.map((s) => {
@@ -1866,6 +1925,8 @@ export default function WorklistTable({
             return (
               <div
                 key={s}
+                role="option"
+                aria-selected={isCurrent}
                 onClick={(e) => { e.stopPropagation(); handleStageSelect(activeDropdownInfo.client.id, activeDropdownInfo.monthIdx, s); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
