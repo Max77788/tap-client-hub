@@ -228,7 +228,7 @@ export default function RootLayout({
         {/* ── Desktop Sidebar ── */}
         {!isAuthPage && (
           <aside
-            className="hidden md:flex sticky top-0 h-screen flex-col shrink-0 select-none"
+            className="hidden md:flex sticky top-0 h-screen flex-col shrink-0 select-none overflow-hidden"
             style={{
               width: "var(--sidebar-width)",
               background: "linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)",
@@ -237,15 +237,15 @@ export default function RootLayout({
             }}
           >
             {/* Brand */}
-            <div style={{ fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600, fontSize: 24, color: "#fff", lineHeight: 1 }}>
+            <div className="shrink-0" style={{ fontFamily: '"Fraunces", Georgia, serif', fontWeight: 600, fontSize: 24, color: "#fff", lineHeight: 1 }}>
               TAP
               <div style={{ display: "block", fontFamily: '"Public Sans", sans-serif', fontWeight: 500, fontSize: "10.5px", letterSpacing: "0.13em", textTransform: "uppercase", color: "#9fb0d8", marginTop: 6 }}>
                 Associates, LLC · Est. 1999
               </div>
             </div>
 
-            {/* Nav */}
-            <nav className="nav flex flex-col gap-[3px] flex-1" style={{ marginTop: 28 }}>
+            {/* Nav — min-h-0 + overflow-y-auto so short viewports can scroll the menu */}
+            <nav className="nav flex flex-col gap-[3px] flex-1 min-h-0 overflow-y-auto" style={{ marginTop: 28 }}>
               {accessLoading && (
                 <div className="space-y-3 px-2" aria-label="Loading navigation">
                   {[72, 88, 64, 92, 76, 84].map((width, index) => (
@@ -274,7 +274,7 @@ export default function RootLayout({
         </nav>
 
         {/* Logout */}
-        <div className="pb-3">
+        <div className="pb-3 shrink-0">
           <button
             onClick={async () => {
               await fetch("/api/demo-login", { method: "DELETE", credentials: "include" }).catch(() => {});
@@ -303,7 +303,7 @@ export default function RootLayout({
             </div>
 
             {/* Footer */}
-            <div className="text-[11px]" style={{ color: "#8a9bc6", lineHeight: 1.5 }}>
+            <div className="text-[11px] shrink-0" style={{ color: "#8a9bc6", lineHeight: 1.5 }}>
               Demo prototype · one entry,<br />flows everywhere · no formulas
             </div>
           </aside>
