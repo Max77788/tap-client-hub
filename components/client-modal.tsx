@@ -13,6 +13,22 @@ interface ClientModalProps {
 
 const STAFF_NAMES = [...STAFF.map(s => s.name), "Unassigned"];
 
+// ── Phone normalization helper ──
+function normalizePhone(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  // Return only digits if it contains letters or junk and no recognizable number.
+  if (/[a-zA-Z]/.test(value)) return digits || "";
+  return value;
+}
+
+function isInvalidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  // Allow short/non-US values only if empty; mark letters or <10 digits as invalid.
+  return /[a-zA-Z]/.test(value) || (digits.length > 0 && digits.length < 10);
+}
+
 const FILING_TYPES = ["C Corp.", "S Corp.", "Partnership", "SMLLC", "Personal", "Trust", "Non Profit", "Retirem Plan"];
 
 export default function ClientModal({ open, client, onClose, onSave }: ClientModalProps) {
@@ -212,6 +228,10 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   async function handleSave() {
     const nm = name.trim();
     if (!nm) return;
+    if (isInvalidPhone(phone) || isInvalidPhone(addPhone)) {
+      setSaveError("Please fix the phone number(s) before saving.");
+      return;
+    }
     setSaving(true);
     setSaveError("");
     const svcs: any[] = [];
@@ -331,9 +351,11 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
           <label style={labelStyle}>Additional email <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
           <input style={inputStyle} value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="cc@email.com" />
           <label style={labelStyle}>Phone</label>
-          <input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="(713) 555-0100" />
+          <input style={{ ...inputStyle, borderColor: isInvalidPhone(phone) ? "var(--red,#e74c3c)" : undefined }} value={phone} onChange={e => setPhone(e.target.value)} onBlur={e => setPhone(normalizePhone(e.target.value))} placeholder="(713) 555-0100" />
+          {isInvalidPhone(phone) && <div style={{ color: "var(--red,#e74c3c)", fontSize: 12, marginTop: 4 }}>Enter a valid 10-digit phone number.</div>}
           <label style={labelStyle}>Additional phone <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
-          <input style={inputStyle} value={addPhone} onChange={e => setAddPhone(e.target.value)} placeholder="(713) 555-0200" />
+          <input style={{ ...inputStyle, borderColor: isInvalidPhone(addPhone) ? "var(--red,#e74c3c)" : undefined }} value={addPhone} onChange={e => setAddPhone(e.target.value)} onBlur={e => setAddPhone(normalizePhone(e.target.value))} placeholder="(713) 555-0200" />
+          {isInvalidPhone(addPhone) && <div style={{ color: "var(--red,#e74c3c)", fontSize: 12, marginTop: 4 }}>Enter a valid 10-digit phone number.</div>}
           <label style={labelStyle}>Street address</label>
           <input style={inputStyle} value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St." />
           <div className="two" style={{ display: "flex", gap: 12 }}>

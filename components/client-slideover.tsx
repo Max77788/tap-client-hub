@@ -34,6 +34,20 @@ const NA_STAGE = { k: "na", t: "–", cls: "na", l: "N/A" };
 
 const NOTE_TYPES = ["Delayed", "Waiting on client", "Issues", "others"];
 
+// ── Phone normalization helper ──
+function normalizePhone(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  if (/[a-zA-Z]/.test(value)) return digits || "";
+  return value;
+}
+
+function isInvalidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  return /[a-zA-Z]/.test(value) || (digits.length > 0 && digits.length < 10);
+}
+
 const STAGE_STYLES: Record<string, { bg: string; fg: string; border: string; cls: string; label: string }> = {
   "":   { bg: "transparent", fg: "#c2c8d4", border: "transparent", cls: "lock", label: "Not due" },
   ip:   { bg: "var(--blue-soft)", fg: "var(--blue)", border: "#bcd0e2", cls: "prog", label: "In progress" },
@@ -2964,15 +2978,17 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Phone</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={ePhoneRef} defaultValue={ePhone} onBlur={e => { setEPhone(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", borderColor: isInvalidPhone(ePhoneRef.current?.value ?? ePhone) ? "var(--red,#e74c3c)" : undefined }}
+                ref={ePhoneRef} defaultValue={ePhone} onBlur={e => { setEPhone(normalizePhone(e.target.value)); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
+            {isInvalidPhone(ePhoneRef.current?.value ?? ePhone) && <div style={{ color: "var(--red,#e74c3c)", fontSize: 12, marginTop: -10, marginBottom: 8 }}>Enter a valid 10-digit phone number.</div>}
             {/* Additional phone */}
             <div className="field" style={fieldStyle}>
               <span className="k" style={{ color: "var(--muted)" }}>Additional phone</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                ref={eAddPhoneRef} defaultValue={eAddPhone} onBlur={e => { setEAddPhone(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
+              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", borderColor: isInvalidPhone(eAddPhoneRef.current?.value ?? eAddPhone) ? "var(--red,#e74c3c)" : undefined }}
+                ref={eAddPhoneRef} defaultValue={eAddPhone} onBlur={e => { setEAddPhone(normalizePhone(e.target.value)); syncAndAutoSaveUniversal(); }} placeholder="—" />
             </div>
+            {isInvalidPhone(eAddPhoneRef.current?.value ?? eAddPhone) && <div style={{ color: "var(--red,#e74c3c)", fontSize: 12, marginTop: -10, marginBottom: 8 }}>Enter a valid 10-digit phone number.</div>}
 
             {/* Address */}
             <div className="field" style={fieldStyle}>
