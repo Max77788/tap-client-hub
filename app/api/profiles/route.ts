@@ -101,6 +101,7 @@ export async function GET() {
       role: ROLE_MAP[p.role] || p.role || "Staff",
       location: p.location || "",
       mgr: mgrName,
+      mgrRaw: nameMap[p.reporting_manager] || null,
       modules: effectiveModules(p.role, p.modules),
       status: STATUS_MAP[p.invite_status] ||
         (p.active ? "Active" : "Inactive"),

@@ -5,7 +5,7 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 
 interface User {
   id: string; name: string; email: string; username: string;
-  role: string; location: string; mgr: string; modules: string[]; status: string;
+  role: string; location: string; mgr: string; mgrRaw?: string; modules: string[]; status: string;
   displayName?: string;
   email_2fa_enabled?: boolean;
   allow_edit_client_data?: boolean;
@@ -89,7 +89,7 @@ export default function UsersPage() {
     } else if (user) {
       setEditForm({
         name: user.name, location: user.location, role: user.role,
-        mgr: user.mgr, username: user.username, modules: [...user.modules],
+        mgr: user.mgrRaw || "—", username: user.username, modules: [...user.modules],
         email: user.email, password: "", allow_edit_client_data: user.allow_edit_client_data === true,
       });
     }
@@ -108,7 +108,7 @@ export default function UsersPage() {
             full_name: editForm.name,
             role: (editForm.role === "Owner / Admin" ? "admin" : (editForm.role || "Staff").toLowerCase().replace(/ /g, "_")),
             location: editForm.location,
-            reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
+            reporting_manager: editForm.mgr === "—" || !editForm.mgr ? null : editForm.mgr,
             modules: editForm.modules || [],
             allow_edit_client_data: editForm.allow_edit_client_data === true,
             ...(editForm.password ? { password: editForm.password } : {}),
@@ -131,7 +131,7 @@ export default function UsersPage() {
             password: editForm.password,
             role: (editForm.role === "Owner / Admin" ? "admin" : (editForm.role || "Staff").toLowerCase().replace(/ /g, "_")),
             location: editForm.location,
-            reporting_manager: editForm.mgr === "—" ? null : editForm.mgr,
+            reporting_manager: editForm.mgr === "—" || !editForm.mgr ? null : editForm.mgr,
             modules: editForm.modules || [],
             allow_edit_client_data: editForm.allow_edit_client_data === true,
           }),
@@ -439,8 +439,10 @@ export default function UsersPage() {
                     width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
                     borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
                   }} value={editForm.mgr || ""} onChange={e => setEditForm(p => ({ ...p, mgr: e.target.value }))}>
-                    <option>—</option>
-                    {users.filter(x => /Manager|Owner/.test(x.role)).map(x => <option key={x.id}>{x.name}</option>)}
+                    <option value="—">—</option>
+                    {users.filter(x => /Manager|Owner/.test(x.role)).map(x => (
+                      <option key={x.id} value={x.name}>{x.displayName || x.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
