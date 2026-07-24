@@ -24,9 +24,21 @@ function normalizeSearchValue(value: unknown): string {
   return value == null ? "" : String(value).toLowerCase();
 }
 
+function normalizePhoneForSearch(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 function matchesClientSearch(client: Client, search: string): boolean {
   const query = normalizeSearchValue(search);
   if (!query) return true;
+
+  // Phone-only numeric query (7+ digits) matches stripped phone numbers regardless of formatting.
+  const phoneQuery = query.replace(/\D/g, "");
+  if (phoneQuery.length >= 7 && client.phones) {
+    for (const phone of client.phones) {
+      if (normalizePhoneForSearch(phone).includes(phoneQuery)) return true;
+    }
+  }
 
   const searchableValues = [
     client.name,
@@ -34,7 +46,6 @@ function matchesClientSearch(client: Client, search: string): boolean {
     client.group,
     client.groupName,
     client.contact,
-    client.phones,
     client.address,
     client.city,
     client.state,
@@ -642,7 +653,7 @@ function GroupCard({
                   )}
                   <div className="min-w-0 flex-1 pr-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
-                    <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}{c.zip && c.zip.length === 5 ? ` ${c.zip.substring(0, 4)}` : ""}</p>
                     {enabledSvcs.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {enabledSvcs.map((m) => (
@@ -770,7 +781,7 @@ function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Cli
       {/* Meta row: CID · city, state */}
       <div className="meta" style={{ color: "var(--muted)", fontSize: "12.5px" }}>
         <span className="mono" style={{ color: "#9a9484" }}>{client.cid || `TP|BS|${String(client.id).padStart(4,"0")}`}</span>
-        {" · "}{client.city}, {client.state}
+        {" · "}{client.city}, {client.state}{client.zip && client.zip.length === 5 ? ` ${client.zip.substring(0, 4)}` : ""}
       </div>
 
       {/* Service pills + type badge at bottom-right */}

@@ -36,6 +36,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
   const [city, setCity] = useState("");
   const [st, setSt] = useState("TX");
   const [zip, setZip] = useState("");
+  const [notes, setNotes] = useState("");
 
   // ── Service toggles ──
   const [fin, setFin] = useState(false);
@@ -170,6 +171,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       const prSvc = svcs.find(s => s.key === "payroll");
       if (prSvc) { setPrFreq(prSvc.frequency || "Bi-Weekly A"); setPrPaydate(prSvc.paydate || ""); setPrPin(prSvc.payrollPassword || ""); setPrEftps(prSvc.eftps || ""); setPrProcessor(prSvc.processor || ""); setPrProcessorOther(prSvc.processorOther || ""); setPrEmails(Array.isArray(prSvc.payEmails) ? prSvc.payEmails : []); }
       setClientEin(client.ein || "");
+      setNotes(client.notes || "");
       const t9Svc = svcs.find(s => s.key === "1099s");
       if (t9Svc) setT9Count(String(t9Svc.expectedAnnual || ""));
       // Restore sales tax line items
@@ -190,7 +192,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
       setAddress(""); setCity(""); setSt("TX"); setZip("");
       setFin(false); setPr(false); setStx(false); setT9(false); setRend(false); setTax(false);
       setFinFreq("Monthly"); setFinMonth("1"); setPrFreq("Bi-Weekly A"); setPrPaydate(""); setPrPin(""); setPrEftps(""); setPrProcessor(""); setPrProcessorOther("");
-      setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin("");
+      setStxFreq("Monthly"); setT9Count(""); setTaxType("Business"); setClientEin(""); setNotes("");
       setTaxFilingMonth(""); setTaxFilingState("");
       setTaxFilingType(""); setStateRenewalItems([]);
       setStxLineItems([]); setNewStxName(""); setNewStxRt(""); setNewStxTaxId(""); setNewStxBank(""); setNewStxRouting(""); setNewStxAccount(""); setNewStxFreq("Monthly"); setNewStxAssigned("");
@@ -265,7 +267,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
         emails: [email, addEmail].filter(Boolean),
         phones: [phone, addPhone].filter(Boolean),
         address, city, state: st, zip,
-        ein: clientEin || null,
+        notes,
         services: svcs.length ? svcs : [],
       } as any);
       onClose();
@@ -350,8 +352,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
               <input style={inputStyle} value={zip} onChange={e => setZip(e.target.value)} placeholder="77002" />
             </div>
           </div>
-          <label style={labelStyle}>EIN Number <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
-          <input style={inputStyle} value={clientEin} onChange={e => setClientEin(e.target.value)} placeholder="e.g. XX-XXXXXXX" />
+          <label style={labelStyle}>General Notes <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add client notes, contacts, EIN, etc." />
 
           {/* ── Services section (order: Fin → PR → STX → T9 → Rend → Tax) ── */}
           <div className="fsect" style={fsectStyle}>Services <span className="opt" style={{ fontWeight: 500, color: "var(--muted)", textTransform: "none", letterSpacing: 0, fontFamily: '"Public Sans",sans-serif' }}>— tick what you do for them; details appear as you tick</span></div>
