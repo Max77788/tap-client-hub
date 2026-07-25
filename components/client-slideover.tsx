@@ -3025,20 +3025,20 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
 
             {/* City / State / ZIP row */}
             <div style={{ display: "flex", gap: 10 }}>
-              <div className="field" style={{ ...fieldStyle, flex: 2 }}>
-                <span className="k" style={{ color: "var(--muted)" }}>City</span>
-                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+              <div className="field" style={{ ...fieldStyle, flex: 1, minWidth: 0 }}>
+                <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>City</span>
+                <input style={{ flex: 1, minWidth: 0, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eCityRef} defaultValue={eCity} onBlur={e => { setECity(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
-              <div className="field" style={{ ...fieldStyle, flex: 1 }}>
-                <span className="k" style={{ color: "var(--muted)" }}>State</span>
-                <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+              <div className="field" style={{ ...fieldStyle, flex: "0 0 70px" }}>
+                <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>State</span>
+                <input style={{ width: 70, minWidth: 70, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eStateRef} defaultValue={eState} onBlur={e => { setEState(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
-              <div className="field" style={{ ...fieldStyle, flex: "0 0 100px" }}>
+              <div className="field" style={{ ...fieldStyle, flex: "0 0 120px" }}>
                 <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>ZIP</span>
-                <input style={{ width: "100%", minWidth: 0, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  ref={eZipRef} defaultValue={eZip} onBlur={e => { setEZip(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
+                <input type="number" inputMode="numeric" pattern="[0-9]*" style={{ width: 120, minWidth: 120, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  ref={eZipRef} defaultValue={eZip} onBlur={e => { setEZip(e.target.value.replace(/\D/g, "")); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
             </div>
 
