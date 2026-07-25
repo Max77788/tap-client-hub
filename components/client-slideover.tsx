@@ -3042,6 +3042,34 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
             </div>
 
+            {/* General Notes */}
+            <div className="field" style={fieldStyle}>
+              <span className="k" style={{ color: "var(--muted)" }}>General Notes</span>
+              <textarea
+                ref={eNotesRef}
+                defaultValue={eNotes}
+                onBlur={e => { setENotes(e.target.value); syncAndAutoSaveUniversal(); }}
+                placeholder="—"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: 60,
+                  maxHeight: 300,
+                  resize: "vertical",
+                  padding: "8px 10px",
+                  border: "1px solid var(--line)",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  background: "#fff",
+                  color: "var(--ink)",
+                  fontWeight: 500,
+                  outline: "none",
+                  fontFamily: "inherit",
+                  lineHeight: 1.4,
+                }}
+              />
+            </div>
+
             {/* ── Services ── */}
             <div style={{ marginTop: 20 }}>
               <div className="sect" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 10px" }}>
