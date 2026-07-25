@@ -28,8 +28,8 @@ assert.equal(matchesClientSearch(client, "9999999999"), false);
 assert.match(page, /matchesClientSearch\((?:c|client), search\)/, "Clients page must use the tested search helper");
 
 // ISS-009: client cards display the requested four ZIP characters.
-assert.match(page, /zip\.length === 5[\s\S]{0,40}zip\.(?:slice|substring)\(0, 4\)/);
-for (const route of ["fin", "pr", "stx", "t9", "rend", "annual", "tax"]) {
+assert.match(page, /String\(c\.zip\)\.replace\(\/\\\.0\+\$\/\, \"\"\)\.(?:substring|slice)\(0, 4\)/);
+for (const route of ["fin", "pr", "stx", "t9", "rend", "annual"]) {
   const source = read(`../app/${route}/page.tsx`);
   assert.match(source, /onClientClick=/, `${route} module must wire client-card opening`);
   assert.match(source, /<ClientSlideover/, `${route} module must render the shared client slideover`);

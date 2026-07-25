@@ -371,7 +371,7 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
             </div>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>ZIP</label>
-              <input style={inputStyle} value={zip} onChange={e => setZip(e.target.value)} placeholder="77002" />
+              <input style={inputStyle} value={String(zip).replace(/\.0+$/, "")} onChange={e => setZip(e.target.value.replace(/\D/g, ""))} placeholder="77002" />
             </div>
           </div>
           {/* ── Services section (order: Fin → PR → STX → T9 → Rend → Tax) ── */}

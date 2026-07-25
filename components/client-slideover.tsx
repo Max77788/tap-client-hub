@@ -3037,8 +3037,8 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               </div>
               <div className="field" style={{ ...fieldStyle, flex: "0 0 120px" }}>
                 <span className="k" style={{ color: "var(--muted)", flexShrink: 0 }}>ZIP</span>
-                <input type="number" inputMode="numeric" pattern="[0-9]*" style={{ width: 120, minWidth: 120, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
-                  ref={eZipRef} defaultValue={eZip} onBlur={e => { setEZip(e.target.value.replace(/\D/g, "")); syncAndAutoSaveUniversal(); }} placeholder="—" />
+                <input type="text" inputMode="numeric" pattern="[0-9]*" style={{ width: 120, minWidth: 120, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
+                  ref={eZipRef} defaultValue={String(eZip).replace(/\.0+$/, "")} onBlur={e => { setEZip(e.target.value.replace(/\D/g, "")); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
             </div>
 

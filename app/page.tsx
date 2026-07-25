@@ -618,7 +618,7 @@ function GroupCard({
                   )}
                   <div className="min-w-0 flex-1 pr-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">{c.name}</p>
-                    <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}{c.zip && c.zip.length === 5 ? ` ${c.zip.substring(0, 4)}` : ""}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{c.city}, {c.state}{c.zip && String(c.zip).replace(/\.0+$/, "").length === 5 ? ` ${String(c.zip).replace(/\.0+$/, "").substring(0, 4)}` : ""}</p>
                     {enabledSvcs.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {enabledSvcs.map((m) => (
@@ -746,7 +746,7 @@ function ClientCard({ client, onClick, selected, onToggleSelect }: { client: Cli
       {/* Meta row: CID · city, state */}
       <div className="meta" style={{ color: "var(--muted)", fontSize: "12.5px" }}>
         <span className="mono" style={{ color: "#9a9484" }}>{client.cid || `TP|BS|${String(client.id).padStart(4,"0")}`}</span>
-        {" · "}{client.city}, {client.state}{client.zip && client.zip.length === 5 ? ` ${client.zip.substring(0, 4)}` : ""}
+        {" · "}{client.city}, {client.state}{client.zip && String(client.zip).replace(/\.0+$/, "").length === 5 ? ` ${String(client.zip).replace(/\.0+$/, "").substring(0, 4)}` : ""}
       </div>
 
       {/* Service pills + type badge at bottom-right */}
