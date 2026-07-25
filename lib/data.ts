@@ -1313,6 +1313,35 @@ export function getVaultEntriesByClient(): Map<string, VaultEntry[]> {
 
 // ── Query helpers ──
 
+function normalizeSearchValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map(normalizeSearchValue).join(" ");
+  return value == null ? "" : String(value).toLowerCase();
+}
+
+export function matchesClientSearch(client: Client, search: string): boolean {
+  const query = normalizeSearchValue(search);
+  if (!query) return true;
+
+  const phoneQuery = query.replace(/\D/g, "");
+  if (phoneQuery.length >= 7 && client.phones) {
+    for (const phone of client.phones) {
+      if (phone.replace(/\D/g, "").includes(phoneQuery)) return true;
+    }
+  }
+
+  return normalizeSearchValue([
+    client.name,
+    client.cid,
+    client.group,
+    client.groupName,
+    client.contact,
+    client.address,
+    client.city,
+    client.state,
+    client.zip,
+  ]).includes(query);
+}
+
 export function filterClients(
   clients: Client[],
   opts: {

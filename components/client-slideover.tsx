@@ -1167,6 +1167,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
             {/* Payroll: credentials section */}
             {isPayroll && svc.enabled && (
               <div style={{ marginBottom: 10 }}>
+                <div style={{ marginBottom: 6 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>EIN</label>
+                  <input
+                    ref={eEinRef}
+                    defaultValue={eEin}
+                    onBlur={e => {
+                      setEEin(e.target.value);
+                      autoSave({ ...c, ein: e.target.value } as Client);
+                    }}
+                    placeholder="XX-XXXXXXX"
+                    style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", fontFamily: "var(--mono)" }}
+                  />
+                </div>
                 {/* Assignee + Processor row */}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ flex: "1 0 100px", minWidth: 100 }}>
@@ -1288,12 +1301,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
               </div>
               <div style={{ marginBottom: 6 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reporting Notes</label>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Notes</label>
                 <textarea style={{ width: "100%", padding: "6px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 13, boxSizing: "border-box", background: "var(--paper)", minHeight: 50, resize: "vertical" }}
                   ref={reportingRef}
                   defaultValue={prReportingNotes}
                   onBlur={e => { setPrReportingNotes(e.target.value); const p = localSvcs.find((s: any) => s.key === 'payroll'); if (p?.csId) fetch('/api/clients',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csId:p.csId,reportingNotes:e.target.value})}).catch(()=>{}); }}
-                  placeholder="Add notes about payroll filing/reporting, EIN, etc."
+                  placeholder="Add payroll notes..."
                 />
               </div>
                 {/* Payroll emails - tag list */}
@@ -2598,6 +2611,19 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
               <>
                 <div className="sect" style={sectStyle}>Payroll Details</div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
+                  <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
+                  <input
+                    ref={eEinRef}
+                    defaultValue={eEin}
+                    onBlur={e => {
+                      setEEin(e.target.value);
+                      autoSave({ ...c, ein: e.target.value } as Client);
+                    }}
+                    placeholder="XX-XXXXXXX"
+                    style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
+                  />
+                </div>
+                <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
                   <span className="k" style={{ color: "var(--muted)" }}>Frequency</span>
                   <select style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", cursor: "pointer" }}
                     value={prPeriodFreq} onChange={e => {
@@ -2714,12 +2740,12 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 </div>
                 </div>
                 <div className="field" style={{ display: "flex", justifyContent: "flex-start", gap: 14, padding: "7px 0", fontSize: "13.5px", borderBottom: "1px dashed #e7e1d3" }}>
-                  <span className="k" style={{ color: "var(--muted)" }}>Reporting Notes</span>
+                  <span className="k" style={{ color: "var(--muted)" }}>Notes</span>
                   <textarea style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", minHeight: 50, resize: "vertical" }}
                     ref={reportingRef}
                     defaultValue={prReportingNotes}
                     onBlur={e => { setPrReportingNotes(e.target.value); const p = localSvcs.find((s: any) => s.key === 'payroll'); if (p?.csId) fetch('/api/clients',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({csId:p.csId,reportingNotes:e.target.value})}).catch(()=>{}); }}
-                    placeholder="Add notes about payroll filing/reporting, EIN, etc." />
+                    placeholder="Add payroll notes..." />
                 </div>
               </>
             )}
@@ -3014,31 +3040,6 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                 <input style={{ width: "100%", minWidth: 0, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none" }}
                   ref={eZipRef} defaultValue={eZip} onBlur={e => { setEZip(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
               </div>
-            </div>
-
-            {/* EIN → Notes (hidden from Clients, now part of General Notes) */}
-            {false && (
-            <div className="field" style={fieldStyle}>
-              <span className="k" style={{ color: "var(--muted)" }}>EIN</span>
-              <input style={{ flex: 1, textAlign: "left", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", fontFamily: "var(--mono)" }}
-                ref={eEinRef} defaultValue={eEin} onBlur={e => { setEEin(e.target.value); syncAndAutoSaveUniversal(); }} placeholder="—" />
-            </div>
-            )}
-
-            {/* General client notes */}
-            <div className="field" style={{ ...fieldStyle, display: "block" }}>
-              <label className="k" htmlFor="client-general-notes" style={{ color: "var(--muted)", display: "block", marginBottom: 5 }}>
-                General Notes
-              </label>
-              <textarea
-                id="client-general-notes"
-                ref={eNotesRef}
-                defaultValue={eNotes}
-                onBlur={e => { setENotes(e.target.value); syncAndAutoSaveUniversal(); }}
-                placeholder="Add general client information, EIN, contacts, or follow-up details..."
-                rows={4}
-                style={{ width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid var(--line)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--ink)", fontWeight: 500, outline: "none", resize: "vertical" }}
-              />
             </div>
 
             {/* ── Services ── */}

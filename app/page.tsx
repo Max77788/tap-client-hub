@@ -5,6 +5,7 @@ import type { Client, ClientType, ServiceKey } from "@/lib/types";
 import {
   SERVICE_META,
   filterClients,
+  matchesClientSearch,
   getGroups,
   getStaffOptions,
   getStats,
@@ -18,42 +19,6 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 type DisplayItem =
   | { kind: "group"; name: string; clients: Client[] }
   | { kind: "single"; client: Client };
-
-function normalizeSearchValue(value: unknown): string {
-  if (Array.isArray(value)) return value.map(normalizeSearchValue).join(" ");
-  return value == null ? "" : String(value).toLowerCase();
-}
-
-function normalizePhoneForSearch(value: string): string {
-  return value.replace(/\D/g, "");
-}
-
-function matchesClientSearch(client: Client, search: string): boolean {
-  const query = normalizeSearchValue(search);
-  if (!query) return true;
-
-  // Phone-only numeric query (7+ digits) matches stripped phone numbers regardless of formatting.
-  const phoneQuery = query.replace(/\D/g, "");
-  if (phoneQuery.length >= 7 && client.phones) {
-    for (const phone of client.phones) {
-      if (normalizePhoneForSearch(phone).includes(phoneQuery)) return true;
-    }
-  }
-
-  const searchableValues = [
-    client.name,
-    client.cid,
-    client.group,
-    client.groupName,
-    client.contact,
-    client.address,
-    client.city,
-    client.state,
-    client.zip,
-  ];
-
-  return normalizeSearchValue(searchableValues).includes(query);
-}
 
 export default function ClientsPage() {
   const [canEditClientData, setCanEditClientData] = useState(false);
