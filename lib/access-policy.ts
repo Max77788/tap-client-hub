@@ -60,6 +60,8 @@ export function sanitizeModulesForRole(role: unknown, modules: unknown): string[
 }
 
 export function moduleForPathname(pathname: string): string | null {
+  // Contacts is a second Clients surface, not an independently assignable module.
+  if (pathname === "/contacts") return "Clients";
   const exact = Object.entries(MODULE_ROUTES).find(([, route]) => route === pathname)?.[0];
   return exact || null;
 }
