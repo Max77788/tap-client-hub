@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from "next/server";
  * Role-based access is handled by sidebar + per-page logic.
  */
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -31,7 +31,9 @@ export async function proxy(request: NextRequest) {
 
   if (!hasDemoCookie && !hasAuthToken && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
+    // Preserve the query string so feature flags such as
+    // ?show_contacts_tab=true survive authentication.
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
