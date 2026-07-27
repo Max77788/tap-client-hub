@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ClientsProvider } from "@/hooks/use-clients-context";
 import { canAccessPathname, effectiveModules, firstAllowedRoute, normalizeRole } from "@/lib/access-policy";
 import "./globals.css";
@@ -16,6 +16,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Clients", href: "/", icon: "👥", module: "Clients" },
+  { label: "Contacts", href: "/contacts?show_contacts_tab=true", icon: "👤", module: "Clients" },
   { label: "Team Workload", href: "/workload", icon: "⚖️", module: "Workload" },
   { label: "Timesheet", href: "/time", icon: "⏱️", module: "Timesheet" },
   { label: "---", href: "" },
@@ -33,7 +34,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
-  "/": { title: "Clients", subtitle: "Your single source of truth — every client, business and personal, in one list." },
+  "/": { title: "Clients", subtitle: "Your single source of truth - every client, business and personal, in one list." },
+  "/contacts": { title: "Contacts", subtitle: "A shared directory for every client contact - organized for quick lookup and follow-through." },
   "/workload": { title: "Team Workload", subtitle: "Who\u2019s carrying what — by client count and by estimated effort. Spot overload before it bites." },
   "/time": { title: "Timesheet", subtitle: "Live time tracking by person and client — lean by design; profitability analytics come next." },
   "/fin": { title: "Financials", subtitle: "Bread & butter. Everyone here was flagged \u2018Financials\u2019 on their client card." },
@@ -108,7 +110,7 @@ function MobileSidebar({
             if (item.label === "---") {
               return <div key={`sep-m-${i}`} className="sep" />;
             }
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href.split("?")[0];
             return (
               <button
                 key={item.label}
@@ -160,6 +162,11 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const showContactsTab = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get("show_contacts_tab") === "true",
+    () => false,
+  );
 
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
   const [accessLoading, setAccessLoading] = useState(!isAuthPage);
@@ -200,8 +207,11 @@ export default function RootLayout({
 
   const allowedModules = useMemo(() => effectiveModules(role, userModules), [role, userModules]);
   const visibleNav = useMemo(
-    () => accessLoading ? [] : NAV_ITEMS.filter(item => !item.module || allowedModules.includes(item.module)),
-    [accessLoading, allowedModules]
+    () => accessLoading ? [] : NAV_ITEMS.filter((item) =>
+      (!item.module || allowedModules.includes(item.module))
+      && (item.label !== "Contacts" || showContactsTab)
+    ),
+    [accessLoading, allowedModules, showContactsTab]
   );
 
   useEffect(() => {
@@ -257,7 +267,7 @@ export default function RootLayout({
                 if (item.label === "---") {
                   return <div key={`sep-${i}`} className="sep" />;
                 }
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href.split("?")[0];
                 return (
                   <button
                     key={item.label}
