@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ClientsProvider } from "@/hooks/use-clients-context";
 import { canAccessPathname, effectiveModules, firstAllowedRoute, normalizeRole } from "@/lib/access-policy";
 import "./globals.css";
@@ -16,7 +16,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Clients", href: "/", icon: "👥", module: "Clients" },
-  { label: "Contacts", href: "/contacts?show_contacts_tab=true", icon: "👤", module: "Clients" },
+  { label: "Contacts", href: "/contacts", icon: "👤", module: "Clients" },
   { label: "Team Workload", href: "/workload", icon: "⚖️", module: "Workload" },
   { label: "Timesheet", href: "/time", icon: "⏱️", module: "Timesheet" },
   { label: "---", href: "" },
@@ -162,12 +162,6 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const showContactsTab = useSyncExternalStore(
-    () => () => {},
-    () => new URLSearchParams(window.location.search).get("show_contacts_tab") === "true",
-    () => false,
-  );
-
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
   const [accessLoading, setAccessLoading] = useState(!isAuthPage);
   const [role, setRole] = useState<string>("staff");
@@ -207,11 +201,8 @@ export default function RootLayout({
 
   const allowedModules = useMemo(() => effectiveModules(role, userModules), [role, userModules]);
   const visibleNav = useMemo(
-    () => accessLoading ? [] : NAV_ITEMS.filter((item) =>
-      (!item.module || allowedModules.includes(item.module))
-      && (item.label !== "Contacts" || showContactsTab)
-    ),
-    [accessLoading, allowedModules, showContactsTab]
+    () => accessLoading ? [] : NAV_ITEMS.filter((item) => !item.module || allowedModules.includes(item.module)),
+    [accessLoading, allowedModules],
   );
 
   useEffect(() => {

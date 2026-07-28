@@ -31,8 +31,7 @@ export async function proxy(request: NextRequest) {
 
   if (!hasDemoCookie && !hasAuthToken && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);
-    // Preserve the query string so feature flags such as
-    // ?show_contacts_tab=true survive authentication.
+    // Preserve the originally requested destination through authentication.
     loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
