@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Client } from "@/lib/types";
 import { matchesClientSearch } from "@/lib/data";
 import { useClients } from "@/hooks/use-clients-context";
@@ -9,8 +10,10 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 /** Temporary directory projected from current TAP Hub client records. */
 export default function ContactsPage() {
   const { clients, loading, updateClient } = useClients();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedId = searchParams.get("contact");
   const contacts = useMemo(() => clients.filter((client) => matchesClientSearch(client, search)).sort((a, b) => a.name.localeCompare(b.name)), [clients, search]);
   const selected = useMemo(() => selectedId ? clients.find((client) => client.id === selectedId) ?? null : null, [clients, selectedId]);
 
@@ -26,8 +29,8 @@ export default function ContactsPage() {
   if (loading) return <PageSkeleton rows={8} />;
   return <div className="space-y-5">
     <section className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-4 shadow-sm sm:p-5"><div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><label className="search max-w-2xl flex-1" aria-label="Search contacts"><span className="mag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg></span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search contacts" /></label><p className="text-xs text-[var(--muted)]">Contact records currently mirror existing client fields.</p></div></section>
-    <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-sm"><div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4"><div><h2 className="text-xl font-medium text-[var(--ink)]">Contacts <span className="text-sm text-[var(--muted)]">({contacts.length})</span></h2><p className="mt-1 text-xs text-[var(--muted)]">A-z directory based on current TAP Hub client records</p></div></div><div className="hidden grid-cols-[44px_minmax(220px,1.4fr)_minmax(200px,1fr)_minmax(170px,0.8fr)] items-center gap-4 border-b border-[var(--line)] bg-[var(--paper)] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] md:grid"><span /><span>Name</span><span>Email</span><span>Phone number</span></div>{contacts.length ? contacts.map((client) => <ContactRow key={client.id} client={client} onOpen={() => setSelectedId(client.id)} />) : <div className="px-5 py-16 text-center"><p className="font-medium text-[var(--ink)]">No contacts found</p><button onClick={() => setSearch("")} className="mt-2 text-sm font-medium text-[var(--teal)] hover:underline">Clear search</button></div>}</section>
-    {selected && <ContactProfile client={selected} onClose={() => setSelectedId(null)} onSave={saveContact} />}
+    <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-sm"><div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4"><div><h2 className="text-xl font-medium text-[var(--ink)]">Contacts <span className="text-sm text-[var(--muted)]">({contacts.length})</span></h2><p className="mt-1 text-xs text-[var(--muted)]">A-z directory based on current TAP Hub client records</p></div></div><div className="hidden grid-cols-[44px_minmax(220px,1.4fr)_minmax(200px,1fr)_minmax(170px,0.8fr)] items-center gap-4 border-b border-[var(--line)] bg-[var(--paper)] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] md:grid"><span /><span>Name</span><span>Email</span><span>Phone number</span></div>{contacts.length ? contacts.map((client) => <ContactRow key={client.id} client={client} onOpen={() => router.push(`/contacts?contact=${encodeURIComponent(client.id)}`)} />) : <div className="px-5 py-16 text-center"><p className="font-medium text-[var(--ink)]">No contacts found</p><button onClick={() => setSearch("")} className="mt-2 text-sm font-medium text-[var(--teal)] hover:underline">Clear search</button></div>}</section>
+    {selected && <ContactProfile client={selected} onClose={() => router.push("/contacts")} onSave={saveContact} />}
   </div>;
 }
 
