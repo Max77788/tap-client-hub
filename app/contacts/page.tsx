@@ -103,9 +103,6 @@ function ContactProfile({ client, onClose }: { client: Client; onClose: () => vo
 
         <div className="mt-8 flex flex-wrap items-center gap-5 border-b border-[var(--line)] pb-7">
           <ProfileAction icon="✉" label="Email" href={email ? `mailto:${email}` : undefined} />
-          <ProfileAction icon="◷" label="Schedule" />
-          <ProfileAction icon="▢" label="Chat" />
-          <ProfileAction icon="◉" label="Video" />
         </div>
 
         <div className="mt-6"><span className="inline-flex items-center gap-1 rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium text-[#1a73e8]">+ Label</span></div>
