@@ -65,7 +65,8 @@ create table if not exists tap_hub_project.clients (
 -- contacts
 create table if not exists tap_hub_project.contacts (
   id          uuid primary key default gen_random_uuid(),
-  client_id   uuid not null references tap_hub_project.clients(id) on delete cascade,
+  client_id   uuid references tap_hub_project.clients(id) on delete cascade,
+  category    text not null default 'client' check (category in ('client', 'internal')),
   name        text not null,
   email       text,
   phone       text,
