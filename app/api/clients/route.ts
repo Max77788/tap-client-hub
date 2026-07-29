@@ -43,11 +43,12 @@ export async function GET(request: Request) {
     const lite = searchParams.get("fields") === "lite";
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // ── Single count query instead of 3 separate ones ──
-    let countQuery = supabase.from("clients").select("type", { count: "exact", head: true }).eq("status", "active");
-    const { data: typeCounts, count: totalCount } = await countQuery;
-    // Get counts from a lightweight query
-    const { data: typeData } = await supabase.from("clients").select("type").eq("status", "active");
+    // These independent queries used to run serially before the client payload query.
+    // Run them together so the request spends one database round trip here, not two.
+    const [{ count: totalCount }, { data: typeData }] = await Promise.all([
+      supabase.from("clients").select("type", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("clients").select("type").eq("status", "active"),
+    ]);
     let bizCount = 0, persCount = 0;
     for (const r of typeData || []) {
       if (r.type?.toLowerCase() === "business") bizCount++;
@@ -66,17 +67,18 @@ export async function GET(request: Request) {
 
     // Batch IN queries — keep under ~200 UUIDs to stay below Supabase's ~16KB URL header limit
     const BATCH_SIZE = 200;
-    let dbServices: any[] = [];
-    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      const batch = ids.slice(i, i + BATCH_SIZE);
-      let svcQuery = supabase
-        .from("client_services")
-        .select("*, service:services(*)")
-        .eq("active", true)
-        .in("client_id", batch);
-      const { data: batchData } = await svcQuery;
-      if (batchData) dbServices = dbServices.concat(batchData);
-    }
+    // Requests for different ID batches do not depend on one another. Fetch them
+    // concurrently instead of adding one Supabase round trip per batch to TTFB.
+    const serviceBatches = await Promise.all(
+      Array.from({ length: Math.ceil(ids.length / BATCH_SIZE) }, (_, index) => {
+        const batch = ids.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE);
+        return supabase.from("client_services")
+          .select("*, service:services(*)")
+          .eq("active", true)
+          .in("client_id", batch);
+      }),
+    );
+    const dbServices = serviceBatches.flatMap(({ data }) => data || []);
 
     const svcByClient: Record<string, any[]> = {};
     for (const cs of dbServices || []) {
@@ -88,15 +90,15 @@ export async function GET(request: Request) {
     const periodByCsId: Record<string, Record<number, string>> = {};
     if (allCsIds.length > 0) {
       const BATCH_SIZE_WP = 200;
-      let allPeriods: any[] = [];
-      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE_WP) {
-        const batch = allCsIds.slice(i, i + BATCH_SIZE_WP);
-        const { data: batchPeriods } = await supabase
-          .from("work_periods")
-          .select("client_service_id, stage, period")
-          .in("client_service_id", batch);
-        if (batchPeriods) allPeriods = allPeriods.concat(batchPeriods);
-      }
+      const periodBatches = await Promise.all(
+        Array.from({ length: Math.ceil(allCsIds.length / BATCH_SIZE_WP) }, (_, index) => {
+          const batch = allCsIds.slice(index * BATCH_SIZE_WP, (index + 1) * BATCH_SIZE_WP);
+          return supabase.from("work_periods")
+            .select("client_service_id, stage, period")
+            .in("client_service_id", batch);
+        }),
+      );
+      const allPeriods = periodBatches.flatMap(({ data }) => data || []);
       for (const wp of allPeriods) {
         const s = String(wp.period ?? "");
         const m = s.match(/^(\d{4})-?(\d{2})$/);
@@ -113,15 +115,15 @@ export async function GET(request: Request) {
     const countByCsId: Record<string, number[]> = {};
     if (allCsIds.length > 0) {
       const BATCH_SIZE_PC = 200;
-      let allCounts: any[] = [];
-      for (let i = 0; i < allCsIds.length; i += BATCH_SIZE_PC) {
-        const batch = allCsIds.slice(i, i + BATCH_SIZE_PC);
-        const { data: batchCounts } = await supabase
-          .from("period_counts")
-          .select("client_service_id, period, processed")
-          .in("client_service_id", batch);
-        if (batchCounts) allCounts = allCounts.concat(batchCounts);
-      }
+      const countBatches = await Promise.all(
+        Array.from({ length: Math.ceil(allCsIds.length / BATCH_SIZE_PC) }, (_, index) => {
+          const batch = allCsIds.slice(index * BATCH_SIZE_PC, (index + 1) * BATCH_SIZE_PC);
+          return supabase.from("period_counts")
+            .select("client_service_id, period, processed")
+            .in("client_service_id", batch);
+        }),
+      );
+      const allCounts = countBatches.flatMap(({ data }) => data || []);
       for (const pc of allCounts) {
         const s = String(pc.period ?? "");
         const m = s.match(/^(\d{4})-?(\d{2})$/);

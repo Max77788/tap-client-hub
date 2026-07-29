@@ -34,9 +34,9 @@ const STAGE_TO_MONTH: Record<WorklistStage, string> = {
 let inflightPromise: Promise<void> | null = null;
 let inflightType: string | null = null;
 
-export function ClientsProvider({ children }: { children: ReactNode }) {
+export function ClientsProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
   const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, business: 0, personal: 0 });
   const [typeFilter, setTypeFilter] = useState("All");
@@ -89,11 +89,15 @@ export function ClientsProvider({ children }: { children: ReactNode }) {
   }, [fetchFromSupabase, typeFilter]);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     if (!fetchedRef.current) {
       fetchedRef.current = true;
       fetchFromSupabase(typeFilter);
     }
-  }, [fetchFromSupabase, typeFilter]);
+  }, [enabled, fetchFromSupabase, typeFilter]);
 
   const updateClient = useCallback((clientId: string, updates: Partial<Client>) => {
     setClients(prev =>

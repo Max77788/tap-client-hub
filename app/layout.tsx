@@ -210,11 +210,9 @@ export default function RootLayout({
     router.replace(firstAllowedRoute(role, userModules));
   }, [accessLoading, isAuthPage, pathname, role, router, userModules]);
 
-  useEffect(() => {
-    if (accessLoading) return;
-    visibleNav.forEach(item => item.href && router.prefetch(item.href));
-  }, [accessLoading, router, visibleNav]);
-
+  // The full client dataset is several megabytes. Pages that do not consume it
+  // should render without paying for that request.
+  const needsClientData = ["/", "/workload", "/time", "/fin", "/pr", "/stx", "/t9", "/tax", "/rend", "/annual", "/vault"].includes(pathname);
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
@@ -409,7 +407,7 @@ export default function RootLayout({
                 <div className="h-40 rounded-xl bg-[var(--card)] border border-[var(--line)] animate-pulse" />
               </div>
             ) : !isAuthPage && canAccessPathname(role, userModules, pathname) ? (
-              <ClientsProvider>
+              <ClientsProvider enabled={needsClientData}>
                 <div className="tip-container" style={{ margin: "0px 0px 14px 0px" }}>
                   {role === "india" && (
                     <div className="doorbar">
