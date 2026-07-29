@@ -1,0 +1,22 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+
+test("Contacts API is a dedicated database endpoint, not a client-directory projection", () => {
+  const routePath = new URL("../app/api/contacts/route.ts", import.meta.url);
+
+  assert.equal(existsSync(routePath), true, "expected a dedicated /api/contacts route");
+
+  const route = readFileSync(routePath, "utf8");
+  assert.match(route, /\.from\("contacts"\)/, "Contacts endpoint must read the contacts table");
+  assert.match(route, /export async function POST/, "Contacts endpoint must create contacts");
+  assert.match(route, /requireClientDataEditAccess/, "Contact creation must require client-data edit access");
+});
+
+test("Contacts page loads dedicated contact records and provides an add-contact action", () => {
+  const page = readFileSync(new URL("../app/contacts/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /fetch\("\/api\/contacts"/, "Contacts page must load /api/contacts directly");
+  assert.match(page, /\+ Add/, "Contacts page must provide a + Add action");
+  assert.doesNotMatch(page, /useClients\(\)/, "Contacts page must not project the full clients list");
+});
