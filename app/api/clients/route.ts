@@ -373,8 +373,12 @@ export async function GET(request: Request) {
           mergedSvcs.push(svc);
         }
       }
-      for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
-        if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, stateRenewalItems: [], serviceName: "", currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
+      // Workload, timesheet, and vault only need real active services. Do not
+      // serialize placeholder services for every client in their lightweight view.
+      if (!lite) {
+        for (const key of Object.keys(SERVICE_META) as ServiceKey[]) {
+          if (!mergedKeys.has(key)) mergedSvcs.push({ csId: "", key, label: SERVICE_META[key].label, enabled: false, frequency: "Monthly", processor: "", assignedTo: "", expectedAnnual: 0, financialsMonth: 0, paydate: "", payrollPassword: "", eftps: "", biweeklyCode: "", payStartDate: "", payPeriodFrequency: "", reportingMethod: "", payrollCategory: "", qbLicense: "", reportingNotes: "", svcNotes: "", filingState: "", filingMonth: "", filingType: "", payEmails: [], comments: [], salesTaxLineItems: [], stateRenewal: null, renewalState: null, renewalDueMonth: null, renewalDueDay: null, renewalIdentifiers: null, stateRenewalItems: [], serviceName: "", currentStage: "not_started", months: Array(12).fill("lock"), periodCounts: Array(12).fill(0) });
+        }
       }
       return {
         id: db.id, cid: db.cid || "CID-" + db.id.substring(0, 4),

@@ -34,21 +34,22 @@ const STAGE_TO_MONTH: Record<WorklistStage, string> = {
 let inflightPromise: Promise<void> | null = null;
 let inflightType: string | null = null;
 
-export function ClientsProvider({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
+export function ClientsProvider({ children, enabled = true, lite = false }: { children: ReactNode; enabled?: boolean; lite?: boolean }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, business: 0, personal: 0 });
   const [typeFilter, setTypeFilter] = useState("All");
-  const fetchedRef = useRef(false);
+  const fetchedRef = useRef<boolean | null>(null);
 
   const fetchFromSupabase = useCallback(async (type?: string) => {
     const filter = type || "All";
     try {
-      let url = "/api/clients";
-      if (filter !== "All") {
-        url += `?type=${filter.toLowerCase()}`;
-      }
+      const params = new URLSearchParams();
+      if (filter !== "All") params.set("type", filter.toLowerCase());
+      if (lite) params.set("fields", "lite");
+      const query = params.toString();
+      const url = query ? `/api/clients?${query}` : "/api/clients";
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -71,7 +72,7 @@ export function ClientsProvider({ children, enabled = true }: { children: ReactN
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lite]);
 
   // Deduplicate concurrent fetch requests
   const refresh = useCallback(async (type?: string) => {
@@ -93,8 +94,9 @@ export function ClientsProvider({ children, enabled = true }: { children: ReactN
       setLoading(false);
       return;
     }
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
+    if (fetchedRef.current !== lite) {
+      fetchedRef.current = lite;
+      setLoading(true);
       fetchFromSupabase(typeFilter);
     }
   }, [enabled, fetchFromSupabase, typeFilter]);

@@ -213,6 +213,7 @@ export default function RootLayout({
   // The full client dataset is several megabytes. Pages that do not consume it
   // should render without paying for that request.
   const needsClientData = ["/", "/workload", "/time", "/fin", "/pr", "/stx", "/t9", "/tax", "/rend", "/annual", "/vault"].includes(pathname);
+  const canUseLightweightClientData = ["/workload", "/time", "/vault"].includes(pathname);
   const pageInfo = PAGE_TITLES[pathname] || PAGE_TITLES["/"];
 
   return (
@@ -407,7 +408,7 @@ export default function RootLayout({
                 <div className="h-40 rounded-xl bg-[var(--card)] border border-[var(--line)] animate-pulse" />
               </div>
             ) : !isAuthPage && canAccessPathname(role, userModules, pathname) ? (
-              <ClientsProvider enabled={needsClientData}>
+              <ClientsProvider enabled={needsClientData} lite={canUseLightweightClientData}>
                 <div className="tip-container" style={{ margin: "0px 0px 14px 0px" }}>
                   {role === "india" && (
                     <div className="doorbar">
