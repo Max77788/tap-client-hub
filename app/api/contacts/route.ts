@@ -11,8 +11,8 @@ export async function GET() {
   try {
     const admin = createAdminClient();
     const [{ data: contacts, error: contactsError }, { data: clients, error: clientsError }] = await Promise.all([
-      admin.from("contacts").select("id, client_id, name, email, phone, is_primary, client:clients!inner(id, name, cid, type, group_name, group_owner, address, city, state, zip, status)").eq("clients.status", "active").order("name", { ascending: true }),
-      admin.from("clients").select("id, name, cid").eq("status", "active").order("name", { ascending: true }),
+      admin.from("contacts").select("id, client_id, name, email, phone, is_primary, client:clients!inner(id, name, cid:client_code, type, group_name, address, city, state, zip, status)").eq("clients.status", "active").order("name", { ascending: true }),
+      admin.from("clients").select("id, name, cid:client_code").eq("status", "active").order("name", { ascending: true }),
     ]);
     if (contactsError) throw contactsError;
     if (clientsError) throw clientsError;
