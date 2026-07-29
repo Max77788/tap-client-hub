@@ -62,3 +62,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ contact: data });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update contact" }, { status: 500 }); }
 }
+
+export async function DELETE(request: Request) {
+  const access = await requireClientDataEditAccess();
+  if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
+  try {
+    const id = text(new URL(request.url).searchParams.get("id"));
+    if (!id) return NextResponse.json({ error: "Contact ID is required." }, { status: 400 });
+    const { error } = await createAdminClient().from("contacts").delete().eq("id", id);
+    if (error) throw error;
+    return NextResponse.json({ deleted: true });
+  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to delete contact" }, { status: 500 }); }
+}
