@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
 // GET /api/work-periods?client_id=X&service_code=FIN&year=2026
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get("client_id") || searchParams.get("clientId");
     const serviceCode = searchParams.get("service_code");
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
 // remain accepted for compatibility with older callers.
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const body = await request.json();
     const clientServiceId = body.client_service_id || body.clientServiceId;
     const rawPeriod = body.period || (body.year && body.month ? `${body.year}-${String(body.month).padStart(2, "0")}` : null);
