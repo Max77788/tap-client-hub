@@ -27,7 +27,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Tax Returns", href: "/tax", icon: "📋", module: "Tax Returns" },
   { label: "Renditions", href: "/rend", icon: "🏠", module: "Renditions" },
   { label: "Annual Reports", href: "/annual", icon: "📄", module: "Annual Reports" },
-  { label: "TAP Lens", href: "/lens", icon: "◌", module: "TAP Lens" },
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault", icon: "🔒", module: "Vault" },
   { label: "Users & Access", href: "/users", icon: "🪪", module: "Users & Access" },
