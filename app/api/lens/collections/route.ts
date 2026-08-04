@@ -42,7 +42,9 @@ export async function GET() {
     supabase.from("clients").select("id,name").eq("status", "active").order("name").limit(1000),
   ]);
 
-  if (invoicesResult.error?.code === "42P01" || ladderResult.error?.code === "42P01") {
+  // PostgREST returns PGRST205 for a table not yet in its schema cache; direct
+  // Postgres reports 42P01. Both mean the additive migration has not run yet.
+  if (["42P01", "PGRST205"].includes(invoicesResult.error?.code || "") || ["42P01", "PGRST205"].includes(ladderResult.error?.code || "")) {
     return NextResponse.json({
       mode: "setup_required",
       invoices: demoInvoices,
