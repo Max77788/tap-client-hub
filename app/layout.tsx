@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Tax Returns", href: "/tax", icon: "📋", module: "Tax Returns" },
   { label: "Renditions", href: "/rend", icon: "🏠", module: "Renditions" },
   { label: "Annual Reports", href: "/annual", icon: "📄", module: "Annual Reports" },
+  { label: "TAP Lens", href: "/lens", icon: "◌", module: "TAP Lens" },
   { label: "---", href: "" },
   { label: "Password Vault", href: "/vault", icon: "🔒", module: "Vault" },
   { label: "Users & Access", href: "/users", icon: "🪪", module: "Users & Access" },
@@ -45,6 +46,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/tax": { title: "Tax Returns", subtitle: "Annual returns — clients flagged for tax prep." },
   "/rend": { title: "Renditions", subtitle: "Clients flagged for renditions filing." },
   "/annual": { title: "Annual Reports", subtitle: "State renewals — clients flagged for annual filings." },
+  "/lens": { title: "TAP Lens", subtitle: "Owner-facing operational intelligence. Collections is the first live Lens module." },
   "/vault": { title: "Password Vault", subtitle: "Portal logins. Kept separate from client files, on purpose." },
   "/users": { title: "Users & Access", subtitle: "Who can get into the platform, what they can see, and who they report to. Owner-controlled." },
   "/support": { title: "Help & Support", subtitle: "Stuck on something? Open a ticket and our team will jump on it." },
@@ -163,6 +165,7 @@ export default function RootLayout({
   const pathname = usePathname();
   const router = useRouter();
   const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
+  const isLensPage = pathname === "/lens";
   const [accessLoading, setAccessLoading] = useState(!isAuthPage);
   const [role, setRole] = useState<string>("staff");
   const [realRole, setRealRole] = useState<string>("staff");
@@ -226,7 +229,7 @@ export default function RootLayout({
       </head>
       <body className="h-screen flex flex-col md:flex-row overflow-hidden" style={{ backgroundColor: "var(--paper)" }}>
         {/* ── Desktop Sidebar ── */}
-        {!isAuthPage && (
+        {!isAuthPage && !isLensPage && (
           <aside
             className="hidden md:flex sticky top-0 h-screen flex-col shrink-0 select-none overflow-hidden"
             style={{
@@ -310,14 +313,14 @@ export default function RootLayout({
         )}
 
         {/* ── Mobile sidebar drawer ── */}
-        {!isAuthPage && (
+        {!isAuthPage && !isLensPage && (
           <MobileSidebar visibleNav={visibleNav} pathname={pathname} open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={href => router.push(href)} />
         )}
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
           {/* Top bar */}
-          {!isAuthPage && (
+          {!isAuthPage && !isLensPage && (
             <header
               className="flex items-end justify-between shrink-0"
               style={{
@@ -401,14 +404,14 @@ export default function RootLayout({
           )}
 
           {/* Page content */}
-          <main className={`flex-1 ${isAuthPage ? "" : "px-8 py-[18px]"}`}>
+          <main className={`flex-1 ${isAuthPage || isLensPage ? "" : "px-8 py-[18px]"}`}>
             {!isAuthPage && accessLoading ? (
               <div className="space-y-4" aria-label="Loading page access">
                 <div className="h-8 w-52 rounded-lg bg-[var(--line)] animate-pulse" />
                 <div className="h-40 rounded-xl bg-[var(--card)] border border-[var(--line)] animate-pulse" />
               </div>
             ) : !isAuthPage && canAccessPathname(role, userModules, pathname) ? (
-              <ClientsProvider enabled={needsClientData} lite={canUseLightweightClientData}>
+              isLensPage ? children : <ClientsProvider enabled={needsClientData} lite={canUseLightweightClientData}>
                 <div className="tip-container" style={{ margin: "0px 0px 14px 0px" }}>
                   {role === "india" && (
                     <div className="doorbar">

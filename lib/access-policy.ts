@@ -15,6 +15,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   "Users & Access": "/users",
   "Support": "/support",
   "Billing": "/billing",
+  "TAP Lens": "/lens",
 };
 
 const MODULE_ALIASES: Record<string, string> = {
