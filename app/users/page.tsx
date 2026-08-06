@@ -84,13 +84,13 @@ export default function UsersPage() {
     if (user === "new") {
       setEditForm({
         name: "", location: "", role: "Staff", mgr: "—", username: "",
-        email: "", password: "", modules: [], allow_edit_client_data: false,
+        email: "", password: "", modules: [], email_2fa_enabled: false, allow_edit_client_data: false,
       });
     } else if (user) {
       setEditForm({
         name: user.name, location: user.location, role: user.role,
         mgr: user.mgrRaw || "—", username: user.username, modules: [...user.modules],
-        email: user.email, password: "", allow_edit_client_data: user.allow_edit_client_data === true,
+        email: user.email, password: "", email_2fa_enabled: user.email_2fa_enabled === true, allow_edit_client_data: user.allow_edit_client_data === true,
       });
     }
   }
@@ -110,6 +110,8 @@ export default function UsersPage() {
             location: editForm.location,
             reporting_manager: editForm.mgr === "—" || !editForm.mgr ? null : editForm.mgr,
             modules: editForm.modules || [],
+            email: editForm.email,
+            email_2fa_enabled: editForm.email_2fa_enabled === true,
             allow_edit_client_data: editForm.allow_edit_client_data === true,
             ...(editForm.password ? { password: editForm.password } : {}),
           }),
@@ -133,6 +135,7 @@ export default function UsersPage() {
             location: editForm.location,
             reporting_manager: editForm.mgr === "—" || !editForm.mgr ? null : editForm.mgr,
             modules: editForm.modules || [],
+            email_2fa_enabled: editForm.email_2fa_enabled === true,
             allow_edit_client_data: editForm.allow_edit_client_data === true,
           }),
         });
@@ -346,7 +349,7 @@ export default function UsersPage() {
             }}>
               {modalUser === "new"
                 ? "Provision a new login — the user signs in with their email and the password you set."
-                : "Update their details and access. Their username and email are set on creation."
+                : "Update their email, password, details, and access. The email address is where two-factor codes are sent."
               }
             </div>
             <div className="mform" style={{ padding: "18px 24px" }}>
@@ -360,6 +363,14 @@ export default function UsersPage() {
                 width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
                 borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
               }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+
+              {modalUser !== "new" && (
+                <>
+                  <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Email address</label>
+                  <input className="ef" type="email" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+                  <p style={{ margin: "2px 0 0", color: "var(--muted)", fontSize: 12 }}>This is also the address that receives email two-factor codes.</p>
+                </>
+              )}
 
               {/* Email + Password (new user only) */}
               {modalUser === "new" && (
@@ -402,6 +413,11 @@ export default function UsersPage() {
                   </div>
                 </>
               )}
+
+              <label style={{ display: "flex", gap: 9, alignItems: "flex-start", margin: "14px 0 4px", cursor: "pointer", fontSize: 13, color: "var(--ink)" }}>
+                <input type="checkbox" checked={editForm.email_2fa_enabled === true} onChange={e => setEditForm(p => ({ ...p, email_2fa_enabled: e.target.checked }))} style={{ marginTop: 2 }} />
+                <span><b>Require email two-factor authentication</b><br /><span style={{ color: "var(--muted)", fontSize: 12 }}>A six-digit code is sent to the email address above after the password is accepted.</span></span>
+              </label>
 
               {/* Location */}
               <label className="el" style={{

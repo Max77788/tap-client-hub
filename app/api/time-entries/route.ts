@@ -99,7 +99,7 @@ export async function DELETE(request: Request) {
   return NextResponse.json({ success: true });
 }
 
-// PATCH /api/time-entries?id=UUID — update a time entry (who, client, task, seconds, edited flag)
+// PATCH /api/time-entries?id=UUID — update a time entry (including start time and the calculated duration)
 export async function PATCH(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);

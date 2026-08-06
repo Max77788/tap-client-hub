@@ -73,8 +73,8 @@ export async function GET() {
       ? rawName.split(",").map((s: string) => s.trim()).reverse().join(" ")
       : rawName;
 
-    // Use real email from auth.users if available, otherwise derive
-    let email = emailMap[p.id] || "";
+    // Use the account email, falling back to the profile value before deriving a legacy address.
+    let email = emailMap[p.id] || p.email || "";
     if (!email) {
       const nameParts = displayName.trim().split(/\s+/);
       const first = (nameParts[0] || "").toLowerCase();
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
   if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const body = await request.json();
-    const { full_name, email, password, role, location, reporting_manager, modules, allow_edit_client_data } = body;
+    const { full_name, email, password, role, location, reporting_manager, modules, email_2fa_enabled, allow_edit_client_data } = body;
 
     if (!full_name || !email || !password) {
       return NextResponse.json(
@@ -178,6 +178,7 @@ export async function POST(request: Request) {
       modules: sanitizeModulesForRole(role || "staff", modules),
       active: true,
       invite_status: "active",
+      email_2fa_enabled: email_2fa_enabled === true,
       allow_edit_client_data: allow_edit_client_data === true,
     });
 
@@ -202,7 +203,7 @@ export async function PATCH(request: Request) {
   if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   try {
     const body = await request.json();
-    const { id, full_name, role, location, reporting_manager, modules, allow_edit_client_data } = body;
+    const { id, full_name, email, role, location, reporting_manager, modules, allow_edit_client_data, email_2fa_enabled } = body;
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
@@ -216,6 +217,17 @@ export async function PATCH(request: Request) {
 
     const updateData: any = {};
     if (full_name !== undefined) updateData.full_name = full_name;
+    if (email !== undefined) {
+      const normalizedEmail = String(email).trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+        return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
+      }
+      const adminSupabase = createAdminClient();
+      const { error: emailError } = await adminSupabase.auth.admin.updateUserById(id, { email: normalizedEmail });
+      if (emailError) return NextResponse.json({ error: emailError.message }, { status: 400 });
+      updateData.email = normalizedEmail;
+    }
+    if (email_2fa_enabled !== undefined) updateData.email_2fa_enabled = email_2fa_enabled === true;
     if (role !== undefined) updateData.role = role;
     if (location !== undefined) updateData.location = location;
     if (modules !== undefined) {

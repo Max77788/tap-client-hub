@@ -58,6 +58,12 @@ function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+function inputTime(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 export default function TimePage() {
   const [entryTab, setEntryTab] = useState<EntryTab>("timer");
 
@@ -316,6 +322,27 @@ export default function TimePage() {
 
   function handleEdit(idx: number, field: string, value: string) {
     setEntries((prev) => prev.map((e, i) => i !== idx ? e : { ...e, [field]: value, edited: true }));
+  }
+
+  function handleTimeEdit(idx: number, field: "start" | "end", value: string) {
+    setEntries((prev) => prev.map((entry, i) => {
+      if (i !== idx) return entry;
+      const start = field === "start" ? value : inputTime(entry.startedAt || entry.date);
+      const end = field === "end" ? value : inputTime(entry.endedAt);
+      if (!start || !end) return entry;
+      const day = entry.date.slice(0, 10);
+      const startAt = new Date(`${day}T${start}:00`);
+      let endAt = new Date(`${day}T${end}:00`);
+      if (endAt.getTime() <= startAt.getTime()) endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
+      return {
+        ...entry,
+        date: startAt.toISOString(),
+        startedAt: startAt.toISOString(),
+        endedAt: endAt.toISOString(),
+        duration: Math.round((endAt.getTime() - startAt.getTime()) / 1000),
+        edited: true,
+      };
+    }));
   }
 
   function saveEdit(origIdx: number) {
@@ -671,9 +698,6 @@ export default function TimePage() {
               pagedEntries.map((entry) => {
                   const idx = entries.indexOf(entry);
                   const isEditing = editIdx === idx;
-                  const h = Math.floor(entry.duration / 3600);
-                  const m = Math.floor((entry.duration % 3600) / 60);
-
                   // Running entry — live clock
                   if (entry.isRunning) {
                     const elapsed = Math.floor((Date.now() - new Date(entry.date).getTime()) / 1000);
@@ -721,17 +745,18 @@ export default function TimePage() {
                           onChange={(e) => { const key = taskKeyFromLabel(e.target.value); setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, task: key, taskLabel: TASK_LABEL[key], edited: true })); }}>
                           {TASK_KEYS.map((k) => <option key={k} value={TASK_LABEL[k]}>{TASK_LABEL[k]}</option>)}
                         </select></td>
+                        <td className="mono" style={{ whiteSpace: "nowrap", color: "var(--muted)" }} title="Calculated from start and end time">
+                          {fmtDur(entry.duration)}
+                        </td>
                         <td style={{ whiteSpace: "nowrap" }}>
-                          <input className="edit-inp" type="number" min={0} value={h}
-                            onChange={(e) => { const nh = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: nh * 3600 + m * 60, edited: true })); }} />h{" "}
-                          <input className="edit-inp" type="number" min={0} max={59} value={m}
-                            onChange={(e) => { const nm = parseInt(e.target.value) || 0; setEntries((prev) => prev.map((ev, i) => i !== idx ? ev : { ...ev, duration: h * 3600 + nm * 60, edited: true })); }} />m
+                          <input className="edit-inp" type="time" value={inputTime(entry.startedAt || entry.date)}
+                            onChange={(e) => handleTimeEdit(idx, "start", e.target.value)}
+                            aria-label="Start time" />
                         </td>
-                        <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--muted)" }}>
-                          {fmtTime(entry.startedAt || entry.date)}
-                        </td>
-                        <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "var(--muted)" }}>
-                          {entry.endedAt ? fmtTime(entry.endedAt) : "—"}
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <input className="edit-inp" type="time" value={inputTime(entry.endedAt)}
+                            onChange={(e) => handleTimeEdit(idx, "end", e.target.value)}
+                            aria-label="End time" />
                         </td>
                         <td><input className="edit-inp" type="text" value={entry.note || ""}
                           onChange={(e) => handleEdit(idx, "note", e.target.value)}
