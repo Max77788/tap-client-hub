@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SUPPORT_RECIPIENTS = [
   "mmatronin@gmail.com",
-  "ben@aifusioniqlabs.com",
+  "singh.benny@gmail.com",
 ];
 const RESEND_FROM = "TAP Hub <notifications@email.mom-ai-agency.site>";
 

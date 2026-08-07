@@ -8,7 +8,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const route = read("app/api/send-email/route.ts");
 const supportPage = read("app/support/page.tsx");
 
-assert.match(route, /const SUPPORT_RECIPIENTS = \[[\s\S]*mmatronin@gmail\.com[\s\S]*ben@aifusioniqlabs\.com[\s\S]*\]/);
+assert.match(route, /const SUPPORT_RECIPIENTS = \[[\s\S]*mmatronin@gmail\.com[\s\S]*singh\.benny@gmail\.com[\s\S]*\]/);
+assert.doesNotMatch(route, /ben@aifusioniqlabs\.com/);
 assert.match(route, /from:\s*RESEND_FROM/);
 assert.match(route, /to:\s*SUPPORT_RECIPIENTS/);
 assert.doesNotMatch(route, /const\s*\{[^}]*\b(?:to|from)\b[^}]*\}\s*=\s*await req\.json\(\)/);
@@ -27,6 +28,7 @@ assert.match(supportPage, /body:\s*JSON\.stringify\(\{[\s\S]{0,600}reporterName[
 assert.doesNotMatch(supportPage, /window\.location\.href\s*=/);
 assert.match(supportPage, /sending/);
 assert.match(supportPage, /ticket was sent to the support team/i);
-assert.match(supportPage, /mmatronin@gmail\.com[\s\S]{0,200}ben@aifusioniqlabs\.com/);
+assert.match(supportPage, /mmatronin@gmail\.com[\s\S]{0,200}singh\.benny@gmail\.com/);
+assert.doesNotMatch(supportPage, /ben@aifusioniqlabs\.com/);
 
 console.log("support Resend delivery regression checks passed");
