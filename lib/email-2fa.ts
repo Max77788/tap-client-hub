@@ -74,6 +74,7 @@ export async function sendCodeEmail(
       headers: {
         Authorization: `Bearer ${resendKey}`,
         "Content-Type": "application/json",
+        "User-Agent": "TAP-Hub/1.0",
       },
       body: JSON.stringify({
         from: RESEND_FROM,
