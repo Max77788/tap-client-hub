@@ -33,11 +33,24 @@ function LoginContent() {
     setError(null);
     setLoading(true);
 
+    // Usernames resolve server-side to the matching internal Supabase email.
+    const identityResponse = await fetch("/api/auth/resolve-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: email }),
+    });
+    if (!identityResponse.ok) {
+      setError("Unable to sign in. Check your username and password.");
+      setLoading(false);
+      return;
+    }
+    const { email: authEmail } = await identityResponse.json();
+
     // Try the real Supabase account first. This lets users sign in with their
     // actual account password instead of being intercepted by demo credentials.
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: authEmail, password });
 
     if (!authError) {
       // Check if 2FA is enabled for this user
@@ -69,7 +82,7 @@ function LoginContent() {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: authEmail, password }),
     });
     if (demoResponse.ok) {
       // Check if 2FA is enabled for this user
@@ -101,7 +114,7 @@ function LoginContent() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: authEmail,
         password,
       });
 
@@ -302,17 +315,17 @@ function LoginContent() {
                   className="block text-sm font-medium mb-1.5"
                   style={{ color: "var(--ink)" }}
                 >
-                  Email address
+                  Username or email address
                 </label>
                 <input
                   id="email"
                   name="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@tap-associates.com"
+                  placeholder="Your username or email"
                   className="w-full px-3.5 py-2.5 rounded-lg text-sm transition-colors border outline-none focus:ring-2 focus:ring-offset-0"
                   style={{
                     borderColor: "var(--line)",

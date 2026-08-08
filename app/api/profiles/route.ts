@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { requireUserManagementAccess } from "@/lib/access-server";
 import { effectiveModules, sanitizeModulesForRole } from "@/lib/access-policy";
+import { usernameFromFullName } from "@/lib/profile-identity";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export async function GET() {
     const { data: authUsers, error: authError } = await adminSupabase.auth.admin.listUsers();
     if (!authError && authUsers?.users) {
       for (const u of authUsers.users) {
-        emailMap[u.id] = u.email || "";
+      emailMap[u.id] = u.email || "";
       }
     }
   } catch {
@@ -73,16 +74,8 @@ export async function GET() {
       ? rawName.split(",").map((s: string) => s.trim()).reverse().join(" ")
       : rawName;
 
-    // Use the account email, falling back to the profile value before deriving a legacy address.
-    let email = emailMap[p.id] || p.email || "";
-    if (!email) {
-      const nameParts = displayName.trim().split(/\s+/);
-      const first = (nameParts[0] || "").toLowerCase();
-      const last = nameParts.length > 1
-        ? nameParts[nameParts.length - 1].toLowerCase()
-        : "";
-      email = `${first}.${last}@tapallc.com`;
-    }
+    // Profile email is the approved destination for 2FA. Auth email is intentionally internal.
+    const email = p.email || emailMap[p.id] || "";
 
     // Resolve reporting_manager UUID to display name (also normalize)
     const mgrRaw = p.reporting_manager
@@ -97,7 +90,7 @@ export async function GET() {
       name: p.full_name || "",           // DB value for PATCH lookups
       displayName,                        // "First Last" for display
       email,
-      username: email.split("@")[0],
+      username: usernameFromFullName(p.full_name),
       role: ROLE_MAP[p.role] || p.role || "Staff",
       location: p.location || "",
       mgr: mgrName,
@@ -172,6 +165,7 @@ export async function POST(request: Request) {
     const { error: profileError } = await supabase.from("profiles").insert({
       id: authData.user.id,
       full_name,
+      email: String(email).trim().toLowerCase(),
       role: role || "staff",
       location: location || null,
       reporting_manager: mgrId,
@@ -215,6 +209,12 @@ export async function PATCH(request: Request) {
       { db: { schema: "tap_hub_project" } }
     );
 
+    const adminSupabase = createAdminClient();
+    const { data: targetProfileData } = await adminSupabase.from("profiles").select("email").eq("id", id).maybeSingle();
+    const targetEmail = (targetProfileData as unknown as { email?: string } | null)?.email?.toLowerCase();
+    const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const authUsersList = (authUsers as unknown as { users: Array<{ id: string; email?: string | null }> } | null)?.users || [];
+    const authUserId = authUsersList.find((user) => user.email?.toLowerCase() === targetEmail)?.id || id;
     const updateData: any = {};
     if (full_name !== undefined) updateData.full_name = full_name;
     if (email !== undefined) {
@@ -222,8 +222,8 @@ export async function PATCH(request: Request) {
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
         return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
       }
-      const adminSupabase = createAdminClient();
-      const { error: emailError } = await adminSupabase.auth.admin.updateUserById(id, { email: normalizedEmail });
+      // Keep the authentication and 2FA destination addresses in sync for staff users.
+      const { error: emailError } = await adminSupabase.auth.admin.updateUserById(authUserId, { email: normalizedEmail });
       if (emailError) return NextResponse.json({ error: emailError.message }, { status: 400 });
       updateData.email = normalizedEmail;
     }
@@ -270,8 +270,7 @@ export async function PATCH(request: Request) {
     // Handle password change if provided (uses admin client to update auth user)
     if (body.password) {
       try {
-        const adminSupabase = createAdminClient();
-        const { error: pwError } = await adminSupabase.auth.admin.updateUserById(id, { password: body.password });
+        const { error: pwError } = await adminSupabase.auth.admin.updateUserById(authUserId, { password: body.password });
         if (pwError) {
           return NextResponse.json({ error: pwError.message }, { status: 400 });
         }
