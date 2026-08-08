@@ -46,9 +46,10 @@ export async function POST(req: NextRequest) {
   }
 
   const sent = await sendCodeEmail(profile.email, result.code, "login");
+  console.log("2FA challenge result:", { sent, email: profile.email, code: result.code, hasKey: !!process.env.RESEND_API_KEY });
   return NextResponse.json({
     sent,
     email: profile.email,
-    message: sent ? `Code sent to ${profile.email}` : "Code generated (email not configured)",
+    message: sent ? `Code sent to ${profile.email}` : "Code generated but email failed to send. Check your spam folder or contact admin.",
   });
 }
