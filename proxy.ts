@@ -18,8 +18,8 @@ export async function proxy(request: NextRequest) {
   // Only the server-issued signed demo session is authoritative.
   const hasDemoCookie = /(?:^|;\s*)tap_demo_session=([^;]*)/.test(cookieHeader);
 
-  // Check for Supabase auth token cookie
-  const hasAuthToken = /(?:^|;\s*)sb-[^-]+-auth-token=/.test(cookieHeader);
+  // Check for Supabase auth token cookie (handles chunked cookies: .0, .1, etc.)
+  const hasAuthToken = /(?:^|;\s*)sb-[^-]+-auth-token(?:\.\d+)?=/.test(cookieHeader);
 
   const { pathname } = request.nextUrl;
 
