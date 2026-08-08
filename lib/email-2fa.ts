@@ -4,7 +4,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const RESEND_FROM = "TAP Hub <noreply@andreashotel.com>";
+const RESEND_FROM = "TAP Hub <noreply@email.mom-ai-agency.site>";
 
 /**
  * Generate a 6-digit code and store it on the user's profile.
