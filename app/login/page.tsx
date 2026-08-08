@@ -159,11 +159,16 @@ function LoginContent() {
     setLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
       const res = await fetch("/api/2fa/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: twoFACode }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json();
 
       if (!res.ok) {
@@ -172,10 +177,11 @@ function LoginContent() {
         return;
       }
 
+      // Call /api/me to establish session, then navigate
       fetch("/api/me", { credentials: "include" }).catch(() => {});
 
-      router.push(next);
-      router.refresh();
+      // Use window.location for a hard navigation to avoid soft-nav hangs
+      window.location.href = next;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Verification failed"
