@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-const SUPPORT_EMAILS = ["mmatronin@gmail.com", "singh.benny@gmail.com", "ben@aifusioniqlabs.com"];
+const SUPPORT_EMAILS = ["support@aifusioniqlabs.com"];
 const SUPPORT_EMAIL = SUPPORT_EMAILS.join(", ");
 const SUPPORT_PHONE = "(832) 937-4786";
 
@@ -181,7 +181,7 @@ export default function SupportPage() {
         <div className="supside" style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="panel supcontact" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", padding: "18px 20px" }}>
             <div className="suph2" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 16, marginBottom: 12 }}>Reach our team</div>
-            <a className="contact" href="mailto:mmatronin@gmail.com,singh.benny@gmail.com,ben@aifusioniqlabs.com" style={contactStyle}>
+            <a className="contact" href="mailto:support@aifusioniqlabs.com" style={contactStyle}>
               <span className="ci" style={{ width: 34, height: 34, borderRadius: 9, background: "var(--teal-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✉️</span>
               <div><div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Email</div><div style={{ fontWeight: 600, fontSize: "13.5px" }}>{SUPPORT_EMAIL}</div></div>
             </a>
