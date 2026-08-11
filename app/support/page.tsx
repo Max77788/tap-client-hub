@@ -22,7 +22,7 @@ export default function SupportPage() {
   const [steps, setSteps] = useState("");
   const [shot, setShot] = useState(false);
   const [sending, setSending] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<{ ticketNumber: string; emailSent: boolean } | null>(null);
   const [submissionError, setSubmissionError] = useState("");
 
   const subjectPreview = useMemo(() => {
@@ -53,7 +53,7 @@ export default function SupportPage() {
 
   async function submitRequest() {
     setSubmissionError("");
-    setSubmitted(false);
+    setSubmitted(null);
 
     const missingFields = [
       !name.trim() && "your name",
@@ -83,10 +83,10 @@ export default function SupportPage() {
         }),
       });
       const responseBody = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(responseBody?.error || "Unable to send the support request. Please try again.");
+      if (!response.ok || !responseBody?.ticket?.number) {
+        throw new Error(responseBody?.error || "Unable to create the support ticket. Please try again.");
       }
-      setSubmitted(true);
+      setSubmitted({ ticketNumber: responseBody.ticket.number, emailSent: responseBody.emailSent === true });
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : "Unable to send the support request. Please try again.");
     } finally {
@@ -116,7 +116,7 @@ export default function SupportPage() {
           <div className="panel" style={{ background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", padding: "20px 22px" }}>
             <div className="suph" style={{ fontFamily: '"Fraunces",Georgia,serif', fontWeight: 600, fontSize: 21 }}>Open a support ticket</div>
             <div className="suphint" style={{ color: "var(--muted)", fontSize: "13.5px", margin: "5px 0 14px", lineHeight: 1.5 }}>
-              Fill this in and send it directly to our support team. We will reply with a ticket number.
+              Fill this in to create a tracked support ticket. We will reply with your ticket number.
             </div>
 
             <div className="shot-note" style={{ display: "flex", gap: 10, background: "var(--amber-soft)", border: "1px solid #e8d3a6", color: "#7a5210", borderRadius: 12, padding: "12px 14px", fontSize: 13, lineHeight: 1.5, marginBottom: 16 }}>
@@ -169,7 +169,7 @@ export default function SupportPage() {
             </div>
 
             {submissionError && <p role="alert" style={{ color: "var(--red)", fontSize: 13, margin: "12px 0 0" }}>{submissionError}</p>}
-            {submitted && <p role="status" style={{ color: "var(--green)", fontSize: 13, margin: "12px 0 0" }}>Your ticket was sent to the support team.</p>}
+            {submitted && <p role="status" style={{ color: "var(--green)", fontSize: 13, margin: "12px 0 0" }}><b>Ticket {submitted.ticketNumber} created.</b> It is now tracked in TAP Hub.{submitted.emailSent ? " The support team has also been notified by email." : " The support team will see it in TAP Hub."}</p>}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
               <button className="btn" disabled={sending} onClick={submitRequest} style={btnStyle(true, sending)}>{sending ? "Sending request..." : "✉️ Send request to support"}</button>
