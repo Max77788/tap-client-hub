@@ -15,6 +15,7 @@ import { useClients } from "@/hooks/use-clients-context";
 import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 import { PageSkeleton } from "@/components/loading-skeleton";
+import { clientKpiFilter, type ClientKpi } from "@/lib/client-kpi-filter";
 
 type DisplayItem =
   | { kind: "group"; name: string; clients: Client[] }
@@ -36,6 +37,7 @@ export default function ClientsPage() {
   const [typeFilter, setTypeFilter] = useState<ClientType | "All">("All");
   const [staffFilter, setStaffFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("All"); // "All" | "active" | "inactive"
+  const [kpiFilter, setKpiFilter] = useState<ClientKpi>("all");
   const { clients, setClients, updateClient, updateServiceMonth, deleteClient: deleteFromState, addClient, loading, stats } = useClients();
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -78,14 +80,14 @@ export default function ClientsPage() {
   const staffOptions = useMemo(() => getStaffOptions(clients), [clients]);
 
   const filteredClients = useMemo(() => {
-    const clientsMatchingFilters = filterClients(clients, {
+    const clientsMatchingFilters = filterClients(clientKpiFilter(clients, kpiFilter), {
       type: typeFilter,
       staff: staffFilter,
       status: statusFilter,
     });
 
     return clientsMatchingFilters.filter(client => matchesClientSearch(client, search));
-  }, [clients, search, typeFilter, staffFilter, statusFilter]);
+  }, [clients, kpiFilter, search, typeFilter, staffFilter, statusFilter]);
 
   // Group filtered clients: multi-client groups become one group card, singles stay as-is
   const displayItems = useMemo((): DisplayItem[] => {
@@ -238,15 +240,15 @@ export default function ClientsPage() {
         <>
           {/* ── Stats row: Total · Business · Personal · Monthly Financials · Behind this month ── */}
           <div className="flex flex-wrap gap-[10px] mt-4">
-            <StatCard label="Total clients" value={computedStats.total} color="var(--ink)" />
-            <StatCard label="Business" value={computedStats.business} color="var(--teal)" />
-            <StatCard label="Personal" value={computedStats.personal} color="var(--blue)" />
-            <StatCard label="Financials" value={computedStats.financialsCount} color="var(--teal)" />
-            <StatCard label="Payroll" value={computedStats.payrollCount} color="var(--blue)" />
-            <StatCard label="Sales Tax" value={computedStats.salesTaxCount} color="var(--amber)" />
-            <StatCard label="1099s" value={computedStats.t9Count} color="var(--ink)" />
-            <StatCard label="Renditions" value={computedStats.renditionsCount} color="var(--green)" />
-            <StatCard label="Annual Reports" value={computedStats.annualReportsCount} color="#7c3aed" />
+            <StatCard label="Total clients" value={computedStats.total} color="var(--ink)" active={kpiFilter === "all"} onClick={() => setKpiFilter("all")} />
+            <StatCard label="Business" value={computedStats.business} color="var(--teal)" active={kpiFilter === "business"} onClick={() => setKpiFilter("business")} />
+            <StatCard label="Personal" value={computedStats.personal} color="var(--blue)" active={kpiFilter === "personal"} onClick={() => setKpiFilter("personal")} />
+            <StatCard label="Financials" value={computedStats.financialsCount} color="var(--teal)" active={kpiFilter === "financials"} onClick={() => setKpiFilter("financials")} />
+            <StatCard label="Payroll" value={computedStats.payrollCount} color="var(--blue)" active={kpiFilter === "payroll"} onClick={() => setKpiFilter("payroll")} />
+            <StatCard label="Sales Tax" value={computedStats.salesTaxCount} color="var(--amber)" active={kpiFilter === "sales_tax"} onClick={() => setKpiFilter("sales_tax")} />
+            <StatCard label="1099s" value={computedStats.t9Count} color="var(--ink)" active={kpiFilter === "1099s"} onClick={() => setKpiFilter("1099s")} />
+            <StatCard label="Renditions" value={computedStats.renditionsCount} color="var(--green)" active={kpiFilter === "renditions"} onClick={() => setKpiFilter("renditions")} />
+            <StatCard label="Annual Reports" value={computedStats.annualReportsCount} color="#7c3aed" active={kpiFilter === "annual_reports"} onClick={() => setKpiFilter("annual_reports")} />
           </div>
 
           {/* ── Controls: Search + Filters + Actions ── */}
@@ -459,20 +461,35 @@ function StatCard({
   label,
   value,
   color,
+  active = false,
+  onClick,
 }: {
   label: string;
   value: number;
   color?: string;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div className="statcard">
+    <button
+      type="button"
+      className="statcard"
+      onClick={onClick}
+      aria-pressed={active}
+      title={`Show ${label.toLowerCase()} clients`}
+      style={{
+        cursor: onClick ? "pointer" : "default",
+        border: active ? `2px solid ${color || "var(--teal)"}` : "1px solid var(--line)",
+        boxShadow: active ? "0 0 0 2px var(--teal-soft)" : undefined,
+      }}
+    >
       <div className="sn" style={{ color: color || "var(--ink)" }}>
         {value}
       </div>
       <div className="sl">
         {label}
       </div>
-    </div>
+    </button>
   );
 }
 
