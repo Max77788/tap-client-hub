@@ -4,7 +4,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const RESEND_FROM = "TAP Hub <noreply@email.mom-ai-agency.site>";
+export const TWO_FACTOR_FROM = "TAP Hub <security@email.mom-ai-agency.site>";
 
 /**
  * Generate a 6-digit code and store it on the user's profile.
@@ -77,7 +77,7 @@ export async function sendCodeEmail(
         "User-Agent": "TAP-Hub/1.0",
       },
       body: JSON.stringify({
-        from: RESEND_FROM,
+        from: TWO_FACTOR_FROM,
         to: toEmail,
         subject,
         html,
