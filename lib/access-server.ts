@@ -100,6 +100,16 @@ export async function requireUserManagementAccess() {
   return { identity, status: null };
 }
 
+/** Managers assigned Users & Access may view the directory, but cannot change accounts. */
+export async function requireUserDirectoryAccess() {
+  const identity = await resolveAccessIdentity();
+  if (!identity) return { identity: null, status: 401 as const };
+  if (!identity.canManageUsers && !identity.modules.includes("Users & Access")) {
+    return { identity, status: 403 as const };
+  }
+  return { identity, status: null };
+}
+
 export async function requireClientDataEditAccess() {
   const identity = await resolveAccessIdentity();
   if (!identity) return { identity: null, status: 401 as const };

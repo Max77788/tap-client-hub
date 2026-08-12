@@ -12,7 +12,7 @@ interface User {
 }
 
 interface CurrentUser {
-  id: string; name: string; role: string;
+  id: string; name: string; role: string; modules: string[];
 }
 
 const MODULES_LIST = ["Tax Returns", "Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions", "Annual Reports", "Timesheet", "Vault", "Workload", "Users & Access", "Billing", "Support"];
@@ -33,6 +33,7 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const isOwner = currentUser?.role === "owner" || currentUser?.role === "admin";
+  const canViewUsers = isOwner || (currentUser?.role === "manager" && currentUser.modules?.includes("Users & Access"));
 
   // ── Load current user (for owner check) ──
   useEffect(() => {
@@ -65,10 +66,10 @@ export default function UsersPage() {
         if (!cancelled) { setError(err.message); setLoading(false); }
       }
     }
-    if (!ownerLoading && isOwner) load();
+    if (!ownerLoading && canViewUsers) load();
     return () => { cancelled = true; };
-  }, [ownerLoading, isOwner]);
-  const isRestrictedRole = !["Owner / Admin", "owner", "admin"].includes(editForm.role || "");
+  }, [ownerLoading, canViewUsers]);
+  const isRestrictedRole = !["Owner / Admin", "owner", "admin", "Manager", "manager"].includes(editForm.role || "");
 
   const stats = useMemo(() => ({
     total: users.length,
@@ -175,7 +176,7 @@ export default function UsersPage() {
 
   // ── Loading / Not-owner states ──
   if (ownerLoading) return <PageSkeleton rows={6} />;
-  if (!isOwner) {
+  if (!canViewUsers) {
     return (
       <div className="panel" style={{
         background: "var(--card)", border: "1px solid var(--line)",
@@ -185,8 +186,8 @@ export default function UsersPage() {
           padding: 60, textAlign: "center", color: "var(--muted)", fontSize: 15,
         }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Owner access only</div>
-          <div style={{ fontSize: 13 }}>Only an Owner or Admin can manage users and access.</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Access not assigned</div>
+          <div style={{ fontSize: 13 }}>Ask an Owner or Admin to grant your profile access to the Users & Access module.</div>
         </div>
       </div>
     );
@@ -249,11 +250,11 @@ export default function UsersPage() {
       <div className="count" style={{
         color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px",
       }}>
-        Click a user to edit their access · use ＋ Add user to provision a new login
+        {isOwner ? "Click a user to edit their access · use ＋ Add user to provision a new login" : "User directory · Owners and Admins manage accounts and access"}
       </div>
 
       {/* ── Add button ── */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+      {isOwner && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
         <button className="btn" onClick={() => openModal("new")} style={{
           all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
           padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
@@ -261,7 +262,7 @@ export default function UsersPage() {
         }}>
           ＋ Add user
         </button>
-      </div>
+      </div>}
 
       {/* ── Users table ── */}
       <div className="panel" style={{
@@ -282,7 +283,7 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {users.map(u => (
-              <tr key={u.id} onClick={() => openModal(u)} style={{ cursor: "pointer" }}>
+              <tr key={u.id} onClick={isOwner ? () => openModal(u) : undefined} style={{ cursor: isOwner ? "pointer" : "default" }}>
                 <td className="lname">{u.displayName || u.name}</td>
                 <td>{u.location}</td>
                 <td>

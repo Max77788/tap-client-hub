@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
-import { requireUserManagementAccess } from "@/lib/access-server";
+import { requireUserDirectoryAccess, requireUserManagementAccess } from "@/lib/access-server";
 import { effectiveModules, sanitizeModulesForRole } from "@/lib/access-policy";
 import { usernameFromFullName } from "@/lib/profile-identity";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * List all profiles mapped to the User shape used by app/users
  */
 export async function GET() {
-  const access = await requireUserManagementAccess();
+  const access = await requireUserDirectoryAccess();
   if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

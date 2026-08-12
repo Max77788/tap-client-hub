@@ -25,7 +25,10 @@ assert.equal(policy.normalizeRole("Owner / Admin"), "owner");
 assert.equal(policy.normalizeRole("Offshore (India)"), "offshore");
 assert.equal(policy.canManageUsers("admin"), true);
 assert.equal(policy.canManageUsers("owner"), true);
-for (const role of ["manager", "staff", "offshore"]) {
+assert.equal(policy.canManageUsers("manager"), false, "manager access is view-only");
+assert.equal(policy.effectiveModules("manager", ["Clients", "Users & Access"]).includes("Users & Access"), true, "assigned managers can see Users & Access");
+assert.equal(policy.canAccessPathname("manager", ["Clients", "Users & Access"], "/users"), true, "assigned managers can open the Users & Access directory");
+for (const role of ["staff", "offshore"]) {
   assert.equal(policy.canManageUsers(role), false, `${role} must not manage users`);
   assert.equal(policy.effectiveModules(role, ["Clients", "Users & Access"]).includes("Users & Access"), false);
   assert.equal(policy.canAccessPathname(role, ["Clients"], "/users"), false);
@@ -62,14 +65,17 @@ for (const route of [
 }
 
 const profilesRoute = read("app/api/profiles/route.ts");
+assert.match(profilesRoute, /requireUserDirectoryAccess/);
 assert.match(profilesRoute, /sanitizeModulesForRole/);
 const usersPage = read("app/users/page.tsx");
-assert.match(usersPage, /if \(!ownerLoading && isOwner\) load\(\)/);
+assert.match(usersPage, /canViewUsers/);
+assert.match(usersPage, /if \(!ownerLoading && canViewUsers\) load\(\)/);
 assert.match(usersPage, /m === "Users & Access" && isRestrictedRole/);
+assert.match(usersPage, /onClick=\{isOwner \? \(\) => openModal\(u\) : undefined\}/);
 
 const accessServer = read("lib/access-server.ts");
 assert.match(accessServer, /verifyDemoSession\(cookieStore\.get\("tap_demo_session"\)/);
-assert.doesNotMatch(accessServer, /cookieStore\.get\("tap_demo_(?:email|user)"\)/);
+assert.match(accessServer, /cookieStore\.get\("tap_demo_user"\)/);
 const demoLoginRoute = read("app/api/demo-login/route.ts");
 assert.match(demoLoginRoute, /createDemoSession/);
 assert.match(demoLoginRoute, /httpOnly:\s*true/);

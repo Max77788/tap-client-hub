@@ -51,8 +51,12 @@ export function canonicalModule(value: unknown): string | null {
 
 export function effectiveModules(role: unknown, assignedModules: unknown): string[] {
   if (isPowerUser(role)) return Object.keys(MODULE_ROUTES);
+  const normalizedRole = normalizeRole(role);
   const assigned = Array.isArray(assignedModules) ? assignedModules : [];
-  return [...new Set(assigned.map(canonicalModule).filter((module): module is string => Boolean(module && module !== "Users & Access")))];
+  return [...new Set(assigned
+    .map(canonicalModule)
+    .filter((module): module is string => Boolean(module && (module !== "Users & Access" || normalizedRole === "manager")))
+  )];
 }
 
 export function sanitizeModulesForRole(role: unknown, modules: unknown): string[] {
