@@ -7,8 +7,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { resolveAccessIdentity } from "@/lib/access-server";
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://verfpuxjuudhwiqjqrqw.supabase.co";
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbG...YYP0";
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://supabase.mom-ai-agency.site";
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export function getSupabaseClient() {
   return createClient(URL, ANON_KEY, { db: { schema: "tap_hub_project" } });

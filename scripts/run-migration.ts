@@ -5,7 +5,7 @@ import { parse } from "dotenv";
 const envRaw = readFileSync(".env.local", "utf-8");
 const env = parse(envRaw);
 
-const url = env.NEXT_PUBLIC_SUPABASE_URL || "https://phgogybfgovrlcdmifpv.supabase.co";
+const url = env.NEXT_PUBLIC_SUPABASE_URL || "https://supabase.mom-ai-agency.site";
 const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!url || !anonKey) {
