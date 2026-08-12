@@ -27,7 +27,11 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth/callback") ||
-    pathname.startsWith("/api/");
+    pathname.startsWith("/api/") ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/sw.js" ||
+    pathname === "/icon-192x192.png" ||
+    pathname === "/icon-512x512.png";
 
   if (!hasDemoCookie && !hasAuthToken && !isPublicRoute) {
     const loginUrl = new URL("/login", request.url);

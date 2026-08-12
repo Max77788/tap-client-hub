@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ClientsProvider } from "@/hooks/use-clients-context";
 import { canAccessPathname, effectiveModules, firstAllowedRoute, normalizeRole } from "@/lib/access-policy";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import "./globals.css";
 
 interface NavItem {
@@ -225,6 +226,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="h-screen flex flex-col md:flex-row overflow-hidden" style={{ backgroundColor: "var(--paper)" }}>
+        <ServiceWorkerRegistration />
         {/* ── Desktop Sidebar ── */}
         {!isAuthPage && (
           <aside
