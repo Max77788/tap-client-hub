@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useClients } from "@/hooks/use-clients-context";
 import { PageSkeleton } from "@/components/loading-skeleton";
+import { applyTimeEdit, combineDateAndTime, deriveEndAt } from "@/lib/time-entry-time";
 
 interface TimeEntry {
   id: string;
@@ -153,7 +154,7 @@ export default function TimePage() {
           const startedAt = e.started_at || e.date;
           const duration = e.duration || 0;
           const endedAt = duration > 0 && startedAt
-            ? new Date(new Date(startedAt).getTime() + duration * 1000).toISOString()
+            ? deriveEndAt(startedAt, duration)
             : null;
           return {
             id: e.id, clientName: e.clientName || "", clientId: e.clientId || "",
@@ -325,21 +326,33 @@ export default function TimePage() {
   }
 
   function handleTimeEdit(idx: number, field: "start" | "end", value: string) {
+    if (!value) return;
     setEntries((prev) => prev.map((entry, i) => {
       if (i !== idx) return entry;
-      const start = field === "start" ? value : inputTime(entry.startedAt || entry.date);
-      const end = field === "end" ? value : inputTime(entry.endedAt);
-      if (!start || !end) return entry;
-      const day = entry.date.slice(0, 10);
-      const startAt = new Date(`${day}T${start}:00`);
-      let endAt = new Date(`${day}T${end}:00`);
-      if (endAt.getTime() <= startAt.getTime()) endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
+      const startedAt = entry.startedAt || entry.date;
+      const endedAt = entry.endedAt || deriveEndAt(startedAt, entry.duration);
+      const updated = applyTimeEdit({ startedAt, endedAt }, field, value);
+      return { ...entry, date: updated.startedAt, ...updated, duration: updated.seconds, edited: true };
+    }));
+  }
+
+  function handleDateEdit(idx: number, value: string) {
+    if (!value) return;
+    setEntries((prev) => prev.map((entry, i) => {
+      if (i !== idx) return entry;
+      const startedAt = entry.startedAt || entry.date;
+      const endedAt = entry.endedAt || deriveEndAt(startedAt, entry.duration);
+      const nextStartedAt = combineDateAndTime(value, startedAt);
+      const nextEndedAt = combineDateAndTime(value, endedAt);
+      const endAt = new Date(nextEndedAt).getTime() <= new Date(nextStartedAt).getTime()
+        ? new Date(new Date(nextEndedAt).getTime() + 24 * 60 * 60 * 1000).toISOString()
+        : nextEndedAt;
       return {
         ...entry,
-        date: startAt.toISOString(),
-        startedAt: startAt.toISOString(),
-        endedAt: endAt.toISOString(),
-        duration: Math.round((endAt.getTime() - startAt.getTime()) / 1000),
+        date: nextStartedAt,
+        startedAt: nextStartedAt,
+        endedAt: endAt,
+        duration: Math.round((new Date(endAt).getTime() - new Date(nextStartedAt).getTime()) / 1000),
         edited: true,
       };
     }));
@@ -763,7 +776,7 @@ export default function TimePage() {
                           placeholder="Note"
                           style={{ width: 140, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
                         <td><input className="edit-inp" type="date" value={entry.date.slice(0, 10)}
-                          onChange={(e) => handleEdit(idx, "date", e.target.value + "T12:00:00.000Z")}
+                          onChange={(e) => handleDateEdit(idx, e.target.value)}
                           style={{ width: 130, padding: "4px 6px", border: "1px solid var(--line)", borderRadius: 6, font: "inherit", fontSize: 13 }} /></td>
                         <td style={{ whiteSpace: "nowrap" }}>
                           <button className="reveal" onClick={() => saveEdit(idx)} style={{ marginRight: 10 }}>Save</button>
