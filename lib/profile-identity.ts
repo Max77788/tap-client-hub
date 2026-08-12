@@ -8,12 +8,17 @@ type Profile = {
   email_2fa_enabled?: boolean | null;
 };
 
+/**
+ * Returns the first-name login alias. Profile names may include a username
+ * suffix, for example "Singh,Ben.singh", but the login alias is simply "ben".
+ */
 export function usernameFromFullName(fullName: string | null | undefined) {
   const value = (fullName || "").trim();
   if (!value) return "";
-  const firstName = value.includes(",")
-    ? value.split(",").slice(1).join(",").trim().split(/\s+/)[0]
-    : value.split(/\s+/)[0];
+  const givenNameSegment = value.includes(",")
+    ? value.split(",").slice(1).join(",").trim()
+    : value;
+  const firstName = givenNameSegment.split(/[.\s]+/)[0];
   return (firstName || "").toLowerCase();
 }
 
