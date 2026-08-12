@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { formatPayrollStartDate, getPayrollStartDate } from "@/lib/payroll-schedule";
+import { COMMENT_CATEGORIES, normalizeCommentCategory, type CommentCategory } from "@/lib/comment-category";
 
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
@@ -296,6 +297,7 @@ export default function WorklistTable({
   const [activeStxItemId, setActiveStxItemId] = useState<string | null>(null);
   const [activeRenewalItemId, setActiveRenewalItemId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [commentCategory, setCommentCategory] = useState<CommentCategory>("Other");
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentPanelPos, setCommentPanelPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -517,7 +519,7 @@ export default function WorklistTable({
     return "You";
   };
 
-  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxItemId?: string, renewalItemId?: string) => {
+  const addComment = useCallback(async (clientId: string, monthIdx: number, text: string, stxItemId?: string, renewalItemId?: string, category: CommentCategory = "Other") => {
     if (!text.trim()) return;
     // Handle composite IDs from STX page (clientId::csId::serviceName)
     const origId = clientId.includes("::") ? clientId.split("::")[0] : clientId;
@@ -531,6 +533,7 @@ export default function WorklistTable({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       month: monthIdx,
       text: text.trim(),
+      category: normalizeCommentCategory(category),
       author: getAuthorName(),
       createdAt: new Date().toISOString(),
     };
@@ -1826,6 +1829,7 @@ export default function WorklistTable({
                                   <div key={cm.id} style={{ background: "var(--paper)", borderRadius: 7, padding: "6px 8px", position: "relative" }}>
                                     <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
                                       <b>{cm.author}</b> · {new Date(cm.createdAt).toLocaleString()}
+                                      {isStxItem && <span style={{ marginLeft: 5, padding: "1px 4px", borderRadius: 4, background: "#e8f0fe", color: "#1d4ed8", fontWeight: 700 }}>{normalizeCommentCategory(cm.category)}</span>}
                                     </div>
                                     <div style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.4 }}>{cm.text}</div>
                                     <button
@@ -1837,19 +1841,29 @@ export default function WorklistTable({
                                 ))}
                               </div>
                             )}
-                            <div style={{ display: "flex", gap: 6 }}>
+                            <div style={{ display: "flex", gap: 6, marginBottom: isStxItem ? 6 : 0 }}>
                               <input
                                 style={{ flex: 1, padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
                                 value={commentText}
                                 onChange={e => setCommentText(e.target.value)}
-                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined); } }}
+                                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addComment(client.id, i, commentText, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined, commentCategory); setCommentCategory("Other"); } }}
                                 placeholder="Add a comment…"
                               />
                               <button
-                                onClick={() => addComment(client.id, i, commentText, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined)}
+                                onClick={() => { addComment(client.id, i, commentText, activeStxItemId ?? undefined, activeRenewalItemId ?? undefined, commentCategory); setCommentCategory("Other"); }}
                                 style={{ all: "unset", cursor: "pointer", background: "var(--teal)", color: "#fff", padding: "5px 10px", borderRadius: 7, fontWeight: 600, fontSize: 12 }}
                               >Send</button>
                             </div>
+                            {isStxItem && (
+                              <select
+                                aria-label="Sales Tax comment category"
+                                value={commentCategory}
+                                onChange={e => setCommentCategory(normalizeCommentCategory(e.target.value))}
+                                style={{ width: "100%", padding: "5px 8px", border: "1px solid var(--line)", borderRadius: 7, fontSize: 12, background: "var(--paper)" }}
+                              >
+                                {COMMENT_CATEGORIES.map(category => <option key={category} value={category}>{category}</option>)}
+                              </select>
+                            )}
                           </div>
                         )}
                       </td>

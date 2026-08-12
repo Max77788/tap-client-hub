@@ -220,6 +220,7 @@ export async function GET(request: Request) {
                       text: cmt.body,
                       body: cmt.body,
                       author: cmt.author_label || "",
+                      category: cmt.category || "Other",
                       createdAt: cmt.created_at,
                     });
                     break;
@@ -625,6 +626,7 @@ export async function PUT(request: Request) {
             month: cm.month ?? null,
             body,
             author_label: cm.author || "",
+            category: cm.category || "Other",
             created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
           });
           if (commentInsertErr) throw new Error(`STX comment insert error: ${commentInsertErr.message}`);
@@ -673,14 +675,14 @@ export async function PUT(request: Request) {
           const body = cm.text || cm.body || "";
           if (!body) continue;
           const { error: commentInsertErr } = await supabase.from("comments").insert({
-            entity_type: "state_renewal_item",
-            entity_id: itemId,
-            month: cm.month ?? null,
-            body,
-            author_label: cm.author || "",
-            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
-          });
-          if (commentInsertErr) throw new Error(`SR comment insert error: ${commentInsertErr.message}`);
+          entity_type: "state_renewal_item",
+          entity_id: itemId,
+          month: cm.month ?? null,
+          body,
+          author_label: cm.author || "",
+          created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+        });
+        if (commentInsertErr) throw new Error(`SR comment insert error: ${commentInsertErr.message}`);
         }
       }
     }
@@ -1088,6 +1090,7 @@ export async function PATCH(request: Request) {
             month: cm.month ?? null,
             body,
             author_label: cm.author || "",
+            category: cm.category || "Other",
             created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
           });
           if (commentInsertErr) throw new Error(`STX comment insert error: ${commentInsertErr.message}`);
@@ -1138,14 +1141,14 @@ export async function PATCH(request: Request) {
           const body = cm.text || cm.body || "";
           if (!body) continue;
           const { error: commentInsertErr } = await supabase.from("comments").insert({
-            entity_type: "state_renewal_item",
-            entity_id: itemId,
-            month: cm.month ?? null,
-            body,
-            author_label: cm.author || "",
-            created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
-          });
-          if (commentInsertErr) throw new Error(`SR comment insert error: ${commentInsertErr.message}`);
+          entity_type: "state_renewal_item",
+          entity_id: itemId,
+          month: cm.month ?? null,
+          body,
+          author_label: cm.author || "",
+          created_at: cm.createdAt ? new Date(cm.createdAt).toISOString() : new Date().toISOString(),
+        });
+        if (commentInsertErr) throw new Error(`SR comment insert error: ${commentInsertErr.message}`);
         }
       }
     }

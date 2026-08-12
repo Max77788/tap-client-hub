@@ -29,6 +29,7 @@ export interface CommentEntry {
   text: string;
   author: string;
   createdAt: string; // ISO timestamp
+  category?: "Delayed" | "Waiting on client" | "Issues" | "Other";
 }
 
 export interface SalesTaxLineItem {
