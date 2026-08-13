@@ -7,6 +7,7 @@ import { COMMENT_CATEGORIES, normalizeCommentCategory, type CommentCategory } fr
 
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
+import { filterWorklistKpi, type WorklistKpi } from "@/lib/worklist-kpi-filter";
 
 
 // ── Worklist stage types ──
@@ -138,6 +139,20 @@ function getActiveMonths(
 
 // ── Payroll: max runs per month by cadence ──
 type PayrollCadence = "Weekly" | "Bi-Weekly" | "Bi-Weekly A" | "Bi-Weekly B" | "Semi-Monthly" | "Monthly";
+
+// Payroll frequency values have historically arrived from imports in several
+// spellings. Keep the filter comparison on one canonical display value.
+function normalizePayrollCadence(value: unknown): PayrollCadence {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+  if (normalized === "weekly") return "Weekly";
+  if (normalized === "bi-weekly" || normalized === "biweekly") return "Bi-Weekly A";
+  if (normalized === "bi-weekly-a" || normalized === "biweekly-a") return "Bi-Weekly A";
+  if (normalized === "bi-weekly-b" || normalized === "biweekly-b") return "Bi-Weekly B";
+  if (normalized === "semi-monthly" || normalized === "semimonthly") return "Semi-Monthly";
+  if (normalized === "monthly") return "Monthly";
+  return "Monthly";
+}
+
 function getMaxRunsPerMonth(cadence: PayrollCadence): number {
   switch (cadence) {
     case "Weekly":   return 5;
@@ -290,6 +305,7 @@ export default function WorklistTable({
   const [filingTypeFilter, setFilingTypeFilter] = useState<string>("All");
   const [dueMonthFilter, setDueMonthFilter] = useState<string>("All");
   const [assignedFilter, setAssignedFilter] = useState<string>("All");
+  const [kpiFilter, setKpiFilter] = useState<WorklistKpi>("all");
 
   // ── Comment panel state ──
   const [activeCommentClientId, setActiveCommentClientId] = useState<string | null>(null);
@@ -400,7 +416,7 @@ export default function WorklistTable({
   }, [activeDropdown]);
 
   // ── Filter clients by search + cadence ──
-  const filteredClients = useMemo(
+  const baseFilteredClients = useMemo(
     () => {
       let list = serviceClients;
       if (search) {
@@ -437,13 +453,8 @@ export default function WorklistTable({
         if (variant === "payroll") {
           list = list.filter((c) => {
             const svc = c.services?.find((s: any) => s.key === "payroll");
-            const freq = svc?.frequency || "Monthly";
-            const cadence = freq === "Weekly" ? "Weekly"
-              : freq === "Bi-Weekly" || freq === "Bi-Weekly A" ? "Bi-Weekly A"
-              : freq === "Bi-Weekly B" ? "Bi-Weekly B"
-              : freq === "Semi-Monthly" ? "Semi-Monthly"
-              : "Monthly";
-            return cadence === cadenceFilter || freq === cadenceFilter;
+            const cadence = normalizePayrollCadence(svc?.frequency);
+            return cadence === cadenceFilter;
           });
         } else {
           // financials, sales_tax — filter by frequency directly
@@ -1131,6 +1142,14 @@ export default function WorklistTable({
     return { dueThisMonth, inProgress, waiting, prepared, done, behind, notStarted, currentMonthName, yDue, yDone };
   }, [serviceClients, serviceKey, currentMonth, year, currentYear, worklistState, isHistorical, prCounts, t9Counts]);
 
+  const filteredClients = useMemo(() => filterWorklistKpi(baseFilteredClients, kpiFilter, {
+    serviceKey,
+    variant,
+    currentMonth,
+    stages: worklistState,
+    periodCounts: variant === "payroll" ? prCounts : variant === "t9" ? t9Counts : {},
+  }), [baseFilteredClients, kpiFilter, serviceKey, variant, currentMonth, worklistState, prCounts, t9Counts]);
+
   // ── Pipe payroll missing runs up to parent ──
   useEffect(() => {
     if (variant === "payroll" && onPayrollMissingRuns) {
@@ -1174,35 +1193,35 @@ export default function WorklistTable({
       {/* ── Stats row (demo: stat cards) ── */}
       {variant === "t9" ? (
         <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-          <StatCard label="Expected (year)" value={stats.expTot} color="var(--ink)" />
-          <StatCard label="Processed" value={stats.doneTot} color="var(--green)" />
-          <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" />
-          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" />
+          <StatCard label="Expected (year)" value={stats.expTot} color="var(--ink)" active={kpiFilter === "all"} onClick={() => setKpiFilter("all")} />
+          <StatCard label="Processed" value={stats.doneTot} color="var(--green)" active={kpiFilter === "processed"} onClick={() => setKpiFilter("processed")} />
+          <StatCard label="Remaining" value={Math.max(0, stats.expTot - stats.doneTot)} color="var(--amber)" active={kpiFilter === "remaining"} onClick={() => setKpiFilter("remaining")} />
+          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Period total`} value={stats.isCur ? stats.curMonthCount : stats.doneTot} color="var(--blue)" active={kpiFilter === "current_month"} onClick={() => setKpiFilter("current_month")} />
         </div>
       ) : variant === "payroll" ? (
         <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-          <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" />
-          <StatCard label="Total Runs" value={stats.totalRuns ?? 0} color="var(--blue)" />
-          <StatCard label="Max Runs" value={stats.totalMax ?? 0} color="var(--muted)" />
-          <StatCard label="Completion" value={(stats.pct ?? 0) + "%"} color="var(--green)" />
-          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Month runs`} value={stats.monthRuns ?? 0} color="var(--amber)" />
+          <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" active={kpiFilter === "all"} onClick={() => setKpiFilter("all")} />
+          <StatCard label="Total Runs" value={stats.totalRuns ?? 0} color="var(--blue)" active={kpiFilter === "runs"} onClick={() => setKpiFilter("runs")} />
+          <StatCard label="Max Runs" value={stats.totalMax ?? 0} color="var(--muted)" active={kpiFilter === "max_runs"} onClick={() => setKpiFilter("max_runs")} />
+          <StatCard label="Completion" value={(stats.pct ?? 0) + "%"} color="var(--green)" active={kpiFilter === "incomplete"} onClick={() => setKpiFilter("incomplete")} />
+          <StatCard label={stats.isCur ? `In ${stats.currentMonthName}` : `Month runs`} value={stats.monthRuns ?? 0} color="var(--amber)" active={kpiFilter === "month_runs"} onClick={() => setKpiFilter("month_runs")} />
         </div>
       ) : (
       <div className="stats" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
         {!isHistorical ? (
           <>
-            <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" />
-            <StatCard label="In progress" value={stats.inProgress} color="var(--blue)" />
-            <StatCard label="Waiting on client" value={stats.waiting} color="var(--amber)" />
-            <StatCard label="Delayed" value={stats.behind ?? 0} color="var(--red)" />
-            <StatCard label={variant === "tax_returns" ? "Filed" : "Done"} value={stats.done} color="var(--green)" />
-            <StatCard label="Not started" value={stats.notStarted || 0} color="var(--red)" />
+            <StatCard label="Total Clients" value={serviceClients.length} color="var(--ink)" active={kpiFilter === "all"} onClick={() => setKpiFilter("all")} />
+            <StatCard label="In progress" value={stats.inProgress} color="var(--blue)" active={kpiFilter === "in_progress"} onClick={() => setKpiFilter("in_progress")} />
+            <StatCard label="Waiting on client" value={stats.waiting} color="var(--amber)" active={kpiFilter === "waiting"} onClick={() => setKpiFilter("waiting")} />
+            <StatCard label="Delayed" value={stats.behind ?? 0} color="var(--red)" active={kpiFilter === "delayed"} onClick={() => setKpiFilter("delayed")} />
+            <StatCard label={variant === "tax_returns" ? "Filed" : "Done"} value={stats.done} color="var(--green)" active={kpiFilter === "done"} onClick={() => setKpiFilter("done")} />
+            <StatCard label="Not started" value={stats.notStarted || 0} color="var(--red)" active={kpiFilter === "not_started"} onClick={() => setKpiFilter("not_started")} />
           </>
         ) : (
           <>
-            <StatCard label="Total periods" value={stats.yDue} color="var(--ink)" />
-            <StatCard label="Completed" value={stats.yDone} color="var(--green)" />
-            <StatCard label="Not completed" value={Math.max(0, stats.yDue - stats.yDone)} color="var(--amber)" />
+            <StatCard label="Total periods" value={stats.yDue} color="var(--ink)" active={kpiFilter === "all"} onClick={() => setKpiFilter("all")} />
+            <StatCard label="Completed" value={stats.yDone} color="var(--green)" active={kpiFilter === "done"} onClick={() => setKpiFilter("done")} />
+            <StatCard label="Not completed" value={Math.max(0, stats.yDue - stats.yDone)} color="var(--amber)" active={kpiFilter === "not_started"} onClick={() => setKpiFilter("not_started")} />
           </>
         )}
       </div>
@@ -2021,18 +2040,25 @@ function StatCard({
   label,
   value,
   color,
+  active = false,
+  onClick,
 }: {
   label: string;
   value: number | string;
   color?: string;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
       className="statcard"
+      onClick={onClick}
+      aria-pressed={active}
       style={{
         flex: 1, minWidth: 120,
         backgroundColor: "var(--card)",
-        border: "1px solid var(--line)",
+        border: active ? `2px solid ${color || "var(--teal)"}` : "1px solid var(--line)",
         borderRadius: 13,
         padding: "13px 16px",
         boxShadow: "0 1px 2px rgba(33,31,26,0.04)",
@@ -2048,6 +2074,6 @@ function StatCard({
       <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
         {label}
       </div>
-    </div>
+    </button>
   );
 }
