@@ -169,6 +169,7 @@ export default function RootLayout({
   const [realRole, setRealRole] = useState<string>("staff");
   const [userModules, setUserModules] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
@@ -189,6 +190,7 @@ export default function RootLayout({
         setRealRole(resolvedRole);
         setRole(resolvedRole);
         setUserModules(Array.isArray(data.modules) ? data.modules : []);
+        setUserName(String(data.name || ""));
         setUserEmail(String(data.email || ""));
         setAccessLoading(false);
       })
@@ -349,10 +351,19 @@ export default function RootLayout({
               </div>
 
               <div className="flex items-center gap-3">
-                {userEmail && (
-                  <span className="hidden sm:block text-[12px] text-[var(--muted)] max-w-[160px] truncate">
-                    {userEmail}
-                  </span>
+                {(userName || userEmail) && (
+                  <div className="flex flex-col items-end min-w-0 max-w-[220px] leading-tight" aria-label="Signed-in user">
+                    {userName && (
+                      <span className="text-[13px] font-semibold text-[var(--ink)] truncate max-w-full">
+                        {userName}
+                      </span>
+                    )}
+                    {userEmail && (
+                      <span className="text-[11px] text-[var(--muted)] truncate max-w-full">
+                        {userEmail}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {/* ── Year selector for worklist pages ── */}
                 {["/fin", "/pr", "/stx", "/t9", "/rend", "/tax"].includes(pathname) && (
