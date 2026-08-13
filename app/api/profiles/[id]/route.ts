@@ -20,13 +20,35 @@ export async function DELETE(
 
     const supabase = createAdminClient();
 
-    // 1. Delete the auth user
-    const { error: authError } = await supabase.auth.admin.deleteUser(id);
-    if (authError) {
-      return NextResponse.json(
-        { error: authError.message },
-        { status: 500 }
-      );
+    // Profiles imported from the legacy identity source do not always use the
+    // Supabase Auth UUID as their profile id. Resolve the auth user by the
+    // profile email before deleting, just as the PATCH handler does.
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("id", id)
+      .maybeSingle();
+    const profile = profileData as { id: string; email?: string | null } | null;
+    if (!profile) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    let authUserId = id;
+    if (profile.email) {
+      const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (listError) {
+        return NextResponse.json({ error: listError.message }, { status: 500 });
+      }
+      const authUserList = (authUsers as unknown as { users: Array<{ id: string; email?: string | null }> }).users || [];
+      const authUser = authUserList.find((user) => user.email?.toLowerCase() === profile.email!.toLowerCase());
+      if (authUser) authUserId = authUser.id;
+    }
+
+    // 1. Delete the auth user when one exists. Imported profile rows may not
+    // have a corresponding Auth account, but should still be removable.
+    const { error: authError } = await supabase.auth.admin.deleteUser(authUserId);
+    if (authError && !authError.message.toLowerCase().includes("user not found")) {
+      return NextResponse.json({ error: authError.message }, { status: 500 });
     }
 
     // 2. Delete the profile row (triggers cascade or manual)
