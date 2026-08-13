@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Password Vault", href: "/vault", icon: "🔒", module: "Vault" },
   { label: "Users & Access", href: "/users", icon: "🪪", module: "Users & Access" },
   { label: "Help & Support", href: "/support", icon: "🛟", module: "Support" },
+  { label: "Settings", href: "/settings", icon: "⚙️" },
 ];
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
