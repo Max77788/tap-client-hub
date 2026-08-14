@@ -16,6 +16,7 @@ import ClientSlideover from "@/components/client-slideover";
 import ClientModal from "@/components/client-modal";
 import { PageSkeleton } from "@/components/loading-skeleton";
 import { clientKpiFilter, type ClientKpi } from "@/lib/client-kpi-filter";
+import { exportClientCsv } from "@/lib/export-csv";
 
 type DisplayItem =
   | { kind: "group"; name: string; clients: Client[] }
@@ -121,28 +122,8 @@ export default function ClientsPage() {
 
   // ── CSV Export ──
   const exportCSV = useCallback(() => {
-    const headers = ["Name", "CID", "Type", "Group", "City", "State", "Assigned Staff", "Services", "Email", "Phone"];
-    const rows = clients.map(c => [
-      `"${c.name.replace(/"/g, '""')}"`,
-      c.cid,
-      c.type,
-      `"${(c.group || "").replace(/"/g, '""')}"`,
-      c.city,
-      c.state,
-      c.assignedStaff || "",
-      `"${c.services.filter(s => s.enabled).map(s => s.label || s.key).join(", ")}"`,
-      (c.emails?.[0] || ""),
-      (c.phones?.[0] || ""),
-    ].join(","));
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tap-clients-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [clients]);
+    exportClientCsv(filteredClients, { filenamePrefix: "TAP Clients" });
+  }, [filteredClients]);
 
   // ── Handlers ──
   function openSlideover(id: string) {
@@ -325,7 +306,7 @@ export default function ClientsPage() {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Export
+              Export {filteredClients.length} filtered
             </button>
           </div>
 

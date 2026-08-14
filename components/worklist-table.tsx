@@ -8,6 +8,7 @@ import { COMMENT_CATEGORIES, normalizeCommentCategory, type CommentCategory } fr
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 import { filterWorklistKpi, type WorklistKpi } from "@/lib/worklist-kpi-filter";
+import { exportClientCsv, serviceLabel } from "@/lib/export-csv";
 
 
 // ── Worklist stage types ──
@@ -1150,6 +1151,13 @@ export default function WorklistTable({
     periodCounts: variant === "payroll" ? prCounts : variant === "t9" ? t9Counts : {},
   }), [baseFilteredClients, kpiFilter, serviceKey, variant, currentMonth, worklistState, prCounts, t9Counts]);
 
+  const exportCSV = useCallback(() => {
+    exportClientCsv(filteredClients, {
+      serviceKey,
+      filenamePrefix: serviceLabel(serviceKey),
+    });
+  }, [filteredClients, serviceKey]);
+
   // ── Pipe payroll missing runs up to parent ──
   useEffect(() => {
     if (variant === "payroll" && onPayrollMissingRuns) {
@@ -1303,6 +1311,14 @@ export default function WorklistTable({
             ? `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · highlighted column = this month (${MONTHS_SHORT[currentMonth]})`
             : `${serviceClients.length} client${serviceClients.length !== 1 ? "s" : ""} · ${year} history`}
         </div>
+        <button
+          type="button"
+          onClick={exportCSV}
+          title={`Export ${filteredClients.length} filtered ${serviceLabel(serviceKey)} clients`}
+          className="px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--card)] text-xs font-semibold text-[var(--ink)] hover:border-[var(--teal)]"
+        >
+          Export {filteredClients.length} filtered
+        </button>
         {/* Legend — status color indicators (hidden for t9 only) */}
         {variant !== "t9" && (
         <div className="flex flex-wrap items-center gap-3.5 text-xs" style={{ zIndex: 5 }}>
