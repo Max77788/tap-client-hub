@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
-import { requireUserDirectoryAccess, requireUserManagementAccess } from "@/lib/access-server";
-import { effectiveModules, sanitizeModulesForRole } from "@/lib/access-policy";
+import { requireUserDirectoryAccess, requireUserManagementAccess, requireUserProfileEditAccess } from "@/lib/access-server";
+import { effectiveModules, sanitizeModulesForRole, sanitizeManagerModules, isPowerUser, normalizeRole } from "@/lib/access-policy";
 import { usernameFromFullName } from "@/lib/profile-identity";
 
 export const dynamic = "force-dynamic";
@@ -96,8 +96,8 @@ export async function GET() {
       mgr: mgrName,
       mgrRaw: nameMap[p.reporting_manager] || null,
       modules: effectiveModules(p.role, p.modules),
-      status: STATUS_MAP[p.invite_status] ||
-        (p.active ? "Active" : "Inactive"),
+      status: p.active === false ? "Inactive" : (STATUS_MAP[p.invite_status] || "Active"),
+      active: p.active !== false,
       email_2fa_enabled: p.email_2fa_enabled ?? false,
       allow_edit_client_data: p.allow_edit_client_data === true,
     };
@@ -193,11 +193,12 @@ export async function POST(request: Request) {
 // ── Also add PATCH for updating profiles ──
 
 export async function PATCH(request: Request) {
-  const access = await requireUserManagementAccess();
+  const access = await requireUserProfileEditAccess();
   if (access.status) return NextResponse.json({ error: access.status === 401 ? "Unauthorized" : "Forbidden" }, { status: access.status });
+  const isManagerEdit = !access.identity!.canManageUsers;
   try {
     const body = await request.json();
-    const { id, full_name, email, role, location, reporting_manager, modules, allow_edit_client_data, email_2fa_enabled } = body;
+    const { id, full_name, email, role, location, reporting_manager, modules, allow_edit_client_data, email_2fa_enabled, active } = body;
 
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
@@ -210,6 +211,63 @@ export async function PATCH(request: Request) {
     );
 
     const adminSupabase = createAdminClient();
+
+    // ── Manager edit: explicit, safe allowlist ──
+    // Managers may update ordinary profile fields (name, location, reporting
+    // manager) and assigned modules for existing non-power users. They can
+    // never change role, promote to Owner/Admin, alter active/invite status,
+    // change password/email/2FA, or grant the privileged "Users & Access"
+    // module. Only the allowlisted fields below are written; everything else
+    // is ignored regardless of what the client sends.
+    if (isManagerEdit) {
+      const { data: targetData } = await adminSupabase
+        .from("profiles")
+        .select("role, modules")
+        .eq("id", id)
+        .maybeSingle();
+      const target = targetData as { role?: string | null; modules?: unknown } | null;
+      if (!target) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      const targetRole = normalizeRole(target.role);
+      if (isPowerUser(targetRole)) {
+        return NextResponse.json({ error: "Managers cannot edit Owner/Admin accounts" }, { status: 403 });
+      }
+
+      const updateData: { full_name?: string; location?: string | null; reporting_manager?: string | null; modules?: string[] } = {};
+      if (full_name !== undefined) updateData.full_name = full_name;
+      if (location !== undefined) updateData.location = location;
+
+      if (reporting_manager !== undefined) {
+        if (!reporting_manager || reporting_manager === "—") {
+          updateData.reporting_manager = null;
+        } else {
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(reporting_manager)) {
+            updateData.reporting_manager = reporting_manager;
+          } else {
+            const { data: mgrProfile } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("full_name", reporting_manager)
+              .maybeSingle();
+            updateData.reporting_manager = mgrProfile ? mgrProfile.id : null;
+          }
+        }
+      }
+
+      if (modules !== undefined) {
+        updateData.modules = sanitizeManagerModules(targetRole, target.modules, modules);
+      }
+
+      const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // ── Owner/Admin full edit (unchanged) ──
     const { data: targetProfileData } = await adminSupabase.from("profiles").select("email").eq("id", id).maybeSingle();
     const targetEmail = (targetProfileData as unknown as { email?: string } | null)?.email?.toLowerCase();
     const { data: authUsers } = await adminSupabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -243,7 +301,7 @@ export async function PATCH(request: Request) {
       }
       updateData.modules = sanitizeModulesForRole(moduleRole, modules);
     }
-    if (body.active !== undefined) updateData.active = body.active;
+    if (active !== undefined) updateData.active = active === true;
     if (body.invite_status !== undefined) updateData.invite_status = body.invite_status;
     if (allow_edit_client_data !== undefined) updateData.allow_edit_client_data = allow_edit_client_data === true;
 

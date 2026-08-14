@@ -25,7 +25,7 @@ assert.equal(policy.normalizeRole("Owner / Admin"), "owner");
 assert.equal(policy.normalizeRole("Offshore (India)"), "offshore");
 assert.equal(policy.canManageUsers("admin"), true);
 assert.equal(policy.canManageUsers("owner"), true);
-assert.equal(policy.canManageUsers("manager"), false, "manager access is view-only");
+assert.equal(policy.canManageUsers("manager"), false, "canManageUsers stays owner/admin-only (add/delete/provision)");
 assert.equal(policy.effectiveModules("manager", ["Clients", "Users & Access"]).includes("Users & Access"), true, "assigned managers can see Users & Access");
 assert.equal(policy.canAccessPathname("manager", ["Clients", "Users & Access"], "/users"), true, "assigned managers can open the Users & Access directory");
 for (const role of ["staff", "offshore"]) {
@@ -40,6 +40,25 @@ assert.equal(policy.canAccessPathname("offshore", ["Vault"], "/vault"), true);
 assert.equal(policy.canAccessPathname("admin", [], "/users"), true);
 assert.equal(policy.firstAllowedRoute("staff", ["Payroll"]), "/pr");
 assert.deepEqual(Array.from(policy.sanitizeModulesForRole("staff", ["Clients", "Users & Access"])), ["Clients"]);
+
+// Manager-safe module sanitization: managers may edit ordinary module
+// assignments, but can never grant (nor revoke) the role-controlled
+// "Users & Access" module for a target.
+assert.deepEqual(
+  Array.from(policy.sanitizeManagerModules("staff", [], ["Clients", "Users & Access"])),
+  ["Clients"],
+  "managers cannot grant Users & Access to non-managers",
+);
+assert.deepEqual(
+  Array.from(policy.sanitizeManagerModules("manager", ["Clients", "Users & Access"], ["Clients"])),
+  ["Clients", "Users & Access"],
+  "managers cannot revoke an existing Users & Access assignment",
+);
+assert.deepEqual(
+  Array.from(policy.sanitizeManagerModules("staff", ["Clients", "Payroll"], ["Clients"])),
+  ["Clients"],
+  "managers can edit ordinary module assignments",
+);
 
 const layout = read("app/layout.tsx");
 assert.match(layout, /accessLoading/);
@@ -70,10 +89,13 @@ assert.match(profilesRoute, /sanitizeModulesForRole/);
 const usersPage = read("app/users/page.tsx");
 assert.match(usersPage, /canViewUsers/);
 assert.match(usersPage, /if \(!ownerLoading && canViewUsers\) load\(\)/);
-assert.match(usersPage, /m === "Users & Access" && isRestrictedRole/);
-assert.match(usersPage, /onClick=\{isOwner \? \(\) => openModal\(u\) : undefined\}/);
+assert.match(usersPage, /const canEditUsers = isOwner \|\| canViewUsers/);
+assert.match(usersPage, /onClick=\{canEditUsers \? \(\) => openModal\(u\) : undefined\}/);
+assert.match(usersPage, /m === "Users & Access" && \(isRestrictedRole \|\| !isOwner\)/);
 
 const accessServer = read("lib/access-server.ts");
+assert.match(accessServer, /requireUserProfileEditAccess/);
+assert.match(accessServer, /requireUserManagementAccess/);
 assert.match(accessServer, /verifyDemoSession\(cookieStore\.get\("tap_demo_session"\)/);
 assert.match(accessServer, /cookieStore\.get\("tap_demo_user"\)/);
 const demoLoginRoute = read("app/api/demo-login/route.ts");

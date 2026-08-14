@@ -5,7 +5,7 @@ import { PageSkeleton } from "@/components/loading-skeleton";
 
 interface User {
   id: string; name: string; email: string; username: string;
-  role: string; location: string; mgr: string; mgrRaw?: string; modules: string[]; status: string;
+  role: string; location: string; mgr: string; mgrRaw?: string; modules: string[]; status: string; active?: boolean;
   displayName?: string;
   email_2fa_enabled?: boolean;
   allow_edit_client_data?: boolean;
@@ -34,6 +34,8 @@ export default function UsersPage() {
   const [showPassword, setShowPassword] = useState(false);
   const isOwner = currentUser?.role === "owner" || currentUser?.role === "admin";
   const canViewUsers = isOwner || (currentUser?.role === "manager" && currentUser.modules?.includes("Users & Access"));
+  // Managers with Users & Access may edit existing users; only Owners/Admins can add or delete.
+  const canEditUsers = isOwner || canViewUsers;
 
   // ── Load current user (for owner check) ──
   useEffect(() => {
@@ -85,13 +87,13 @@ export default function UsersPage() {
     if (user === "new") {
       setEditForm({
         name: "", location: "", role: "Staff", mgr: "—", username: "",
-        email: "", password: "", modules: [], email_2fa_enabled: false, allow_edit_client_data: false,
+        email: "", password: "", modules: [], active: true, email_2fa_enabled: false, allow_edit_client_data: false,
       });
     } else if (user) {
       setEditForm({
         name: user.name, location: user.location, role: user.role,
         mgr: user.mgrRaw || "—", username: user.username, modules: [...user.modules],
-        email: user.email, password: "", email_2fa_enabled: user.email_2fa_enabled === true, allow_edit_client_data: user.allow_edit_client_data === true,
+        email: user.email, password: "", active: user.active !== false, email_2fa_enabled: user.email_2fa_enabled === true, allow_edit_client_data: user.allow_edit_client_data === true,
       });
     }
   }
@@ -112,6 +114,7 @@ export default function UsersPage() {
             reporting_manager: editForm.mgr === "—" || !editForm.mgr ? null : editForm.mgr,
             modules: editForm.modules || [],
             email: editForm.email,
+            active: editForm.active === true,
             email_2fa_enabled: editForm.email_2fa_enabled === true,
             allow_edit_client_data: editForm.allow_edit_client_data === true,
             ...(editForm.password ? { password: editForm.password } : {}),
@@ -250,7 +253,7 @@ export default function UsersPage() {
       <div className="count" style={{
         color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px",
       }}>
-        {isOwner ? "Click a user to edit their access · use ＋ Add user to provision a new login" : "User directory · Owners and Admins manage accounts and access"}
+        {isOwner ? "Click a user to edit their access · use ＋ Add user to provision a new login" : "Click a user to edit their details and module access · adding and deleting users is Owner/Admin only"}
       </div>
 
       {/* ── Add button ── */}
@@ -283,7 +286,7 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {users.map(u => (
-              <tr key={u.id} onClick={isOwner ? () => openModal(u) : undefined} style={{ cursor: isOwner ? "pointer" : "default" }}>
+              <tr key={u.id} onClick={canEditUsers ? () => openModal(u) : undefined} style={{ cursor: canEditUsers ? "pointer" : "default" }}>
                 <td className="lname">{u.displayName || u.name}</td>
                 <td>{u.location}</td>
                 <td>
@@ -365,7 +368,7 @@ export default function UsersPage() {
                 borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
               }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
 
-              {modalUser !== "new" && (
+              {isOwner && modalUser !== "new" && (
                 <>
                   <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Email address</label>
                   <input className="ef" type="email" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
@@ -415,10 +418,12 @@ export default function UsersPage() {
                 </>
               )}
 
-              <label style={{ display: "flex", gap: 9, alignItems: "flex-start", margin: "14px 0 4px", cursor: "pointer", fontSize: 13, color: "var(--ink)" }}>
-                <input type="checkbox" checked={editForm.email_2fa_enabled === true} onChange={e => setEditForm(p => ({ ...p, email_2fa_enabled: e.target.checked }))} style={{ marginTop: 2 }} />
-                <span><b>Require email two-factor authentication</b><br /><span style={{ color: "var(--muted)", fontSize: 12 }}>A six-digit code is sent to the email address above after the password is accepted.</span></span>
-              </label>
+              {isOwner && (
+                <label style={{ display: "flex", gap: 9, alignItems: "flex-start", margin: "14px 0 4px", cursor: "pointer", fontSize: 13, color: "var(--ink)" }}>
+                  <input type="checkbox" checked={editForm.email_2fa_enabled === true} onChange={e => setEditForm(p => ({ ...p, email_2fa_enabled: e.target.checked }))} style={{ marginTop: 2 }} />
+                  <span><b>Require email two-factor authentication</b><br /><span style={{ color: "var(--muted)", fontSize: 12 }}>A six-digit code is sent to the email address above after the password is accepted.</span></span>
+                </label>
+              )}
 
               {/* Location */}
               <label className="el" style={{
@@ -439,7 +444,7 @@ export default function UsersPage() {
                     textTransform: "uppercase", color: "var(--muted)",
                     margin: "12px 0 4px", display: "block",
                   }}>Role</label>
-                  <select className="ef" style={{
+                  <select className="ef" disabled={!isOwner} style={{
                     width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
                     borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
                   }} value={editForm.role || ""} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
@@ -494,7 +499,7 @@ export default function UsersPage() {
               <div className="modgrid" style={{
                 display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 7, marginTop: 6,
               }}>
-                {MODULES_LIST.filter(m => !(m === "Users & Access" && isRestrictedRole)).map(m => (
+                {MODULES_LIST.filter(m => !(m === "Users & Access" && (isRestrictedRole || !isOwner))).map(m => (
                   <label key={m} style={{
                     display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink)",
                   }}>
@@ -513,15 +518,26 @@ export default function UsersPage() {
                 ))}
               </div>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
-                <input type="checkbox" checked={editForm.allow_edit_client_data === true}
-                  onChange={e => setEditForm(p => ({ ...p, allow_edit_client_data: e.target.checked }))}
-                  style={{ width: "auto" }} />
-                Allow editing client data
-              </label>
+              {isOwner && modalUser !== "new" && (
+                <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
+                  <input type="checkbox" checked={editForm.active === true}
+                    onChange={e => setEditForm(p => ({ ...p, active: e.target.checked }))}
+                    style={{ width: "auto" }} />
+                  Active user
+                </label>
+              )}
+
+              {isOwner && (
+                <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
+                  <input type="checkbox" checked={editForm.allow_edit_client_data === true}
+                    onChange={e => setEditForm(p => ({ ...p, allow_edit_client_data: e.target.checked }))}
+                    style={{ width: "auto" }} />
+                  Allow editing client data
+                </label>
+              )}
 
               {/* Password change (edit mode) */}
-              {modalUser !== "new" && (
+              {isOwner && modalUser !== "new" && (
                 <>
                   <label className="el" style={{
                     fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
@@ -613,7 +629,7 @@ export default function UsersPage() {
               justifyContent: "space-between",
             }}>
               {/* Left: Delete button (edit mode only) */}
-              {modalUser !== "new" && !deleteConfirm && (
+              {isOwner && modalUser !== "new" && !deleteConfirm && (
                 <button className="btn alt" onClick={() => setDeleteConfirm((modalUser as User).name)}
                   style={{
                     all: "unset", cursor: "pointer", background: "transparent",

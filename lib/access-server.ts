@@ -110,6 +110,21 @@ export async function requireUserDirectoryAccess() {
   return { identity, status: null };
 }
 
+/**
+ * Owner/Admin retain full profile edit rights. Managers assigned Users & Access
+ * may edit existing non-power users (see the PATCH route's manager allowlist),
+ * but they cannot add or delete accounts.
+ */
+export async function requireUserProfileEditAccess() {
+  const identity = await resolveAccessIdentity();
+  if (!identity) return { identity: null, status: 401 as const };
+  const canEdit =
+    identity.canManageUsers ||
+    (identity.role === "manager" && identity.modules.includes("Users & Access"));
+  if (!canEdit) return { identity, status: 403 as const };
+  return { identity, status: null };
+}
+
 export async function requireClientDataEditAccess() {
   const identity = await resolveAccessIdentity();
   if (!identity) return { identity: null, status: 401 as const };

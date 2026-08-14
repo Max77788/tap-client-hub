@@ -63,6 +63,27 @@ export function sanitizeModulesForRole(role: unknown, modules: unknown): string[
   return effectiveModules(role, modules);
 }
 
+/**
+ * Manager-safe module sanitization. Managers may edit assigned modules for
+ * existing non-power users, but they may never grant (or revoke) the
+ * role-controlled "Users & Access" module — an existing assignment is
+ * preserved, otherwise it is stripped.
+ */
+export function sanitizeManagerModules(
+  targetRole: unknown,
+  existingModules: unknown,
+  requestedModules: unknown,
+): string[] {
+  const role = normalizeRole(targetRole);
+  const existing = effectiveModules(role, existingModules);
+  const hadUsersAccess = existing.includes("Users & Access");
+  const requested = sanitizeModulesForRole(role, requestedModules).filter(
+    (module) => module !== "Users & Access",
+  );
+  if (hadUsersAccess) requested.push("Users & Access");
+  return [...new Set(requested)];
+}
+
 export function moduleForPathname(pathname: string): string | null {
   // Contacts is a second Clients surface, not an independently assignable module.
   if (pathname === "/contacts") return "Clients";
