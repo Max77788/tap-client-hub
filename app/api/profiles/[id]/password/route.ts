@@ -41,7 +41,8 @@ export async function POST(
       .eq("id", id)
       .maybeSingle();
 
-    if (profile?.email) {
+    if (profile?.email || identity.email) {
+      const canonicalEmail = (profile?.email || identity.email).trim().toLowerCase();
       const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers({
         page: 1,
         perPage: 1000,
@@ -51,7 +52,7 @@ export async function POST(
       }
       const authUserList = (authUsers as unknown as { users: Array<{ id: string; email?: string | null }> }).users || [];
       const matchingAuthUser = authUserList.find(
-        (authUser) => authUser.email?.trim().toLowerCase() === profile.email.trim().toLowerCase()
+        (authUser) => authUser.email?.trim().toLowerCase() === canonicalEmail
       );
       if (!matchingAuthUser) {
         return NextResponse.json({ error: "No login account found for this profile" }, { status: 404 });

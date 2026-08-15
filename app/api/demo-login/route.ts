@@ -5,6 +5,11 @@ import { createDemoSession } from "@/lib/demo-session";
 // Temporary onboarding credential. Keep this server-side and remove the
 // fallback after every active user has selected a personal password.
 const TEMP_PASSWORD = process.env.TAP_TEMP_PASSWORD || "TapHub2024!";
+const LEGACY_DEMO_USERS: Record<string, string> = {
+  "mmatronin@gmail.com": "Max Matronin",
+  "ben@aifusioniqlabs.com": "Ben",
+  "staff@tapallc.com": "Staff Test",
+};
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -35,11 +40,14 @@ export async function POST(request: NextRequest) {
     .ilike("email", email)
     .eq("active", true)
     .maybeSingle();
-  if (error || !profile?.email) {
+  if (error) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
-  const name = profile.full_name || email;
+  const name = profile?.full_name || LEGACY_DEMO_USERS[email];
+  if (!name) {
+    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+  }
   const response = NextResponse.json({ ok: true, name, email, mustChangePassword: true });
   response.cookies.set("tap_demo_session", createDemoSession(email, name), COOKIE_OPTIONS);
   response.cookies.set("tap_demo_user", name, COOKIE_OPTIONS);
