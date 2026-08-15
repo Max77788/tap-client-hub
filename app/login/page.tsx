@@ -14,6 +14,10 @@ function LoginContent() {
   const [twoFACode, setTwoFACode] = useState("");
   const [twoFAMessage, setTwoFAMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotPasswordIdentifier, setForgotPasswordIdentifier] = useState("");
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
 
   // Clear stale demo cookies on mount so login always starts fresh
   useEffect(() => {
@@ -53,6 +57,11 @@ function LoginContent() {
     const { error: authError } = await supabase.auth.signInWithPassword({ email: authEmail, password });
 
     if (!authError) {
+      await fetch("/api/auth/mark-password-change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
       // Check if 2FA is enabled for this user
       try {
         const res = await fetch("/api/2fa/status");
@@ -187,6 +196,27 @@ function LoginContent() {
         err instanceof Error ? err.message : "Verification failed"
       );
       setLoading(false);
+    }
+  }
+
+  async function submitForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setForgotPasswordLoading(true);
+    setForgotPasswordMessage("");
+    try {
+      const response = await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: forgotPasswordIdentifier }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Unable to send the request.");
+      setForgotPasswordMessage("Request sent. Tushar, Lizette, and support will review it and contact you.");
+      setForgotPasswordIdentifier("");
+    } catch (err) {
+      setForgotPasswordMessage(err instanceof Error ? err.message : "Unable to send the request.");
+    } finally {
+      setForgotPasswordLoading(false);
     }
   }
 
@@ -358,7 +388,14 @@ function LoginContent() {
                   >
                     Password
                   </label>
-                  {/* Forgot password? — contact admin for reset */}
+                  <button
+                    type="button"
+                    onClick={() => { setForgotPasswordOpen(true); setForgotPasswordMessage(""); setForgotPasswordIdentifier(email); }}
+                    className="text-xs font-medium hover:underline"
+                    style={{ color: "var(--teal)", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                  >
+                    Forgot password?
+                  </button>
                 </div>
                 <div style={{ position: "relative" }}>
                 <input
@@ -438,6 +475,25 @@ function LoginContent() {
                 {loading ? "Signing in..." : "Sign in with email"}
               </button>
             </form>
+
+            {forgotPasswordOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(23,32,51,.35)" }}>
+                <div className="w-full max-w-sm rounded-xl p-6" style={{ background: "var(--card)", boxShadow: "var(--shadow)" }}>
+                  <h2 className="text-lg font-semibold" style={{ color: "var(--ink)", fontFamily: '"Fraunces", Georgia, serif' }}>Forgot password?</h2>
+                  <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>
+                    Enter your username or email. We&apos;ll notify Tushar, Lizette, and support@aifusioniqlabs.com so they can verify your identity and reset access.
+                  </p>
+                  <form onSubmit={submitForgotPassword} className="space-y-3 mt-4">
+                    <input autoFocus type="text" required value={forgotPasswordIdentifier} onChange={(e) => setForgotPasswordIdentifier(e.target.value)} placeholder="Username or email address" className="w-full px-3.5 py-2.5 rounded-lg text-sm border outline-none" style={{ borderColor: "var(--line)", background: "var(--card)", color: "var(--ink)" }} />
+                    {forgotPasswordMessage && <p role="status" className="text-sm" style={{ color: forgotPasswordMessage.startsWith("Request sent") ? "var(--green)" : "var(--red)" }}>{forgotPasswordMessage}</p>}
+                    <div className="flex gap-2 justify-end">
+                      <button type="button" onClick={() => setForgotPasswordOpen(false)} className="px-3 py-2 rounded-lg text-sm border" style={{ borderColor: "var(--line)", color: "var(--ink)" }}>Close</button>
+                      <button type="submit" disabled={forgotPasswordLoading} className="px-3 py-2 rounded-lg text-sm font-semibold disabled:opacity-60" style={{ background: "var(--teal)", color: "#fff" }}>{forgotPasswordLoading ? "Sending..." : "Send request"}</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
 
             <p
               className="text-center text-xs mt-6"

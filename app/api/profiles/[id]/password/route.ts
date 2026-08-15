@@ -31,7 +31,35 @@ export async function POST(
 
     const supabase = createAdminClient();
 
-    const { error } = await supabase.auth.admin.updateUserById(id, {
+    // `profiles.id` is not guaranteed to be the Supabase Auth user id. TAP Hub
+    // has legacy/imported profiles where the two UUIDs differ. Resolve the
+    // auth account by the profile's canonical email before updating it.
+    let authUserId = id;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (profile?.email) {
+      const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      if (listError) {
+        return NextResponse.json({ error: listError.message }, { status: 500 });
+      }
+      const authUserList = (authUsers as unknown as { users: Array<{ id: string; email?: string | null }> }).users || [];
+      const matchingAuthUser = authUserList.find(
+        (authUser) => authUser.email?.trim().toLowerCase() === profile.email.trim().toLowerCase()
+      );
+      if (!matchingAuthUser) {
+        return NextResponse.json({ error: "No login account found for this profile" }, { status: 404 });
+      }
+      authUserId = matchingAuthUser.id;
+    }
+
+    const { error } = await supabase.auth.admin.updateUserById(authUserId, {
       password,
     });
 
@@ -42,7 +70,9 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    response.cookies.delete("tap_force_password");
+    return response;
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message || "Internal server error" },
