@@ -260,9 +260,19 @@ export async function PATCH(request: Request) {
         updateData.modules = sanitizeManagerModules(targetRole, target.modules, modules);
       }
 
-      const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
+      // Use the service-role client for writes. The anon client has no request
+      // auth session here, so RLS can silently update zero rows without an error.
+      const { data: updatedProfile, error } = await adminSupabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", id)
+        .select("id")
+        .maybeSingle();
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      if (!updatedProfile) {
+        return NextResponse.json({ error: "User profile was not updated" }, { status: 404 });
       }
       return NextResponse.json({ success: true });
     }
@@ -301,7 +311,15 @@ export async function PATCH(request: Request) {
       }
       updateData.modules = sanitizeModulesForRole(moduleRole, modules);
     }
-    if (active !== undefined) updateData.active = active === true;
+    if (active !== undefined) {
+      updateData.active = active === true;
+      // The Users & Access checkbox represents the effective account status.
+      // Keep the legacy invite_status field synchronized unless an explicit
+      // invite status was supplied by an administrative caller.
+      if (body.invite_status === undefined) {
+        updateData.invite_status = active === true ? "active" : "disabled";
+      }
+    }
     if (body.invite_status !== undefined) updateData.invite_status = body.invite_status;
     if (allow_edit_client_data !== undefined) updateData.allow_edit_client_data = allow_edit_client_data === true;
 
@@ -337,13 +355,21 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const { error } = await supabase
+    // Use the service-role client for the profile write. The anon client does
+    // not carry the browser session in this route and RLS can otherwise make
+    // the update a silent no-op.
+    const { data: updatedProfile, error } = await adminSupabase
       .from("profiles")
       .update(updateData)
-      .eq("id", id);
+      .eq("id", id)
+      .select("id, active")
+      .maybeSingle();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!updatedProfile) {
+      return NextResponse.json({ error: "User profile was not updated" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
