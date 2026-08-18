@@ -44,6 +44,9 @@ export default function SettingsPage() {
         const res2fa = await fetch("/api/2fa/status");
         const status = await res2fa.json();
         if (cancelled) return;
+        // /api/2fa/status is the authoritative source for this field. Keep the
+        // user state in sync because the render branches use email_2fa_enabled.
+        setUser(p => p ? { ...p, email_2fa_enabled: status.enabled === true } : p);
         if (status.enabled) setStep("done");
         else setStep("setup");
       } catch {
