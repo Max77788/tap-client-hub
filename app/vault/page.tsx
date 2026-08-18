@@ -17,6 +17,7 @@ export default function VaultPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<VaultEntry | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [visiblePws, setVisiblePws] = useState<Set<string>>(new Set());
 
   const { clients: supabaseClients } = useClients();
@@ -62,8 +63,22 @@ export default function VaultPage() {
   const totalEntries = useMemo(() => grouped.reduce((s, [, e]) => s + e.length, 0), [grouped]);
   const entityCount = grouped.length;
 
-  function handleAdd() { setEditingEntry(null); setModalOpen(true); }
-  function handleEdit(entry: VaultEntry) { setEditingEntry(entry); setModalOpen(true); }
+  function handleAdd() { setEditingEntry(null); setSaveError(null); setModalOpen(true); }
+  function handleEdit(entry: VaultEntry) { setEditingEntry(entry); setSaveError(null); setModalOpen(true); }
+
+  // Read the sanitized `error` message from an API response. Credential values
+  // are never echoed back, so only the error string is surfaced to the UI.
+  async function readApiError(res: Response): Promise<string> {
+    try {
+      const data = await res.json();
+      if (data && typeof data.error === "string" && data.error.trim()) {
+        return data.error.trim();
+      }
+    } catch {
+      // fall through to a generic message
+    }
+    return "Save failed — please try again.";
+  }
 
   async function handleDelete(entry: VaultEntry) {
     if (!confirm(`Delete credential for "${entry.site}"?\n\nThis cannot be undone.`)) return;
@@ -82,11 +97,19 @@ export default function VaultPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(entry),
       });
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) {
+        // Show the real (sanitized) API error and keep the modal open.
+        setSaveError(await readApiError(res));
+        return;
+      }
+      setSaveError(null);
       setModalOpen(false);
       await loadCredentials();
-    } catch (err: any) { alert("Failed to save"); }
-    finally { setSaving(false); }
+    } catch {
+      setSaveError("Network error — could not reach the server. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }, [loadCredentials]);
 
   const clientOptions = useMemo(
@@ -350,7 +373,7 @@ export default function VaultPage() {
 
       {saving && <div className="fixed bottom-4 right-4 px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ backgroundColor: "var(--teal)" }}>Saving…</div>}
 
-      <VaultModal open={modalOpen} vaultEntry={editingEntry} clients={clientOptions} onClose={() => setModalOpen(false)} onSave={handleSave} />
+      <VaultModal open={modalOpen} vaultEntry={editingEntry} clients={clientOptions} onClose={() => setModalOpen(false)} onSave={handleSave} saveError={saveError} />
     </div>
   );
 }

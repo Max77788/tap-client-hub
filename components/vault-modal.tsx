@@ -8,7 +8,8 @@ interface VaultModalProps {
   vaultEntry?: VaultEntry | null; // null = "Add" mode
   clients: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (entry: VaultEntry | Omit<VaultEntry, "id">) => void;
+  onSave: (entry: VaultEntry | Omit<VaultEntry, "id">) => void | Promise<void>;
+  saveError?: string | null;
 }
 
 function makeEmptyEntry(): Omit<VaultEntry, "id"> {
@@ -27,10 +28,11 @@ function makeEmptyEntry(): Omit<VaultEntry, "id"> {
   };
 }
 
-export default function VaultModal({ open, vaultEntry, clients, onClose, onSave }: VaultModalProps) {
+export default function VaultModal({ open, vaultEntry, clients, onClose, onSave, saveError }: VaultModalProps) {
   const isEdit = !!vaultEntry;
   const [form, setForm] = useState<Omit<VaultEntry, "id">>(makeEmptyEntry());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -88,15 +90,20 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
     return Object.keys(errs).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate()) return;
-    if (isEdit && vaultEntry) {
-      onSave({ ...form, id: vaultEntry.id } as VaultEntry);
-    } else {
-      onSave(form as Omit<VaultEntry, "id">);
+    if (!validate() || submitting) return;
+    setSubmitting(true);
+    try {
+      if (isEdit && vaultEntry) {
+        await onSave({ ...form, id: vaultEntry.id } as VaultEntry);
+      } else {
+        await onSave(form as Omit<VaultEntry, "id">);
+      }
+    } finally {
+      setSubmitting(false);
     }
-    onClose();
+    // Note: onSave (the parent) is responsible for closing the modal on success.
   }
 
   return (
@@ -144,6 +151,19 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+            {saveError && (
+              <div
+                className="text-sm px-3 py-2 rounded-lg border"
+                style={{
+                  color: "var(--red)",
+                  borderColor: "var(--red)",
+                  backgroundColor: "rgba(244,63,94,0.08)",
+                }}
+                role="alert"
+              >
+                {saveError}
+              </div>
+            )}
             {/* Site (required) + URL row */}
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
@@ -315,9 +335,10 @@ export default function VaultModal({ open, vaultEntry, clients, onClose, onSave 
               </button>
               <button
                 type="submit"
-                className="text-sm font-semibold px-5 py-2 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity"
+                disabled={submitting}
+                className="text-sm font-semibold px-5 py-2 rounded-lg bg-[var(--teal)] text-white hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isEdit ? "Save Changes" : "Add Credential"}
+                {submitting ? "Saving…" : isEdit ? "Save Changes" : "Add Credential"}
               </button>
             </div>
           </form>

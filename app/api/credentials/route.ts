@@ -1,11 +1,38 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isPowerUser } from "@/lib/access-policy";
+import { resolveAccessIdentity } from "@/lib/access-server";
 import { NextRequest, NextResponse } from "next/server";
+
+type CredentialMethod = "GET" | "POST" | "PUT" | "DELETE";
+
+// Credentials are RLS-restricted, so all CRUD runs through the admin client.
+// Access is gated here as well:
+//   - Owner/Admin: full access.
+//   - Everyone else needs the "Vault" module for GET, and needs
+//     `allowEditClientData` for POST/PUT/DELETE.
+// Returns a NextResponse when access is denied, otherwise null (proceed).
+async function authorize(method: CredentialMethod): Promise<NextResponse | null> {
+  const identity = await resolveAccessIdentity();
+  if (!identity) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (isPowerUser(identity.role)) return null;
+  if (method === "GET") {
+    if (identity.modules.includes("Vault")) return null;
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (identity.allowEditClientData) return null;
+  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+}
 
 // ══════════════════════════════════════════════
 // GET — list all credentials
 // ══════════════════════════════════════════════
 export async function GET() {
-  const supabase = await createClient();
+  const denied = await authorize("GET");
+  if (denied) return denied;
+
+  const supabase = createAdminClient();
 
   const { data: credentials, error } = await supabase
     .from("credentials")
@@ -45,7 +72,10 @@ export async function GET() {
 // POST — create a new credential
 // ══════════════════════════════════════════════
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const denied = await authorize("POST");
+  if (denied) return denied;
+
+  const supabase = createAdminClient();
 
   let body: any;
   try {
@@ -106,7 +136,10 @@ export async function POST(request: NextRequest) {
 // PUT — update a credential by id
 // ══════════════════════════════════════════════
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient();
+  const denied = await authorize("PUT");
+  if (denied) return denied;
+
+  const supabase = createAdminClient();
 
   let body: any;
   try {
@@ -175,7 +208,10 @@ export async function PUT(request: NextRequest) {
 // DELETE — delete a credential by id (query param)
 // ══════════════════════════════════════════════
 export async function DELETE(request: NextRequest) {
-  const supabase = await createClient();
+  const denied = await authorize("DELETE");
+  if (denied) return denied;
+
+  const supabase = createAdminClient();
 
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {

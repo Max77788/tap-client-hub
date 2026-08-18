@@ -8,6 +8,7 @@ import { COMMENT_CATEGORIES, normalizeCommentCategory, type CommentCategory } fr
 import type { Client, ServiceConfig, ServiceKey, MonthStatus } from "@/lib/types";
 import { MONTHS_SHORT } from "@/lib/data";
 import { filterWorklistKpi, type WorklistKpi } from "@/lib/worklist-kpi-filter";
+import { collectAssignmentOptions, matchesAssignmentFilter } from "@/lib/worklist-assignment-filter";
 import { exportClientCsv, serviceLabel } from "@/lib/export-csv";
 
 
@@ -358,30 +359,11 @@ export default function WorklistTable({
     "All", ...MONTHS_SHORT
   ] : [], [variant]);
 
-  // ── Assigned-to filter options (from services and line items) ──
-  const assignedOptions = useMemo(() => {
-    const names = new Set<string>();
-    for (const c of serviceClients) {
-      const svc = c.services?.find((s: any) => s.key === serviceKey);
-      if (svc?.assignedTo) names.add(svc.assignedTo);
-      if (svc?.processor) names.add(svc.processor);
-      // STX line items
-      if (svc?.salesTaxLineItems) {
-        for (const item of svc.salesTaxLineItems) {
-          if (item.assignedTo) names.add(item.assignedTo);
-        }
-      }
-      // State renewal items
-      if (svc?.stateRenewalItems) {
-        for (const item of svc.stateRenewalItems) {
-          if (item.assignedTo) names.add(item.assignedTo);
-        }
-      }
-      // Client-level assigned staff
-      if ((c as any).assignedStaff) names.add((c as any).assignedStaff);
-    }
-    return ["All", ...Array.from(names).sort()];
-  }, [serviceClients, serviceKey]);
+  // ── Assigned-to filter options (service-level + line items only) ──
+  const assignedOptions = useMemo(
+    () => ["All", ...collectAssignmentOptions(serviceClients, serviceKey)],
+    [serviceClients, serviceKey],
+  );
   // ── Stage dropdown picker ──
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{
@@ -488,28 +470,7 @@ export default function WorklistTable({
       }
       // Assigned-to filter (works across all worklist tabs)
       if (assignedFilter !== "All") {
-        list = list.filter((c) => {
-          const svc = c.services?.find((s: any) => s.key === serviceKey);
-          const filter = assignedFilter.toLowerCase();
-          // Check service-level assignedTo / processor
-          if ((svc?.assignedTo || "").toLowerCase().includes(filter)) return true;
-          if ((svc?.processor || "").toLowerCase().includes(filter)) return true;
-          // Check STX line items
-          if (svc?.salesTaxLineItems) {
-            for (const item of svc.salesTaxLineItems) {
-              if ((item.assignedTo || "").toLowerCase().includes(filter)) return true;
-            }
-          }
-          // Check state renewal items
-          if (svc?.stateRenewalItems) {
-            for (const item of svc.stateRenewalItems) {
-              if ((item.assignedTo || "").toLowerCase().includes(filter)) return true;
-            }
-          }
-          // Check client-level assignedStaff
-          if (((c as any).assignedStaff || "").toLowerCase().includes(filter)) return true;
-          return false;
-        });
+        list = list.filter((c) => matchesAssignmentFilter(c, serviceKey, assignedFilter));
       }
       return list;
     },
