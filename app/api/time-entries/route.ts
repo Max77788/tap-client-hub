@@ -1,9 +1,22 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAccessIdentity } from "@/lib/access-server";
 import { NextResponse } from "next/server";
+
+async function requireTimeEntryAccess() {
+  const identity = await resolveAccessIdentity();
+  if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return identity;
+}
+
+function canManageTimeEntries(access: { role: string }) {
+  return ["owner", "admin", "manager"].includes(access.role);
+}
 
 // GET /api/time-entries — list all time entries with joined profile/client names
 export async function GET() {
-  const supabase = await createClient();
+  const access = await requireTimeEntryAccess();
+  if (access instanceof NextResponse) return access;
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from("time_entries")
@@ -54,8 +67,14 @@ export async function GET() {
 
 // POST /api/time-entries — create a new time entry
 export async function POST(request: Request) {
-  const supabase = await createClient();
+  const access = await requireTimeEntryAccess();
+  if (access instanceof NextResponse) return access;
+  const supabase = createAdminClient();
   const body = await request.json();
+
+  if (!body.who || (!canManageTimeEntries(access) && body.who !== access.id)) {
+    return NextResponse.json({ error: "You may only create time entries for yourself" }, { status: 403 });
+  }
 
   const { data, error } = await supabase
     .from("time_entries")
@@ -69,6 +88,7 @@ export async function POST(request: Request) {
       seconds: body.seconds || 0,
       note: body.note || "",
       edited: false,
+      manual: body.manual === true,
     })
     .select()
     .single();
@@ -82,7 +102,9 @@ export async function POST(request: Request) {
 
 // DELETE /api/time-entries?id=UUID — delete a time entry
 export async function DELETE(request: Request) {
-  const supabase = await createClient();
+  const access = await requireTimeEntryAccess();
+  if (access instanceof NextResponse) return access;
+  const supabase = createAdminClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -90,7 +112,9 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("time_entries").delete().eq("id", id);
+  let query = supabase.from("time_entries").delete().eq("id", id);
+  if (!canManageTimeEntries(access)) query = query.eq("who", access.id);
+  const { error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -101,7 +125,9 @@ export async function DELETE(request: Request) {
 
 // PATCH /api/time-entries?id=UUID — update a time entry (including start time and the calculated duration)
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
+  const access = await requireTimeEntryAccess();
+  if (access instanceof NextResponse) return access;
+  const supabase = createAdminClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -123,10 +149,9 @@ export async function PATCH(request: Request) {
     updates.edited_at = new Date().toISOString();
   }
 
-  const { data, error } = await supabase
-    .from("time_entries")
-    .update(updates)
-    .eq("id", id)
+  let query = supabase.from("time_entries").update(updates).eq("id", id);
+  if (!canManageTimeEntries(access)) query = query.eq("who", access.id);
+  const { data, error } = await query
     .select()
     .single();
 

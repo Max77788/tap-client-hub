@@ -302,7 +302,7 @@ export default function TimePage() {
     };
     setEntries((prev) => [entry, ...prev]);
 
-    fetch("/api/time-entries", {
+    const response = await fetch("/api/time-entries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -310,7 +310,13 @@ export default function TimePage() {
         task: TASK_LABEL[manualService] || "Admin/Other",
         seconds: elapsed, started_at: dateStr, note: manualNote, manual: true,
       }),
-    }).catch((e) => console.error("Manual save failed:", e));
+    });
+    if (!response.ok) {
+      setEntries((prev) => prev.filter((e) => e.id !== entryId));
+      const result = await response.json().catch(() => ({}));
+      window.alert(result.error || "Manual time entry could not be saved.");
+      return;
+    }
 
     setManualStartTime(""); setManualEndTime(""); setManualNote("");
     setManualDate(new Date().toISOString().slice(0, 10));
