@@ -153,6 +153,8 @@ export default function UsersPage() {
       if (res.ok) setUsers(await res.json());
     } catch (err: any) {
       setSaveError(err.message);
+      const reloadRes = await fetch("/api/profiles");
+      if (reloadRes.ok) setUsers(await reloadRes.json());
     } finally {
       setSaving(false);
     }
@@ -175,6 +177,13 @@ export default function UsersPage() {
     } finally {
       setDeleting(false);
     }
+  }
+
+  async function handleCancelEdit() {
+    setModalUser(null);
+    // Discard optimistic status changes made while the modal was open.
+    const res = await fetch("/api/profiles");
+    if (res.ok) setUsers(await res.json());
   }
 
   // ── Loading / Not-owner states ──
@@ -521,7 +530,14 @@ export default function UsersPage() {
               {isOwner && modalUser !== "new" && (
                 <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
                   <input type="checkbox" checked={editForm.active === true}
-                    onChange={e => setEditForm(p => ({ ...p, active: e.target.checked }))}
+                    onChange={e => {
+                      const active = e.target.checked;
+                      setEditForm(p => ({ ...p, active }));
+                      // Reflect the requested status immediately in the table.
+                      setUsers(prev => prev.map(user => user.id === (modalUser as User).id
+                        ? { ...user, active, status: active ? "Active" : "Inactive" }
+                        : user));
+                    }}
                     style={{ width: "auto" }} />
                   Active user
                 </label>
@@ -643,7 +659,7 @@ export default function UsersPage() {
               {modalUser !== "new" && !deleteConfirm && <div style={{ flex: 1 }} />}
 
               {/* Right: Cancel + Save */}
-              <button className="btn alt" onClick={() => setModalUser(null)} disabled={saving}
+              <button className="btn alt" onClick={handleCancelEdit} disabled={saving}
                 style={{
                   all: "unset", cursor: "pointer", background: "var(--card)",
                   color: "var(--ink)", border: "1px solid var(--line)",
