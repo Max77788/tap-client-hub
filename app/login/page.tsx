@@ -50,13 +50,17 @@ function LoginContent() {
     }
     const { email: authEmail } = await identityResponse.json();
 
-    // Try the real Supabase account first. This lets users sign in with their
-    // actual account password instead of being intercepted by demo credentials.
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: authEmail, password });
+    // Authenticate server-side so the browser does not call the protected
+    // Supabase hostname directly. The route sets the SSR auth cookies.
+    const authResponse = await fetch("/api/auth/sign-in", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: authEmail, password }),
+    });
+    const authResult = await authResponse.json().catch(() => null);
 
-    if (!authError) {
+    if (authResponse.ok) {
       await fetch("/api/auth/mark-password-change", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,46 +122,8 @@ function LoginContent() {
       return;
     }
 
-    try {
-      // Sign in with Supabase
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password,
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      // Check if this user has 2FA enabled
-      const res = await fetch("/api/2fa/status");
-      const data = await res.json();
-
-      if (data.enabled) {
-        // Send 2FA code to email
-        setStep("2fa");
-        setTwoFAMessage("Sending verification code...");
-        setLoading(false);
-        fetch("/api/2fa/challenge", { method: "POST" })
-          .then(r => r.json())
-          .then(d => setTwoFAMessage(d.message || "Check your email for the code"))
-          .catch(() => setTwoFAMessage("Enter the code from your email"));
-      } else {
-        // No 2FA - proceed
-        fetch("/api/me", { credentials: "include" }).catch(() => {});
-        router.push(next);
-        router.refresh();
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred"
-      );
-      setLoading(false);
-    }
+    setError(authResult?.error || "Invalid email or password");
+    setLoading(false);
   }
 
   async function handle2FASubmit(e: React.FormEvent) {
