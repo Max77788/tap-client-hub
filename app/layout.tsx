@@ -53,6 +53,36 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/settings": { title: "Settings", subtitle: "Your account details, password, and security settings." },
 };
 
+async function logoutAndRedirect() {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 5000);
+
+  try {
+    // The API clears the HttpOnly session cookie. The redirect must not depend
+    // on this request succeeding, otherwise a stalled API leaves the button
+    // looking inactive.
+    await fetch("/api/demo-login", {
+      method: "DELETE",
+      credentials: "include",
+      signal: controller.signal,
+    });
+  } catch {
+    // Continue clearing browser-visible cookies and leave the app regardless
+    // of a network error or a slow serverless response.
+  } finally {
+    window.clearTimeout(timeout);
+    document.cookie = "tap_demo_user=; path=/; max-age=0";
+    document.cookie = "tap_demo_email=; path=/; max-age=0";
+    document.cookie.split("; ").forEach((cookie) => {
+      const name = cookie.split("=")[0];
+      if (name.includes("sb-") || name.includes("supabase")) {
+        document.cookie = `${name}=; path=/; max-age=0`;
+      }
+    });
+    window.location.replace("/login");
+  }
+}
+
 // ── Mobile sidebar ──
 function MobileSidebar({
   visibleNav,
@@ -129,18 +159,7 @@ function MobileSidebar({
         </nav>
         <div className="px-3 pb-3">
           <button
-            onClick={async () => {
-              await fetch("/api/demo-login", { method: "DELETE", credentials: "include" }).catch(() => {});
-              document.cookie = "tap_demo_user=; path=/; max-age=0";
-              document.cookie = "tap_demo_email=; path=/; max-age=0";
-              document.cookie.split("; ").forEach(c => {
-                const name = c.split("=")[0];
-                if (name.includes("sb-") || name.includes("supabase")) {
-                  document.cookie = name + "=; path=/; max-age=0";
-                }
-              });
-              window.location.href = "/login";
-            }}
+            onClick={() => { void logoutAndRedirect(); }}
             className="flex items-center gap-2 px-3 py-2.5 rounded-[10px] text-sm font-medium text-[#c4cee8] hover:bg-white/10 hover:text-white transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.9 }}>
@@ -205,7 +224,7 @@ export default function RootLayout({
 
   const allowedModules = useMemo(() => effectiveModules(role, userModules), [role, userModules]);
   const visibleNav = useMemo(
-    () => accessLoading ? [] : NAV_ITEMS.filter((item) => !item.module || allowedModules.includes(item.module)),
+    () => accessLoading ? [] : NAV_ITEMS.filter((item) => !item.module || item.href === "/support" || allowedModules.includes(item.module)),
     [accessLoading, allowedModules],
   );
 
@@ -281,18 +300,7 @@ export default function RootLayout({
         {/* Logout */}
         <div className="pb-3 shrink-0">
           <button
-            onClick={async () => {
-              await fetch("/api/demo-login", { method: "DELETE", credentials: "include" }).catch(() => {});
-              document.cookie = "tap_demo_user=; path=/; max-age=0";
-              document.cookie = "tap_demo_email=; path=/; max-age=0";
-              document.cookie.split("; ").forEach(c => {
-                const name = c.split("=")[0];
-                if (name.includes("sb-") || name.includes("supabase")) {
-                  document.cookie = name + "=; path=/; max-age=0";
-                }
-              });
-              window.location.href = "/login";
-            }}
+            onClick={() => { void logoutAndRedirect(); }}
             className="flex items-center gap-2 px-3 py-[10px] rounded-[10px] text-sm font-medium transition-colors w-full"
                 style={{ color: "#c4cee8" }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.10)"; e.currentTarget.style.color = "#fff"; }}
