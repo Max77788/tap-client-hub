@@ -31,6 +31,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unable to sign in right now.", requestId }, { status: 500, headers: { "x-auth-request-id": requestId } });
     }
 
+    const authProbeStartedAt = Date.now();
+    let authProbe: { status: number | string; contentType?: string } = { status: "not-run" };
+    try {
+      const authResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/health`, {
+        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "" },
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      });
+      authProbe = { status: authResponse.status, contentType: authResponse.headers.get("content-type") || undefined };
+    } catch (error) {
+      authProbe = { status: `error:${authError(error).name}` };
+    }
+    console.info("[auth.resolve-login] supabase auth probe", { ...context, authProbe, authProbeMs: Date.now() - authProbeStartedAt });
+
     const normalized = identifier.toLowerCase();
     const matches = ((profiles ?? []) as Profile[]).filter((profile) =>
       profile.email?.trim().toLowerCase() === normalized || usernameFromFullName(profile.full_name) === normalized,
