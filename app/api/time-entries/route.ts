@@ -2,6 +2,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAccessIdentity } from "@/lib/access-server";
 import { NextResponse } from "next/server";
 
+const TAP_ASSOCIATES_CLIENT_ID = "tap-associates";
+
+function normalizeClientId(value: unknown): string | null {
+  if (!value || value === TAP_ASSOCIATES_CLIENT_ID) return null;
+  return String(value);
+}
+
 async function requireTimeEntryAccess() {
   const identity = await resolveAccessIdentity();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -53,7 +60,7 @@ export async function GET() {
     personId: e.who,
     personName: profileMap[e.who] || "Unknown",
     clientId: e.client_id,
-    clientName: clientMap[e.client_id] || e.client_id || "",
+    clientName: e.client_id ? (clientMap[e.client_id] || e.client_id) : "Tap Associates",
     serviceLabel: e.task || "",
     duration: e.seconds || 0,
     date: e.started_at,
@@ -81,7 +88,7 @@ export async function POST(request: Request) {
     .insert({
       id: body.id || undefined,
       who: body.who,
-      client_id: body.client_id || null,
+      client_id: normalizeClientId(body.client_id),
       client_service_id: body.client_service_id || null,
       task: body.task || "",
       started_at: body.started_at || new Date().toISOString(),
@@ -139,7 +146,7 @@ export async function PATCH(request: Request) {
   const updates: Record<string, any> = {};
 
   if (body.who !== undefined) updates.who = body.who;
-  if (body.client_id !== undefined) updates.client_id = body.client_id;
+  if (body.client_id !== undefined) updates.client_id = normalizeClientId(body.client_id);
   if (body.task !== undefined) updates.task = body.task;
   if (body.seconds !== undefined) updates.seconds = body.seconds;
   if (body.note !== undefined) updates.note = body.note;
