@@ -5,12 +5,10 @@ import type { Client, ServiceKey, CommentEntry, SalesTaxLineItem } from "@/lib/t
 import { SERVICE_META, STAFF } from "@/lib/data";
 import { PAY_DAY_OPTIONS, calculatePayrollStartDate, normalizePayDay, formatPayrollStartDate } from "@/lib/payroll-schedule";
 
-// ── Utility: mask sensitive numbers (show last 4) ──
-function maskNum(val: string | undefined | null): string {
+// ── Utility: display stored banking references in the authorized client view ──
+function displayBankNumber(val: string | undefined | null): string {
   if (!val) return "—";
-  const s = val.replace(/\s/g, "");
-  if (s.length <= 4) return `***${s.slice(-4)}`;
-  return `***${s.slice(-4)}`;
+  return val;
 }
 
 // ── Constants ──
@@ -2181,11 +2179,11 @@ export default function ClientSlideover({ client, open, onClose, onSave, onDelet
                     </div>
                     <div>
                       <span className="fk">Routing</span>
-                      <span className="fv mono">{maskNum(item.bankRouting)}</span>
+                      <span className="fv mono">{displayBankNumber(item.bankRouting)}</span>
                     </div>
                     <div>
                       <span className="fk">Account</span>
-                      <span className="fv mono">{maskNum(item.bankAccount)}</span>
+                      <span className="fv mono">{displayBankNumber(item.bankAccount)}</span>
                     </div>
                     <div>
                       <span className="fk">Assigned to</span>
