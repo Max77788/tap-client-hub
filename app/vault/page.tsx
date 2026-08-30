@@ -248,6 +248,9 @@ export default function VaultPage() {
                 <tbody>
                   {entries.map(entry => {
                     const isBank = entry.isBank || entry.site === "TAP Bank";
+                    // Bank credentials stay in the separate TAP Bank system. Prefer
+                    // a per-entry URL, then the deployment-level portal URL.
+                    const bankUrl = entry.url?.trim() || process.env.NEXT_PUBLIC_TAP_BANK_URL?.trim() || "";
                     const pwKey = entry.id;
                     const pwVisible = visiblePws.has(pwKey);
                     return (
@@ -257,7 +260,19 @@ export default function VaultPage() {
                           <>
                             <td className="vt-mono vt-muted">— linked —</td>
                             <td>
-                              <a href="#" onClick={e => { e.preventDefault(); }} className="vt-bank-link">
+                              <a
+                                href={bankUrl || undefined}
+                                target={bankUrl ? "_blank" : undefined}
+                                rel={bankUrl ? "noopener noreferrer" : undefined}
+                                onClick={e => {
+                                  if (!bankUrl) {
+                                    e.preventDefault();
+                                    alert("TAP Bank portal URL is not configured. Ask an administrator to set NEXT_PUBLIC_TAP_BANK_URL.");
+                                  }
+                                }}
+                                className="vt-bank-link"
+                                aria-disabled={!bankUrl}
+                              >
                                 Open in TAP&nbsp;Bank ↗
                               </a>
                             </td>

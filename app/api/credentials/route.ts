@@ -53,7 +53,7 @@ export async function GET() {
     id: c.id,
     site: c.site || "",
     service: c.service_type || "",
-    url: c.url || "",
+    url: c.url || c.link_url || c.portal_url || "",
     email: c.username || "",
     password: c.vault_ref || "",
     notes: c.notes || "",
