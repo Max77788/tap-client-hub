@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:support": "node tests/support-shared-system.test.mjs && node tests/support-api-auth.test.mjs && node tests/support-inbox-dashboard.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

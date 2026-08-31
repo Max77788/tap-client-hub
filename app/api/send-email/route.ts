@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAccessIdentity } from "@/lib/access-server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTicket } from "@/lib/support/create-ticket";
 
 const SUPPORT_RECIPIENTS = ["support@aifusioniqlabs.com"];
 const RESEND_FROM = "TAP Hub <notifications@email.mom-ai-agency.site>";
@@ -35,10 +35,6 @@ function readText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function formatTicketNumber(ticketNumber: number) {
-  return `TAP-${String(ticketNumber).padStart(6, "0")}`;
-}
-
 export async function POST(req: NextRequest) {
   const requestBody = await req.json().catch(() => null);
   if (!requestBody || typeof requestBody !== "object" || Array.isArray(requestBody)) {
@@ -70,32 +66,42 @@ export async function POST(req: NextRequest) {
   const identity = await resolveAccessIdentity();
   if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const admin = createAdminClient();
-  const { data: ticket, error: ticketError } = await admin
-    .from("support_tickets")
-    .insert({
-      reporter_profile_id: identity.id.startsWith("demo-") ? null : identity.id,
-      reporter_name: payload.reporterName,
-      reporter_email: identity.email || null,
-      account_firm: payload.accountFirm || null,
-      app_area: payload.appArea || null,
-      summary: payload.summary,
-      priority: payload.urgent ? "urgent" : "normal",
-      what_happened: payload.whatHappened,
-      expected_result: payload.expectedResult || null,
-      reproduction_steps: payload.reproductionSteps || null,
-      screenshot_confirmed: payload.screenshotConfirmed,
-    })
-    .select("id, ticket_number, status, created_at")
-    .single();
+  // Route the legacy TAP support form through the shared firm-wide module.
+  const result = await createTicket({
+    sourceAppKey: "tap-hub",
+    title: payload.summary,
+    description: payload.whatHappened,
+    reporter: {
+      name: payload.reporterName,
+      email: identity.email || null,
+      userId: null,
+    },
+    priority: payload.urgent ? "urgent" : "normal",
+    category: payload.appArea || null,
+    tapProfileId: identity.id.startsWith("demo-") ? null : identity.id,
+    clientContext: {
+      accountFirm: payload.accountFirm,
+      appArea: payload.appArea,
+      expectedResult: payload.expectedResult,
+      reproductionSteps: payload.reproductionSteps,
+      screenshotConfirmed: payload.screenshotConfirmed,
+    },
+    tapContext: {
+      accountFirm: payload.accountFirm,
+      appArea: payload.appArea,
+      expectedResult: payload.expectedResult,
+      reproductionSteps: payload.reproductionSteps,
+      screenshotConfirmed: payload.screenshotConfirmed,
+    },
+  });
 
-  if (ticketError || !ticket) {
-    console.error("Support ticket database insert failed:", ticketError);
-    return NextResponse.json({ error: "Unable to create the support ticket. Please try again." }, { status: 500 });
+  if (result.ok === false) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
+  const ticket = result.ticket;
+  const ticketNumber = ticket.number;
   const priority = payload.urgent ? "URGENT" : "Normal";
-  const ticketNumber = formatTicketNumber(ticket.ticket_number);
   const subject = `${payload.urgent ? "[URGENT] " : ""}${ticketNumber}: ${payload.summary}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 680px; margin: 0 auto; color: #172033;">
@@ -134,5 +140,5 @@ export async function POST(req: NextRequest) {
     console.error("RESEND_API_KEY is not configured. Ticket was saved without an email notification.");
   }
 
-  return NextResponse.json({ ticket: { id: ticket.id, number: ticketNumber, status: ticket.status, createdAt: ticket.created_at }, emailSent }, { status: 201 });
+  return NextResponse.json({ ticket: { id: ticket.id, number: ticketNumber, status: ticket.status, createdAt: ticket.createdAt }, emailSent }, { status: 201 });
 }
