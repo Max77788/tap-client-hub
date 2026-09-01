@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Client, ServiceKey } from "@/lib/types";
 import { SERVICE_META, STAFF } from "@/lib/data";
+import { calculatePayrollStartDate } from "@/lib/payroll-schedule";
 
 interface ClientModalProps {
   open: boolean;
@@ -72,48 +73,8 @@ export default function ClientModal({ open, client, onClose, onSave }: ClientMod
     "Monday","Tuesday","Wednesday","Sunday",
   ];
 
-  // ── Calculate next payroll start date based on cadence + pay day ──
-  function calcPayrollStartDate(cadence: string, payDay: string): string | null {
-    if (!cadence || !payDay) return null;
-    const today = new Date();
-    let d = new Date(today);
-    d.setDate(d.getDate() + 1);
-    const dowMap: Record<string, number> = {
-      sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,
-      sundays:0,mondays:1,tuesdays:2,wednesdays:3,thursdays:4,fridays:5,saturdays:6,
-    };
-    const dow = dowMap[payDay.toLowerCase()];
-    if (cadence === "Weekly" || cadence === "Bi-Weekly A" || cadence === "Bi-Weekly B") {
-      if (dow === undefined) return null;
-      while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
-      if (cadence === "Bi-Weekly B") d.setDate(d.getDate() + 7);
-      return d.toISOString().slice(0,10);
-    }
-    const parts = payDay.split("/");
-    for (let attempt = 0; attempt < 62; attempt++) {
-      const dom = d.getDate();
-      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-      let match = false;
-      for (const p of parts) {
-        if (p === "EOM" && dom === lastDay) match = true;
-        else {
-          const numMatch = p.match(/^(\d+)/);
-          if (numMatch) {
-            const n = parseInt(numMatch[1]);
-            if (n <= lastDay && dom === n) match = true;
-            else if (n > lastDay && dom === lastDay) match = true;
-          }
-          else {
-            const wd = dowMap[p.toLowerCase()];
-            if (wd !== undefined && d.getDay() === wd) match = true;
-          }
-        }
-      }
-      if (match) return d.toISOString().slice(0,10);
-      d.setDate(d.getDate() + 1);
-    }
-    return null;
-  }
+  // Shared payroll business-calendar calculation keeps modal saves aligned with the worklist.
+  const calcPayrollStartDate = calculatePayrollStartDate;
 
   const [prFreq, setPrFreq] = useState("Bi-Weekly A");
   const [prPaydate, setPrPaydate] = useState("");

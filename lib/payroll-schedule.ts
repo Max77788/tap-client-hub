@@ -23,14 +23,36 @@ function cadenceKey(value: string): string {
   return String(value || "").toLowerCase().replace(/[ _-]+/g, "");
 }
 
-/** Calculate the next payroll start date from cadence and the configured pay day. */
+/**
+ * Payroll dates are business dates for the TAP team, not timestamps in the
+ * viewer's browser or the server's UTC zone. Keeping the calculation as a
+ * noon date-only value avoids DST boundaries while preserving the Chicago
+ * calendar day in both browser and server execution.
+ */
+function chicagoBusinessDate(from: Date): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(from);
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find(item => item.type === type)?.value);
+  return new Date(part("year"), part("month") - 1, part("day"), 12, 0, 0, 0);
+}
+
+function isEndOfMonthSchedule(payDay: string): boolean {
+  return normalizePayDay(payDay)
+    .replace(/\s*(?:&|and)\s*/gi, "/")
+    .split(/[\\/|,]+/)
+    .some(part => part.trim().toLowerCase() === "eom");
+}
+
+/** Calculate the current or next payroll start date from cadence and configured pay day. */
 export function calculatePayrollStartDate(cadence: string, payDay: string, from = new Date()): string | null {
   if (!cadence || !payDay) return null;
   const day = normalizePayDay(payDay);
   const key = cadenceKey(cadence);
-  const d = new Date(from);
-  d.setHours(12, 0, 0, 0);
-  d.setDate(d.getDate() + 1);
+  const d = chicagoBusinessDate(from);
 
   const dow = weekdayNumber(day);
   if (key === "semimonthly") {
@@ -108,10 +130,11 @@ function toISODate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export function getPayrollStartDate(cadence: string, payDay: string, stored?: string): string | null {
-  // Semi-monthly dates are relative to the current pay period. Recalculate
-  // them even when an older stored date exists, otherwise stale values such
-  // as 08/15 can remain displayed when the correct current date is 07/31.
-  if (cadenceKey(cadence) === "semimonthly") return calculatePayrollStartDate(cadence, payDay);
-  return stored || calculatePayrollStartDate(cadence, payDay);
+export function getPayrollStartDate(cadence: string, payDay: string, stored?: string, from = new Date()): string | null {
+  // Semi-monthly and EOM schedules are relative to the current business period.
+  // Recalculate them rather than rendering an imported/stale future date.
+  if (cadenceKey(cadence) === "semimonthly" || isEndOfMonthSchedule(payDay)) {
+    return calculatePayrollStartDate(cadence, payDay, from);
+  }
+  return stored || calculatePayrollStartDate(cadence, payDay, from);
 }
