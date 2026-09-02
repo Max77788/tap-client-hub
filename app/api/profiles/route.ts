@@ -120,19 +120,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { db: { schema: "tap_hub_project" } }
-    );
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      return NextResponse.json({ error: "A valid email address is required" }, { status: 400 });
+    }
 
-    // 1. Create user in Supabase Auth via sign-up (works with anon key)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
+    // Public sign-up is intentionally disabled in production. Provision users
+    // through the service-role Auth Admin API after the server-side capability
+    // check above has authorized this request.
+    const adminSupabase = createAdminClient();
+    const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+      email: normalizedEmail,
       password,
-      options: {
-        data: { full_name, role: role || "staff" },
-      },
+      email_confirm: true,
+      user_metadata: { full_name, role: role || "staff" },
     });
 
     if (authError) {
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
       if (uuidRegex.test(reporting_manager)) {
         mgrId = reporting_manager;
       } else {
-        const { data: mgrProfile } = await supabase
+        const { data: mgrProfile } = await adminSupabase
           .from("profiles")
           .select("id")
           .eq("full_name", reporting_manager)
@@ -161,11 +162,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Create profile record
-    const { error: profileError } = await supabase.from("profiles").insert({
+    // 3. Create profile record with the same admin client so RLS cannot turn
+    // this authorized write into a silent no-op.
+    const { error: profileError } = await adminSupabase.from("profiles").insert({
       id: authData.user.id,
       full_name,
-      email: String(email).trim().toLowerCase(),
+      email: normalizedEmail,
       role: role || "staff",
       location: location || null,
       reporting_manager: mgrId,
@@ -177,7 +179,8 @@ export async function POST(request: Request) {
     });
 
     if (profileError) {
-      // Rollback: sign out and delete (best effort)
+      // Keep Auth and profiles consistent if profile provisioning fails.
+      await adminSupabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 

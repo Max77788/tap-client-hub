@@ -16,6 +16,19 @@ assert.match(profilesRoute, /requireUserProfileEditAccess\(\)/, "PATCH must use 
 assert.match(profilesRoute, /requireUserManagementAccess\(\)/, "POST must require explicit user-management access");
 assert.match(deleteRoute, /requireUserManagementAccess\(\)/, "DELETE must require explicit user-management access");
 
+// User provisioning is an authenticated administrative action. Public sign-up is
+// disabled in production, so POST must use the service-role Auth Admin API and
+// clean up the Auth account if the profile insert fails.
+const postHandler = profilesRoute.slice(
+  profilesRoute.indexOf("export async function POST"),
+  profilesRoute.indexOf("// ── Also add PATCH"),
+);
+assert.doesNotMatch(postHandler, /\.auth\.signUp\(/, "POST must not depend on public Supabase sign-up");
+assert.match(postHandler, /createAdminClient\(\)/, "POST must create a service-role client");
+assert.match(postHandler, /\.auth\.admin\.createUser\(/, "POST must provision through the Auth Admin API");
+assert.match(postHandler, /email_confirm:\s*true/, "provisioned users must be able to sign in with the initial password");
+assert.match(postHandler, /\.auth\.admin\.deleteUser\(authData\.user\.id\)/, "profile failure must roll back the Auth user");
+
 // ── Access-server guard ──
 // Managers with Users & Access get edit access. A manager with an explicit
 // can_manage_users grant gets the full user-management surface.
