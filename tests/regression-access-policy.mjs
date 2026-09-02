@@ -100,6 +100,8 @@ assert.match(accessServer, /requireUserProfileEditAccess/);
 assert.match(accessServer, /requireUserManagementAccess/);
 assert.match(accessServer, /can_manage_users/);
 assert.match(accessServer, /canManageUsers\(role, profile\?\.can_manage_users\)/);
+assert.match(accessServer, /const userManager = canManageUsers\(role, profile\?\.can_manage_users\)/);
+assert.match(accessServer, /allowEditClientData: userManager \|\| profile\?\.allow_edit_client_data === true/);
 assert.match(accessServer, /verifyDemoSession\(cookieStore\.get\("tap_demo_session"\)/);
 assert.match(accessServer, /cookieStore\.get\("tap_demo_user"\)/);
 const demoLoginRoute = read("app/api/demo-login/route.ts");

@@ -81,14 +81,15 @@ export async function resolveAccessIdentity(): Promise<AccessIdentity | null> {
 
   const role = demoFallback ? normalizeRole(demoFallback.role) : normalizeRole(profile?.role);
   const modules = effectiveModules(role, demoFallback?.modules || profile?.modules);
+  const userManager = canManageUsers(role, profile?.can_manage_users);
   return {
     id: profile?.id || id || `demo-${role}`,
     email,
     name: profile?.full_name || demoName || email,
     role,
     modules,
-    canManageUsers: canManageUsers(role, profile?.can_manage_users),
-    allowEditClientData: ["owner", "admin"].includes(role) || profile?.allow_edit_client_data === true,
+    canManageUsers: userManager,
+    allowEditClientData: userManager || profile?.allow_edit_client_data === true,
     authenticated: true,
   };
 }

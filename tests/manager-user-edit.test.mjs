@@ -23,6 +23,7 @@ assert.match(accessServer, /export async function requireUserProfileEditAccess/)
 assert.match(accessServer, /identity\.role === "manager" && identity\.modules\.includes\("Users & Access"\)/);
 assert.match(accessServer, /identity\.canManageUsers/);
 assert.match(accessServer, /canManageUsers\(role, profile\?\.can_manage_users\)/);
+assert.match(accessServer, /allowEditClientData: userManager \|\| profile\?\.allow_edit_client_data === true/);
 
 // ── Manager edit branch is an explicit, safe allowlist ──
 // Slice out the manager branch (from `if (isManagerEdit)` up to the owner/admin comment)
