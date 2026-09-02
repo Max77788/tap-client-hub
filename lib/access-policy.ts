@@ -39,8 +39,8 @@ export function isPowerUser(role: unknown) {
   return ["owner", "admin"].includes(normalizeRole(role));
 }
 
-export function canManageUsers(role: unknown) {
-  return isPowerUser(role);
+export function canManageUsers(role: unknown, explicitlyGranted = false) {
+  return isPowerUser(role) || (normalizeRole(role) === "manager" && explicitlyGranted === true);
 }
 
 export function canonicalModule(value: unknown): string | null {

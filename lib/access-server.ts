@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canManageUsers, effectiveModules, normalizeRole } from "@/lib/access-policy";
 import { verifyDemoSession } from "@/lib/demo-session";
 
-type Profile = { id: string; full_name?: string | null; email?: string | null; role?: string | null; modules?: unknown; location?: string | null; allow_edit_client_data?: boolean | null };
+type Profile = { id: string; full_name?: string | null; email?: string | null; role?: string | null; modules?: unknown; location?: string | null; can_manage_users?: boolean | null; allow_edit_client_data?: boolean | null };
 
 function normalizedName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -58,15 +58,15 @@ export async function resolveAccessIdentity(): Promise<AccessIdentity | null> {
   let profile: Profile | null = null;
 
   if (id) {
-    const { data } = await admin.from("profiles").select("id, full_name, email, role, modules, location, allow_edit_client_data").eq("id", id).maybeSingle();
+    const { data } = await admin.from("profiles").select("id, full_name, email, role, modules, location, can_manage_users, allow_edit_client_data").eq("id", id).maybeSingle();
     profile = data;
   }
   if (!profile && email) {
-    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location, allow_edit_client_data");
+    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location, can_manage_users, allow_edit_client_data");
     profile = (profiles || []).find((candidate: Profile) => String(candidate.email || "").toLowerCase() === email) || null;
   }
   if (!profile && demoName) {
-    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location, allow_edit_client_data");
+    const { data: profiles } = await admin.from("profiles").select("id, full_name, email, role, modules, location, can_manage_users, allow_edit_client_data");
     profile = (profiles || []).find((candidate: Profile) => nameMatches(candidate.full_name || "", demoName)) || null;
   }
 
@@ -87,7 +87,7 @@ export async function resolveAccessIdentity(): Promise<AccessIdentity | null> {
     name: profile?.full_name || demoName || email,
     role,
     modules,
-    canManageUsers: canManageUsers(role),
+    canManageUsers: canManageUsers(role, profile?.can_manage_users),
     allowEditClientData: ["owner", "admin"].includes(role) || profile?.allow_edit_client_data === true,
     authenticated: true,
   };
@@ -100,7 +100,7 @@ export async function requireUserManagementAccess() {
   return { identity, status: null };
 }
 
-/** Managers assigned Users & Access may view the directory, but cannot change accounts. */
+/** Managers assigned Users & Access may view the directory. */
 export async function requireUserDirectoryAccess() {
   const identity = await resolveAccessIdentity();
   if (!identity) return { identity: null, status: 401 as const };
@@ -111,9 +111,9 @@ export async function requireUserDirectoryAccess() {
 }
 
 /**
- * Owner/Admin retain full profile edit rights. Managers assigned Users & Access
- * may edit existing non-power users (see the PATCH route's manager allowlist),
- * but they cannot add or delete accounts.
+ * Owner/Admin and explicitly authorized managers retain full profile edit
+ * rights. Other managers assigned Users & Access may edit existing non-power
+ * users through the PATCH route's manager allowlist.
  */
 export async function requireUserProfileEditAccess() {
   const identity = await resolveAccessIdentity();

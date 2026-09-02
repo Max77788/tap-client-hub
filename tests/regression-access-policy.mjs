@@ -26,6 +26,8 @@ assert.equal(policy.normalizeRole("Offshore (India)"), "offshore");
 assert.equal(policy.canManageUsers("admin"), true);
 assert.equal(policy.canManageUsers("owner"), true);
 assert.equal(policy.canManageUsers("manager"), false, "canManageUsers stays owner/admin-only (add/delete/provision)");
+assert.equal(policy.canManageUsers("manager", true), true, "an explicitly authorized manager can provision and manage users");
+assert.equal(policy.canManageUsers("staff", true), false, "the explicit capability cannot elevate a staff role");
 assert.equal(policy.effectiveModules("manager", ["Clients", "Users & Access"]).includes("Users & Access"), true, "assigned managers can see Users & Access");
 assert.equal(policy.canAccessPathname("manager", ["Clients", "Users & Access"], "/users"), true, "assigned managers can open the Users & Access directory");
 for (const role of ["staff", "offshore"]) {
@@ -91,11 +93,13 @@ assert.match(usersPage, /canViewUsers/);
 assert.match(usersPage, /if \(!ownerLoading && canViewUsers\) load\(\)/);
 assert.match(usersPage, /const canEditUsers = isOwner \|\| canViewUsers/);
 assert.match(usersPage, /onClick=\{canEditUsers \? \(\) => openModal\(u\) : undefined\}/);
-assert.match(usersPage, /m === "Users & Access" && \(isRestrictedRole \|\| !isOwner\)/);
+assert.match(usersPage, /m === "Users & Access" && \(isRestrictedRole \|\| !canManageUsers\)/);
 
 const accessServer = read("lib/access-server.ts");
 assert.match(accessServer, /requireUserProfileEditAccess/);
 assert.match(accessServer, /requireUserManagementAccess/);
+assert.match(accessServer, /can_manage_users/);
+assert.match(accessServer, /canManageUsers\(role, profile\?\.can_manage_users\)/);
 assert.match(accessServer, /verifyDemoSession\(cookieStore\.get\("tap_demo_session"\)/);
 assert.match(accessServer, /cookieStore\.get\("tap_demo_user"\)/);
 const demoLoginRoute = read("app/api/demo-login/route.ts");

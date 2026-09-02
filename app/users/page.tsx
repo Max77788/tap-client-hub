@@ -12,7 +12,7 @@ interface User {
 }
 
 interface CurrentUser {
-  id: string; name: string; role: string; modules: string[];
+  id: string; name: string; role: string; modules: string[]; canManageUsers?: boolean;
 }
 
 const MODULES_LIST = ["Tax Returns", "Clients", "Financials", "Payroll", "Sales Tax", "1099s", "Renditions", "Annual Reports", "Timesheet", "Vault", "Workload", "Users & Access", "Billing", "Support"];
@@ -33,8 +33,9 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const isOwner = currentUser?.role === "owner" || currentUser?.role === "admin";
-  const canViewUsers = isOwner || (currentUser?.role === "manager" && currentUser.modules?.includes("Users & Access"));
-  // Managers with Users & Access may edit existing users; only Owners/Admins can add or delete.
+  const canManageUsers = isOwner || currentUser?.canManageUsers === true;
+  const canViewUsers = canManageUsers || (currentUser?.role === "manager" && currentUser.modules?.includes("Users & Access"));
+  // Managers with Users & Access may edit existing users; explicitly authorized managers can also add and delete.
   const canEditUsers = isOwner || canViewUsers;
 
   // ── Load current user (for owner check) ──
@@ -262,11 +263,11 @@ export default function UsersPage() {
       <div className="count" style={{
         color: "var(--muted)", fontSize: 13, margin: "12px 2px 6px",
       }}>
-        {isOwner ? "Click a user to edit their access · use ＋ Add user to provision a new login" : "Click a user to edit their details and module access · adding and deleting users is Owner/Admin only"}
+        {canManageUsers ? "Click a user to edit their access · use ＋ Add user to provision a new login" : "Click a user to edit their details and module access · adding and deleting users requires explicit authorization"}
       </div>
 
       {/* ── Add button ── */}
-      {isOwner && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+      {canManageUsers && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
         <button className="btn" onClick={() => openModal("new")} style={{
           all: "unset", cursor: "pointer", background: "var(--ink)", color: "#fff",
           padding: "10px 16px", borderRadius: 11, fontWeight: 600, fontSize: "13.5px",
@@ -377,7 +378,7 @@ export default function UsersPage() {
                 borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
               }} value={editForm.name || ""} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
 
-              {isOwner && modalUser !== "new" && (
+              {canManageUsers && modalUser !== "new" && (
                 <>
                   <label className="el" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)", margin: "12px 0 4px", display: "block" }}>Email address</label>
                   <input className="ef" type="email" style={{ width: "100%", padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4 }} value={editForm.email || ""} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
@@ -427,7 +428,7 @@ export default function UsersPage() {
                 </>
               )}
 
-              {isOwner && (
+              {canManageUsers && (
                 <label style={{ display: "flex", gap: 9, alignItems: "flex-start", margin: "14px 0 4px", cursor: "pointer", fontSize: 13, color: "var(--ink)" }}>
                   <input type="checkbox" checked={editForm.email_2fa_enabled === true} onChange={e => setEditForm(p => ({ ...p, email_2fa_enabled: e.target.checked }))} style={{ marginTop: 2 }} />
                   <span><b>Require email two-factor authentication</b><br /><span style={{ color: "var(--muted)", fontSize: 12 }}>A six-digit code is sent to the email address above after the password is accepted.</span></span>
@@ -453,7 +454,7 @@ export default function UsersPage() {
                     textTransform: "uppercase", color: "var(--muted)",
                     margin: "12px 0 4px", display: "block",
                   }}>Role</label>
-                  <select className="ef" disabled={!isOwner} style={{
+                  <select className="ef" disabled={!canManageUsers} style={{
                     width: "100%", padding: "9px 11px", border: "1px solid var(--line)",
                     borderRadius: 9, font: "inherit", fontSize: 14, background: "#fff", marginBottom: 4,
                   }} value={editForm.role || ""} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
@@ -508,7 +509,7 @@ export default function UsersPage() {
               <div className="modgrid" style={{
                 display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 7, marginTop: 6,
               }}>
-                {MODULES_LIST.filter(m => !(m === "Users & Access" && (isRestrictedRole || !isOwner))).map(m => (
+                {MODULES_LIST.filter(m => !(m === "Users & Access" && (isRestrictedRole || !canManageUsers))).map(m => (
                   <label key={m} style={{
                     display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink)",
                   }}>
@@ -527,7 +528,7 @@ export default function UsersPage() {
                 ))}
               </div>
 
-              {isOwner && modalUser !== "new" && (
+              {canManageUsers && modalUser !== "new" && (
                 <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
                   <input type="checkbox" checked={editForm.active === true}
                     onChange={e => {
@@ -543,7 +544,7 @@ export default function UsersPage() {
                 </label>
               )}
 
-              {isOwner && (
+              {canManageUsers && (
                 <label style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 16, fontSize: 13, fontWeight: 600 }}>
                   <input type="checkbox" checked={editForm.allow_edit_client_data === true}
                     onChange={e => setEditForm(p => ({ ...p, allow_edit_client_data: e.target.checked }))}
@@ -553,7 +554,7 @@ export default function UsersPage() {
               )}
 
               {/* Password change (edit mode) */}
-              {isOwner && modalUser !== "new" && (
+              {canManageUsers && modalUser !== "new" && (
                 <>
                   <label className="el" style={{
                     fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
@@ -645,7 +646,7 @@ export default function UsersPage() {
               justifyContent: "space-between",
             }}>
               {/* Left: Delete button (edit mode only) */}
-              {isOwner && modalUser !== "new" && !deleteConfirm && (
+              {canManageUsers && modalUser !== "new" && !deleteConfirm && (
                 <button className="btn alt" onClick={() => setDeleteConfirm((modalUser as User).name)}
                   style={{
                     all: "unset", cursor: "pointer", background: "transparent",
