@@ -349,7 +349,7 @@ export default function UsersPage() {
           <div className="modal" style={{
             position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
             zIndex: 61, background: "var(--paper)", borderRadius: 18, width: 520,
-            maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow)",
+            maxWidth: "90vw", maxHeight: "calc(100dvh - 32px)", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "var(--shadow)",
           }} onClick={e => e.stopPropagation()}>
             <h2 style={{
               fontFamily: '"Fraunces",Georgia,serif', fontSize: 22, fontWeight: 600,
@@ -366,7 +366,7 @@ export default function UsersPage() {
                 : "Update their email, password, details, and access. The email address is where two-factor codes are sent."
               }
             </div>
-            <div className="mform" style={{ padding: "18px 24px" }}>
+            <div className="mform" style={{ padding: "18px 24px", overflowY: "auto", flex: 1, minHeight: 0 }}>
               {/* Full name */}
               <label className="el" style={{
                 fontSize: 11, fontWeight: 700, letterSpacing: ".05em",
@@ -642,8 +642,9 @@ export default function UsersPage() {
 
             {/* Footer buttons */}
             <div style={{
-              display: "flex", gap: 10, marginTop: 16, padding: "0 24px 22px",
-              justifyContent: "space-between",
+              display: "flex", gap: 10, padding: "14px 24px calc(14px + env(safe-area-inset-bottom))",
+              justifyContent: "space-between", borderTop: "1px solid var(--line)", flexShrink: 0,
+              background: "var(--paper)",
             }}>
               {/* Left: Delete button (edit mode only) */}
               {canManageUsers && modalUser !== "new" && !deleteConfirm && (

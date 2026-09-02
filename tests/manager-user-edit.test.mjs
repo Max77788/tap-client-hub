@@ -64,4 +64,12 @@ assert.match(usersPage, /const canManageUsers = isOwner \|\| currentUser\?\.canM
 assert.match(usersPage, /\{canManageUsers && <div style=\{\{ display: "flex", justifyContent: "flex-end"/, "Add user button follows the explicit management capability");
 assert.match(usersPage, /\{canManageUsers && modalUser !== "new" && !deleteConfirm && \(/, "Delete action follows the explicit management capability");
 
+// The modal footer must remain visible while a long user form scrolls. The
+// action handlers and persistence API are unchanged - only the layout splits
+// into a scrolling form body and non-scrolling footer.
+assert.match(usersPage, /maxHeight: "calc\(100dvh - 32px\)"/);
+assert.match(usersPage, /overflow: "hidden", display: "flex", flexDirection: "column"/);
+assert.match(usersPage, /className="mform" style=\{\{ padding: "18px 24px", overflowY: "auto", flex: 1, minHeight: 0 \}\}/);
+assert.match(usersPage, /borderTop: "1px solid var\(--line\)", flexShrink: 0/);
+
 console.log("manager user edit regression checks passed");
