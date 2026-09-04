@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveAccessIdentity } from "@/lib/access-server";
 
-const TEMP_PASSWORD = process.env.TAP_TEMP_PASSWORD || "TapHub2024!";
+const TEMP_PASSWORD = "TapHub2026!";
 
 export async function POST(request: Request) {
   const identity = await resolveAccessIdentity();

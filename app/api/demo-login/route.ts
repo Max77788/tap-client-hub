@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createDemoSession } from "@/lib/demo-session";
 import { authContext, authError, authRequestId } from "@/lib/auth-debug";
 
 // Temporary onboarding credential. Keep this server-side and remove the
 // fallback after every active user has selected a personal password.
-const TEMP_PASSWORD = process.env.TAP_TEMP_PASSWORD || "TapHub2024!";
+const TEMP_PASSWORD = "TapHub2026!";
 const LEGACY_DEMO_USERS: Record<string, string> = {
   "mmatronin@gmail.com": "Max Matronin",
   "ben@aifusioniqlabs.com": "Ben",
@@ -58,6 +59,26 @@ export async function POST(request: NextRequest) {
       console.warn("[auth.demo-login] active profile not found", { ...context, emailDomain: email.includes("@") ? email.split("@").pop() : "missing", elapsedMs: Date.now() - startedAt });
       return NextResponse.json({ error: "Invalid email or password", requestId }, { status: 401, headers: { "x-auth-request-id": requestId } });
     }
+
+    // Do not let the generic fallback continue working for users who have
+    // already chosen a personal Auth password. The Auth check is deliberately
+    // password-verification-only: no session from this probe is used.
+    const { data: authUsers, error: authListError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (authListError) {
+      console.error("[auth.demo-login] auth account lookup failed", { ...context, error: authError(authListError), elapsedMs: Date.now() - startedAt });
+      return NextResponse.json({ error: "Unable to sign in right now.", requestId }, { status: 500, headers: { "x-auth-request-id": requestId } });
+    }
+    const authUserList = (authUsers as unknown as { users: Array<{ email?: string | null }> }).users || [];
+    const authUser = authUserList.find((user) => user.email?.trim().toLowerCase() === email);
+    if (authUser) {
+      const authProbe = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { db: { schema: "tap_hub_project" } });
+      const { error: passwordError } = await authProbe.auth.signInWithPassword({ email, password: TEMP_PASSWORD });
+      if (passwordError) {
+        console.info("[auth.demo-login] generic fallback disabled after personal password", { ...context, emailDomain: email.split("@").pop(), elapsedMs: Date.now() - startedAt });
+        return NextResponse.json({ error: "Invalid email or password", requestId }, { status: 401, headers: { "x-auth-request-id": requestId } });
+      }
+    }
+
     const response = NextResponse.json({ ok: true, name, email, mustChangePassword: true, requestId });
     response.cookies.set("tap_demo_session", createDemoSession(email, name), COOKIE_OPTIONS);
     response.cookies.set("tap_demo_user", name, COOKIE_OPTIONS);
