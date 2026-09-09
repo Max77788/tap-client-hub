@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApp } from "@/lib/support/api-keys";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTicketsAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Invalid ticket id." }, { status: 400 });
   }
 
-  const admin = createAdminClient();
+  const admin = createTicketsAdminClient();
 
   // App isolation: scope the lookup to the authenticated source app so a
   // ticket owned by another app is indistinguishable from a missing one (404).

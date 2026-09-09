@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAccessIdentity } from "@/lib/access-server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTicketsAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid ticket status." }, { status: 400 });
   }
 
-  const admin = createAdminClient();
+  const admin = createTicketsAdminClient();
   const { data: apps, error: appsError } = await admin
     .from("support_apps")
     .select("key, display_name, active")

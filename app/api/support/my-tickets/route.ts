@@ -1,0 +1,5 @@
+import { NextRequest, NextResponse } from "next/server";
+import { resolveAccessIdentity } from "@/lib/access-server";
+import { createTicketsAdminClient } from "@/lib/supabase/admin";
+export const runtime = "nodejs"; export const dynamic = "force-dynamic";
+export async function GET(req: NextRequest) { const identity=await resolveAccessIdentity(); if(!identity)return NextResponse.json({error:"Unauthorized"},{status:401}); const status=req.nextUrl.searchParams.get("status")||""; const admin=createTicketsAdminClient(); let q=admin.from("support_tickets").select("id,external_id,status,priority,summary,category,created_at,updated_at,last_activity_at,first_response_at,closed_at").eq("source_app_key","tap-hub").eq("reporter_profile_id",identity.id).order("last_activity_at",{ascending:false}).limit(100); if(["open","in_progress","resolved","closed"].includes(status))q=q.eq("status",status); const {data,error}=await q; if(error)return NextResponse.json({error:"Unable to load your tickets"},{status:500}); return NextResponse.json({tickets:data||[]},{headers:{"Cache-Control":"no-store"}}); }

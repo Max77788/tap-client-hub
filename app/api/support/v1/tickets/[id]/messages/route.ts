@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApp } from "@/lib/support/api-keys";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTicketsAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     metadata = body.metadata as Record<string, unknown>;
   }
 
-  const admin = createAdminClient();
+  const admin = createTicketsAdminClient();
 
   // App isolation: only the ticket's own source app may append messages.
   let ticketQuery = admin

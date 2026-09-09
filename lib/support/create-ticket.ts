@@ -3,7 +3,7 @@
 // IMPORTANT: this module runs only on the server (Supabase service role +
 // server env vars). Never import it from a client component or route it
 // through the browser.
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createTicketsAdminClient } from "@/lib/supabase/admin";
 
 export type TicketPriority = "normal" | "urgent";
 
@@ -232,7 +232,7 @@ export async function createTicket(input: CreateTicketInput): Promise<CreateTick
   }
   const v = parsed.value;
 
-  const admin = createAdminClient();
+  const admin = createTicketsAdminClient();
 
   // Validate the source app is registered and active.
   const { data: app, error: appError } = await admin
