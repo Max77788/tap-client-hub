@@ -36,6 +36,6 @@ export async function POST(req: NextRequest) {
     email: user.email,
     message: sent
       ? `Verification code sent to ${user.email}`
-      : "Code generated (email not configured — set RESEND_API_KEY)",
+      : "Code generated, but the verification email could not be sent. Please try again or contact support.",
   });
 }
