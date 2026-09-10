@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Password Vault", href: "/vault", icon: "🔒", module: "Vault" },
   { label: "Users & Access", href: "/users", icon: "🪪", module: "Users & Access" },
   { label: "Help & Support", href: "/support", icon: "🛟", module: "Support" },
+  { label: "Support Inbox", href: "/support/inbox", icon: "📥", role: "admin", module: "Support" },
   { label: "Settings", href: "/settings", icon: "⚙️" },
 ];
 
@@ -226,7 +227,7 @@ export default function RootLayout({
   const allowedModules = useMemo(() => effectiveModules(role, userModules), [role, userModules]);
   const visibleNav = useMemo(
     () => accessLoading ? [] : NAV_ITEMS.filter((item) => {
-      const allowedByModule = !item.module || item.href === "/support" || allowedModules.includes(item.module);
+      const allowedByModule = !item.module || allowedModules.includes(item.module);
       const allowedByRole = !item.role || item.role === "all" || item.role === role || (item.role === "admin" && ["owner", "admin"].includes(role));
       return allowedByModule && allowedByRole;
     }),
