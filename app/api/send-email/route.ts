@@ -3,7 +3,7 @@ import { resolveAccessIdentity } from "@/lib/access-server";
 import { createTicket } from "@/lib/support/create-ticket";
 
 const SUPPORT_RECIPIENTS = ["support@aifusioniqlabs.com"];
-const RESEND_FROM = "TAP Hub <notifications@email.mom-ai-agency.site>";
+const RESEND_FROM = "TAP Hub Support <support@email.aifusioniqlabs.com>";
 
 type SupportRequest = {
   reporterName: string;
@@ -128,7 +128,11 @@ export async function POST(req: NextRequest) {
     try {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+          "User-Agent": "TAP-Hub/1.0",
+        },
         body: JSON.stringify({ from: RESEND_FROM, to: SUPPORT_RECIPIENTS, subject, html }),
       });
       if (!response.ok) console.error("Resend support email failed:", response.status, await response.text());

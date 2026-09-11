@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Keep this aligned with the verified Resend sending domain.
-export const TWO_FACTOR_FROM = "TAP Hub <security@email.mom-ai-agency.com>";
+export const TWO_FACTOR_FROM = "TAP Hub <security@email.aifusioniqlabs.com>";
 
 /**
  * Generate a 6-digit code and store it on the user's profile.
