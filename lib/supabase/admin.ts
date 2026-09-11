@@ -15,10 +15,13 @@ export function createAdminClient() {
 }
 
 /**
- * Support tickets live in TAP Hub's active primary Supabase project. Keep this
- * named client so ticket routes remain explicit, while avoiding a retired,
- * separately configured project that can make support submission unavailable.
+ * Dedicated ticket-database client. Ticket storage intentionally lives in a
+ * separate Supabase project from the primary TAP Hub database.
  */
 export function createTicketsAdminClient() {
-  return createAdminClient();
+  const url = process.env.TICKETS_SUPABASE_URL!;
+  const key = process.env.TICKETS_SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key, {
+    db: { schema: process.env.TICKETS_SUPABASE_SCHEMA || "tap_hub_project" },
+  });
 }
