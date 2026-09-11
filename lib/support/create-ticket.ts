@@ -267,7 +267,9 @@ export async function createTicket(input: CreateTicketInput): Promise<CreateTick
     what_happened: v.description,
     ...(v.tapContext
       ? {
-          account_firm: v.tapContext.accountFirm,
+          // The dedicated ticket database calls this legacy TAP field
+          // account_name (the primary TAP Hub schema called it account_firm).
+          account_name: v.tapContext.accountFirm,
           app_area: v.tapContext.appArea,
           expected_result: v.tapContext.expectedResult,
           reproduction_steps: v.tapContext.reproductionSteps,

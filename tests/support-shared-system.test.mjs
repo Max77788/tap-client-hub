@@ -13,6 +13,7 @@ const legacyRoute = read("app/api/send-email/route.ts");
 const postTickets = read("app/api/support/v1/tickets/route.ts");
 const getTicket = read("app/api/support/v1/tickets/[id]/route.ts");
 const postMessage = read("app/api/support/v1/tickets/[id]/messages/route.ts");
+const createTicket = read("lib/support/create-ticket.ts");
 
 let passed = 0;
 function ok(condition, label) {
@@ -152,6 +153,17 @@ function rejects(pattern, text, label) {
     rejects(/\.eq\(`/, src, `${name} avoids template-string interpolation into .eq()`);
     rejects(/\.ilike\(/, src, `${name} avoids wildcard/ilike filters`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// 4. Dedicated ticket database compatibility
+// ---------------------------------------------------------------------------
+{
+  // The new dedicated tickets project retains this field under its original
+  // public-schema name. Sending the old primary-DB name makes PostgREST reject
+  // every TAP form submission before a ticket can be created.
+  ok(/account_name:\s*v\.tapContext\.accountFirm/.test(createTicket), "TAP form maps account firm to dedicated DB account_name");
+  rejects(/account_firm\s*:/.test(createTicket) ? /account_firm\s*:/ : /noop/, createTicket, "ticket insert does not send obsolete account_firm column");
 }
 
 console.log(`support-shared-system.test.mjs: ${passed} assertions passed`);
